@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.31 2004/03/17 15:45:26 manu Exp $ */
+/* $Id: pending.c,v 1.32 2004/03/17 17:33:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.31 2004/03/17 15:45:26 manu Exp $");
+__RCSID("$Id: pending.c,v 1.32 2004/03/17 17:33:40 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -54,18 +54,15 @@ __RCSID("$Id: pending.c,v 1.31 2004/03/17 15:45:26 manu Exp $");
 
 #include "config.h"
 #include "sync.h"
+#include "dump.h"
 #include "pending.h"
 #include "autowhite.h"
 #include "milter-greylist.h"
 
 struct pendinglist pending_head;
-int pending_dirty;
-pthread_rwlock_t pending_lock; 	/* protects pending_head and pending_dirty */
-pthread_cond_t dump_sleepflag;
+pthread_rwlock_t pending_lock; 	/* protects pending_head and dump_dirty */
 
 int delay = DELAY;
-char *dumpfile = DUMPFILE;
-int dump_parse(void);
 
 int
 pending_init(void) {
@@ -74,9 +71,6 @@ pending_init(void) {
 	TAILQ_INIT(&pending_head);
 
 	if ((error = pthread_rwlock_init(&pending_lock, NULL)) == 0)
-		return error;
-
-	if ((error = pthread_cond_init(&dump_sleepflag, NULL)) == 0)
 		return error;
 
 	return 0;
@@ -113,7 +107,7 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 	TAILQ_INSERT_TAIL(&pending_head, pending, p_list); 
 
 	if (debug)
-		pending_dirty++;
+		dump_dirty++;
 
 	(void)gettimeofday(&tv, NULL);
 	syslog(LOG_INFO, "created: %s from %s to %s, delayed for %ld s",
@@ -134,7 +128,7 @@ pending_put(pending) /* pending list should be write-locked */
 	free(pending);
 
 	if (debug)
-		pending_dirty++;
+		dump_dirty++;
 
 	return;
 }
@@ -264,7 +258,7 @@ out:
 		*elapsed = (time_t)(tv.tv_sec - (pending->p_tv.tv_sec - delay));
 
 	if (dirty)
-		pending_flush();
+		dump_flush();
 
 	if (rest == 0)
 		return 1;
@@ -310,133 +304,3 @@ pending_textdump(stream)
 	return done;
 }
 
-void
-pending_dumper_start(void) {
-	pthread_t tid;
-
-	if (pthread_create(&tid, NULL, (void *)pending_dumper, NULL) != 0) {
-		syslog(LOG_ERR, 
-		    "cannot start dumper thread: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-	return;
-}
-	
-/* ARGSUSED0 */
-void
-pending_dumper(dontcare) 
-	void *dontcare;
-{
-	FILE *dump;
-	int dumpfd;
-	struct timeval tv1, tv2, tv3;
-	pthread_mutex_t mutex;
-	char newdumpfile[MAXPATHLEN + 1];
-	int done;
-
-	if (pthread_mutex_init(&mutex, NULL) != 0) {
-		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n",
-		    strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	while (1) {
-		if (pthread_cond_wait(&dump_sleepflag, &mutex) != 0)
-		    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
-			strerror(errno));
-
-		if (debug) {
-			(void)gettimeofday(&tv1, NULL);
-			syslog(LOG_DEBUG, "dumping %d modifications", 
-			    pending_dirty);
-			/* 
-			 * pending_dirty is not protected by a lock,
-			 * hence it could be modified between the 
-			 * display and the actual dump. This debug
-			 * message does not give an accurate information
-			 */
-			pending_dirty = 0;
-		}
-
-		/* 
-		 * Dump the database in a temporary file and 
-		 * then replace the old one by the new one.
-		 * On decent systems, rename(2) garantees that 
-		 * even if the machine crashes, we will not 
-		 * loose both files.
-		 */
-		snprintf(newdumpfile, MAXPATHLEN, "%s-XXXXXXXX", dumpfile);
-
-		if ((dumpfd = mkstemp(newdumpfile)) == -1) {
-			syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s", 
-			    newdumpfile, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		if ((dump = fdopen(dumpfd, "w")) == NULL) {
-			syslog(LOG_ERR, "cannot write dumpfile \"%s\": %s", 
-			    newdumpfile, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		done = pending_textdump(dump);
-		fclose(dump);
-		if (rename(newdumpfile, dumpfile) != 0) {
-			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
-			    dumpfile, newdumpfile, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		if (debug) {
-			(void)gettimeofday(&tv2, NULL);
-			timersub(&tv2, &tv1, &tv3);
-			syslog(LOG_DEBUG, "dumping %d records in %ld.%06lds",
-			    done, tv3.tv_sec, tv3.tv_usec);
-		}
-
-	}
-
-	/* NOTREACHED */
-	syslog(LOG_ERR, "pending_dumper unexpectedly exitted");
-	exit(EX_SOFTWARE);
-
-	return;
-}
-
-void
-pending_reload(void) {
-	FILE *dump;
-
-	/* 
-	 * Re-import a saved greylist
-	 */
-	if ((dump = fopen(dumpfile, "r")) == NULL) {
-		syslog(LOG_ERR, "cannot read dumpfile \"%s\"", dumpfile);
-		syslog(LOG_ERR, "starting with an empty greylist");
-	} else {
-		dump_in = dump;
-		PENDING_WRLOCK;
-		dump_parse();
-
-		/* 
-		 * pending_dirty has been bumped on each pending_get call,
-		 * whereas there is nothing to flush. Fix that.
-		 */
-		pending_dirty = 0;
-
-		PENDING_UNLOCK;
-		fclose(dump);
-	}
-
-	return;
-}
-
-void
-pending_flush(void) {
-	if (pthread_cond_signal(&dump_sleepflag) != 0) {
-		syslog(LOG_ERR, "cannot wakeup dumper: %s", strerror(errno));
-		exit(EX_SOFTWARE);
-	}
-
-	return;
-}

@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.2 2004/03/17 15:36:19 manu Exp $ */
+/* $Id: autowhite.h,v 1.3 2004/03/17 17:33:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -53,6 +53,7 @@ struct autowhite {
 };
 
 extern time_t autowhite_validity;
+extern pthread_rwlock_t autowhite_lock;
 
 int autowhite_init(void);
 void autowhite_add(struct in_addr *, char *, char *);

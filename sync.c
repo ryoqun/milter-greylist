@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.23 2004/03/17 13:22:44 manu Exp $ */
+/* $Id: sync.c,v 1.24 2004/03/17 17:33:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -690,7 +690,7 @@ sync_server(arg)
 		}
 
 		/* Flush modifications to disk */
-		pending_flush();
+		dump_flush();
 	}
 
 	fprintf(stream, "202 Good bye\n");

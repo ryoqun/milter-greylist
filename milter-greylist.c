@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.33 2004/03/17 15:36:19 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.34 2004/03/17 17:33:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.33 2004/03/17 15:36:19 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.34 2004/03/17 17:33:40 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -52,6 +52,7 @@ __RCSID("$Id: milter-greylist.c,v 1.33 2004/03/17 15:36:19 manu Exp $");
 #include <libmilter/mfapi.h>
 
 #include "config.h"
+#include "dump.h"
 #include "except.h"
 #include "conf.h"
 #include "pending.h"
@@ -391,26 +392,14 @@ main(argc, argv)
 	/*
 	 * Various init
 	 */
-	if (except_init() != 0) {
+	if ((except_init() != 0) ||
+	    (pending_init() != 0) ||
+	    (peer_init() != 0) ||
+	    (autowhite_init() != 0) ||
+	    (dump_init() != 0)) {
 		fprintf(stderr, "%s: list init failed\n", argv[0]);
 		exit(EX_SOFTWARE);
 	}
-
-	if (pending_init() != 0) {
-		fprintf(stderr, "%s: list init failed\n", argv[0]);
-		exit(EX_SOFTWARE);
-	}
-
-	if (peer_init() != 0) {
-		fprintf(stderr, "%s: list init failed\n", argv[0]);
-		exit(EX_SOFTWARE);
-	}
-
-	if (autowhite_init() != 0) {
-		fprintf(stderr, "%s: list init failed\n", argv[0]);
-		exit(EX_SOFTWARE);
-	}
-
 
 	if (dont_fork != 0)
 		openlog("milter-greylist", LOG_PERROR, LOG_MAIL);
@@ -429,7 +418,7 @@ main(argc, argv)
 	 * Reload a saved greylist
 	 * No lock needed here either.
 	 */
-	pending_reload();
+	dump_reload();
 
 	/*
 	 * Turn into a daemon
@@ -468,7 +457,7 @@ main(argc, argv)
 	/*
 	 * Start the dumper thread
 	 */
-	pending_dumper_start();
+	dumper_start();
 
 	/*
 	 * Run the peer MX greylist sync threads

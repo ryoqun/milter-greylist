@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.17 2004/03/13 15:12:42 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.18 2004/03/17 17:33:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,6 +34,7 @@
 
 #include <libmilter/mfapi.h>
 #include "config.h"
+#include "dump.h"
 
 #define HDRLEN 160
 #define HEADERNAME "X-Greylist"

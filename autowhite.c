@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.2 2004/03/17 15:36:19 manu Exp $ */
+/* $Id: autowhite.c,v 1.3 2004/03/17 17:33:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.2 2004/03/17 15:36:19 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.3 2004/03/17 17:33:40 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -48,6 +48,7 @@ __RCSID("$Id: autowhite.c,v 1.2 2004/03/17 15:36:19 manu Exp $");
 #include <arpa/inet.h>
 
 #include "except.h"
+#include "dump.h"
 #include "autowhite.h"
 
 time_t autowhite_validity = AUTOWHITE_VALIDITY;
@@ -78,6 +79,10 @@ autowhite_add(in, from, rcpt)
 	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
 	int h, mn, s;
+	int dirty = 0;
+
+	if (autowhite_validity == 0)
+		return;
 
 	gettimeofday(&now, NULL);
 	delay.tv_sec = autowhite_validity;
@@ -101,6 +106,8 @@ autowhite_add(in, from, rcpt)
 				free(aw);
 				aw = NULL;
 
+				dirty++;
+
 				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
 				    "autowhitelisted entry expired",
 				    addr, from, rcpt);
@@ -120,6 +127,8 @@ autowhite_add(in, from, rcpt)
 			    (strncmp(from, aw->a_from, ADDRLEN) == 0) &&
 			    (strncmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)) {
 				timeradd(&now, &delay, &aw->a_tv);
+
+				dirty++;
 
 				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
 				    "autowhitelisted for more %02d:%02d:%02d", 
@@ -148,11 +157,18 @@ autowhite_add(in, from, rcpt)
 		timeradd(&now, &delay, &aw->a_tv);
 		TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
 
+		dirty++;
+
 		syslog(LOG_INFO, "addr %s from %s rcpt %s: "
 		    "autowhitelisted for %02d:%02d:%02d", 
 		    addr, from, rcpt, h, mn, s);
 	}
 	AUTOWHITE_UNLOCK;
+
+	if (dirty != 0) {
+		dump_dirty += dirty;
+		dump_flush();
+	}
 
 	return;
 }
@@ -168,6 +184,10 @@ autowhite_check(in, from, rcpt)
 	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
 	int h, mn, s;
+	int dirty = 0;
+
+	if (autowhite_validity == 0)
+		return EXF_NONE;
 
 	gettimeofday(&now, NULL);
 	delay.tv_sec = autowhite_validity;
@@ -191,6 +211,8 @@ autowhite_check(in, from, rcpt)
 				free(aw);
 				aw = NULL;
 
+				dirty++;
+
 				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
 				    "autowhitelisted entry expired",
 				    addr, from, rcpt);
@@ -211,6 +233,8 @@ autowhite_check(in, from, rcpt)
 			    (strncmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)) {
 				timeradd(&now, &delay, &aw->a_tv);
 
+				dirty++;
+
 				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
 				    "autowhitelisted for more %02d:%02d:%02d", 
 				    addr, from, rcpt, h, mn, s);
@@ -219,6 +243,11 @@ autowhite_check(in, from, rcpt)
 		}
 	}
 	AUTOWHITE_UNLOCK;
+
+	if (dirty != 0) {
+		dump_dirty += dirty;
+		dump_flush();
+	}
 
 	if (aw != NULL) 
 		return EXF_AUTO;	

@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.13 2004/03/14 15:48:39 manu Exp $ */
+/* $Id: pending.h,v 1.14 2004/03/17 17:33:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -47,13 +47,6 @@
 #define TIMEOUT (3600 * 24 * 5) /* 432000 seconds = 5 days */
 #endif
 
-#ifndef DUMPFILE
-#define DUMPFILE "/var/milter-greylist/greylist.db"
-#endif
-
-#define ADDRLEN	31
-#define IPADDRLEN sizeof("255.255.255.255")
-
 #include "milter-greylist.h"
 
 #define PENDING_WRLOCK WRLOCK(pending_lock)
@@ -71,10 +64,7 @@ struct pending {
 	TAILQ_ENTRY(pending) p_list;
 };
 
-extern FILE *dump_in;
-extern int dump_line;
 extern int delay;
-extern char *dumpfile;
 extern pthread_rwlock_t pending_lock;
 
 int pending_init(void);
@@ -83,10 +73,5 @@ int pending_check(struct in_addr *, char *, char *, time_t *, time_t *);
 void pending_del(struct in_addr *, char *, char *, time_t);
 void pending_put(struct pending *);
 int pending_textdump(FILE *);
-void pending_import(FILE *);
-void pending_dumper(void *);
-void pending_dumper_start(void);
-void pending_flush(void);
-void pending_reload(void);
 
 #endif /* _PENDING_H_ */
