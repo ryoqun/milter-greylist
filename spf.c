@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.6 2004/04/01 13:57:50 manu Exp $ */
+/* $Id: spf.c,v 1.7 2004/04/01 14:03:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.6 2004/04/01 13:57:50 manu Exp $");
+__RCSID("$Id: spf.c,v 1.7 2004/04/01 14:03:52 manu Exp $");
 #endif
 #endif
 
@@ -124,10 +124,11 @@ spf_alt_check(in, fromp)
 	 */
 	SPF_init_output(&out);
 	out = SPF_result(spfconf, dnsconf, NULL);
-	syslog(LOG_DEBUG, "SPF out.result = %d", out.result);
-
 	if (out.result == SPF_RESULT_PASS) 
 		result = EXF_SPF;
+
+	if (conf.c_debug)
+		syslog(LOG_DEBUG, "SPF return code %d", out.result);
 
 	SPF_free_output(&out);
 out3:

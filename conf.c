@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.12 2004/03/31 17:02:08 manu Exp $ */
+/* $Id: conf.c,v 1.13 2004/04/01 14:03:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.12 2004/03/31 17:02:08 manu Exp $");
+__RCSID("$Id: conf.c,v 1.13 2004/04/01 14:03:52 manu Exp $");
 #endif
 #endif
 
@@ -129,7 +129,7 @@ conf_update(void) {
 	struct timeval tv1, tv2, tv3;
 	
 	if (stat(conffile, &st) != 0) {
-		syslog(LOG_DEBUG, "config file \"%s\" unavailable", 
+		syslog(LOG_ERR, "config file \"%s\" unavailable", 
 		    conffile);
 		return;
 	}

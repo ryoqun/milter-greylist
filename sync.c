@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.35 2004/03/31 09:49:16 manu Exp $ */
+/* $Id: sync.c,v 1.36 2004/04/01 14:03:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.35 2004/03/31 09:49:16 manu Exp $");
+__RCSID("$Id: sync.c,v 1.36 2004/04/01 14:03:52 manu Exp $");
 #endif
 #endif
 
@@ -235,7 +235,8 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 		return -1;
 	}
 
-	syslog(LOG_DEBUG, "sync one entry with %s", peer->p_name);
+	if (conf.c_debug)
+		syslog(LOG_DEBUG, "sync one entry with %s", peer->p_name);
 
 	return 0;
 }

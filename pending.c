@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.47 2004/03/31 15:13:50 manu Exp $ */
+/* $Id: pending.c,v 1.48 2004/04/01 14:03:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.47 2004/03/31 15:13:50 manu Exp $");
+__RCSID("$Id: pending.c,v 1.48 2004/04/01 14:03:52 manu Exp $");
 #endif
 #endif
 
@@ -120,10 +120,12 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 		dump_dirty++;
 
 	(void)gettimeofday(&tv, NULL);
-	syslog(LOG_DEBUG, "created: %s from %s to %s, delayed for %ld s",
-	    pending->p_addr, pending->p_from, pending->p_rcpt, 
-	    pending->p_tv.tv_sec - tv.tv_sec);
 
+	if (conf.c_debug) {
+		syslog(LOG_DEBUG, "created: %s from %s to %s delayed for %lds",
+		    pending->p_addr, pending->p_from, pending->p_rcpt, 
+		    pending->p_tv.tv_sec - tv.tv_sec);
+	}
 out:
 	return pending;
 }
@@ -132,8 +134,11 @@ void
 pending_put(pending) /* pending list should be write-locked */
 	struct pending *pending;
 {
-	syslog(LOG_DEBUG, "removed: %s from %s to %s",
-	    pending->p_addr, pending->p_from, pending->p_rcpt);
+	if (conf.c_debug) {
+		syslog(LOG_DEBUG, "removed: %s from %s to %s",
+		    pending->p_addr, pending->p_from, pending->p_rcpt);
+	}
+
 	TAILQ_REMOVE(&pending_head, pending, p_list);	
 	free(pending);
 
@@ -175,8 +180,13 @@ pending_del(in, from, rcpt, time)
 		 * Check for expired entries 
 		 */
 		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
-			syslog(LOG_DEBUG, "del: %s from %s to %s timed out", 
-			    pending->p_addr, pending->p_from, pending->p_rcpt);
+			if (conf.c_debug) {
+				syslog(LOG_DEBUG, 
+				    "del: %s from %s to %s timed out", 
+				    pending->p_addr, pending->p_from, 
+				    pending->p_rcpt);
+			}
+
 			pending_put(pending);
 
 			if (TAILQ_EMPTY(&pending_head))
@@ -236,8 +246,13 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 		 * Check for expired entries 
 		 */
 		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
-			syslog(LOG_DEBUG, "check: %s from %s to %s timed out", 
-			    pending->p_addr, pending->p_from, pending->p_rcpt);
+			if (conf.c_debug) {
+				syslog(LOG_DEBUG, 
+				    "check: %s from %s to %s timed out", 
+				    pending->p_addr, pending->p_from, 
+				    pending->p_rcpt);
+			}
+
 			pending_put(pending);
 			dirty = 1;
 
