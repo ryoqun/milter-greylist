@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.2 2004/02/21 13:55:25 manu Exp $ */
+/* $Id: except.h,v 1.3 2004/02/21 17:46:11 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -43,7 +43,9 @@
 #include "pending.h"
 #include "config.h"
 
-#define EXCEPTFILE "except.conf"
+#ifndef EXCEPTFILE
+#define EXCEPTFILE "/etc/mail/except.conf"
+#endif
 
 LIST_HEAD(exceptlist, except);
 

@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.2 2004/02/21 13:55:25 manu Exp $ */
+/* $Id: pending.h,v 1.3 2004/02/21 17:46:11 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -40,11 +40,11 @@
 #include <arpa/inet.h>
 
 #ifndef DELAY
-#define DELAY	10	/* seconds */
+#define DELAY	1800	/* 1800 seconds = 30 minutes */
 #endif
 
 #ifndef TIMEOUT
-#define TIMEOUT (3600 * 24 * 5) /* seconds */
+#define TIMEOUT (3600 * 24 * 5) /* 432000 seconds = 5 days */
 #endif
 
 #define ADDRLEN	31

@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.1 2004/02/21 13:55:25 manu Exp $
+# $Id: Makefile.in,v 1.2 2004/02/21 17:46:10 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,6 @@
 CFLAGS= 	@CFLAGS@ -Wall -Werror -ansi
 LDFLAGS=	@LDFLAGS@
 LIBS= 		@LIBS@
-PREFIX=		@prefix@
 
 MKDEP=		@MKDEP@
 RM=		@RM@

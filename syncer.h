@@ -31,11 +31,11 @@
 #define _SYNCER_H_
 
 #ifndef DUMPFILE
-#define DUMPFILE "greylist.db"
+#define DUMPFILE "/var/db/greylist.db"
 #endif
 
 #ifndef DUMPFREQ
-#define DUMPFREQ 60 /* seconds */
+#define DUMPFREQ 60 /* 60 seconds = 1 minute */
 #endif
 
 extern int dumpfreq;
