@@ -1,3 +1,5 @@
+1.7.3:
+	Builds again with SPF enabled
 1.7.2:
 	Support libspf2 (Eugene Crosser)
 	New ACL framework for whitelist and greylist (Remy Card)

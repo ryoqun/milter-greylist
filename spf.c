@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.16 2004/12/08 22:23:09 manu Exp $ */
+/* $Id: spf.c,v 1.17 2004/12/09 22:01:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.16 2004/12/08 22:23:09 manu Exp $");
+__RCSID("$Id: spf.c,v 1.17 2004/12/09 22:01:17 manu Exp $");
 #endif
 #endif
 
@@ -51,6 +51,7 @@ __RCSID("$Id: spf.c,v 1.16 2004/12/08 22:23:09 manu Exp $");
 #include "conf.h"
 #include "spf.h"
 
+#include "acl.h"
 
 #ifdef HAVE_SPF
 #include <spf.h>
