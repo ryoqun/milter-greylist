@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.10 2004/03/11 17:02:11 manu Exp $ */
+/* $Id: sync.c,v 1.11 2004/03/11 17:32:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -89,7 +89,7 @@ peer_clear(void) {
 		}
 			
 		if (peer->p_stream != NULL)
-			fclose(stream);
+			fclose(peer->p_stream);
 
 		LIST_REMOVE(peer, p_list);
 		free(peer);
