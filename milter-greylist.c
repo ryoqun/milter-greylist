@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.98 2004/11/11 12:03:22 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.99 2004/11/12 10:08:56 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.98 2004/11/11 12:03:22 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.99 2004/11/12 10:08:56 manu Exp $");
 #endif
 #endif
 
@@ -796,7 +796,7 @@ main(argc, argv)
 
 	
 	if (conf.c_socket == NULL) {
-		fprintf(stderr, "%s: No socket provided, exitting\n", argv[0]);
+		fprintf(stderr, "%s: No socket provided, exiting\n", argv[0]);
 		usage(argv[0]);
 	}
 	cleanup_sock(conf.c_socket);
@@ -1131,6 +1131,6 @@ final_dump(void) {
 		syslog(LOG_INFO, "Final database dump: no change to dump");
 	}
 
-	syslog(LOG_INFO, "Exitting");
+	syslog(LOG_INFO, "Exiting");
 	return;
 }
