@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.9 2004/03/02 16:26:40 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.10 2004/03/03 16:30:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -48,6 +48,7 @@
 
 #include <libmilter/mfapi.h>
 
+#include "config.h"
 #include "except.h"
 #include "pending.h"
 #include "syncer.h"
@@ -55,12 +56,13 @@
 
 int debug = 0;
 int dont_fork = 0;
+int quiet = 0;
 
 struct smfiDesc smfilter =
 {
 	"greylist",	/* filter name */
 	SMFI_VERSION,	/* version code */
-	0,		/* flags */
+	SMFIF_ADDHDRS,	/* flags */
 	mlfi_connect,	/* connection info filter */
 	NULL,		/* SMTP HELO command filter */
 	mlfi_envfrom,	/* envelope sender filter */
@@ -81,6 +83,7 @@ mlfi_connect(ctx, hostname, addr)
 {
 	struct mlfi_priv *priv;
 	struct sockaddr_in *sin;
+	char addrstr[IPADDRLEN + 1];
 
 	if ((priv = malloc(sizeof(*priv))) == NULL)
 		return SMFIS_TEMPFAIL;	
@@ -93,7 +96,9 @@ mlfi_connect(ctx, hostname, addr)
 		priv->priv_addr.s_addr = sin->sin_addr.s_addr;
 
 	if (debug)
-		syslog(LOG_DEBUG, "addr = %s\n", inet_ntoa(priv->priv_addr));
+		syslog(LOG_DEBUG, "addr = %s\n", 
+		    inet_ntop(AF_INET, &priv->priv_addr, 
+		    addrstr, IPADDRLEN));
 
 
 	return SMFIS_CONTINUE;
@@ -118,6 +123,11 @@ mlfi_envrcpt(ctx, envrcpt)
 	char **envrcpt;
 {
 	struct mlfi_priv *priv;
+	long remaining;
+	long elapsed;
+	char hdr[HDRLEN + 1];
+	char addrstr[IPADDRLEN + 1];
+	int h, mn, s;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
@@ -126,14 +136,49 @@ mlfi_envrcpt(ctx, envrcpt)
 		    inet_ntoa(priv->priv_addr), 
 		    priv->priv_from, *envrcpt);
 
-	if (except_filter(&priv->priv_addr, priv->priv_from, *envrcpt) != 0)
+	if (except_filter(&priv->priv_addr, priv->priv_from, *envrcpt) != 0) {
+		snprintf(hdr, HDRLEN, 
+		    "Not delayed by milter-greylist-%s [whitelist]", 
+		    PACKAGE_VERSION);
+		smfi_addheader(ctx, HEADERNAME, hdr);
 		return SMFIS_CONTINUE;
+	}
 
-	if (pending_check(&priv->priv_addr, priv->priv_from, *envrcpt) == 0)
+	if (pending_check(&priv->priv_addr, priv->priv_from, 
+	    *envrcpt, &remaining, &elapsed) != 0) {
+		h = elapsed / 3600;
+		elapsed = elapsed % 3600;
+		mn = (elapsed / 60);
+		elapsed = elapsed % 60;
+		s = elapsed;
+
+		snprintf(hdr, HDRLEN, 
+		    "Delayed for %02d:%02d:%02d by milter-greylist-%s", 
+		    h, mn, s, PACKAGE_VERSION);
+		smfi_addheader(ctx, HEADERNAME, hdr);
+
 		return SMFIS_CONTINUE;
-	else
+	}
+
+	h = remaining / 3600;
+	remaining = remaining % 3600;
+	mn = (remaining / 60);
+	remaining = remaining % 60;
+	s = remaining;
+
+	syslog(LOG_INFO, "addr %s from %s to %s delayed for %02d:%02d:%02d\n",
+	    inet_ntop(AF_INET, &priv->priv_addr, addrstr, IPADDRLEN),
+	    priv->priv_from, *envrcpt, h, mn, s);
+
+	if (quiet) {
 		(void)smfi_setreply(ctx, "451", "4.7.1", 
 		    "Greylisting in action, please come back later");
+	} else {
+		snprintf(hdr, HDRLEN, 
+		    "Greylisting in action, please come "
+		    "back in %02d:%02d:%02d", h, mn, s);
+		(void)smfi_setreply(ctx, "451", "4.7.1", hdr);
+	}
 
 	return SMFIS_TEMPFAIL;
 }
@@ -165,10 +210,14 @@ main(argc, argv)
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "vDd:w:f:hp:Tu:")) != -1) {
+	while ((ch = getopt(argc, argv, "vDd:qw:f:hp:Tu:")) != -1) {
 		switch (ch) {
 		case 'D':
 			dont_fork = 1;
+			break;
+
+		case 'q':
+			quiet = 1;
 			break;
 
 		case 'u': {
@@ -345,7 +394,7 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, 
-	    "usage: %s [-D] [-v] [-T] [-d dumpfile] [-f exceptionfile]\n"
+	    "usage: %s [-DvqT] [-d dumpfile] [-f exceptionfile]\n"
 	    "       [-w delay] [-u username] -p socket\n", progname);
 	exit(EX_USAGE);
 }

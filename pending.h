@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.3 2004/02/21 17:46:11 manu Exp $ */
+/* $Id: pending.h,v 1.4 2004/03/03 16:30:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -65,7 +65,7 @@ extern int delay;
 
 int pending_init(void);
 struct pending *pending_get(char *, struct in_addr *, char *, char *, long);
-long pending_check(struct in_addr *, char *, char *);
+int pending_check(struct in_addr *, char *, char *, long *, long *);
 void pending_put(struct pending *);
 void pending_log(struct pending *);
 void pending_textdump(FILE *);

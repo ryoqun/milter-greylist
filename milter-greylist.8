@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.7 2004/03/03 13:51:47 manu Exp $
+.\" $Id: milter-greylist.8,v 1.8 2004/03/03 16:30:12 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -37,12 +37,13 @@
 .Nd grey listing filter for sendmail
 .Sh SYNOPSIS
 .Nm
-.Op Fl v
 .Op Fl D
 .Op Fl d Ar dumpfile
 .Op Fl f Ar exceptfile
+.Op Fl q
 .Op Fl T
 .Op Fl u Ar username
+.Op Fl v
 .Op Fl w Ar delay
 .Fl p Ar socket
 .Sh DESCRIPTION
@@ -108,6 +109,11 @@ as the socket used by
 to talk with
 .Nm .
 This option is mandatory.
+.It Fl q
+Quiet mode. 
+.Nm
+will not tell SMTP client how many time they have to wait before the
+message is accepted.
 .It Fl T
 Enable test mode. This alters the meaning of recipient lines in 
 .Pa greylist.except ,

@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.2 2004/03/02 16:26:40 manu Exp $ */
+/* $Id: pending.c,v 1.3 2004/03/03 16:30:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -123,9 +123,8 @@ void
 pending_put(pending) /* pending list should be write-locked */
 	struct pending *pending;
 {
-	syslog(LOG_INFO, "removed: %s from %s to %s, delayed for %ld s\n",
-	    pending->p_addr, pending->p_from, 
-	    pending->p_rcpt, pending->p_tv.tv_sec);
+	syslog(LOG_INFO, "removed: %s from %s to %s\n",
+	    pending->p_addr, pending->p_from, pending->p_rcpt);
 	TAILQ_REMOVE(&pending_head, pending, p_list);	
 	free(pending);
 
@@ -169,16 +168,18 @@ pending_purge(void) {
 }
 
 
-long
-pending_check(in, from, rcpt)
+int
+pending_check(in, from, rcpt, remaining, elapsed)
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
+	long *remaining;
+	long *elapsed;
 {
 	char addr[IPADDRLEN + 1];
 	struct pending *pending;
 	struct timeval tv;
-	long remain = -1;
+	long rest = -1;
 
 	gettimeofday(&tv, NULL);
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
@@ -191,16 +192,13 @@ pending_check(in, from, rcpt)
 		if ((strncmp(addr, pending->p_addr, IPADDRLEN) == 0) &&
 		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
-			remain = pending->p_tv.tv_sec - tv.tv_sec;
+			rest = pending->p_tv.tv_sec - tv.tv_sec;
 
-			syslog(LOG_INFO, 
-			    "check: addr %s from %s to %s: %ld s to wait\n",
-			    addr, from, rcpt, remain);
-
-			if (remain < 0) {
+			if (rest < 0) {
 				pending_put(pending);
-				remain = 0;
+				rest = 0;
 			}
+
 			goto out;
 		}
 
@@ -220,11 +218,21 @@ pending_check(in, from, rcpt)
 	 * Error handling is useless here, we will tempfail anyway
 	 */
 	pending = pending_get(addr, in, from, rcpt, 0);
-	remain = pending->p_tv.tv_sec - tv.tv_sec;
+	rest = delay;
 
 out:
 	PENDING_UNLOCK;
-	return remain;
+
+	if (remaining != NULL)
+		*remaining = rest; 
+
+	if (elapsed != NULL)
+		*elapsed = tv.tv_sec - (pending->p_tv.tv_sec - delay);
+
+	if (rest == 0)
+		return 1;
+	else
+		return 0;
 }
 
 void
