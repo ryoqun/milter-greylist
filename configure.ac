@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.51 2004/03/21 09:37:38 manu Exp $
+# $Id: configure.ac,v 1.52 2004/03/21 20:17:48 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -199,6 +199,10 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([
 	])], [brokenpth=no], 
 	AC_DEFINE([HAVE_BROKEN_RWLOCK], [], [broken rwlock in libpthread]))
 AC_MSG_RESULT([$brokenpth])
+
+# Record the build environnement for milter-greylist -r
+AC_DEFINE_UNQUOTED([BUILD_ENV], ["`logname`@`uname -n`:`pwd` `date`"], 
+    [Build environnement]) 
 
 # Options
 AC_ARG_WITH(user,

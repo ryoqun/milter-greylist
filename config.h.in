@@ -1,5 +1,8 @@
-/* $Id: config.h.in,v 1.8 2004/03/19 22:45:23 manu Exp $ */
+/* $Id: config.h.in,v 1.9 2004/03/21 20:17:48 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
+
+/* Build environnement */
+#undef BUILD_ENV
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
@@ -161,6 +164,9 @@
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef pid_t
+
+/* Define to `unsigned' if <sys/types.h> does not define. */
+#undef size_t
 
 /* Define as `fork' if `vfork' does not work. */
 #undef vfork

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.42 2004/03/21 10:08:43 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.43 2004/03/21 20:17:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.42 2004/03/21 10:08:43 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.43 2004/03/21 20:17:48 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -347,7 +347,7 @@ main(argc, argv)
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "a:vDd:qw:f:hp:Tu:")) != -1) {
+	while ((ch = getopt(argc, argv, "a:vDd:qw:f:hp:Tu:r")) != -1) {
 		switch (ch) {
 		case 'a':
 			if (optarg == NULL) {
@@ -364,6 +364,12 @@ main(argc, argv)
 
 		case 'q':
 			quiet = 1;
+			break;
+
+		case 'r':
+			printf("milter-greylist-%s %s\n", 
+			    PACKAGE_VERSION, BUILD_ENV);
+			exit(EX_OK);
 			break;
 
 		case 'u': {

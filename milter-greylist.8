@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.17 2004/03/21 09:37:38 manu Exp $
+.\" $Id: milter-greylist.8,v 1.18 2004/03/21 20:17:48 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -42,6 +42,7 @@
 .Op Fl d Ar dumpfile
 .Op Fl f Ar configfile
 .Op Fl q
+.Op Fl r
 .Op Fl T
 .Op Fl u Ar username
 .Op Fl v
@@ -129,6 +130,10 @@ Quiet mode.
 .Nm
 will not tell SMTP clients how many time they have to wait before the
 message is accepted.
+.It Fl r
+Display 
+.Nm
+version and build environnement, then exit.
 .It Fl T
 Enable test mode. This alters the meaning of recipient lines in 
 .Pa greylist.conf ,
