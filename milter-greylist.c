@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.82 2004/05/20 19:34:19 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.83 2004/05/21 14:22:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.82 2004/05/20 19:34:19 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.83 2004/05/21 14:22:03 manu Exp $");
 #endif
 #endif
 
@@ -684,7 +684,7 @@ main(argc, argv)
 	 * Check the lockfile. This is used to detect unproper shutdown,
 	 * which is a synonym of DB corruption. Also used to prevent
 	 * multiple launch of milter-greylist.
-	 * On improper shutdwn, we reload from the text dump.
+	 * On improper shutdown, we reload from the text dump.
 	 */
 	check_lockfile();
 
