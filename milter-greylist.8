@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.13 2004/03/20 06:36:55 manu Exp $
+.\" $Id: milter-greylist.8,v 1.14 2004/03/20 06:37:29 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -54,7 +54,7 @@ a spam filtering technique proposed by Evan Harris.
 .Pp
 Grey listing works by assuming that contrarily to legitimate MTA, spam engines
 will not retry sending their junk mail on a temporary error. The filter
-will always temporarilly reject mail on a first attempt, and to 
+will always temporarily reject mail on a first attempt, and 
 accept it after some time has elapsed.
 .Pp
 If spammers ever try to resend rejected messages, we can assume they will 
@@ -63,17 +63,17 @@ send a mail to an honey pot address and get blacklisted in a distributed
 black list before the second attempt.
 .Pp
 Of course, the filter can be configured to not apply grey listing to some
-hosts or networks. You can white list friendly SMTP servers, and you should
-whitelist your own network, else your SMTP clients will have real trouble to 
+hosts or networks. You can whitelist friendly SMTP servers, and you should
+whitelist your own network, otherwise your SMTP clients will have real trouble to 
 send e-mail. Whitelisting localhost is also a must.
 .Pp
 .Nm
 works with two files. 
 .Pa greylist.conf
-is the configuration file. It holds the white list of addresses that will 
-not suffer grey list filtering.  It is readen once upon 
+is the configuration file. It holds the whitelist of addresses that will 
+not suffer grey list filtering.  It is read once upon 
 .Nm
-startup, then it will be automatically reloaded when a new message
+startup, then it will be automatically reloaded whenever a new message
 gets in and if it had been modified. You should not send
 .Nm
 a 
@@ -92,18 +92,18 @@ The second file is
 .Nm
 will regularly dump its grey list database into this file, which is used
 on startup to restore the previous grey list state. If the file does not
-exists or is unreadable, 
+exist or is unreadable, 
 .Nm
 will start with an empty grey list. 
 .Pp
 The following options are available:
 .Bl -tag -width flag
 .It Fl a Ar delay
-Condifugre auto-whitelisting. After a tuple (sender IP, sender e-mail, 
+Configure auto-whitelisting. After a tuple (sender IP, sender e-mail, 
 recipient e-mail) has been accepted, other identical tuples will get
 accepted for 
 .Ar delay 
-seconds. The default is 84600 seconds (one day). Use zero to disable 
+seconds. The default is 86400 seconds (one day). Use zero to disable 
 auto-whitelisting.
 .It Fl D
 Do not fork and run in the foreground. Without this flag, 
@@ -126,7 +126,7 @@ This option is mandatory.
 .It Fl q
 Quiet mode. 
 .Nm
-will not tell SMTP client how many time they have to wait before the
+will not tell SMTP clients how many time they have to wait before the
 message is accepted.
 .It Fl T
 Enable test mode. This alters the meaning of recipient lines in 
@@ -164,16 +164,16 @@ When peers are configured,
 will listen on port defined for the mxglsync service in
 .Pa /etc/services 
 (defaults to 5252), and it will connect to peers at this port. Each time 
-an entry will be added or deleted on one MX, it will be propagated on 
+an entry will be added or deleted on one MX, it will be propagated to 
 the others. 
 .Pp
 The protocol is quite simple, just
 telnet to your MX at port 5252, and type help to see how it works. Note that
-connexions will only be accepted from peer MX's, even localhost will be
-rejected (and don't ever add localhost as a peer for MX sync, you will 
+connections will only be accepted from peer MX's, even localhost will be
+rejected (and don't ever add localhost as a peer for MX sync, as you will 
 cause each entry in the greylist to be added twice).
 .Pp
-If a MX is down, changes to the greylist will be queued until it gets
+If an MX is down, changes to the greylist will be queued until it gets
 back up again.
 .Sh AUTHOR
 .An Emmanuel Dreyfus Aq manu@netbsd.org
