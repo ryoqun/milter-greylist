@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.34 2004/04/01 09:31:34 manu Exp $ */
+/* $Id: except.c,v 1.35 2004/04/01 20:36:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.34 2004/04/01 09:31:34 manu Exp $");
+__RCSID("$Id: except.c,v 1.35 2004/04/01 20:36:00 manu Exp $");
 #endif
 #endif
 
@@ -51,6 +51,7 @@ __RCSID("$Id: except.c,v 1.34 2004/04/01 09:31:34 manu Exp $");
 #include <string.h>
 #include <strings.h>
 #include <syslog.h>
+#include <regex.h>
 #include <pthread.h>
 #include <sysexits.h>
 #include <sys/socket.h>
@@ -162,6 +163,86 @@ except_add_rcpt(email)	/* exceptlist must be write-locked */
 	return;
 }
 
+#define ERRLEN 1024
+void
+except_add_from_regex(regexstr)	/* exceptlist must be write-locked */
+	char *regexstr;
+{
+	struct except *except;
+	size_t len;
+	int error;
+	char errstr[ERRLEN + 1];
+
+	/* 
+	 * Strip leading and trailing slashes
+	 */
+	len = strlen(regexstr);
+	if (len > 0)
+		regexstr[len - 1] = '\0';
+	regexstr++;
+
+	if ((except = malloc(sizeof(*except))) == NULL) {
+		perror("cannot allocate memory");
+		exit(EX_OSERR);
+	}
+		
+	if ((error = regcomp(&except->e_from_re, regexstr, 0)) != 0) {
+		regerror(error, &except->e_from_re, errstr, ERRLEN);
+		fprintf(stderr, "bad regular expression \"s\": %s\n", 
+		    regexstr, errstr);
+		free(except);
+		exit(EX_OSERR);
+	}
+
+	except->e_type = E_FROM_RE;
+	LIST_INSERT_HEAD(&except_head, except, e_list);
+
+	if (conf.c_debug)
+		printf("load exception from regex %s\n", regexstr);
+
+	return;
+}
+
+void
+except_add_rcpt_regex(regexstr)	/* exceptlist must be write-locked */
+	char *regexstr;
+{
+	struct except *except;
+	size_t len;
+	int error;
+	char errstr[ERRLEN + 1];
+
+	/* 
+	 * Strip leading and trailing slashes
+	 */
+	len = strlen(regexstr);
+	if (len > 0)
+		regexstr[len - 1] = '\0';
+	regexstr++;
+
+	if ((except = malloc(sizeof(*except))) == NULL) {
+		perror("cannot allocate memory");
+		exit(EX_OSERR);
+	}
+		
+	if ((error = regcomp(&except->e_rcpt_re, regexstr, 0)) != 0) {
+		regerror(error, &except->e_from_re, errstr, ERRLEN);
+		fprintf(stderr, "bad regular expression \"s\": %s\n", 
+		    regexstr, errstr);
+		free(except);
+		exit(EX_OSERR);
+	}
+
+	except->e_type = E_RCPT_RE;
+	LIST_INSERT_HEAD(&except_head, except, e_list);
+
+	if (conf.c_debug)
+		printf("load exception rcpt regex %s\n", regexstr);
+
+	return;
+}
+
+
 int 
 except_rcpt_filter(rcpt, queueid)
 	char *rcpt;
@@ -185,15 +266,22 @@ except_rcpt_filter(rcpt, queueid)
 		retval = EXF_NONE;
 
 	LIST_FOREACH(ex, &except_head, e_list) {
-		if (ex->e_type != E_RCPT)
-			continue;
-
 		/*
 		 * If we find it in the list this means:
 		 * for testmode: that it is not whitelisted
 		 * for normal mode: that it is whitelisted
 		 */
-		if (emailcmp(rcpt, ex->e_rcpt) == 0) {
+		if ((ex->e_type == E_RCPT) &&
+		    (emailcmp(rcpt, ex->e_rcpt) == 0)) {
+			if (testmode)
+				retval = EXF_NONE;
+			else
+				retval = EXF_RCPT;
+			break;
+		}
+
+		if ((ex->e_type == E_RCPT_RE) &&
+		    (regexec(&ex->e_rcpt_re, rcpt, 0, NULL, 0) == 0)) {
 			if (testmode)
 				retval = EXF_NONE;
 			else
@@ -249,6 +337,15 @@ except_sender_filter(in, from, queueid)
 			}
 			break;
 
+		case E_FROM_RE:
+			if (regexec(&ex->e_from_re, from, 0, NULL, 0) == 0) {
+				syslog(LOG_INFO, "%s: sender %s is in "
+				    "exception list", queueid, from);
+				retval = EXF_FROM;
+				goto out;
+			}
+			break;
+
 		default:
 			syslog(LOG_ERR, "corrupted exception list");
 			exit(EX_SOFTWARE);
@@ -293,6 +390,13 @@ except_clear(void) {	/* exceptlist must be write locked */
 	while(!LIST_EMPTY(&except_head)) {
 		except = LIST_FIRST(&except_head);
 		LIST_REMOVE(except, e_list);
+
+		if (except->e_type == E_FROM_RE)
+			regfree(&except->e_from_re);
+
+		if (except->e_type == E_RCPT_RE)
+			regfree(&except->e_rcpt_re);
+
 		free(except);
 	}
 

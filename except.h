@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.18 2004/04/01 09:31:34 manu Exp $ */
+/* $Id: except.h,v 1.19 2004/04/01 20:36:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -41,6 +41,7 @@
 
 #include <stdio.h>
 #include <pthread.h>
+#include <regex.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
@@ -55,11 +56,13 @@
 
 LIST_HEAD(exceptlist, except);
 
-typedef enum { E_NETBLOCK, E_FROM, E_RCPT } except_type_t;
+typedef enum { E_NETBLOCK, E_FROM, E_RCPT, E_FROM_RE, E_RCPT_RE } except_type_t;
 #define e_addr e_data.d_netblock.nb_addr
 #define e_mask e_data.d_netblock.nb_mask
 #define e_from e_data.d_from
 #define e_rcpt e_data.d_rcpt
+#define e_from_re e_data.d_from_re
+#define e_rcpt_re e_data.d_rcpt_re
 struct except {
 	except_type_t e_type;
 	union {
@@ -69,6 +72,8 @@ struct except {
 		} d_netblock;
 		char d_from[ADDRLEN + 1];
 		char d_rcpt[ADDRLEN + 1];
+		regex_t d_from_re;
+		regex_t d_rcpt_re;
 	} e_data;
 	LIST_ENTRY(except) e_list;
 };
@@ -81,6 +86,8 @@ void except_clear(void);
 void except_add_netblock(struct in_addr *, int);
 void except_add_from(char *);
 void except_add_rcpt(char *);
+void except_add_from_regex(char *);
+void except_add_rcpt_regex(char *);
 int except_rcpt_filter(char *, char *);
 int except_sender_filter(struct in_addr *, char *, char *);
 

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.70 2004/04/01 14:42:26 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.71 2004/04/01 20:36:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.70 2004/04/01 14:42:26 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.71 2004/04/01 20:36:00 manu Exp $");
 #endif
 #endif
 
@@ -635,7 +635,7 @@ main(argc, argv)
 
 	
 	if (conf.c_socket == NULL) {
-		fprintf(stderr, "%s: No socket provided, exitting", argv[0]);
+		fprintf(stderr, "%s: No socket provided, exitting\n", argv[0]);
 		usage(argv[0]);
 	}
 	cleanup_sock(conf.c_socket);

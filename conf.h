@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.10 2004/03/31 17:02:08 manu Exp $ */
+/* $Id: conf.h,v 1.11 2004/04/01 20:36:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -50,6 +50,13 @@
 
 #ifndef CONFFILE
 #define CONFFILE "/etc/mail/greylist.conf"
+#endif
+
+/* 
+ * Some heavily brain-damaged systems have no in_addr_t
+ */
+#ifndef in_addr_t
+typedef __uint32_t in_addr_t
 #endif
 
 struct conf {

@@ -32,6 +32,7 @@ user		[Uu][Ss][Ee][Rr]:?
 nodetach	[Nn][Oo][Dd][Ee][Tt][Aa][Cc][Hh]
 delay		[0-9]{1,}[smhdw]?
 path		"\""[^"\n]{1,}"\""
+regex		"/"[^/\n]{1,}"/"
 
 %{
 	#include "config.h"
@@ -40,7 +41,7 @@ path		"\""[^"\n]{1,}"\""
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.12 2004/04/01 07:19:25 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.13 2004/04/01 20:36:00 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -96,6 +97,11 @@ path		"\""[^"\n]{1,}"\""
 				exit(EX_DATAERR);
 			}
 			return IPADDR; 
+		}
+{regex}		{
+			strncpy(yylval.regex, yytext, REGEXLEN);
+			yylval.regex[PATHLEN] = '\0';
+			return REGEX;
 		}
 {cidr}		{ 
 			yylval.cidr = atoi(yytext + 1);

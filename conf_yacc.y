@@ -1,4 +1,4 @@
-%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH DELAY SUBNETMATCH SOCKET USER NODETACH
+%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH DELAY SUBNETMATCH SOCKET USER NODETACH REGEX
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.10 2004/03/31 14:12:49 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.11 2004/04/01 20:36:00 manu Exp $");
 #endif
 #endif
 
@@ -26,17 +26,21 @@ void conf_error(char *);
 	char email[ADDRLEN + 1];
 	char path[PATHLEN + 1];
 	char delay[NUMLEN + 1];
+	char regex[REGEXLEN + 1];
 	}
 %type <ipaddr> IPADDR;
 %type <cidr> CIDR;
 %type <email> EMAIL;
 %type <delay> DELAY;
 %type <path> PATH;
+%type <regex> REGEX;
 
 %%
 lines	:	lines netblock '\n' 
 	|	lines fromaddr '\n' 
 	|	lines rcptaddr '\n' 
+	|	lines fromregex '\n' 
+	|	lines rcptregex '\n' 
 	|	lines peeraddr '\n' 
 	|	lines verbose '\n' 
 	|	lines quiet '\n' 
@@ -59,6 +63,10 @@ netblock:	ADDR IPADDR CIDR{ except_add_netblock(&$2, $3); }
 fromaddr:	FROM EMAIL	{ except_add_from($2); }
 	;
 rcptaddr:	RCPT EMAIL	{ except_add_rcpt($2); }
+	;
+fromregex:	FROM REGEX	{ except_add_from_regex($2); }
+	;
+rcptregex:	RCPT REGEX	{ except_add_rcpt_regex($2); }
 	;
 peeraddr:	PEER IPADDR	{ peer_add(&$2); }
 	;
