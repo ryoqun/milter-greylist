@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.8 2004/03/21 23:51:47 manu Exp $ */
+/* $Id: sync.h,v 1.9 2004/03/30 11:40:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,8 +29,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MXGLSYNC_H_
-#define _MXGLSYNC_H_
+#ifndef _SYNC_H_
+#define _SYNC_H_
 
 #include "pending.h"
 #include "milter-greylist.h"
@@ -98,4 +98,4 @@ void sync_help(FILE *);
 int sync_waitdata(int);
 
 
-#endif /* _MXGLSYNC_H_ */
+#endif /* _SYNC_H_ */
