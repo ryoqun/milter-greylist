@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.57 2004/05/26 09:14:29 manu Exp $ */
+/* $Id: pending.c,v 1.58 2004/06/03 12:56:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.57 2004/05/26 09:14:29 manu Exp $");
+__RCSID("$Id: pending.c,v 1.58 2004/06/03 12:56:41 manu Exp $");
 #endif
 #endif
 
@@ -247,7 +247,7 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 		/*
 		 * Check for expired entries 
 		 */
-		if (now - accepted > TIMEOUT) {
+		if (now - accepted > conf.c_timeout) {
 			if (conf.c_debug) {
 				syslog(LOG_DEBUG, 
 				    "check: %s from %s to %s timed out", 
