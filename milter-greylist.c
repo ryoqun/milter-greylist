@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.90 2004/05/26 21:50:13 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.91 2004/06/12 08:58:28 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.90 2004/05/26 21:50:13 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.91 2004/06/12 08:58:28 manu Exp $");
 #endif
 #endif
 
@@ -150,6 +150,8 @@ mlfi_envfrom(ctx, envfrom)
 	SMFICTX *ctx;
 	char **envfrom;
 {
+	char tmpfrom[ADDRLEN + 1];
+	char *idx;
 	struct mlfi_priv *priv;
 	char *auth_authen;
 	char *verify;
@@ -165,7 +167,19 @@ mlfi_envfrom(ctx, envfrom)
 	/*
 	 * Strip spaces from the source address
 	 */
-	strncpy_rmsp(priv->priv_from, *envfrom, ADDRLEN);
+	strncpy_rmsp(tmpfrom, *envfrom, ADDRLEN);
+	tmpfrom[ADDRLEN] = '\0';
+
+	/* 
+	 * Strip anything before the last '=' in the
+	 * source address. This avoid problems with
+	 * mailing lists using a unique sender address
+	 * for each retry.
+	 */
+	if ((idx = rindex(tmpfrom, '=')) == NULL)
+		idx = tmpfrom;
+
+	strncpy(priv->priv_from, idx, ADDRLEN);
 	priv->priv_from[ADDRLEN] = '\0';
 
 	/*

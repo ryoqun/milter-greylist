@@ -1,4 +1,5 @@
 1.5.1:
+	Handle mailing lists with unique sender by removing '^.*=' from sender
 	Minor bug fixes in queue management from Wolfgang Solfrank
 1.3.9:
 	Solaris rc script from Christian Pelissier
