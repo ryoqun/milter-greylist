@@ -1,4 +1,5 @@
 1.1.1:
+	Add a -L flag for subnet matching (ad-hoc hack for MTA farms)
 	Use setsid() to detach from the terminal
 	Fix the mising units in ps output for -a and -w
 	Fix typos
