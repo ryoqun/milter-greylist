@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.11 2004/03/03 16:52:04 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.12 2004/03/03 19:17:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -100,7 +100,6 @@ mlfi_connect(ctx, hostname, addr)
 		    inet_ntop(AF_INET, &priv->priv_addr, 
 		    addrstr, IPADDRLEN));
 
-
 	return SMFIS_CONTINUE;
 }
 
@@ -174,12 +173,25 @@ mlfi_eom(ctx)
 	struct mlfi_priv *priv;
 	char hdr[HDRLEN + 1];
 	int h, mn, s;
+	char *fqdn = NULL;
+	char *ip = NULL;
+	char time[HDRLEN + 1];
+	struct timeval tv;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
+	if (((fqdn = smfi_getsymval(ctx, "{j}")) == NULL) ||
+	    ((ip = smfi_getsymval(ctx, "{if_addr}")) == NULL))
+		syslog(LOG_ERR, "Option \"O Milter.macros.connect="
+		    "j,{if_addr}\" missing in sendmail.cf\n");
+
+	(void)gettimeofday(&tv, NULL);
+	strftime(time, HDRLEN, "%a, %d %b %Y %T %z", localtime(&tv.tv_sec));
+
 	if (priv->priv_elapsed == 0) {
-		snprintf(hdr, HDRLEN, "Not delayed by milter-greylist-%s "
-		    "[whitelist]", PACKAGE_VERSION);
+		snprintf(hdr, HDRLEN, "Whitelisted, not "
+		    "delayed by milter-greylist-%s (%s [%s]); %s",
+		    PACKAGE_VERSION, fqdn, ip, time);
 
 		smfi_addheader(ctx, HEADERNAME, hdr);
 
@@ -193,8 +205,8 @@ mlfi_eom(ctx)
 	s = priv->priv_elapsed;
 
 	snprintf(hdr, HDRLEN,
-	    "Delayed for %02d:%02d:%02d by milter-greylist-%s", 
-	    h, mn, s, PACKAGE_VERSION);
+	    "Delayed for %02d:%02d:%02d by milter-greylist-%s (%s [%s]); %s", 
+	    h, mn, s, PACKAGE_VERSION, fqdn, ip, time);
 	smfi_addheader(ctx, HEADERNAME, hdr);
 
 	return SMFIS_CONTINUE;

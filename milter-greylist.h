@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.6 2004/03/03 16:52:04 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.7 2004/03/03 19:17:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <libmilter/mfapi.h>
 
-#define HDRLEN 80
+#define HDRLEN 160
 #define HEADERNAME "X-Greylist"
 
 struct mlfi_priv {

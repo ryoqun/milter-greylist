@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.14 2004/03/03 18:21:29 manu Exp $
+# $Id: configure.ac,v 1.15 2004/03/03 19:17:39 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -48,6 +48,7 @@ AC_HEADER_TIME
 
 # Checks for library functions.
 AC_FUNC_FORK
+AC_FUNC_STRFTIME
 AC_FUNC_MALLOC
 AC_FUNC_STAT
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror])
