@@ -1,9 +1,9 @@
-# $Id: README,v 1.31 2004/12/17 22:37:43 manu Exp $
+# $Id: README,v 1.32 2004/12/29 21:33:35 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/12/17 22:37:43 $
+		       $Date: 2004/12/29 21:33:35 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -26,12 +26,18 @@ Build dependencies:
 Optionnal dependencies: 
 - libspf2, libspf_alt or libspf.
 
+Before building milter-greylist, it might be wise to view the
+configuration options by running:
+./configure -help
+
 To build milter-greylist, just do the usual 
 ./configure && make && make install
 
 If libpthread and libmilter are not automatically located, use
 --with-libpthread and --with-libmilter flags to the configure
-script.  If you intend to run milter-greylist under an unprivileged
+script.
+
+If you intend to run milter-greylist under an unprivileged
 UID, use the --with-user flag.
 
 A Makefile is supplied in the distribution in case you run into real 
@@ -46,7 +52,7 @@ a file. In that case the original file is preserved.
 
 Some startup scripts are available: rc-redhat.sh, rc-debian, rc-gentoo.sh,
 and rc-suse.sh for Linux and rc-bsd.sh for NetBSD and FreeBSD. They are 
-not installed by default, you have install the startup script by hand if 
+not installed by default; you have install the startup script by hand if 
 you want to use one.
 
 
@@ -103,7 +109,7 @@ acl whitelist addr 10.0.0.0/8
 Then consider adding addresses of all the friendly network you get
 mail from. By friendly network, we mean network with no spammers:
 Universities are usually friendly, some companies are friendly,
-some other are not, and dial-up and ADSL ISP are definitively not
+some other are not, and dial-up and ADSL ISPs are definitively not
 friendly at all.
 
 
@@ -126,6 +132,9 @@ acl whitelist default
 Now you can start milter-greylist:
 
 milter-greylist -u smmsp -p /var/milter-greylist/milter-greylist.sock
+
+If you have trouble with the socket file, check the permissions of
+the directory where the socket is located.
 
 You might want to add -v and -D to get more debugging output. The
 -w flag is used to choose how long we will refuse a given message.
@@ -180,37 +189,37 @@ document: Building with SPF
 
 Another workaround is simply to whitelist the netblocks allocated to 
 mail farms. As any machine in theses IP address ranges are real SMTP 
-servers that will always resend their messages, there is no point into 
+servers that will always resend their messages, there is no point in 
 greylisting them.
 
 
  7 Working with multiple MX
  ===========================
 
-When running several MX, the client should try each server after
+When running several MXs, the client should try each server after
 its message gets refused, thus causing greylist entries creation 
-on each MX. Things should work, but with two minors problems:
+on each MX. Things should work, but with two minor problems:
 
-* Some stupid clients don't try all the available MX. In that 
+* Some stupid clients don't try all the available MXs. In that 
   situation, it could take some time before the message gets in,
   as the client might try a different MX each time and wait for 
   several hours between the retries.
 
-* After a messages goes in, its entry is removed for one MX, 
+* After a messages is accepted, its entry is removed for one MX, 
   but not the others. Stale entries remain until being flushed
   because of a timeout. If a message with the same {IP, from, rcpt}
-  gets in on a MX with a stale entry, it will be accepted 
+  gets in on an MX with a stale entry, it will be accepted 
   immediately, and the X-Greylist header will report it had been
   delayed for some time.
 
-In order to address those issues, milter-greylist is now able to
-sync the greylist among different MX. This can be configured in
-the greylist.conf file, by adding one line per peer MX, just 
+In order to address these issues, milter-greylist is now able to
+sync the greylist among different MXs. This can be configured in
+the greylist.conf file, by adding one line per peer MX,  
 like this:
 peer 192.0.2.17
 peer 192.0.2.18
 
-If you have firewalls between your MX, you should enable TCP 
+If you have firewalls between your MXs, you should enable TCP 
 connections in both directions between random unprivileged 
 source ports and destination port 5252.
 
@@ -255,11 +264,30 @@ source tarball: rpmbuild -bb  milter-greylist-1.7.3.tgz
 
 First, read the milter-greylist(8) and greylist.conf(5) man page! :-)
 
-Each message will get a X-Greylist header indicating how long the
-message has been delayed. It looks like this:
+Second, reread the installation notes at the beginning this file! ;-)
 
-X-Greylist: Delayed for 00:53:21 by milter-greylist-0.7 (mail.example.net
-	    [192.0.2.16]); Wed, 3 Mar 2004 17:01:06 -0000
+Each message will get an X-Greylist header indicating either how long the
+message has been delayed, or that it has been passed through because of
+whitelisting. It looks something like this:
+
+For messages which were delayed because of greylisting:
+  X-Greylist: Delayed for 00:53:21 by milter-greylist-M.m
+      (mail.example.net [192.0.2.16]); Wed, 3 Mar 2004 17:01:06 -0000
+
+For messages which were not delayed because of whitelisting (e.g. they
+are whitelisted in the configuration file):
+  X-Greylist: Sender IP whitelisted, not delayed by milter-greylist-M.m
+      (mail.example.net [192.0.2.16]); Wed, 3 Mar 2004 17:01:06 -0000
+  X-Greylist: Sender DNS name whitelisted, not delayed by milter-greylist-M.m
+      (mail.example.net [192.0.2.16]); Wed, 3 Mar 2004 17:01:06 -0000
+
+For messages which were not delayed because of auto-whitelisting from a
+previously resent and accepted message:
+  X-Greylist: IP, sender and recipient auto-whitelisted, not delayed by
+      milter-greylist-M.m (mail.example.net [192.0.2.16]); Wed, 3 Mar 2004
+      17:01:06 -0000
+
+where M.m is the major and minor version number of milter-greylist.
 
 The file /var/milter-greylist/greylist.db is a dump of the greylist.
 It is done on each change and is used to restore state after
@@ -277,6 +305,8 @@ At the end of the file, you will find entries with the keyword AUTO
 at the end of the line. Theses are auto-whitelisted tuples. The date
 tells you when the entry will expire.
 
+Examining the tail of this file may reveal problems with domains which
+use multiple MX servers or whose mail is actually served by another site.
 
  11 Known problems
  =================
@@ -284,18 +314,18 @@ tells you when the entry will expire.
 If milter-greylist terminates during its operation, first check your
 system limits with ulimit (sh/ksh/bash) or limit (csh/tcsh). As it stores 
 all its database in memory, milter-greylist can eat a large amount of 
-memory on a busy mail server. Each incoming connexion uses a socket, so
+memory on a busy mail server. Each incoming connection uses a socket, so
 file descriptors can easily be exhausted too. Any ressource shortage will
-cause milter-greylist to quit. This is not specific to milter-greylist, 
+cause milter-greylist to quit. This is not specific to milter-greylist; 
 all milters do that.
 
-When SPF support is compiled in, if milter-greylist hangs and/or crash
+When SPF support is compiled in, if milter-greylist hangs and/or crashes
 regularly, check that you linked your SPF library with a thread-safe
 resolver. This can be done by running nm(1) on milter-greylist: if
-nres_init is referenced, you are fine. if res_init is referenced, you 
+nres_init is referenced, you are fine.  If res_init is referenced, you 
 are probably at risk.
 
-On Solaris 2.8, milter-greylist may grow out of memory pretty quickly 
+On Solaris 2.8, milter-greylist may grow out of memory rather quickly 
 due to some bugs in the pthread nsl and socket libraries. It is strongly 
 recommended that you install the latest revision of patch 108993 (sparc) 
 or 108994 (x86). Solaris 9 and later do not seem to be affected.
@@ -304,9 +334,9 @@ Solaris patches are available from <http://sunsolve.sun.com/>
 On Solaris, and on some IRIX releases, the file descriptor field 
 of <stdio.h>'s FILE structure is a char, and thus no more than 255 
 streams can be open at once. This will cause failures in milter-greylist 
-when handling a large amount of connexions. If you are not sure whether 
-your system is affected or not, check your system headers for FILE 
-definition. On Solaris, the problem only exist with the 32 bit ABI, 
+when handling a large number of connexions. If you are not sure whether 
+your system is affected or not, check your system headers for the FILE 
+definition. On Solaris, the problem only exists with the 32 bit ABI, 
 so rebuilding milter-greylist with a 64 bit compiler will fix the problem.
 
 
@@ -360,7 +390,7 @@ install-sh has a MIT BSD-like license:
   without express or implied warranty.
 
 
-queue.h has a 4 clauses BSD license:
+queue.h has a 4 clause BSD license:
   Copyright (c) 1991, 1993
  	The Regents of the University of California.  All rights reserved.
  
