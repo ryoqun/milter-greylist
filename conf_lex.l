@@ -5,7 +5,7 @@
 
 byte		[0-9]{1,3}
 ipaddr		{byte}"."{byte}"."{byte}"."{byte}
-cidr		{byte}
+cidr		"/"{byte}
 atext		[A-Za-z0-9!#$%&'*+/=?$^_`}{|~.-]{1,}
 qtext		"\""[!-~]{1,}"\""
 mailbox		{atext}|{qtext}
@@ -17,7 +17,17 @@ addr		[Aa][Dd][Dd][Rr]:?
 from		[Ff][Rr][Oo][Mm]:?
 rcpt		[Rr][Cc][Pp][Tt]:?
 peer		[Pp][Ee][Ee][Rr]:?
-
+verbose		[Vv][Ee][Rr][Bb][Oo][Ss][Ee]
+quiet		[Qq][Uu][Ii][Ee][Tt]
+noauth		[Nn][Oo][Aa][Uu][Tt][Hh]
+nospf		[Nn][Oo][Ss][Pp][Ff]
+testmode	[Tt][Ee][Ss][Tt][Mm][Oo][Dd][Ee]
+greylist	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt]:?		
+autowhite	[Aa][Uu][Tt][Oo][Ww][Hh][Ii][Tt][Ee]:?
+pidfile		[Pp][Ii][Dd][Ff][Ii][Ll][Ee]:?
+dumpfile	[Dd][Uu][Mm][Pp][Ff][Ii][Ll][Ee]:?
+delay		[0-9]{1,}[smhdw]?
+path		"\""[^"\n]{1,}"\""
 %{
 
 /* mailbox		[A-Za-z0-9!#$%&'"*+/=?$^_`}{|~\-]+ */
@@ -27,7 +37,7 @@ peer		[Pp][Ee][Ee][Rr]:?
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.6 2004/03/28 19:54:18 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.7 2004/03/31 09:49:16 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -44,11 +54,29 @@ peer		[Pp][Ee][Ee][Rr]:?
 %%
 {blank}
 {comment}
-"/"		{ return yytext[0]; }
 {addr}		{ return ADDR; }
 {from}		{ return FROM; }
 {rcpt}		{ return RCPT; }
 {peer}		{ return PEER; }
+{autowhite}	{ return AUTOWHITE; }
+{greylist}	{ return GREYLIST; }
+{noauth}	{ return NOAUTH; }
+{nospf}		{ return NOSPF; }
+{quiet}		{ return QUIET; }
+{testmode}	{ return TESTMODE; }
+{verbose}	{ return VERBOSE; }
+{pidfile}	{ return PIDFILE; }
+{dumpfile}	{ return DUMPFILE; }
+{path}		{
+			strncpy(yylval.path, yytext, PATHLEN);
+			yylval.delay[PATHLEN] = '\0';
+			return PATH;
+		}
+{delay}		{
+			strncpy(yylval.delay, yytext, NUMLEN);
+			yylval.delay[NUMLEN] = '\0';
+			return DELAY;
+		}
 {email}		{
 			strncpy(yylval.email, yytext, ADDRLEN);
 			yylval.email[ADDRLEN] = '\0';
@@ -63,7 +91,7 @@ peer		[Pp][Ee][Ee][Rr]:?
 			return IPADDR; 
 		}
 {cidr}		{ 
-			yylval.cidr = atoi(yytext);
+			yylval.cidr = atoi(yytext + 1);
 			return CIDR; 
 		}
 \n		{ 

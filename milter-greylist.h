@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.22 2004/03/22 17:55:25 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.23 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -36,6 +36,8 @@
 #include "config.h"
 #include "dump.h"
 
+#define NUMLEN 20
+#define PATHLEN 1024
 #define HDRLEN 160
 #define HEADERNAME "X-Greylist"
 
@@ -47,14 +49,13 @@ struct mlfi_priv {
 	char *priv_queueid;
 };
 
-extern int debug;
-
 sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);
 sfsistat mlfi_envfrom(SMFICTX *, char **);
 sfsistat mlfi_envrcpt(SMFICTX *, char **);
 sfsistat mlfi_eom(SMFICTX *);
 sfsistat mlfi_close(SMFICTX *);
 void usage(char *);
+int humanized_atoi(char *);
 void cleanup_sock(char *);
 int main(int, char **);
 

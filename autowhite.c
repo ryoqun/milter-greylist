@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.17 2004/03/29 15:21:25 manu Exp $ */
+/* $Id: autowhite.c,v 1.18 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.17 2004/03/29 15:21:25 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.18 2004/03/31 09:49:16 manu Exp $");
 #endif
 #endif
 
@@ -57,12 +57,11 @@ __RCSID("$Id: autowhite.c,v 1.17 2004/03/29 15:21:25 manu Exp $");
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "conf.h"
 #include "except.h"
 #include "pending.h"
 #include "dump.h"
 #include "autowhite.h"
-
-time_t autowhite_validity = AUTOWHITE_VALIDITY;
 
 struct autowhitelist autowhite_head;
 pthread_rwlock_t autowhite_lock;
@@ -91,10 +90,11 @@ autowhite_add(in, from, rcpt, date, queueid)
 	struct autowhite *prev_aw = NULL;
 	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
+	time_t autowhite_validity;
 	int h, mn, s;
 	int dirty = 0;
 
-	if (autowhite_validity == 0)
+	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
 		return;
 
 	gettimeofday(&now, NULL);
@@ -183,10 +183,11 @@ autowhite_check(in, from, rcpt, queueid)
 	struct autowhite *prev_aw = NULL;
 	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
+	time_t autowhite_validity;
 	int h, mn, s;
 	int dirty = 0;
 
-	if (autowhite_validity == 0)
+	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
 		return EXF_NONE;
 
 	gettimeofday(&now, NULL);
@@ -294,6 +295,7 @@ autowhite_get(in, from, rcpt, date) /* autowhite list must be locked */
 {
 	struct autowhite *aw;
 	struct timeval now, delay;
+	time_t autowhite_validity;
 
 	gettimeofday(&now, NULL);
 	delay.tv_sec = autowhite_validity;

@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.34 2004/03/30 11:43:46 manu Exp $ */
+/* $Id: sync.c,v 1.35 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.34 2004/03/30 11:43:46 manu Exp $");
+__RCSID("$Id: sync.c,v 1.35 2004/03/31 09:49:16 manu Exp $");
 #endif
 #endif
 
@@ -56,6 +56,7 @@ __RCSID("$Id: sync.c,v 1.34 2004/03/30 11:43:46 manu Exp $");
 
 #include "pending.h"
 #include "sync.h"
+#include "conf.h"
 #include "autowhite.h"
 #include "milter-greylist.h"
 
@@ -133,7 +134,7 @@ peer_add(addr)
 	LIST_INSERT_HEAD(&peer_head, peer, p_list);
 	PEER_UNLOCK;
 
-	if (debug)
+	if (conf.c_debug)
 		printf("load peer %s\n", peer->p_name);
 		    
 
@@ -850,7 +851,7 @@ sync_sender(dontcare)
 		if (pthread_cond_wait(&sync_sleepflag, &mutex) != 0)
 			syslog(LOG_ERR, "pthread_cond_wait failed: %s\n", 
 			    strerror(errno));
-		if (debug) {
+		if (conf.c_debug) {
 			syslog(LOG_DEBUG, "sync_sender running");
 			gettimeofday(&tv1, NULL);
 		}
@@ -893,7 +894,7 @@ sync_sender(dontcare)
 out:
 		PEER_UNLOCK;
 
-		if (debug) {
+		if (conf.c_debug) {
 			gettimeofday(&tv2, NULL);
 			timersub(&tv2, &tv1, &tv3);
 			syslog(LOG_DEBUG, "sync_sender sleeping, "

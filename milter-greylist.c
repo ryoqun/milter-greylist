@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.61 2004/03/30 15:59:32 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.62 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.61 2004/03/30 15:59:32 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.62 2004/03/31 09:49:16 manu Exp $");
 #endif
 #endif
 
@@ -75,15 +75,9 @@ __RCSID("$Id: milter-greylist.c,v 1.61 2004/03/30 15:59:32 manu Exp $");
 #include "autowhite.h"
 #include "milter-greylist.h"
 
-int debug = 0;
 int dont_fork = 0;
-int quiet = 0;
-int noauth = 0;
-int nospf = 0;
-char *pidfile = NULL;
 
 static char *strncpy_rmsp(char *, char *, size_t);
-static int humanized_atoi(char *);
 static char *gmtoffset(time_t *, char *, size_t);
 static void writepid(char *);
 
@@ -141,7 +135,7 @@ mlfi_envfrom(ctx, envfrom)
 	/*
 	 * Is the user authenticated?
 	 */
-	if ((noauth == 0) &&
+	if ((conf.c_noauth == 0) &&
 	    ((auth_authen = smfi_getsymval(ctx, "{auth_authen}")) != NULL)) {
 		syslog(LOG_DEBUG, 
 		    "User %s authenticated, bypassing greylisting", 
@@ -152,7 +146,7 @@ mlfi_envfrom(ctx, envfrom)
 	/*
 	 * Is the sender address SPF-compliant?
 	 */
-	if ((nospf == 0) && 
+	if ((conf.c_nospf == 0) && 
 	    (SPF_CHECK(&priv->priv_addr, *envfrom) != EXF_NONE)) {
 		char ipstr[IPADDRLEN + 1];
 
@@ -191,7 +185,7 @@ mlfi_envrcpt(ctx, envrcpt)
 		priv->priv_queueid = "(unkown id)";
 	}
 	
-	if (debug)
+	if (conf.c_debug)
 		syslog(LOG_DEBUG, "%s: addr = %s, from = %s, rcpt = %s", 
 		    priv->priv_queueid, inet_ntoa(priv->priv_addr), 
 		    priv->priv_from, *envrcpt);
@@ -287,7 +281,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	    inet_ntop(AF_INET, &priv->priv_addr, addrstr, IPADDRLEN),
 	    priv->priv_from, *envrcpt, h, mn, s);
 
-	if (quiet) {
+	if (conf.c_quiet) {
 		(void)smfi_setreply(ctx, "451", "4.7.1", 
 		    "Greylisting in action, please come back later");
 	} else {
@@ -423,7 +417,8 @@ main(argc, argv)
 	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rSL:")) != -1) {
 		switch (ch) {
 		case 'A':
-			noauth = 1;
+			conf.c_noauth = 1;
+			conf.c_forced |= C_NOAUTH;
 			break;
 
 		case 'a':
@@ -432,7 +427,9 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			autowhite_validity = (time_t)humanized_atoi(optarg);
+			conf.c_autowhite_validity = 
+			    (time_t)humanized_atoi(optarg);
+			conf.c_forced |= C_AUTOWHITE;
 			break;
 
 		case 'D':
@@ -440,7 +437,8 @@ main(argc, argv)
 			break;
 
 		case 'q':
-			quiet = 1;
+			conf.c_quiet = 1;
+			conf.c_forced |= C_QUIET;
 			break;
 
 		case 'r':
@@ -450,7 +448,8 @@ main(argc, argv)
 			break;
 
 		case 'S':
-			nospf = 1;
+			conf.c_nospf = 1;
+			conf.c_forced |= C_NOSPF;
 			break;
 
 		case 'u': {
@@ -471,17 +470,19 @@ main(argc, argv)
 		}
 			
 		case 'v':
-			debug = 1;
+			conf.c_debug = 1;
+			conf.c_forced |= C_DEBUG;
 			break;
 
 		case 'w':
 			if ((optarg == NULL) || 
-			    ((delay = humanized_atoi(optarg)) == 0)) {
+			    ((conf.c_delay = humanized_atoi(optarg)) == 0)) {
 				fprintf(stderr, 
 				    "%s: -w needs a positive argument\n",
 				    argv[0]);
 				usage(argv[0]);
 			}
+			conf.c_forced |= C_DELAY;
 			break;
 
 		case 'f':
@@ -508,7 +509,8 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			pidfile = optarg;
+			conf.c_pidfile = optarg;
+			conf.c_forced |= C_PIDFILE;
 			break;
 
 		case 'p':
@@ -547,7 +549,7 @@ main(argc, argv)
 				    inet_makeaddr(~((1UL << cidr) - 1), 0L);
 			}
 
-			if (debug)
+			if (conf.c_debug)
 				printf("match mask: %s\n", inet_ntop(AF_INET, 
 				    &match_mask, maskstr, IPADDRLEN));
 
@@ -555,7 +557,8 @@ main(argc, argv)
 		}
 
 		case 'T':
-			testmode = 1;	
+			conf.c_testmode = 1;	
+			conf.c_forced |= C_TESTMODE;
 			break;
 
 		case 'h':
@@ -665,8 +668,8 @@ main(argc, argv)
 	/* 
 	 * Write down our PID to a file
 	 */
-	if (pidfile != NULL)
-		writepid(pidfile);
+	if (conf.c_pidfile != NULL)
+		writepid(conf.c_pidfile);
 
 	/*
 	 * Start the dumper thread
@@ -736,8 +739,7 @@ strncpy_rmsp(dst, src, len)
 	return dst;
 }
 
-#define NUMLEN 20
-static int
+int
 humanized_atoi(str)	/* *str is modified */
 	char *str;
 {

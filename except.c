@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.30 2004/03/30 15:53:53 manu Exp $ */
+/* $Id: except.c,v 1.31 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.30 2004/03/30 15:53:53 manu Exp $");
+__RCSID("$Id: except.c,v 1.31 2004/03/31 09:49:16 manu Exp $");
 #endif
 #endif
 
@@ -63,7 +63,6 @@ __RCSID("$Id: except.c,v 1.30 2004/03/30 15:53:53 manu Exp $");
 #include "sync.h"
 #include "milter-greylist.h"
 
-int testmode = 0;
 struct exceptlist except_head;
 pthread_rwlock_t except_lock;
 
@@ -115,7 +114,7 @@ except_add_netblock(in, cidr)	/* exceptlist must be write-locked */
 	memcpy(&except->e_mask, &mask, sizeof(mask));
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
-	if (debug)
+	if (conf.c_debug)
 		printf("load exception net %s/%s\n", 
 		    (char *)inet_ntop(AF_INET, 
 		    &except->e_addr, addrstr, IPADDRLEN),
@@ -141,7 +140,7 @@ except_add_from(email)	/* exceptlist must be write-locked */
 	except->e_from[ADDRLEN] = '\0';
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
-	if (debug)
+	if (conf.c_debug)
 		printf("load exception from %s\n", email);
 
 	return;
@@ -163,7 +162,7 @@ except_add_rcpt(email)	/* exceptlist must be write-locked */
 	except->e_rcpt[ADDRLEN] = '\0';
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
-	if (debug)
+	if (conf.c_debug)
 		printf("load exception rcpt %s\n", email);
 
 	return;
@@ -178,6 +177,7 @@ except_filter(in, from, rcpt, queueid)
 {
 	struct except *ex;
 	char addrstr[IPADDRLEN + 1];
+	int testmode = conf.c_testmode;
 	int retval;
 
 	EXCEPT_RDLOCK;

@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.4 2004/03/19 10:16:38 manu Exp $ */
+/* $Id: conf.h,v 1.5 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -52,7 +52,37 @@
 #define CONFFILE "/etc/mail/greylist.conf"
 #endif
 
+struct conf {
+	int c_forced;
+	int c_debug;
+	int c_quiet;
+	int c_noauth;
+	int c_nospf;
+	int c_testmode;
+	int c_delay;
+	int c_autowhite_validity;
+	char *c_pidfile;
+	char *c_dumpfile;
+
+};
+
+/* c_forced flags */
+#define C_NONE		0x000
+#define C_DEBUG		0x001
+#define C_QUIET		0x002
+#define C_NOAUTH	0x004
+#define C_NOSPF		0x008 
+#define C_TESTMODE	0x010
+#define C_DELAY		0x020
+#define C_AUTOWHITE	0x040
+#define C_PIDFILE	0x080
+#define C_DUMPFILE	0x100
+#define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
+
+extern struct conf conf;
 extern char *conffile;
+extern char c_pidfile[PATHLEN + 1];
+extern char c_dumpfile[PATHLEN + 1];
 
 void conf_load(void);
 void conf_update(void);
@@ -60,5 +90,6 @@ void conf_update(void);
 extern FILE *conf_in;
 extern int conf_line;
 int conf_parse(void);
+char *quotepath(char *, char *, size_t);
 
 #endif /* _CONF_H_ */

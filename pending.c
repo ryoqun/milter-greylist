@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.45 2004/03/29 15:21:25 manu Exp $ */
+/* $Id: pending.c,v 1.46 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.45 2004/03/29 15:21:25 manu Exp $");
+__RCSID("$Id: pending.c,v 1.46 2004/03/31 09:49:16 manu Exp $");
 #endif
 #endif
 
@@ -64,14 +64,13 @@ __RCSID("$Id: pending.c,v 1.45 2004/03/29 15:21:25 manu Exp $");
 
 #include "sync.h"
 #include "dump.h"
+#include "conf.h"
 #include "pending.h"
 #include "autowhite.h"
 #include "milter-greylist.h"
 
 struct pendinglist pending_head;
 pthread_rwlock_t pending_lock; 	/* protects pending_head and dump_dirty */
-
-int delay = GLDELAY;
 
 struct in_addr match_mask = { 0xffffffff }; /* Default is 255.255.255.255 */
 
@@ -97,6 +96,7 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 {
 	struct pending *pending;
 	struct timeval tv;
+	int delay = conf.c_delay;
 
 	if ((pending = malloc(sizeof(*pending))) == NULL)
 		goto out;
@@ -118,7 +118,7 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 	pending->p_rcpt[ADDRLEN] = '\0';
 	TAILQ_INSERT_TAIL(&pending_head, pending, p_list); 
 
-	if (debug)
+	if (conf.c_debug)
 		dump_dirty++;
 
 	(void)gettimeofday(&tv, NULL);
@@ -139,7 +139,7 @@ pending_put(pending) /* pending list should be write-locked */
 	TAILQ_REMOVE(&pending_head, pending, p_list);	
 	free(pending);
 
-	if (debug)
+	if (conf.c_debug)
 		dump_dirty++;
 
 	return;
@@ -208,6 +208,7 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 	struct timeval tv;
 	time_t rest = -1;
 	int dirty = 0;
+	int delay = conf.c_delay;
 
 	gettimeofday(&tv, NULL);
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);

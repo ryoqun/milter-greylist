@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.7 2004/03/22 21:56:35 manu Exp $ */
+/* $Id: conf.c,v 1.8 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.7 2004/03/22 21:56:35 manu Exp $");
+__RCSID("$Id: conf.c,v 1.8 2004/03/31 09:49:16 manu Exp $");
 #endif
 #endif
 
@@ -58,10 +58,29 @@ __RCSID("$Id: conf.c,v 1.7 2004/03/22 21:56:35 manu Exp $");
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "autowhite.h"
 #include "conf.h"
 #include "except.h"
 #include "sync.h"
+#include "pending.h"
+#include "dump.h"
 #include "milter-greylist.h"
+
+/* Default configuration */
+struct conf conf = {
+	C_NONE,		/* c_forced */
+	0,		/* c_debug */
+	0,		/* c_quiet */
+	0,		/* c_noauth */
+	0,		/* c_nospf */
+	0,		/* c_testmode */
+	GLDELAY,	/* c_delay */
+	AUTOWHITE_VALIDITY,	/* c_autowhite_validity */
+	NULL,		/* c_pidfile */
+	DUMPFILE,	/* c_dumpfile */
+};
+char c_pidfile[PATHLEN + 1];
+char c_dumpfile[PATHLEN + 1];
 
 char *conffile = CONFFILE;
 struct timeval conffile_modified;
@@ -105,7 +124,7 @@ conf_update(void) {
 		return;
 
 	syslog(LOG_INFO, "reloading \"%s\"", conffile);
-	if (debug)
+	if (conf.c_debug)
 		(void)gettimeofday(&tv1, NULL);
 
 	peer_clear();
@@ -114,7 +133,7 @@ conf_update(void) {
 	conf_load();
 	EXCEPT_UNLOCK;
 
-	if (debug) {
+	if (conf.c_debug) {
 		(void)gettimeofday(&tv2, NULL);
 		timersub(&tv2, &tv1, &tv3);
 		syslog(LOG_DEBUG, "reloaded config file in %ld.%06lds", 
@@ -122,4 +141,24 @@ conf_update(void) {
 	}
 
 	return;
+}
+
+/*
+ * Write path into dst, stripping leading and trailing quotes
+ */
+char *
+quotepath(dst, path, len)
+	char *dst;
+	char *path;
+	size_t len;
+{
+	path++;	/* strip first quote */
+	strncpy(dst, path, len);
+	dst[len] = '\0';
+
+	/* Strip trailing quote */
+	if (strlen(dst) > 0)
+		dst[strlen(dst) - 1] = '\0';
+
+	return dst;
 }

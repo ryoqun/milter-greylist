@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.11 2004/03/29 15:21:25 manu Exp $ */
+/* $Id: dump.c,v 1.12 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.11 2004/03/29 15:21:25 manu Exp $");
+__RCSID("$Id: dump.c,v 1.12 2004/03/31 09:49:16 manu Exp $");
 #endif
 #endif
 
@@ -62,6 +62,7 @@ __RCSID("$Id: dump.c,v 1.11 2004/03/29 15:21:25 manu Exp $");
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "conf.h"
 #include "sync.h"
 #include "dump.h"
 #include "autowhite.h"
@@ -124,7 +125,7 @@ dumper(dontcare)
 		    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
 			strerror(errno));
 
-		if (debug) {
+		if (conf.c_debug) {
 			(void)gettimeofday(&tv1, NULL);
 			syslog(LOG_DEBUG, "dumping %d modifications", 
 			    dump_dirty);
@@ -171,7 +172,7 @@ dumper(dontcare)
 			exit(EX_OSERR);
 		}
 
-		if (debug) {
+		if (conf.c_debug) {
 			(void)gettimeofday(&tv2, NULL);
 			timersub(&tv2, &tv1, &tv3);
 			syslog(LOG_DEBUG, "dumping %d records in %ld.%06lds",

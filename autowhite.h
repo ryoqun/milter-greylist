@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.8 2004/03/20 17:22:42 manu Exp $ */
+/* $Id: autowhite.h,v 1.9 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -52,7 +52,6 @@ struct autowhite {
 	TAILQ_ENTRY(autowhite) a_list;
 };
 
-extern time_t autowhite_validity;
 extern pthread_rwlock_t autowhite_lock;
 
 int autowhite_init(void);

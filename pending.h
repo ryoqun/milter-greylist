@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.20 2004/03/28 14:05:42 manu Exp $ */
+/* $Id: pending.h,v 1.21 2004/03/31 09:49:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -70,7 +70,6 @@ struct pending {
 	TAILQ_ENTRY(pending) p_list;
 };
 
-extern int delay;
 extern pthread_rwlock_t pending_lock;
 
 extern struct in_addr match_mask;
