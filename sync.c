@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.15 2004/03/12 10:27:56 manu Exp $ */
+/* $Id: sync.c,v 1.16 2004/03/13 16:04:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -447,7 +447,7 @@ sync_master(dontcare)
 
 			if (errno != ECONNABORTED)
 				exit(EX_OSERR);
-			break;
+			continue;
 		}
 
 		inet_ntop(AF_INET, &raddr.sin_addr, peerstr, IPADDRLEN);
@@ -460,7 +460,6 @@ sync_master(dontcare)
 			    "fdopen fail: %s", peerstr, strerror(errno));
 			close(fd);
 			exit(EX_OSERR);
-			break;
 		}
 
 		if (setvbuf(stream, NULL, _IOLBF, 0) != 0)
@@ -496,7 +495,7 @@ sync_master(dontcare)
 			fprintf(stream, 
 			    "106 You have no permission to talk, go away!\n");
 			fclose(stream);
-			break;
+			continue;
 		}
 
 		if (pthread_create(&tid, NULL, (void *)sync_server, 
@@ -505,11 +504,12 @@ sync_master(dontcare)
 			    "pthread_create failed: %s", 
 			    peerstr, strerror(errno));
 			fclose(stream);
-			break;
+			continue:
 		}
 	}
 
 	/* NOTREACHED */
+	syslog(LOG_ERR, "sync_master quitted unexpectedly");
 	return;
 }
 
