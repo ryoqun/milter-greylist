@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.59 2004/03/22 00:02:22 manu Exp $
+# $Id: configure.ac,v 1.60 2004/03/22 00:05:05 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -121,7 +121,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		/* nothing */
 	])], [rcsidtwice=yes], 
 	[AC_DEFINE([HAVE_BROKEN_RCSID], [], 
-	    [unsable to use __RCSID twice]) rcsidtwice=no])
+	    [__RCSID cannot be used twice]) rcsidtwice=no])
 AC_MSG_RESULT([$rcsidtwice])
 
 # Linux requires -D_XOPEN_SOURCE=500 to build with libpthread and -Wall
