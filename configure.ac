@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.64 2004/03/22 10:34:23 manu Exp $
+# $Id: configure.ac,v 1.65 2004/03/22 17:55:25 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -66,6 +66,63 @@ AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"],
 # Check for inet_aton (libmilter uses it). On solaris, -lresolv is required
 AC_CHECK_LIB([resolv], [inet_aton], [LIBS="$LIBS -lresolv"], []) 
 
+# Check if <syslog.h> defines LOG_PERROR
+AC_MSG_CHECKING([if <syslog.h> defines LOG_PERROR])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <syslog.h>
+	],[
+		#ifndef LOG_PERROR
+		# error LOG_PERROR undefined
+		#endif
+	])], [logperror=yes], 
+	[AC_DEFINE([HAVE_MISSING_LOG_PERROR], 
+	    [], [<syslog.h> defines LOG_PERROR]) logperror=no])
+AC_MSG_RESULT([$logperror])
+
+# Check if <time.h> defines timeradd (and timersub)
+AC_MSG_CHECKING([if <time.h> defines timeradd])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#if HAVE_TIME_H
+		#include <time.h>
+		#endif
+		#ifdef HAVE_SYS_TIME_H
+		#include <sys/time.h>
+		#endif
+	],[
+		#ifndef timeradd
+		# error timeradd undefined
+		#endif
+	])], [timeradd=yes], 
+	[AC_DEFINE([HAVE_MISSING_TIMERADD], 
+	    [], [<time.h> defines timeradd]) timeradd=no])
+AC_MSG_RESULT([$timeradd])
+
+# Check if -D__EXTENSIONS__ is needed for snprintf, getopt, seteuid...
+SAVEDCFLAGS=$CFLAGS
+CFLAGS=$CFLAGS" -ansi -Wall -Werror"
+AC_MSG_CHECKING([if -D__EXTENSIONS__ is neede to use snprintf])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <stdio.h>
+	],[[
+		char dst[16 + 1];
+
+		snprintf(dst, 16, "test");
+	]])], [dextensions=no],
+		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+				#define __EXTENSIONS__
+				#include <stdio.h>
+			],[[
+				char dst[16 + 1];
+
+				snprintf(dst, 16, "test");
+			]])], 
+			[SAVEDCFLAGS=$SAVEDCFLAGS" -D__EXTENSIONS__"; 
+			 dextensions=yes], [dextensions=no])
+	])
+AC_MSG_RESULT([$dextensions])
+CFLAGS=$SAVEDCFLAGS
+
+
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use
 AC_CHECK_LIB([pthread], [pthread_create], 
@@ -94,7 +151,7 @@ AC_CHECK_LIB(milter, smfi_register,
 ])
 
 # Some Linux flavors have an outdated <sys/queue.h>
-AC_MSG_CHECKING([if your <sys/queue.h> is outdated])
+AC_MSG_CHECKING([if <sys/queue.h> is outdated])
 oldqueue=no
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <sys/queue.h>
@@ -107,7 +164,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 AC_MSG_RESULT([$oldqueue])
 
 # Darwin seems to have no definition for socklen_t beyond _BSD_SOCKLEN_T_
-AC_MSG_CHECKING([if you have a missing socklen_t])
+AC_MSG_CHECKING([if socklen_t is missing])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <sys/types.h>
 		#include <sys/socket.h>

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.21 2004/03/22 07:01:53 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.22 2004/03/22 17:55:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -91,4 +91,34 @@ int main(int, char **);
 	}
 #endif
 
+/*
+ * Some systems don't know about LOG_PERROR. By defining it
+ * to zero, we make it nilpotent
+ */
+#ifdef HAVE_MISSING_LOG_PERROR
+#define LOG_PERROR 0
+#endif
+
+#ifdef HAVE_MISSING_TIMERADD
+#define	timeradd(tvp, uvp, vvp)						\
+	do {								\
+		(vvp)->tv_sec = (tvp)->tv_sec + (uvp)->tv_sec;		\
+		(vvp)->tv_usec = (tvp)->tv_usec + (uvp)->tv_usec;	\
+		if ((vvp)->tv_usec >= 1000000) {			\
+			(vvp)->tv_sec++;				\
+			(vvp)->tv_usec -= 1000000;			\
+		}							\
+	} while (/* CONSTCOND */ 0)
+#define	timersub(tvp, uvp, vvp)						\
+	do {								\
+		(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;		\
+		(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;	\
+		if ((vvp)->tv_usec < 0) {				\
+			(vvp)->tv_sec--;				\
+			(vvp)->tv_usec += 1000000;			\
+		}							\
+	} while (/* CONSTCOND */ 0)
+#endif
+
 #endif /* _MILTER_GREYLIST_H_ */
+
