@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.19 2004/05/24 21:57:36 manu Exp $ */
+/* $Id: dump.c,v 1.20 2004/05/25 08:37:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.19 2004/05/24 21:57:36 manu Exp $");
+__RCSID("$Id: dump.c,v 1.20 2004/05/25 08:37:08 manu Exp $");
 #endif
 #endif
 
@@ -86,6 +86,10 @@ void
 dumper_start(void) {
 	pthread_t tid;
 
+	/* XXX This is not dynamically adjustable */
+	if (conf.c_dumpfreq == -1)
+		return;
+
 	if (pthread_create(&tid, NULL, (void *(*)(void *))dumper, NULL) != 0) {
 		syslog(LOG_ERR, 
 		    "cannot start dumper thread: %s", strerror(errno));
@@ -106,10 +110,6 @@ dumper(dontcare)
 	char newdumpfile[MAXPATHLEN + 1];
 	int done;
 
-	/* XXX Not dynamically adjustable */
-	if (conf.c_dumpfreq == -1)
-		return;
-
 	if (pthread_mutex_init(&mutex, NULL) != 0) {
 		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n",
 		    strerror(errno));
@@ -124,25 +124,33 @@ dumper(dontcare)
 
 	while (1) {
 		/* XXX Not dynamically adjustable */
-		if (conf.c_dumpfreq != 0)
+		if (conf.c_dumpfreq != 0) {
 			sleep(conf.c_dumpfreq);
+		} else {
+			if (pthread_cond_wait(&dump_sleepflag, &mutex) != 0)
+			    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
+				strerror(errno));
+		}
 
-		if (pthread_cond_wait(&dump_sleepflag, &mutex) != 0)
-		    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
-			strerror(errno));
+		/*
+		 * If there is no change to dump, go back to sleep
+		 */
+		if (dump_dirty == 0)
+			continue;
 
 		if (conf.c_debug) {
 			(void)gettimeofday(&tv1, NULL);
 			syslog(LOG_DEBUG, "dumping %d modifications", 
 			    dump_dirty);
-			/* 
-			 * dump_dirty is not protected by a lock,
-			 * hence it could be modified between the 
-			 * display and the actual dump. This debug
-			 * message does not give an accurate information
-			 */
-			dump_dirty = 0;
 		}
+
+		/* 
+		 * dump_dirty is not protected by a lock,
+		 * hence it could be modified between the 
+		 * display and the actual dump. This debug
+		 * message does not give an accurate information
+		 */
+		dump_dirty = 0;
 
 		/* 
 		 * Dump the database in a temporary file and 

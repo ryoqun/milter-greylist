@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.85 2004/05/24 21:22:03 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.86 2004/05/25 08:37:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.85 2004/05/24 21:22:03 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.86 2004/05/25 08:37:08 manu Exp $");
 #endif
 #endif
 
@@ -479,6 +479,12 @@ mlfi_close(ctx)
 		free(priv);
 		smfi_setpriv(ctx, NULL);
 	}
+
+	/*
+	 * If we need to dump on each change and something changed, dump
+	 */
+	if ((dump_dirty != 0) && (conf.c_dumpfreq == 0))
+		dump_flush();
 
 	return SMFIS_CONTINUE;
 }

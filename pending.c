@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.55 2004/05/24 21:22:03 manu Exp $ */
+/* $Id: pending.c,v 1.56 2004/05/25 08:37:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.55 2004/05/24 21:22:03 manu Exp $");
+__RCSID("$Id: pending.c,v 1.56 2004/05/25 08:37:08 manu Exp $");
 #endif
 #endif
 
@@ -113,8 +113,7 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 	pending->p_rcpt[ADDRLEN] = '\0';
 	TAILQ_INSERT_TAIL(&pending_head, pending, p_list); 
 
-	if (conf.c_debug)
-		dump_dirty++;
+	dump_dirty++;
 
 	(void)gettimeofday(&tv, NULL);
 
@@ -139,8 +138,7 @@ pending_put(pending) /* pending list should be write-locked */
 	TAILQ_REMOVE(&pending_head, pending, p_list);	
 	free(pending);
 
-	if (conf.c_debug)
-		dump_dirty++;
+	dump_dirty++;
 
 	return;
 }

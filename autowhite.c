@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.28 2004/05/24 22:00:38 manu Exp $ */
+/* $Id: autowhite.c,v 1.29 2004/05/25 08:37:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.28 2004/05/24 22:00:38 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.29 2004/05/25 08:37:08 manu Exp $");
 #endif
 #endif
 
@@ -162,10 +162,8 @@ autowhite_add(in, from, rcpt, date, queueid)
 	}
 	AUTOWHITE_UNLOCK;
 
-	if (dirty != 0) {
+	if (dirty != 0)
 		dump_dirty += dirty;
-		dump_flush();
-	}
 
 	return;
 }
@@ -242,10 +240,8 @@ autowhite_check(in, from, rcpt, queueid)
 	}
 	AUTOWHITE_UNLOCK;
 
-	if (dirty != 0) {
+	if (dirty != 0)
 		dump_dirty += dirty;
-		dump_flush();
-	}
 
 	if (aw != NULL) 
 		return EXF_AUTO;	
