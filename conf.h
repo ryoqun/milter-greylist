@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.3 2004/03/18 22:37:21 manu Exp $ */
+/* $Id: conf.h,v 1.4 2004/03/19 10:16:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,19 +32,19 @@
 #ifndef _CONF_H_
 #define _CONF_H_
 
+#include "config.h"
+#ifdef HAVE_OLD_QUEUE_H
+#include "queue.h"
+#else 
+#include <sys/queue.h>
+#endif
+
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include "config.h"
-#ifndef HAVE_OLD_QUEUE_H
-#include "queue.h"
-#else 
-#include <sys/queue.h>
-#endif
 
 #include "pending.h"
 

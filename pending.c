@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.36 2004/03/18 22:37:21 manu Exp $ */
+/* $Id: pending.c,v 1.37 2004/03/19 10:16:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,14 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.36 2004/03/18 22:37:21 manu Exp $");
+__RCSID("$Id: pending.c,v 1.37 2004/03/19 10:16:38 manu Exp $");
+#endif
+
+#include "config.h"
+#ifdef HAVE_OLD_QUEUE_H 
+#include "queue.h"
+#else
+#include <sys/queue.h>
 #endif
 
 #include <stdlib.h>
@@ -50,13 +57,6 @@ __RCSID("$Id: pending.c,v 1.36 2004/03/18 22:37:21 manu Exp $");
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include "config.h"
-#ifndef HAVE_OLD_QUEUE_H 
-#include "queue.h"
-#else
-#include <sys/queue.h>
-#endif
 
 #include "sync.h"
 #include "dump.h"

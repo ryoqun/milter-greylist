@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.16 2004/03/18 22:37:21 manu Exp $ */
+/* $Id: pending.h,v 1.17 2004/03/19 10:16:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,19 +31,19 @@
 #ifndef _PENDING_H_
 #define _PENDING_H_
 
+#include "config.h"
+#ifdef HAVE_OLD_QUEUE_H
+#include "queue.h"
+#else 
+#include <sys/queue.h>
+#endif
+
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include "config.h"
-#ifndef HAVE_OLD_QUEUE_H
-#include "queue.h"
-#else 
-#include <sys/queue.h>
-#endif
 
 #ifndef DELAY
 #define DELAY	1800	/* 1800 seconds = 30 minutes */

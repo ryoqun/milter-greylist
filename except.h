@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.13 2004/03/18 22:37:21 manu Exp $ */
+/* $Id: except.h,v 1.14 2004/03/19 10:16:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,19 +32,19 @@
 #ifndef _EXCEPT_H_
 #define _EXCEPT_H_
 
+#include "config.h"
+#ifdef HAVE_OLD_QUEUE_H
+#include "queue.h"
+#else 
+#include <sys/queue.h>
+#endif
+
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#include "config.h"
-#ifndef HAVE_OLD_QUEUE_H
-#include "queue.h"
-#else 
-#include <sys/queue.h>
-#endif
 
 #include "pending.h"
 #include "milter-greylist.h"
