@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.38 2004/04/10 07:51:10 manu Exp $ */
+/* $Id: except.c,v 1.39 2004/04/13 08:31:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.38 2004/04/10 07:51:10 manu Exp $");
+__RCSID("$Id: except.c,v 1.39 2004/04/13 08:31:50 manu Exp $");
 #endif
 #endif
 
@@ -51,13 +51,14 @@ __RCSID("$Id: except.c,v 1.38 2004/04/10 07:51:10 manu Exp $");
 #include <string.h>
 #include <strings.h>
 #include <syslog.h>
-#include <regex.h>
 #include <pthread.h>
 #include <sysexits.h>
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <regex.h>
 
 #include "except.h"
 #include "conf.h"

@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.20 2004/04/12 12:28:56 manu Exp $ */
+/* $Id: except.h,v 1.21 2004/04/13 08:31:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -41,11 +41,12 @@
 
 #include <stdio.h>
 #include <pthread.h>
-#include <regex.h>
 #include <sys/socket.h>
 #include <sys/time.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <regex.h>
 
 #include "pending.h"
 #include "milter-greylist.h"
