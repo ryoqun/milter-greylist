@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.9 2004/04/07 09:09:09 manu Exp $ */
+/* $Id: spf.c,v 1.10 2004/04/08 11:32:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.9 2004/04/07 09:09:09 manu Exp $");
+__RCSID("$Id: spf.c,v 1.10 2004/04/08 11:32:53 manu Exp $");
 #endif
 #endif
 
@@ -55,8 +55,9 @@ __RCSID("$Id: spf.c,v 1.9 2004/04/07 09:09:09 manu Exp $");
 #ifdef HAVE_SPF
 #include <spf.h>
 int
-spf_check(in, from)
+spf_check(in, helo, from)
 	struct in_addr *in;
+	char *helo;
 	char *from;
 {
 	peer_info_t *p = NULL;
@@ -74,7 +75,7 @@ spf_check(in, from)
 		syslog(LOG_ERR, "SPF_Init failed");
 		goto out1;
 	}
-	/* SPF_smtp_helo(p, helo); */ /* For when from is <> */
+	SPF_smtp_helo(p, helo);
 	SPF_smtp_from(p, from);
 	p->RES = SPF_policy_main(p);
 
@@ -107,8 +108,9 @@ out1:
 /* SMTP needs at least 64 chars for local part and 255 for doamin... */
 #define NS_MAXDNAME 1025 
 int
-spf_alt_check(in, fromp)
+spf_alt_check(in, helo, fromp)
 	struct in_addr *in;
+	char *helo;
 	char *fromp;
 {
 	SPF_config_t spfconf;
@@ -150,6 +152,11 @@ spf_alt_check(in, fromp)
 	len = strlen(from);
 	if (fromp[len - 1] == '>')
 		from[len - 1] = '\0'; /* strip trailing > */
+
+	if (SPF_set_helo_dom(spfconf, helo) != 0) {
+		syslog(LOG_ERR, "SPF_set_helo failed");
+		goto out3;
+	}
 
 	if (SPF_set_env_from(spfconf, from) != 0) {
 		syslog(LOG_ERR, "SPF_set_env_from failed");

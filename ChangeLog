@@ -1,3 +1,5 @@
+1.1.11:
+	Use the HELO domain for SPF checks (usefull when getting mail from <>)
 1.1.10:
 	Support libspf
 	Initialisation scripts

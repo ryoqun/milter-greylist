@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.74 2004/04/03 08:58:14 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.75 2004/04/08 11:32:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.74 2004/04/03 08:58:14 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.75 2004/04/08 11:32:53 manu Exp $");
 #endif
 #endif
 
@@ -85,7 +85,7 @@ struct smfiDesc smfilter =
 	SMFI_VERSION,	/* version code */
 	SMFIF_ADDHDRS,	/* flags */
 	mlfi_connect,	/* connection info filter */
-	NULL,		/* SMTP HELO command filter */
+	mlfi_helo,	/* SMTP HELO command filter */
 	mlfi_envfrom,	/* envelope sender filter */
 	mlfi_envrcpt,	/* envelope recipient filter */
 	NULL,		/* header filter */
@@ -119,6 +119,22 @@ mlfi_connect(ctx, hostname, addr)
 
 	return SMFIS_CONTINUE;
 }
+
+sfsistat
+mlfi_helo(ctx, helostr)
+	SMFICTX *ctx;
+	char *helostr;
+{
+	struct mlfi_priv *priv;
+
+	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+
+	strncpy_rmsp(priv->priv_helo, helostr, ADDRLEN);
+	priv->priv_from[ADDRLEN] = '\0';
+
+	return SMFIS_CONTINUE;
+}
+
 
 sfsistat
 mlfi_envfrom(ctx, envfrom)
@@ -176,7 +192,8 @@ mlfi_envfrom(ctx, envfrom)
 	 * Is the sender address SPF-compliant?
 	 */
 	if ((conf.c_nospf == 0) && 
-	    (SPF_CHECK(&priv->priv_addr, *envfrom) != EXF_NONE)) {
+	    (SPF_CHECK(&priv->priv_addr, 
+	    priv->priv_helo, *envfrom) != EXF_NONE)) {
 		char ipstr[IPADDRLEN + 1];
 
 		inet_ntop(AF_INET, &priv->priv_addr, ipstr, IPADDRLEN);
