@@ -1,9 +1,9 @@
-# $Id: README,v 1.23 2004/10/14 22:23:53 manu Exp $
+# $Id: README,v 1.24 2004/11/28 00:33:29 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/10/14 22:23:53 $
+		       $Date: 2004/11/28 00:33:29 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -44,9 +44,9 @@ On the make install step, the Makefile will install a default config
 file in /etc/mail/greylist.conf, except if there is already such
 a file. In that case the original file is preserved.
 
-Two startup scripts are available: rc-linux.sh for Linux and rc-bsd.sh
-for NetBSD and FreeBSD. They are not installed by default, you have
-install the startup script by hand if you want to use one.
+Two startup scripts are available: rc-redhat.sh, rc-debian, and rc-gentoo.sh
+for Linux and rc-bsd.sh for NetBSD and FreeBSD. They are not installed by 
+default, you have install the startup script by hand if you want to use one.
 
 
  2 Configuring sendmail with milter-greylist

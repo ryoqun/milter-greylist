@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: rc-linux.sh.in,v 1.2 2004/07/29 06:53:02 manu Exp $
+# $Id: rc-redhat.sh.in,v 1.1 2004/11/28 00:33:29 manu Exp $
 #  init file for milter-greylist
 #
 # chkconfig: - 50 50
