@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.25 2004/12/29 21:44:38 manu Exp $
+# $Id: Makefile,v 1.26 2004/12/29 21:46:55 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -38,7 +38,7 @@ SYSCONFDIR=	${prefix}/etc
 LOCALSTATEDIR=	${prefix}/var
 BINDIR=		${exec_prefix}/bin
 MANDIR=		${prefix}/man
-USER=		smmsp
+USER=		root
 
 CC=		gcc
 MKDEP=		mkdep
