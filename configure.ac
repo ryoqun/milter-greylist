@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.143 2005/03/26 17:10:58 manu Exp $
+# $Id: configure.ac,v 1.144 2005/03/28 06:35:32 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -152,10 +152,7 @@ AC_CHECK_LIB([nsl], [inet_pton], [LIBS="$LIBS -lnsl"], [])
 
 # Check for getaddrinfo and getnameinfo
 AC_DEFUN([IPv6_CHECK_FUNC], [
-changequote(, )dnl
-ac_tr_lib=HAVE_`echo $1 | sed -e 's/[^a-zA-Z0-9_]/_/g' \
-  -e 'y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/'`
-changequote([, ])dnl
+AH_TEMPLATE(AS_TR_CPP(HAVE_$1), [Define to 1 if you have the `]$1[' function.])
 AC_CHECK_FUNC($1, [dnl
   ac_cv_lib_socket_$1=no
   ac_cv_lib_inet6_$1=no
@@ -209,18 +206,14 @@ if test $ipv6_cv_$1 = no; then
   fi
 fi
 if test $ipv6_cv_$1 = yes; then
-  AC_DEFINE_UNQUOTED($ac_tr_lib)
+  AC_DEFINE_UNQUOTED(AS_TR_CPP(HAVE_$1))
   ifelse([$2], , :, [$2])
 else
   ifelse([$3], , :, [$3])
 fi])
 
-IPv6_CHECK_FUNC(getaddrinfo, 
-    AC_DEFINE([HAVE_GETADDRINFO], [], 
-    [Define to 1 if you have the `getaddrinfo' function.]))
-IPv6_CHECK_FUNC(getnameinfo, 
-    AC_DEFINE([HAVE_GETNAMEINFO], [], 
-    [Define to 1 if you have the `getnameinfo' function.]))
+IPv6_CHECK_FUNC(getaddrinfo)
+IPv6_CHECK_FUNC(getnameinfo)
 
 # Check if <syslog.h> defines LOG_PERROR
 AC_MSG_CHECKING([if <syslog.h> defines LOG_PERROR])
@@ -286,13 +279,13 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <time.h>
 	],[[
 
-		(void)localtime_r(NULL);
+		(void)localtime(NULL);
 	]])], [dreentrant=no],
 		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 				#define _REENTRANT
 				#include <stdio.h>
 			],[[
-				 (void)localtime_r(NULL);
+				 (void)localtime(NULL);
 			]])], 
 			[SAVEDCFLAGS=$SAVEDCFLAGS" -D_REENTRANT"; 
 			 dreentrant=yes], [dreentrant=no])
