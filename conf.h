@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.14 2004/04/01 21:03:58 manu Exp $ */
+/* $Id: conf.h,v 1.15 2004/04/02 08:57:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -52,13 +52,6 @@
 #define CONFFILE "/etc/mail/greylist.conf"
 #endif
 
-/* 
- * This is missing on some systems
- */
-#ifndef in_addr_t
-#define in_addr_t unsigned int
-#endif
-
 struct conf {
 	int c_forced;
 	int c_debug;
@@ -70,7 +63,7 @@ struct conf {
 	int c_autowhite_validity;
 	char *c_pidfile;
 	char *c_dumpfile;
-	in_addr_t c_match_mask;
+	struct in_addr c_match_mask;
 	char *c_socket;
 	char *c_user;
 	int c_nodetach;
@@ -108,5 +101,6 @@ extern FILE *conf_in;
 extern int conf_line;
 int conf_parse(void);
 char *quotepath(char *, char *, size_t);
+void conf_defaults(struct conf *);
 
 #endif /* _CONF_H_ */

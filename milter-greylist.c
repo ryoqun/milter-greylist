@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.71 2004/04/01 20:36:00 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.72 2004/04/02 08:57:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.71 2004/04/01 20:36:00 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.72 2004/04/02 08:57:18 manu Exp $");
 #endif
 #endif
 
@@ -429,7 +429,14 @@ main(argc, argv)
 {
 	int ch;
 
-	/* Process command line options */
+	/*
+	 * Load configuration defaults
+	 */
+	conf_defaults(&defconf);
+
+	/* 
+	 * Process command line options 
+	 */
 	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rSL:")) != -1) {
 		switch (ch) {
 		case 'A':
@@ -861,18 +868,17 @@ writepid(pidfile)
 }
 
 
-in_addr_t *
+struct in_addr *
 cidr2mask(cidr, mask)
 	int cidr;
-	in_addr_t *mask;
+	struct in_addr *mask;
 {
-	struct in_addr *inmask = (struct in_addr *)mask;
 
 	if ((cidr == 0) || (cidr > 32)) {
 		bzero((void *)mask, sizeof(*mask));
 	} else {
 		cidr = 32 - cidr;
-		*inmask = inet_makeaddr(~((1UL << cidr) - 1), 0L);
+		*mask = inet_makeaddr(~((1UL << cidr) - 1), 0L);
 	}
 	
 	return mask;
