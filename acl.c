@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.3 2005/03/13 16:43:03 manu Exp $ */
+/* $Id: acl.c,v 1.4 2005/03/18 23:48:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.3 2005/03/13 16:43:03 manu Exp $");
+__RCSID("$Id: acl.c,v 1.4 2005/03/18 23:48:20 manu Exp $");
 #endif
 #endif
 
@@ -578,19 +578,22 @@ emailcmp(big, little)
 {
 	int i;
 
-	/* Strip leading < */
-	while (big[0] == '<')
+	printf("big = \"%s\", little = \"%s\"\n", big, little);
+	/* Strip leading <, tabs and spaces */
+	while (strchr("< \t", big[0]) != NULL)
 		big++;
-	while (little[0] == '<')
+	while (strchr("< \t", little[0]) != NULL)
 		little++;
 
-	/* Strip trailing > */
+	/* Strip trailing >, tabs and spaces */
 	i = strlen(big) - 1;
-	while ((i >= 0) && (big[i] == '>'))
+	while ((i >= 0) && (strchr("> \t", big[i]) != NULL))
 		big[i--] = '\0';
 	i = strlen(little) - 1;
-	while ((i >= 0) && (little[i] == '>'))
+	while ((i >= 0) && (strchr("> \t", little[i]) != NULL))
 		little[i--] = '\0';
+
+	printf(">> big = \"%s\", little = \"%s\"\n", big, little);
 
 	while (big[0] && little[0]) {
 		if (tolower((int)big[0]) != tolower((int)little[0]))
@@ -602,6 +605,7 @@ emailcmp(big, little)
 	if (big[0] || little[0])
 		return -1;
 
+	printf("match\n");
 	return 0;
 }
 
