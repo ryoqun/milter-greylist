@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.107 2005/02/13 23:42:01 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.108 2005/02/13 23:43:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.107 2005/02/13 23:42:01 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.108 2005/02/13 23:43:47 manu Exp $");
 #endif
 #endif
 
@@ -889,12 +889,14 @@ main(argc, argv)
 			exit(EX_OSERR);
 		}
 
+#ifdef HAVE_INITGROUPS
 		if (initgroups(conf.c_user, pw->pw_gid) != 0) {
 		        syslog(LOG_ERR, "%s: cannot change "
 			    "supplementary groups: %s\n",
 			    argv[0], strerror(errno));
 			exit(EX_OSERR);
 		}
+#endif
 
 		if (setgid(pw->pw_gid) != 0 ||
 		    setegid(pw->pw_gid) != 0) {

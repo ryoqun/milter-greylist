@@ -23,7 +23,7 @@ quiet		[Qq][Uu][Ii][Ee][Tt]
 noauth		[Nn][Oo][Aa][Uu][Tt][Hh]
 noaccessdb	[Nn][Oo][Aa][Cc][Cc][Ee][Ss][Ss][Dd][Bb]
 nospf		[Nn][Oo][Ss][Pp][Ff]
-delayedreject	[Dd][Ee][Ll][Aa][Yy][Ee][Dd][Rr][Ee][Jj][Cc][Tt]
+delayedreject	[Dd][Ee][Ll][Aa][Yy][Ee][Dd][Rr][Ee][Jj][Ee][Cc][Tt]
 testmode	[Tt][Ee][Ss][Tt][Mm][Oo][Dd][Ee]
 greylist	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt]:?		
 autowhite	[Aa][Uu][Tt][Oo][Ww][Hh][Ii][Tt][Ee]:?
@@ -63,7 +63,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.35 2005/02/13 23:42:01 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.36 2005/02/13 23:43:47 manu Exp $");
 	#endif
 	#endif
 	#endif
