@@ -1,3 +1,5 @@
+1.2.1:
+	Fix build problems on Solaris
 1.2:
 	New stable branch, based on 1.1.16
 1.1.16:

@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.96.2.1 2004/04/14 12:25:12 manu Exp $
+# $Id: configure.ac,v 1.96.2.2 2004/04/15 21:29:45 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 1.2, manu@netbsd.org)
+AC_INIT(milter-greylist, 1.2.1, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -108,6 +108,9 @@ AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"],
 
 # Check for inet_aton (libmilter uses it). On solaris, -lresolv is required
 AC_CHECK_LIB([resolv], [inet_aton], [LIBS="$LIBS -lresolv"], []) 
+
+# Check for inet_pton (libmilter uses it). On solaris, -lnsl is required
+AC_CHECK_LIB([nsl], [inet_pton], [LIBS="$LIBS -lnsl"], []) 
 
 # Check if <syslog.h> defines LOG_PERROR
 AC_MSG_CHECKING([if <syslog.h> defines LOG_PERROR])
