@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.45 2004/03/18 10:14:05 manu Exp $
+# $Id: configure.ac,v 1.46 2004/03/19 13:15:49 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -29,6 +29,7 @@ AC_ARG_WITH(libpthread,
 	[CFLAGS=$CFLAGS" -I$withval/include" 
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,--rpath=$withval/lib"])
 
+# Check for libpthread. On FreeBSD, the libc_r does the job.
 AC_CHECK_LIB(pthread, pthread_create, 
 	[LIBS="$LIBS -lpthread"],
 	[AC_CHECK_LIB(c_r, pthread_create, 
@@ -37,12 +38,15 @@ AC_CHECK_LIB(pthread, pthread_create,
 		 exit 1;])
 	 ])
 
+# Check for libmilter. For sendmail-8.12.1, -lsm is required too.
+# This uses a gross hack on the second AC_CHECK_LIB first argument, but using 
+# [-lsm] in the optionnal 5th argument does not seems to help at all.
 AC_CHECK_LIB(milter, smfi_register,
 	[LIBS="$LIBS -lmilter"],
-	[AC_CHECK_LIB(milter, smfi_register,
+	[AC_CHECK_LIB([milter -lsm], smfi_register,
 		[LIBS="$LIBS -lmilter -lsm"],
 		[echo "Required libmilter not found. Use --with-libmilter"; 
-		 exit 1;], [-lsm])
+		 exit 1;])
 	])
 
 # Checks for header files.
