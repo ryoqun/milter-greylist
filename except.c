@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.21 2004/03/18 09:55:15 manu Exp $ */
+/* $Id: except.c,v 1.22 2004/03/18 22:37:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.21 2004/03/18 09:55:15 manu Exp $");
+__RCSID("$Id: except.c,v 1.22 2004/03/18 22:37:21 manu Exp $");
 #endif
 
 #include <errno.h>
@@ -48,6 +48,7 @@ __RCSID("$Id: except.c,v 1.21 2004/03/18 09:55:15 manu Exp $");
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "config.h"
 #ifndef HAVE_OLD_QUEUE_H
 #include "queue.h"
 #else 

@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.2 2004/03/18 09:55:14 manu Exp $ */
+/* $Id: conf.h,v 1.3 2004/03/18 22:37:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -39,6 +39,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "config.h"
 #ifndef HAVE_OLD_QUEUE_H
 #include "queue.h"
 #else 
@@ -46,7 +47,6 @@
 #endif
 
 #include "pending.h"
-#include "config.h"
 
 #ifndef CONFFILE
 #define CONFFILE "/etc/mail/greylist.conf"

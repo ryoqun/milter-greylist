@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.7 2004/03/18 09:55:14 manu Exp $ */
+/* $Id: autowhite.c,v 1.8 2004/03/18 22:37:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.7 2004/03/18 09:55:14 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.8 2004/03/18 22:37:21 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -45,6 +45,7 @@ __RCSID("$Id: autowhite.c,v 1.7 2004/03/18 09:55:14 manu Exp $");
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "config.h"
 #ifndef HAVE_OLD_QUEUE_H
 #include "queue.h"
 #else

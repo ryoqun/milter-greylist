@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.12 2004/03/18 09:55:15 manu Exp $ */
+/* $Id: except.h,v 1.13 2004/03/18 22:37:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -39,6 +39,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "config.h"
 #ifndef HAVE_OLD_QUEUE_H
 #include "queue.h"
 #else 
@@ -46,7 +47,6 @@
 #endif
 
 #include "pending.h"
-#include "config.h"
 #include "milter-greylist.h"
 
 #define EXCEPT_WRLOCK WRLOCK(except_lock) 
