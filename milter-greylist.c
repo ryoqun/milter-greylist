@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.103 2004/12/16 23:08:13 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.104 2005/01/29 18:42:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.103 2004/12/16 23:08:13 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.104 2005/01/29 18:42:53 manu Exp $");
 #endif
 #endif
 
@@ -78,6 +78,8 @@ __RCSID("$Id: milter-greylist.c,v 1.103 2004/12/16 23:08:13 manu Exp $");
 static char *strncpy_rmsp(char *, char *, size_t);
 static char *gmtoffset(time_t *, char *, size_t);
 static void writepid(char *);
+static void log_and_report_greylisting(SMFICTX *ctx, 
+    struct mlfi_priv *priv, char *rcpt);
 
 struct smfiDesc smfilter =
 {
@@ -278,10 +280,8 @@ mlfi_envrcpt(ctx, envrcpt)
 	struct mlfi_priv *priv;
 	time_t remaining;
 	char *greylist;
-	char hdr[HDRLEN + 1];
 	char addrstr[IPADDRSTRLEN];
 	char rcpt[ADDRLEN + 1];
-	int h, mn, s;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
@@ -387,29 +387,27 @@ mlfi_envrcpt(ctx, envrcpt)
 	    priv->priv_queueid) != 0)
 		return SMFIS_CONTINUE;
 
+	priv->priv_remaining = remaining;
+
 	/*
 	 * The message has been added to the greylist and will be delayed.
-	 * Log this and report to the client.
+	 * If the sender address is null, this will be done after the DATA
+	 * phase, otherwise immediately.
 	 */
-	h = remaining / 3600;
-	remaining = remaining % 3600;
-	mn = (remaining / 60);
-	remaining = remaining % 60;
-	s = remaining;
-
-	syslog(LOG_INFO, "%s: addr %s from %s to %s delayed for %02d:%02d:%02d",
-	    priv->priv_queueid, addrstr, priv->priv_from, *envrcpt, h, mn, s);
-
-	if (conf.c_quiet) {
-		(void)smfi_setreply(ctx, "451", "4.7.1", 
-		    "Greylisting in action, please come back later");
-	} else {
-		snprintf(hdr, HDRLEN, 
-		    "Greylisting in action, please come "
-		    "back in %02d:%02d:%02d", h, mn, s);
-		(void)smfi_setreply(ctx, "451", "4.7.1", hdr);
+	if ((conf.c_delayedreject == 1) && 
+	    (strcmp(priv->priv_from, "<>") == 0)) {
+		priv->priv_delayed_reject = 1;
+		if (*priv->priv_rcpt == 0)
+			strcpy(priv->priv_rcpt, rcpt);
+		else
+			strcpy(priv->priv_rcpt, "(multiple recipients)");
+		return SMFIS_CONTINUE;
 	}
 
+	/*
+	 * Log temporary failure and report to the client.
+	 */
+	log_and_report_greylisting(ctx, priv, *envrcpt);
 	return SMFIS_TEMPFAIL;
 }
 
@@ -431,6 +429,11 @@ mlfi_eom(ctx)
 	struct tm ltm;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+
+	if (priv->priv_delayed_reject) {
+		log_and_report_greylisting(ctx, priv, priv->priv_rcpt);
+		return SMFIS_TEMPFAIL;
+	}
 
 	if ((fqdn = smfi_getsymval(ctx, "{j}")) == NULL) {
 		syslog(LOG_DEBUG, "smfi_getsymval failed for {j}");
@@ -1128,8 +1131,8 @@ unmappedaddr(sa, salen)
 {
 #ifdef AF_INET6
 	struct in_addr addr4;
-	int port;
-
+	int port;       
+			
 	if (SA6(sa)->sin6_family != AF_INET6 ||
 	    !IN6_IS_ADDR_V4MAPPED(SADDR6(sa)))
 		return;
@@ -1144,6 +1147,54 @@ unmappedaddr(sa, salen)
 #endif
 	*salen = sizeof(struct sockaddr_in);
 #endif
+	return;
+}
+
+void
+log_and_report_greylisting(ctx, priv, rcpt)
+	SMFICTX *ctx;
+	struct mlfi_priv *priv;
+	char *rcpt;
+{
+	int h, mn, s;
+	char hdr[HDRLEN + 1];
+	char addrstr[IPADDRSTRLEN];
+	time_t remaining;
+	char *delayed_rj;
+
+	/*
+	 * The message has been added to the greylist and will be delayed.
+	 * Log this and report to the client.
+	 */
+	iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
+	    sizeof(addrstr));
+
+	remaining = priv->priv_remaining;
+	h = remaining / 3600;
+	remaining = remaining % 3600;
+	mn = (remaining / 60);
+	remaining = remaining % 60;
+	s = remaining;
+
+	if (priv->priv_delayed_reject)
+		delayed_rj = " after DATA phase";
+	else
+		delayed_rj = "";
+
+	syslog(LOG_INFO, "%s: addr %s from %s to %s delayed%s for %02d:%02d:%02d",
+	    priv->priv_queueid, addrstr, priv->priv_from, rcpt, delayed_rj,
+	    h, mn, s);
+
+	if (conf.c_quiet) {
+		(void)smfi_setreply(ctx, "451", "4.7.1",
+		    "Greylisting in action, please come back later");
+	} else {
+		snprintf(hdr, HDRLEN,
+		    "Greylisting in action, please come "
+		    "back in %02d:%02d:%02d", h, mn, s);
+		(void)smfi_setreply(ctx, "451", "4.7.1", hdr);
+	}
+
 	return;
 }
 

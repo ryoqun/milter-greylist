@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.36 2004/12/08 22:23:09 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.37 2005/01/29 18:42:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -85,9 +85,12 @@ struct mlfi_priv {
 	char priv_hostname[ADDRLEN + 1];
 	char priv_helo[ADDRLEN + 1];
 	char priv_from[ADDRLEN + 1];
+	char priv_rcpt[ADDRLEN + 1];
 	time_t priv_elapsed;
 	int priv_whitelist;
 	char *priv_queueid;
+	int priv_delayed_reject;
+	time_t priv_remaining;
 };
 
 sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);

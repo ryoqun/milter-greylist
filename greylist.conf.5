@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.21 2005/01/29 18:24:17 manu Exp $
+.\" $Id: greylist.conf.5,v 1.22 2005/01/29 18:42:53 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -234,6 +234,27 @@ the message was not delayed.
 .It Ar report all
 Always add a header. This is the default.
 .El
+.Sh SENDER CALLBACK SYSTEMS
+Sender callback systems are another anti-spam measure that attempts to
+send a DSN to the sender address before accepting a message. If that
+fails, then the sender address is wrong and the message is rejected. 
+Such systems usually stop their callback check at the RCPT stage of 
+the SMTP transaction. 
+.Pp
+Greylisting temporarilly rejects at the RCPT stage, so sender callback
+and greylisting love to fight each others. 
+.Xr milter-greylist 8
+proposes a work around to that problem with the 
+.Ar delayedreject
+option. For messages coming from <> (that is, for DSN), it will cause 
+the temporary reject to happen at the DATA stage of the SMTP transaction 
+instead of the RCPT stage. That way,
+.Xr milter-greylist 8
+will cope much better with sender callback systems. 
+.Pp
+This has a minor drawback (and this is why it is not enabled by default): 
+for a multi recipient DSN, whitelisted recipient will not be honoured: 
+the message will be delayed for everyone. 
 .Sh COMMAND-LINE FLAG EQUIVALENTS
 Most 
 .Xr milter-greylist 8

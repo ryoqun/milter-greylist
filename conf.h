@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.29 2004/12/16 23:08:13 manu Exp $ */
+/* $Id: conf.h,v 1.30 2005/01/29 18:42:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -65,6 +65,7 @@ struct conf {
 	int c_noauth;
 	int c_noaccessdb;
 	int c_nospf;
+	int c_delayedreject;
 	int c_testmode;
 	int c_delay;
 	int c_autowhite_validity;
