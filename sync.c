@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.33 2004/03/22 23:29:59 manu Exp $ */
+/* $Id: sync.c,v 1.34 2004/03/30 11:43:46 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id");
+__RCSID("$Id: sync.c,v 1.34 2004/03/30 11:43:46 manu Exp $");
 #endif
 #endif
 
