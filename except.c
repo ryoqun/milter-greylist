@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.5 2004/03/01 10:18:18 manu Exp $ */
+/* $Id: except.c,v 1.6 2004/03/01 14:05:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -235,14 +235,29 @@ except_filter(in, from, rcpt)
 }
 
 static int 
-emailcmp(e1, e2)
-	char *e1;
-	char *e2;
+emailcmp(big, little)
+	char *big;
+	char *little;
 {
-	int i;
+	int i, j;
 
-	for (i = 0; (i < ADDRLEN) && e1[i] && e2[i]; i++)
-		if (tolower(e1[i]) != tolower(e2[i]))
+	/* 
+	 * An e-mail address starts with [A-Za-z0-9]
+	 * Strip any leading garbage, including brackets.
+	 * eg: "  <foo@example.com>" -> "foo@xample.com>"
+	 */
+	for (j = 0; (j < ADDRLEN) && big[0] && !isalnum(big[0]); j++)
+		big++;
+
+	/* 
+	 * Then compare it with the smaller string. 
+	 * Comparison stops as soon as the end of
+	 * a string is reached. This avoids problems
+	 * with trailing chars, including brackets.
+	 * eg: "foo@example.com> " matches "foo@example.com"
+	 */
+	 for (i = 0; (i < ADDRLEN - j) && big[i] && little[i]; i++)
+		if (tolower(big[i]) != tolower(little[i]))
 			return 1;
 
 	return 0;
