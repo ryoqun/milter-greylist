@@ -1,4 +1,5 @@
 1.3.1:
+	Remove fake error message on dump reload  (make the LOG_DEBUG)
 	List build dependenvies in README
 1.1.16:
 	More buid problems on FreeBSD 

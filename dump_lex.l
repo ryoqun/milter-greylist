@@ -23,13 +23,14 @@ auto		[Aa][Uu][Tt][Oo]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.10 2004/03/28 19:54:18 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.11 2004/04/16 20:15:19 manu Exp $");
 	#endif
 	#endif
 	#endif
 
 	#include <string.h>
 	#include <errno.h>
+	#include <syslog.h>
 	#include <sysexits.h>
 
 	#define YY_NO_UNPUT
@@ -63,7 +64,8 @@ auto		[Aa][Uu][Tt][Oo]
 			return yytext[0]; 
 		}
 <*>.|\n		{ 
-			printf("unknown token \"%s\" line %d, skiping\n", 
+			syslog(LOG_DEBUG, 
+			    "unknown token \"%s\" line %d, skiping\n", 
 			    yytext, dump_line); 
 		}
 %%
@@ -72,6 +74,6 @@ void
 yyerror(err)
 	char *err;
 {
-	fprintf(stderr, "error at line %d: %s\n", dump_line, err);
+	syslog(LOG_ERR, "error at line %d: %s\n", dump_line, err);
 	return;
 }
