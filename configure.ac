@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.67 2004/03/22 21:19:09 manu Exp $
+# $Id: configure.ac,v 1.68 2004/03/22 22:13:03 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -162,18 +162,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	[AC_DEFINE([HAVE_OLD_QUEUE_H], [], [old <sys/queue.h>]) oldqueue=yes])
 AC_MSG_RESULT([$oldqueue])
 
-# Darwin seems to have no definition for socklen_t beyond _BSD_SOCKLEN_T_
-AC_MSG_CHECKING([if socklen_t is missing])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
-		#include <sys/types.h>
-		#include <sys/socket.h>
-	],[
-		socklen_t slen;
-	])], [socklen=no], 
-	[AC_DEFINE([HAVE_MISSING_SOCKLEN_T], [], 
-	    [missing socklen_t definition]) socklen=yes])
-AC_MSG_RESULT([$socklen])
-
 # Darwin is unable to define two __RCSID in the same file
 AC_MSG_CHECKING([if __RCSID can be used twice in the same source])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
@@ -190,11 +178,13 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 AC_MSG_RESULT([$rcsidtwice])
 
 # Digital UNIX's native compiler require -pthread when using libpthread
+# It also require -D_XOPEN_SOURCE=500 for various reasons I have not 
+# been abe to isolate. Let's define both there.
 AC_MSG_CHECKING([whether <pthreads.h> wants -pthread])
 SAVEDCFLAGS=$CFLAGS
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],[])],
 	[pthreadfl=no], 
-	[CFLAGS=$CFLAGS" -pthread";
+	[CFLAGS=$CFLAGS" -pthread -D_XOPEN_SOURCE=500";
 	 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],[])],
 		[pthreadfl=yes; SAVEDCLFAGS=$CFLAGS], [pthreadfl=no])
 	])
@@ -218,6 +208,18 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 		#include <sys/types.h>
 		#include <sys/socket.h>
 	])
+
+# Darwin seems to have no definition for socklen_t beyond _BSD_SOCKLEN_T_
+AC_MSG_CHECKING([if socklen_t is missing])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <sys/types.h>
+		#include <sys/socket.h>
+	],[
+		socklen_t slen;
+	])], [socklen=no], 
+	[AC_DEFINE([HAVE_MISSING_SOCKLEN_T], [], 
+	    [missing socklen_t definition]) socklen=yes])
+AC_MSG_RESULT([$socklen])
 
 # GNU pth-2.0.0 has a bug with rwlock. 
 AC_MSG_CHECKING([for broken rwlock in libpthread])
