@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.11 2004/03/11 17:32:57 manu Exp $ */
+/* $Id: sync.c,v 1.12 2004/03/11 18:38:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -152,7 +152,7 @@ peer_delete(pending)
 {
 	struct peer *peer;
 
-	PEER_RDLOCK;
+	PEER_WRLOCK;
 	if (LIST_EMPTY(&peer_head))
 		goto out;
 
