@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.1 2004/02/21 18:02:52 manu Exp $
+.\" $Id: milter-greylist.8,v 1.2 2004/02/22 00:58:42 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -65,7 +65,7 @@ send e-mail. Whitelisting localhost is also a must.
 .Pp
 .Nm
 works with two files. 
-.Pa except.conf
+.Pa greylist.except
 holds the white list of machines that will not suffer grey list filtering.
 It is readen upon 
 .Nm
@@ -88,7 +88,7 @@ The following options are available:
 .Bl -tag -width flag
 .It Fl d Ar dumpfile
 Location of the dump file. Default is 
-.Pa /etc/mail/except.conf .
+.Pa /etc/mail/greylist.except
 .It Fl f Ar exceptfile
 Location of the white list file. Default is
 .Pa /var/milter-greylist/greylist.db .

@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.3 2004/02/21 23:15:49 manu Exp $
+# $Id: Makefile.in,v 1.4 2004/02/22 00:58:42 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,6 @@ CFLAGS= 	@CFLAGS@ -Wall -Werror -ansi
 LDFLAGS=	@LDFLAGS@
 LIBS= 		@LIBS@
 PREFIX=		@prefix@
-SYSCONFDIR=	@sysconfdir@
 
 MKDEP=		@MKDEP@
 RM=		@RM@
@@ -49,8 +48,9 @@ all:	depend milter-greylist
 
 install:	milter-greylist
 	${INSTALL} -m 755 milter-greylist ${PREFIX}/sbin
-	${INSTALL} -m 644 milter-greylist.8 ${PREFIX}/man/man8
-	${INSTALL} -m 644 except.conf ${SYSCONFDIR}/mail
+	${INSTALL} -m 644 milter-greylist.8 ${PREFIX}/share/man/man8
+	${INSTALL} -m 644 greylist.except /etc/mail
+	${INSTALL} -d -m 755 /var/milter-greylist
 
 depend:
 	${MKDEP} ${CFLAGS} ${SRC}

@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.3 2004/02/21 17:46:11 manu Exp $ */
+/* $Id: except.h,v 1.4 2004/02/22 00:58:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -44,7 +44,7 @@
 #include "config.h"
 
 #ifndef EXCEPTFILE
-#define EXCEPTFILE "/etc/mail/except.conf"
+#define EXCEPTFILE "/etc/mail/greylist.except"
 #endif
 
 LIST_HEAD(exceptlist, except);
