@@ -1,4 +1,6 @@
 1.1.5:	
+	Bugfix: the dumpfile was not set correctly on command line
+	Bugfix: correctly reset defaults before reloading the config
 	Clear a warning on Solaris build
 	Bugfix: The subnet match mask was not set in the configuration file
 1.1.4:

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.67 2004/03/31 15:31:59 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.68 2004/03/31 17:02:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.67 2004/03/31 15:31:59 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.68 2004/03/31 17:02:08 manu Exp $");
 #endif
 #endif
 
@@ -413,8 +413,8 @@ main(argc, argv)
 	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rSL:")) != -1) {
 		switch (ch) {
 		case 'A':
-			conf.c_noauth = 1;
-			conf.c_forced |= C_NOAUTH;
+			defconf.c_noauth = 1;
+			defconf.c_forced |= C_NOAUTH;
 			break;
 
 		case 'a':
@@ -423,19 +423,19 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			conf.c_autowhite_validity = 
+			defconf.c_autowhite_validity = 
 			    (time_t)humanized_atoi(optarg);
-			conf.c_forced |= C_AUTOWHITE;
+			defconf.c_forced |= C_AUTOWHITE;
 			break;
 
 		case 'D':
-			conf.c_nodetach = 1;
-			conf.c_forced |= C_NODETACH;
+			defconf.c_nodetach = 1;
+			defconf.c_forced |= C_NODETACH;
 			break;
 
 		case 'q':
-			conf.c_quiet = 1;
-			conf.c_forced |= C_QUIET;
+			defconf.c_quiet = 1;
+			defconf.c_forced |= C_QUIET;
 			break;
 
 		case 'r':
@@ -445,8 +445,8 @@ main(argc, argv)
 			break;
 
 		case 'S':
-			conf.c_nospf = 1;
-			conf.c_forced |= C_NOSPF;
+			defconf.c_nospf = 1;
+			defconf.c_forced |= C_NOSPF;
 			break;
 
 		case 'u': {
@@ -462,25 +462,25 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			conf.c_user = optarg;
-			conf.c_forced |= C_USER;
+			defconf.c_user = optarg;
+			defconf.c_forced |= C_USER;
 			break;
 		}
 			
 		case 'v':
-			conf.c_debug = 1;
-			conf.c_forced |= C_DEBUG;
+			defconf.c_debug = 1;
+			defconf.c_forced |= C_DEBUG;
 			break;
 
 		case 'w':
 			if ((optarg == NULL) || 
-			    ((conf.c_delay = humanized_atoi(optarg)) == 0)) {
+			    ((defconf.c_delay = humanized_atoi(optarg)) == 0)) {
 				fprintf(stderr, 
 				    "%s: -w needs a positive argument\n",
 				    argv[0]);
 				usage(argv[0]);
 			}
-			conf.c_forced |= C_DELAY;
+			defconf.c_forced |= C_DELAY;
 			break;
 
 		case 'f':
@@ -498,7 +498,8 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			dumpfile = optarg;
+			defconf.c_dumpfile = optarg;
+			defconf.c_forced |= C_DUMPFILE;
 			break;
 				
 		case 'P':
@@ -507,8 +508,8 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			conf.c_pidfile = optarg;
-			conf.c_forced |= C_PIDFILE;
+			defconf.c_pidfile = optarg;
+			defconf.c_forced |= C_PIDFILE;
 			break;
 
 		case 'p':
@@ -517,8 +518,8 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			conf.c_socket = optarg;
-			conf.c_forced |= C_SOCKET;
+			defconf.c_socket = optarg;
+			defconf.c_forced |= C_SOCKET;
 			break;
 
 		case 'L': {
@@ -537,19 +538,19 @@ main(argc, argv)
 				    "%s: -L requires a CIDR mask\n", argv[0]);
 				usage(argv[0]);
 			}
-			cidr2mask(cidr, &conf.c_match_mask);
-			conf.c_forced |= C_MATCHMASK;
+			cidr2mask(cidr, &defconf.c_match_mask);
+			defconf.c_forced |= C_MATCHMASK;
 
-			if (conf.c_debug)
+			if (defconf.c_debug)
 				printf("match mask: %s\n", inet_ntop(AF_INET, 
-				    &conf.c_match_mask, maskstr, IPADDRLEN));
+				    &defconf.c_match_mask, maskstr, IPADDRLEN));
 
 			break;
 		}
 
 		case 'T':
-			conf.c_testmode = 1;	
-			conf.c_forced |= C_TESTMODE;
+			defconf.c_testmode = 1;	
+			defconf.c_forced |= C_TESTMODE;
 			break;
 
 		case 'h':

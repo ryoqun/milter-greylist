@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.12 2004/03/31 09:49:16 manu Exp $ */
+/* $Id: dump.c,v 1.13 2004/03/31 17:02:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.12 2004/03/31 09:49:16 manu Exp $");
+__RCSID("$Id: dump.c,v 1.13 2004/03/31 17:02:08 manu Exp $");
 #endif
 #endif
 
@@ -70,7 +70,6 @@ __RCSID("$Id: dump.c,v 1.12 2004/03/31 09:49:16 manu Exp $");
 
 pthread_cond_t dump_sleepflag;
 
-char *dumpfile = DUMPFILE;
 int dump_parse(void);
 int dump_dirty = 0;
 
@@ -145,7 +144,8 @@ dumper(dontcare)
 		 * even if the machine crashes, we will not 
 		 * loose both files.
 		 */
-		snprintf(newdumpfile, MAXPATHLEN, "%s-XXXXXXXX", dumpfile);
+		snprintf(newdumpfile, MAXPATHLEN, 
+		    "%s-XXXXXXXX", conf.c_dumpfile);
 
 		if ((dumpfd = mkstemp(newdumpfile)) == -1) {
 			syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s", 
@@ -166,9 +166,9 @@ dumper(dontcare)
 
 		fclose(dump);
 
-		if (rename(newdumpfile, dumpfile) != 0) {
+		if (rename(newdumpfile, conf.c_dumpfile) != 0) {
 			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
-			    dumpfile, newdumpfile, strerror(errno));
+			    conf.c_dumpfile, newdumpfile, strerror(errno));
 			exit(EX_OSERR);
 		}
 
@@ -195,8 +195,8 @@ dump_reload(void) {
 	/* 
 	 * Re-import a saved greylist
 	 */
-	if ((dump = fopen(dumpfile, "r")) == NULL) {
-		syslog(LOG_ERR, "cannot read dumpfile \"%s\"", dumpfile);
+	if ((dump = fopen(conf.c_dumpfile, "r")) == NULL) {
+		syslog(LOG_ERR, "cannot read dumpfile \"%s\"", conf.c_dumpfile);
 		syslog(LOG_ERR, "starting with an empty greylist");
 	} else {
 		dump_in = dump;

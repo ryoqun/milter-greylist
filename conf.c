@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.11 2004/03/31 15:31:59 manu Exp $ */
+/* $Id: conf.c,v 1.12 2004/03/31 17:02:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.11 2004/03/31 15:31:59 manu Exp $");
+__RCSID("$Id: conf.c,v 1.12 2004/03/31 17:02:08 manu Exp $");
 #endif
 #endif
 
@@ -67,7 +67,7 @@ __RCSID("$Id: conf.c,v 1.11 2004/03/31 15:31:59 manu Exp $");
 #include "milter-greylist.h"
 
 /* Default configuration */
-struct conf conf = {
+struct conf defconf = {
 	C_NONE,		/* c_forced */
 	0,		/* c_debug */
 	0,		/* c_quiet */
@@ -83,6 +83,8 @@ struct conf conf = {
 	NULL,		/* c_user */
 	0,		/* c_nodetach */
 };
+struct conf conf;
+
 char c_pidfile[PATHLEN + 1];
 char c_dumpfile[PATHLEN + 1];
 char c_socket[PATHLEN + 1];
@@ -96,6 +98,15 @@ conf_load(void) 	/* exceptlist must be write-locked */
 {
 	FILE *stream;
 
+	/*
+	 * Reset the configuration to its default 
+	 * (This includes command line flags)
+	 */
+	memcpy(&conf, &defconf, sizeof(conf));
+
+	/* 
+	 * And load the new one
+	 */
 	if ((stream = fopen(conffile, "r")) == NULL) {
 		fprintf(stderr, "cannot open config file %s: %s\n", 
 		    conffile, strerror(errno));

@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.9 2004/03/31 15:31:59 manu Exp $ */
+/* $Id: conf.h,v 1.10 2004/03/31 17:02:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -86,6 +86,7 @@ struct conf {
 #define C_NODETACH	0x1000
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
+extern struct conf defconf;
 extern struct conf conf;
 extern char *conffile;
 extern char c_pidfile[PATHLEN + 1];
