@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.28 2004/10/11 20:57:42 manu Exp $ */
+/* $Id: conf.c,v 1.29 2004/10/26 19:57:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.28 2004/10/11 20:57:42 manu Exp $");
+__RCSID("$Id: conf.c,v 1.29 2004/10/26 19:57:40 manu Exp $");
 #endif
 #endif
 
@@ -80,8 +80,17 @@ char c_syncport[NUMLEN + 1];
 
 char *conffile = CONFFILE;
 struct timeval conffile_modified;
+int numb_of_conf_update_threads;
 
-pthread_rwlock_t conf_lock; 	/* protects conf_update */
+#define MAX_NUMB_OF_CONF_UPDATE_THREADS 1
+/*
+ * this lock does not protect conf_update any more,
+ * only conffile_modified and numb_of_conf_update_threads.
+ * there are lot of non-auto variables above to protect as well,
+ * so it is safer to limit the maximum number of configuration loading
+ * processes to one for the time being.
+ */
+pthread_rwlock_t conf_lock;
 
 void
 conf_init(void) {
@@ -97,12 +106,10 @@ conf_init(void) {
 }
 
 void
-conf_load(void) 	/* exceptlist must be write-locked */
+conf_load(void)
 {
 	FILE *stream;
-	pthread_t tid;
-	pthread_attr_t attr;
-	int error;
+	struct timeval tv1, tv2, tv3;
 
 	/*
 	 * Reset the configuration to its default 
@@ -110,17 +117,79 @@ conf_load(void) 	/* exceptlist must be write-locked */
 	 */
 	memcpy(&conf, &defconf, sizeof(conf));
 
-	/* 
-	 * And load the new one
-	 */
+	if (!conf.c_cold)
+		(void)gettimeofday(&tv1, NULL);
+
 	if ((stream = fopen(conffile, "r")) == NULL) {
-		fprintf(stderr, "cannot open config file %s: %s\n", 
-		    conffile, strerror(errno));
-		fprintf(stderr, "continuing with no exception list\n");
+		if (conf.c_cold) {
+			fprintf(stderr, "cannot open config file %s: %s\n", 
+			    conffile, strerror(errno));
+			fprintf(stderr, "continuing with no exception list\n");
+		} else {
+			syslog(LOG_ERR, "cannot open config file %s: %s", 
+			    conffile, strerror(errno));
+		}
+	} else {
+
+		peer_clear();
+		EXCEPT_WRLOCK;
+		except_clear();
+
+		conf_in = stream;
+
+		conf_parse();
+
+		EXCEPT_UNLOCK;
+
+		fclose(stream);
+
+		if (!conf.c_cold) {
+			(void)gettimeofday(&tv2, NULL);
+			timersub(&tv2, &tv1, &tv3);
+			syslog(LOG_DEBUG, "%sloaded config file in %ld.%06lds", 
+			conf.c_cold ? "" : "re",
+			    tv3.tv_sec, tv3.tv_usec);
+		}
+	}
+
+	if (conf.c_cold) {
+		conf.c_cold = 0;
+		defconf.c_cold = 0;
+		(void)gettimeofday(&conffile_modified, NULL);
+	} else {
+		CONF_WRLOCK;
+		--numb_of_conf_update_threads;
+		CONF_UNLOCK;
+	}
+
+	return;
+}
+
+void
+conf_update(void) {
+	struct stat st;
+	pthread_t tid;
+	pthread_attr_t attr;
+	int error;
+	
+	if (stat(conffile, &st) != 0) {
+		syslog(LOG_ERR, "config file \"%s\" unavailable", 
+		    conffile);
 		return;
 	}
 
-	conf_in = stream;
+	CONF_WRLOCK;
+	numb_of_conf_update_threads++;
+	if (st.st_mtime <= conffile_modified.tv_sec ||
+		numb_of_conf_update_threads > MAX_NUMB_OF_CONF_UPDATE_THREADS) {
+		--numb_of_conf_update_threads;
+		CONF_UNLOCK;
+		return;
+	}
+	conffile_modified.tv_sec = st.st_mtime;
+	CONF_UNLOCK;
+
+	syslog(LOG_INFO, "reloading \"%s\"", conffile);
 
 	/*
 	 * On some platforms, the thread stack limit is too low and
@@ -135,83 +204,36 @@ conf_load(void) 	/* exceptlist must be write-locked */
 	 * it is useless and it will trigger a bug on some systems
 	 * (launching a thread before a fork seems to be a problem)
 	 */
-	if (conf.c_cold) {
-		conf_parse();
-		conf.c_cold = 0;
-		defconf.c_cold = 0;
-	} else {
-		if ((error = pthread_attr_init(&attr)) != 0) {
-			syslog(LOG_ERR, "pthread_attr_init failed: %s", 
-			    strerror(error));
-			exit(EX_OSERR);
-		}
-
-		if ((error = pthread_attr_setstacksize(&attr, 
-		    2 * 1024 * 1024)) != 0) {
-			syslog(LOG_ERR, "pthread_attr_setstacksize failed: %s", 
-			    strerror(error));
-			exit(EX_OSERR);
-		}
-
-		if ((error = pthread_create(&tid, &attr, 
-		    (void *(*)(void *))conf_parse, NULL)) != 0) {
-			syslog(LOG_ERR, "pthread_create failed: %s", 
-			    strerror(error));
-			exit(EX_OSERR);
-		}
-
-		if ((error = pthread_join(tid, NULL)) != 0) {
-			syslog(LOG_ERR, "pthread_join failed: %s",
-			    strerror(error));
-			exit(EX_OSERR);
-		}
-
-		if ((error = pthread_attr_destroy(&attr)) != 0) {
-			syslog(LOG_ERR, "pthread_attr_destroy failed: %s",
-			    strerror(error));
-			exit(EX_OSERR);
-		}
+	if ((error = pthread_attr_init(&attr)) != 0) {
+		syslog(LOG_ERR, "pthread_attr_init failed: %s", 
+		    strerror(error));
+		exit(EX_OSERR);
 	}
 
-	fclose(stream);
-
-	(void)gettimeofday(&conffile_modified, NULL);
-
-	return;
-}
-
-void
-conf_update(void) {
-	struct stat st;
-	struct timeval tv1, tv2, tv3;
-	
-	if (stat(conffile, &st) != 0) {
-		syslog(LOG_ERR, "config file \"%s\" unavailable", 
-		    conffile);
-		return;
+	if ((error = pthread_attr_setstacksize(&attr, 
+	    2 * 1024 * 1024)) != 0) {
+		syslog(LOG_ERR, "pthread_attr_setstacksize failed: %s", 
+		    strerror(error));
+		exit(EX_OSERR);
 	}
 
-	/* 
-	 * conffile_modified is updated in conf_load()
-	 */
-	if (st.st_mtime < conffile_modified.tv_sec) 
-		return;
+	if ((error = pthread_create(&tid, &attr, 
+	    (void *(*)(void *))conf_load, NULL)) != 0) {
+		syslog(LOG_ERR, "pthread_create failed: %s", 
+		    strerror(error));
+		exit(EX_OSERR);
+	}
 
-	syslog(LOG_INFO, "reloading \"%s\"", conffile);
-	if (conf.c_debug)
-		(void)gettimeofday(&tv1, NULL);
+	if ((error = pthread_detach(tid)) != 0) {
+		syslog(LOG_ERR, "pthread_detach failed: %s",
+		    strerror(error));
+		exit(EX_OSERR);
+	}
 
-	peer_clear();
-	EXCEPT_WRLOCK;
-	except_clear();
-	conf_load();
-	EXCEPT_UNLOCK;
-
-	if (conf.c_debug) {
-		(void)gettimeofday(&tv2, NULL);
-		timersub(&tv2, &tv1, &tv3);
-		syslog(LOG_DEBUG, "reloaded config file in %ld.%06lds", 
-		    tv3.tv_sec, tv3.tv_usec);
+	if ((error = pthread_attr_destroy(&attr)) != 0) {
+		syslog(LOG_ERR, "pthread_attr_destroy failed: %s",
+		    strerror(error));
+		exit(EX_OSERR);
 	}
 
 	return;

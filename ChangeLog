@@ -1,4 +1,5 @@
 1.5.11:
+	Don't block threads while reloading config (Attila Bruncsak)
 	Allow regex with # in the configuration (Hajimu Umemoto)
 	Ingore self as sync peer (Matthias Scheler and Hajimu Umemoto)
 	Document ressource shortage for memory and file descriptor

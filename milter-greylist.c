@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.96 2004/10/14 21:59:13 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.97 2004/10/26 19:57:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.96 2004/10/14 21:59:13 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.97 2004/10/26 19:57:40 manu Exp $");
 #endif
 #endif
 
@@ -206,11 +206,8 @@ mlfi_envfrom(ctx, envfrom)
 
 	/*
 	 * Reload the config file if it has been touched
-	 * Only one thread at a time, please.
 	 */
-	CONF_WRLOCK;
 	conf_update();
-	CONF_UNLOCK;
 
 	/*
 	 * Is the sender non-IPv4?
