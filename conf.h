@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.13 2004/04/01 20:49:16 manu Exp $ */
+/* $Id: conf.h,v 1.14 2004/04/01 21:03:58 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -53,10 +53,10 @@
 #endif
 
 /* 
- * Some heavily brain-damaged systems have no in_addr_t
+ * This is missing on some systems
  */
 #ifndef in_addr_t
-typedef unsigned int in_addr_t;
+#define in_addr_t unsigned int
 #endif
 
 struct conf {
