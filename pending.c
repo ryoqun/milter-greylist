@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.30 2004/03/16 23:16:52 manu Exp $ */
+/* $Id: pending.c,v 1.31 2004/03/17 15:45:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.30 2004/03/16 23:16:52 manu Exp $");
+__RCSID("$Id: pending.c,v 1.31 2004/03/17 15:45:26 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -148,6 +148,7 @@ pending_del(in, from, rcpt, time)
 {
 	char addr[IPADDRLEN + 1];
 	struct pending *pending;
+	struct pending *prev_pending = NULL;
 	struct timeval tv;
 
 	gettimeofday(&tv, NULL);
@@ -163,7 +164,7 @@ pending_del(in, from, rcpt, time)
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0) &&
 		    (pending->p_tv.tv_sec == time)) {
 			pending_put(pending);
-			goto out;
+			break;
 		}
 
 		/*
@@ -173,9 +174,15 @@ pending_del(in, from, rcpt, time)
 			syslog(LOG_INFO, "del: %s from %s to %s timed out", 
 			    pending->p_addr, pending->p_from, pending->p_rcpt);
 			pending_put(pending);
+
+			if (TAILQ_EMPTY(&pending_head))
+				break;
+			if ((pending = prev_pending) == NULL)
+				pending = TAILQ_FIRST(&pending_head);
+			continue;
 		}
+		prev_pending = pending;
 	}
-out:
 	PENDING_UNLOCK;
 	return;
 }
@@ -190,6 +197,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 {
 	char addr[IPADDRLEN + 1];
 	struct pending *pending;
+	struct pending *prev_pending = NULL;
 	struct timeval tv;
 	time_t rest = -1;
 	int dirty = 0;
@@ -227,7 +235,14 @@ pending_check(in, from, rcpt, remaining, elapsed)
 			    pending->p_addr, pending->p_from, pending->p_rcpt);
 			pending_put(pending);
 			dirty = 1;
+
+			if (TAILQ_EMPTY(&pending_head))
+				break;
+			if ((pending = prev_pending) == NULL)
+				pending = TAILQ_FIRST(&pending_head);
+			continue;
 		}
+		prev_pending = pending;
 	}
 
 	/* 
