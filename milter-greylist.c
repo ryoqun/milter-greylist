@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.81 2004/05/15 08:41:54 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.82 2004/05/20 19:34:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.81 2004/05/15 08:41:54 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.82 2004/05/20 19:34:19 manu Exp $");
 #endif
 #endif
 
@@ -159,7 +159,7 @@ mlfi_envfrom(ctx, envfrom)
 
 	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
 		syslog(LOG_DEBUG, "smfi_getsymval failed for {i}");
-		priv->priv_queueid = "(unkown id)";
+		priv->priv_queueid = "(unknown id)";
 	}
 
 	/*
