@@ -1,4 +1,4 @@
-/* $Id: config.h.in,v 1.17 2004/04/04 14:14:00 manu Exp $ */
+/* $Id: config.h.in,v 1.18 2004/05/01 15:53:46 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
@@ -15,6 +15,9 @@
 
 /* Define to 1 if you have the `bzero' function. */
 #undef HAVE_BZERO
+
+/* <db_185.h> should be used instead of <db.h> */
+#undef HAVE_DB_185_H
 
 /* Define to 1 if you have the <fcntl.h> header file. */
 #undef HAVE_FCNTL_H

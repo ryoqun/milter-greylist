@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.99 2004/04/30 21:54:28 manu Exp $
+# $Id: configure.ac,v 1.100 2004/05/01 15:53:46 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -29,6 +29,10 @@ LDFLAGS=$SAVEDLDFLAGS
 AC_MSG_RESULT([$ldrpath])
 
 # Path to required packages
+AC_ARG_WITH(db,
+        [  --with-db=DIR   Find Berkeley DB in DIR],
+        [CFLAGS=$CFLAGS" -I$withval/include"
+            LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
 AC_ARG_WITH(libmilter, 
 	[  --with-libmilter=DIR   Find libmilter in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
@@ -99,6 +103,12 @@ AC_ARG_WITH(libspf,
 ])
 LDFLAGS=$SAVEDLDFLAGS
 CFLAGS=$SAVEDCFLAGS
+
+# Check for DB version
+AC_CHECK_HEADER([db_185.h],
+                [AC_DEFINE([HAVE_DB_185_H], [],
+                           [<db_185.h> should be used instead of <db.h>])
+                ])
 
 # Check for socket functions linking. On Solaris, -lsocket -lnsl is required
 AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], 
