@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.4 2004/02/29 22:35:09 manu Exp $ */
+/* $Id: except.c,v 1.5 2004/03/01 10:18:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -107,9 +107,15 @@ except_add_netblock(in, cidr)
 	memcpy(&except->e_mask, &mask, sizeof(mask));
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
-	if (debug)
-		printf("load exception net %s/%s\n", 
-		    inet_ntoa(except->e_addr), inet_ntoa(except->e_mask));
+	if (debug) {
+		/*
+		 * inet_ntoa result is a static char[], so we cannot use
+		 * inet_ntoa two times in the same function call, else we 
+		 * get the same result twice.
+		 */
+		printf("load exception net %s", inet_ntoa(except->e_addr));
+		printf("/%s\n", inet_ntoa(except->e_mask));
+	}
 
 	return;
 }
