@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.5 2004/03/17 22:28:57 manu Exp $ */
+/* $Id: autowhite.h,v 1.6 2004/03/18 11:08:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -35,7 +35,7 @@
 #include "milter-greylist.h"
 
 #ifndef AUTOWHITE_VALIDITY
-#define AUTOWHITE_VALIDITY (24 * 2600) /* 1 day */
+#define AUTOWHITE_VALIDITY (24 * 3600) /* 1 day */
 #endif
 
 #define AUTOWHITE_WRLOCK WRLOCK(autowhite_lock) 
