@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.3 2004/06/17 20:03:25 manu Exp $
+# $Id: Makefile,v 1.4 2004/06/17 20:05:18 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -38,7 +38,7 @@ SYSCONFDIR=	${prefix}/etc
 LOCALSTATEDIR=	${prefix}/var
 BINDIR=		${exec_prefix}/bin
 MANDIR=		${prefix}/man
-USER=		root
+USER=		smmsp
 
 CC=		gcc
 MKDEP=		mkdep
@@ -102,7 +102,8 @@ depend:
 	${MKDEP} ${CFLAGS} ${SRC}
 
 clean:
-	${RM} -f milter-greylist ${OBJ} ${GENSRC} rc-linux.sh rc-bsd.sh
+	${RM} -f milter-greylist ${OBJ} ${GENSRC} \
+	rc-linux.sh rc-bsd.sh rc-solaris.sh
 
 realclean:	clean
 	${RM} -Rf Makefile config.h config.log config.status \
