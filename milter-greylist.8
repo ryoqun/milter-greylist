@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.3 2004/02/23 08:24:05 manu Exp $
+.\" $Id: milter-greylist.8,v 1.4 2004/02/29 18:07:17 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -66,14 +66,16 @@ send e-mail. Whitelisting localhost is also a must.
 .Nm
 works with two files. 
 .Pa greylist.except
-holds the white list of machines that will not suffer grey list filtering.
+holds the white list of addresses that will not suffer grey list filtering.
 It is readen upon 
 .Nm
-startup and is left alone once started. The syntax of this file is simple:
-it just consist of one pair of network address and CIDR netmask per line, 
-separated by a / (slash). Here is an example:
-.Dl 127.0.0.0/8
-.Dl 192.168.3.0/24
+startup and is left alone once started. 
+The format of the file is rather simple: each line gives a network address
+block or an e-mail address that is excluded from grey list filtering. 
+Here is an example:
+.Dl addr 127.0.0.0/8
+.Dl addr 192.168.3.0/24
+.Dl rcpt John.Doe@example.net
 .Pp
 The second file is
 .Pa greylist.db .

@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.2 2004/02/29 15:13:30 manu Exp $ */
+/* $Id: except.c,v 1.3 2004/02/29 18:07:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,6 +31,7 @@
 
 #include <errno.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
@@ -45,6 +46,8 @@
 extern int debug;
 char *exceptfile = EXCEPTFILE;
 struct exceptlist except_head;
+
+static int emailcmp(char *, char *);
 
 int
 except_init(void) {
@@ -72,7 +75,7 @@ except_load(void)
 }
 
 void
-except_add(in, cidr)
+except_add_netblock(in, cidr)
 	struct in_addr *in;
 	int cidr;
 {
@@ -98,31 +101,115 @@ except_add(in, cidr)
 		exit(EX_OSERR);
 	}
 		
+	except->e_type = E_NETBLOCK;
 	memcpy(&except->e_addr, in, sizeof(*in));
 	memcpy(&except->e_mask, &mask, sizeof(mask));
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
-	if (debug) {
-		printf("load exception %s", inet_ntoa(except->e_addr));
-		printf("/%s\n", inet_ntoa(except->e_mask));
-	}
+	if (debug)
+		printf("load exception net %s/%s\n", 
+		    inet_ntoa(except->e_addr), inet_ntoa(except->e_mask));
 
 	return;
 }
 
+void
+except_add_from(email)
+	char *email;
+{
+	struct except *except;
+
+	if ((except = malloc(sizeof(*except))) == NULL) {
+		perror("cannot allocate memory");
+		exit(EX_OSERR);
+	}
+		
+	except->e_type = E_FROM;
+	strncpy(except->e_from, email, ADDRLEN);
+	LIST_INSERT_HEAD(&except_head, except, e_list);
+
+	if (debug)
+		printf("load exception from %s\n", email);
+
+	return;
+}
+
+void
+except_add_rcpt(email)
+	char *email;
+{
+	struct except *except;
+
+	if ((except = malloc(sizeof(*except))) == NULL) {
+		perror("cannot allocate memory");
+		exit(EX_OSERR);
+	}
+		
+	except->e_type = E_RCPT;
+	strncpy(except->e_rcpt, email, ADDRLEN);
+	LIST_INSERT_HEAD(&except_head, except, e_list);
+
+	if (debug)
+		printf("load exception rcpt %s\n", email);
+
+	return;
+}
 
 int 
-except_checkaddr(in)
+except_filter(in, from, rcpt)
 	struct in_addr *in;
+	char *from;
+	char *rcpt;
 {
 	struct except *ex;
 	
 	LIST_FOREACH(ex, &except_head, e_list) {
-		if ((in->s_addr & ex->e_mask.s_addr) == ex->e_addr.s_addr) {
-			syslog(LOG_INFO, "address %s is in exception list\n", 
-			    inet_ntoa(*in));
-			return 1;
+		switch (ex->e_type) {
+		case E_NETBLOCK: {
+			if ((in->s_addr & ex->e_mask.s_addr) == 
+			    ex->e_addr.s_addr) {
+				syslog(LOG_INFO, "address %s is in "
+				    "exception list\n", inet_ntoa(*in));
+				return 1;
+			}
+			break;
+		}
+
+		case E_FROM:
+			if (emailcmp(from, ex->e_from) == 0) {
+				syslog(LOG_INFO, "sender %s is in "
+				    "exception list\n", from);
+				return 1;
+			}
+			break;
+
+		case E_RCPT:
+			if (emailcmp(rcpt, ex->e_rcpt) == 0) {
+				syslog(LOG_INFO, "recipient %s is in "
+				    "exception list\n", rcpt);
+				return 1;
+			}
+			break;
+
+		default:
+			syslog(LOG_ERR, "corrupted exception list\n");
+			exit(EX_SOFTWARE);
+			break;
 		}
 	}
+	return 0;
+}
+
+static int 
+emailcmp(e1, e2)
+	char *e1;
+	char *e2;
+{
+	int i;
+
+	for (i = 0; (i < ADDRLEN) && e1[i] && e2[i]; i++)
+		if (tolower(e1[i]) != tolower(e2[i]))
+			return 1;
+
 	return 0;
 }

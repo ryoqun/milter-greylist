@@ -1,1 +1,26 @@
-127.0.0.0/8
+#
+# Greylisting exception file
+#
+# $Id: greylist.except,v 1.2 2004/02/29 18:07:17 manu Exp $
+#
+
+# Greylisting your own MTA is a very bad idea: never 
+# comment this line.
+addr 127.0.0.0/8
+
+# You will want to avoid greylisting your own clients 
+# as well, by filtering out your IP address blocks.
+# Here is an example if you use 192.0.2.0/16
+#addr 192.0.2.0/16
+
+# You can avoid greylisting by filtering on the sender 
+# enveloppe address but this is not a good idea: this 
+# can be trivially forged.
+#from friendly@example.com
+
+# Some of your users do not get any spam because 
+# their addresses have never been collected by 
+# spammers. They will want to avoid the extra delivery 
+# delay caused by grey listing. You can filter on the
+# recipient enveloppe address to achieve that.
+#to John.Doe@example.net

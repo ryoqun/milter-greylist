@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.5 2004/02/29 15:13:30 manu Exp $ */
+/* $Id: except.h,v 1.6 2004/02/29 18:07:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -49,9 +49,21 @@
 
 LIST_HEAD(exceptlist, except);
 
+typedef enum { E_NETBLOCK, E_FROM, E_RCPT } except_type_t;
+#define e_addr e_data.d_netblock.nb_addr
+#define e_mask e_data.d_netblock.nb_mask
+#define e_from e_data.d_from
+#define e_rcpt e_data.d_rcpt
 struct except {
-	struct in_addr e_addr;
-	struct in_addr e_mask;
+	except_type_t e_type;
+	union {
+		struct {
+			struct in_addr nb_addr;
+			struct in_addr nb_mask;
+		} d_netblock;
+		char d_from[ADDRLEN + 1];
+		char d_rcpt[ADDRLEN + 1];
+	} e_data;
 	LIST_ENTRY(except) e_list;
 };
 
@@ -59,8 +71,10 @@ extern char *exceptfile;
 
 int except_init(void);
 void except_load(void);
-void except_add(struct in_addr *, int);
-int except_checkaddr(struct in_addr *);
+void except_add_netblock(struct in_addr *, int);
+void except_add_from(char *);
+void except_add_rcpt(char *);
+int except_filter(struct in_addr *, char *, char *);
 
 extern FILE *except_in;
 extern int except_line;

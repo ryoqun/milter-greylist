@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.5 2004/02/29 15:13:30 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.6 2004/02/29 18:07:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -118,7 +118,7 @@ mlfi_envrcpt(ctx, envrcpt)
 		    inet_ntoa(priv->priv_addr), 
 		    priv->priv_from, *envrcpt);
 
-	if (except_checkaddr(&priv->priv_addr) == 1)
+	if (except_filter(&priv->priv_addr, priv->priv_from, *envrcpt) != 0)
 		return SMFIS_CONTINUE;
 
 	if (pending_check(&priv->priv_addr, priv->priv_from, *envrcpt) == 0)

@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.6 2004/02/29 15:13:30 manu Exp $
+# $Id: Makefile.in,v 1.7 2004/02/29 18:07:17 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,8 @@
 CFLAGS= 	@CFLAGS@ -Wall -Werror -ansi
 LDFLAGS=	@LDFLAGS@
 LIBS= 		@LIBS@
-PREFIX=		@prefix@
+prefix=		@prefix@
+exec_prefix=	@exec_prefix@
 SYSCONFDIR=	@sysconfdir@
 LOCALSTATEDIR=	@localstatedir@
 BINDIR=		@bindir@
@@ -81,5 +82,5 @@ realclean:	clean
 	    -o${.TARGET} ${.IMPSRC}
 
 start:	milter-greylist
-	{RM} -f /home/manu/milter-greylist.sock
+	${RM} -f /home/manu/milter-greylist.sock
 	./milter-greylist -v -p milter-greylist.sock	
