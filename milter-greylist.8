@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.21 2004/03/30 08:00:25 manu Exp $
+.\" $Id: milter-greylist.8,v 1.22 2004/03/30 12:26:03 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -44,6 +44,7 @@
 .Op Fl f Ar configfile
 .Op Fl q
 .Op Fl r
+.Op Fl S
 .Op Fl T
 .Op Fl u Ar username
 .Op Fl v
@@ -154,6 +155,12 @@ message is accepted.
 Display 
 .Nm
 version and build environnement, then exit.
+.It Fl S
+If
+.Nm
+was built with SPF support, then SPF-compliant senders bypass greylisting.
+This flag cause messages to be greylisted regardeless if they are 
+SPF-compliant or not.
 .It Fl T
 Enable test mode. This alters the meaning of recipient lines in 
 .Pa greylist.conf ,

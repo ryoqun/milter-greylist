@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.58 2004/03/30 08:46:58 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.59 2004/03/30 12:26:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.58 2004/03/30 08:46:58 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.59 2004/03/30 12:26:03 manu Exp $");
 #endif
 #endif
 
@@ -71,6 +71,7 @@ __RCSID("$Id: milter-greylist.c,v 1.58 2004/03/30 08:46:58 manu Exp $");
 #include "conf.h"
 #include "pending.h"
 #include "sync.h"
+#include "spf.h"
 #include "autowhite.h"
 #include "milter-greylist.h"
 
@@ -78,6 +79,7 @@ int debug = 0;
 int dont_fork = 0;
 int quiet = 0;
 int noauth = 0;
+int nospf = 0;
 char *pidfile = NULL;
 
 static char *strncpy_rmsp(char *, char *, size_t);
@@ -146,6 +148,20 @@ mlfi_envfrom(ctx, envfrom)
 		    auth_authen);
 		priv->priv_whitelist = EXF_AUTH;
 	} 
+
+	/*
+	 * Is the sender address SPF-compliant?
+	 */
+	if ((nospf == 0) && 
+	    (SPF_CHECK(priv->priv_addr, envfrom) != EXF_NONE)) {
+		char ipstr[IPADDRLEN + 1];
+
+		inet_ntop(AF_INET, &priv->priv_addr, ipstr, IPADDRLEN);
+		syslog(LOG_DEBUG, 
+		    "Sender IP %s and address %s are SPF-compliant, "
+		    "bypassing greylist", ipstr, *envfrom);
+		priv->priv_whitelist = EXF_SPF;
+	}
 
 	/*
 	 * Strip spaces from the source address
@@ -404,7 +420,7 @@ main(argc, argv)
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rL:")) != -1) {
+	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rSL:")) != -1) {
 		switch (ch) {
 		case 'A':
 			noauth = 1;
@@ -431,6 +447,10 @@ main(argc, argv)
 			printf("milter-greylist-%s %s\n", 
 			    PACKAGE_VERSION, BUILD_ENV);
 			exit(EX_OK);
+			break;
+
+		case 'S':
+			nospf = 1;
 			break;
 
 		case 'u': {
@@ -670,7 +690,7 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, 
-	    "usage: %s [-ADvqT] [-a autowhite] [-d dumpfile] [-f configfile]\n"
+	    "usage: %s [-ADvqST] [-a autowhite] [-d dumpfile] [-f configfile]\n"
 	    "       [-w delay] [-u username] [-L cidrmask] -p socket\n", 
 	    progname);
 	exit(EX_USAGE);
