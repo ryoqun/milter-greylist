@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.40 2004/05/31 11:19:57 manu Exp $ */
+/* $Id: sync.c,v 1.41 2004/06/08 12:09:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.40 2004/05/31 11:19:57 manu Exp $");
+__RCSID("$Id: sync.c,v 1.41 2004/06/08 12:09:36 manu Exp $");
 #endif
 #endif
 
@@ -450,7 +450,7 @@ sync_master(dontcare)
 		return;
 	}
 
-	while (1) {
+	for (;;) {
 		struct sockaddr_in raddr;
 		socklen_t socklen;
 		int fd;
@@ -555,7 +555,7 @@ sync_server(arg)
 	fprintf(stream, "200 Yeah, what do you want?\n");
 	fflush(stream);
 
-	while (1) {
+	for (;;) {
 		if ((fgets(line, LINELEN, stream)) == NULL)
 			break;
 
@@ -842,7 +842,7 @@ sync_sender(dontcare)
 		exit(EX_OSERR);
 	}
 
-	while (1) {
+	for (;;) {
 		if (pthread_cond_wait(&sync_sleepflag, &mutex) != 0)
 			syslog(LOG_ERR, "pthread_cond_wait failed: %s\n", 
 			    strerror(errno));

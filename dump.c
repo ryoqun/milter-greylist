@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.21 2004/05/25 09:39:49 manu Exp $ */
+/* $Id: dump.c,v 1.22 2004/06/08 12:09:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.21 2004/05/25 09:39:49 manu Exp $");
+__RCSID("$Id: dump.c,v 1.22 2004/06/08 12:09:36 manu Exp $");
 #endif
 #endif
 
@@ -113,7 +113,7 @@ dumper(dontcare)
 		exit(EX_OSERR);
 	}
 
-	while (1) {
+	for (;;) {
 		/* XXX Not really dynamically adjustable */
 		switch (conf.c_dumpfreq) {
 		case -1:
