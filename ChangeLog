@@ -1,3 +1,6 @@
+1.6:
+	New stable branch
+	Missing flags in milter-greylist usage display
 1.5.12:
 	More broken servers in the default config file
 	Fix wrong sync queue counter computations (Attila Bruncsak)

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.99 2004/11/12 10:08:56 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.100 2004/11/27 14:43:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.99 2004/11/12 10:08:56 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.100 2004/11/27 14:43:17 manu Exp $");
 #endif
 #endif
 
@@ -905,7 +905,8 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, 
-	    "usage: %s [-ADvqST] [-a autowhite] [-d dumpfile] [-f configfile]\n"
+	    "usage: %s [-ADvqSTcr] [-a autowhite] [-d dumpfile] \n"
+	    "       [-P pidfile] [-M prefix] [-f configfile]\n"
 	    "       [-w delay] [-u username] [-L cidrmask] -p socket\n", 
 	    progname);
 	exit(EX_USAGE);
