@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.8 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: spf.h,v 1.9 2004/12/08 17:49:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -41,7 +41,7 @@
 
 #include "except.h"
 
-#if defined(HAVE_SPF_ALT)
+#if defined(HAVE_SPF_ALT) || defined(HAVE_SPF2)
 int spf_alt_check(struct sockaddr *, socklen_t, char *, char *);
 #define SPF_CHECK(w,x,y,z) spf_alt_check((w),(x),(y),(z))
 
