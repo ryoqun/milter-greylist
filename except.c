@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.16 2004/03/10 14:17:13 manu Exp $ */
+/* $Id: except.c,v 1.17 2004/03/10 14:24:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.16 2004/03/10 14:17:13 manu Exp $");
+__RCSID("$Id: except.c,v 1.17 2004/03/10 14:24:34 manu Exp $");
 #endif
 
 #include <errno.h>
@@ -63,21 +63,9 @@ struct timeval exceptfile_modified;
 
 static int emailcmp(char *, char *);
 
-#define EXCEPT_WRLOCK if (pthread_rwlock_wrlock(&except_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
-#define EXCEPT_RDLOCK if (pthread_rwlock_rdlock(&except_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_rdlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
-#define EXCEPT_UNLOCK if (pthread_rwlock_unlock(&except_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
+#define EXCEPT_WRLOCK WRLOCK(except_lock)
+#define EXCEPT_RDLOCK RDLOCK(except_lock)
+#define EXCEPT_UNLOCK UNLOCK(except_lock)
 
 
 int

@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.18 2004/03/10 14:17:13 manu Exp $ */
+/* $Id: pending.c,v 1.19 2004/03/10 14:24:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.18 2004/03/10 14:17:13 manu Exp $");
+__RCSID("$Id: pending.c,v 1.19 2004/03/10 14:24:34 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -71,32 +71,13 @@ int delay = DELAY;
 char *dumpfile = DUMPFILE;
 int dump_parse(void);
 
-#define PENDING_WRLOCK if (pthread_rwlock_wrlock(&pending_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
-#define PENDING_RDLOCK if (pthread_rwlock_rdlock(&pending_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_rdlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
-#define PENDING_UNLOCK if (pthread_rwlock_unlock(&pending_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
+#define PENDING_WRLOCK WRLOCK(pending_lock)
+#define PENDING_RDLOCK RDLOCK(pending_lock)
+#define PENDING_UNLOCK UNLOCK(pending_lock)
 
-#define DUMP_WRLOCK if (pthread_rwlock_wrlock(&dump_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
-#define DUMP_UNLOCK if (pthread_rwlock_unlock(&dump_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
+#define DUMP_WRLOCK WRLOCK(dump_lock)
+#define DUMP_RDLOCK RDLOCK(dump_lock)
+#define DUMP_UNLOCK UNLOCK(dump_lock)
 
 int
 pending_init(void) {
@@ -168,44 +149,6 @@ pending_put(pending) /* pending list should be write-locked */
 
 	return;
 }
-
-void
-pending_log(pending)
-	struct pending *pending;
-{
-	struct timeval tv;
-
-	gettimeofday(&tv, NULL);
-
-	syslog(LOG_INFO, "log: %s from %s to %s, delayed for %ld s",
-	    pending->p_addr, pending->p_from, 
-	    pending->p_rcpt, pending->p_tv.tv_sec - tv.tv_sec);
-
-	return;
-}
-
-
-void
-pending_purge(void) {
-	struct pending *pending;
-	struct timeval tv;
-
-	gettimeofday(&tv, NULL);
-
-	PENDING_WRLOCK;
-	TAILQ_FOREACH(pending, &pending_head, p_list) {
-		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
-			syslog(LOG_INFO, "purge: %s from %s to %s timed out", 
-			    pending->p_addr, pending->p_from, pending->p_rcpt);
-			peer_delete(pending);
-			pending_put(pending);
-		}
-	}
-	PENDING_UNLOCK;
-
-	return;
-}
-
 
 void
 pending_del(in, from, rcpt, time)

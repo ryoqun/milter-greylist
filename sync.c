@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.1 2004/03/10 14:17:14 manu Exp $ */
+/* $Id: sync.c,v 1.2 2004/03/10 14:24:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -50,6 +50,7 @@ __RCSID("$Id");
 
 #include "pending.h"
 #include "sync.h"
+#include "milter-greylist.h"
 
 extern int debug;
 
@@ -57,21 +58,9 @@ int sync_master_runs = 0;
 struct peerlist peer_head;
 pthread_rwlock_t peer_lock;
 
-#define PEER_WRLOCK if (pthread_rwlock_wrlock(&peer_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
-#define PEER_RDLOCK if (pthread_rwlock_rdlock(&peer_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",   \
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
-#define PEER_UNLOCK if (pthread_rwlock_unlock(&peer_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",   \
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
-	}
+#define PEER_WRLOCK WRLOCK(peer_lock);
+#define PEER_RDLOCK RDLOCK(peer_lock);
+#define PEER_UNLOCK UNLOCK(peer_lock);
 
 int 
 peer_init(void) {

@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.8 2004/03/10 14:17:14 manu Exp $ */
+/* $Id: pending.h,v 1.9 2004/03/10 14:24:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -75,7 +75,6 @@ struct pending *pending_get(struct in_addr *, char *, char *, time_t);
 int pending_check(struct in_addr *, char *, char *, time_t *, time_t *);
 void pending_del(struct in_addr *, char *, char *, time_t);
 void pending_put(struct pending *);
-void pending_log(struct pending *);
 void pending_textdump(FILE *);
 void pending_import(FILE *);
 void pending_flush(void);
