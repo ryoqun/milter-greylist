@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.45 2004/06/17 19:57:51 manu Exp $ */
+/* $Id: sync.c,v 1.46 2004/06/17 21:13:37 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.45 2004/06/17 19:57:51 manu Exp $");
+__RCSID("$Id: sync.c,v 1.46 2004/06/17 21:13:37 manu Exp $");
 #endif
 #endif
 
@@ -296,7 +296,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	}
 
 	if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
-		service = MXGLSYNC_PORT;
+		service = htons(MXGLSYNC_PORT);
 	else
 		service = se->s_port;
 
@@ -321,7 +321,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	raddr.sin_len = sizeof(raddr);
 #endif
 	raddr.sin_family = AF_INET;
-	raddr.sin_port = htons(service);
+	raddr.sin_port = service;
 	raddr.sin_addr = peer->p_addr;
 
 	if (connect(s, (struct sockaddr *)&raddr, sizeof(raddr)) != 0) {
@@ -439,7 +439,7 @@ sync_master(dontcare)
 	}
 
 	if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
-		service = MXGLSYNC_PORT;
+		service = htons(MXGLSYNC_PORT);
 	else
 		service = se->s_port;
 
@@ -462,7 +462,7 @@ sync_master(dontcare)
 	laddr.sin_len = sizeof(laddr);
 #endif
 	laddr.sin_family = AF_INET;
-	laddr.sin_port = htons(service);
+	laddr.sin_port = service;
 	laddr.sin_addr.s_addr = INADDR_ANY;
 
 	if (bind(s, (struct sockaddr *)&laddr, sizeof(laddr)) != 0) {

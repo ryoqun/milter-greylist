@@ -1,3 +1,5 @@
+1.5.3:
+	Fix unproper MX sync port on little endian machines
 1.5.2:
 	Add a template Makefile to manually tweak if configure fails
 	Feed strtkok_r with a NULL initialized pointer
