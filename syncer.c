@@ -50,6 +50,7 @@ syncer_thread(dontcare)
 {
 	FILE *dump;
 	int error;
+	struct timeval tv1, tv2;
 
 	syslog(LOG_DEBUG, "syncer_thread started\n");
 
@@ -71,14 +72,23 @@ syncer_thread(dontcare)
 	}
 
 	while (1) {
-		if (debug)
+		if (debug) {
+			(void)gettimeofday(&tv1, NULL);
 			syslog(LOG_DEBUG, "dumping\n");
+		}
 
 		rewind(dump);
 		pending_textdump(dump);
 		if ((error = truncate(dumpfile, ftell(dump))) != 0)
 			syslog(LOG_ERR, "truncate \"%s\" failed\n", dumpfile);
 		fflush(dump);
+
+		if (debug) {
+			(void)gettimeofday(&tv2, NULL);
+			syslog(LOG_DEBUG, "dumping done in %ld.%06lds\n",
+			tv2.tv_sec - tv1.tv_sec, tv2.tv_usec - tv1.tv_usec);
+		}
+
 		sleep(dumpfreq);
 	}
 		
