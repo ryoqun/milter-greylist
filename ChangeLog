@@ -1,3 +1,5 @@
+1.5.5:
+	Fix build problems on Solaris
 1.5.4:
 	Avoid race conditions when reloading the config (Attila Bruncsak)
 	Full blown IPv6 support, from Hajimu Umemoto
