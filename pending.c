@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.11 2004/03/06 19:06:14 manu Exp $ */
+/* $Id: pending.c,v 1.12 2004/03/06 20:22:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.11 2004/03/06 19:06:14 manu Exp $");
+__RCSID("$Id: pending.c,v 1.12 2004/03/06 20:22:43 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -230,6 +230,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
 			rest = pending->p_tv.tv_sec - tv.tv_sec;
 
+			syslog(LOG_DEBUG, "got the entry\n");
 			if (rest < 0) {
 				pending_put(pending);
 				rest = 0;
