@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.105 2004/05/26 09:18:04 manu Exp $
+# $Id: configure.ac,v 1.106 2004/05/27 19:46:12 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -103,12 +103,6 @@ AC_ARG_WITH(libspf,
 ])
 LDFLAGS=$SAVEDLDFLAGS
 CFLAGS=$SAVEDCFLAGS
-
-# Check for DB version
-AC_CHECK_HEADER([db_185.h],
-                [AC_DEFINE([HAVE_DB_185_H], [],
-                           [<db_185.h> should be used instead of <db.h>])
-                ])
 
 # Check for socket functions linking. On Solaris, -lsocket -lnsl is required
 AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], 
