@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.37 2004/03/14 14:51:28 manu Exp $
+# $Id: configure.ac,v 1.38 2004/03/15 09:43:34 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -75,9 +75,8 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 AC_MSG_RESULT([$xopen])
 
 # Linux does not have a sa_len field in sockaddr
-AC_DEFINE([HAVE_SA_LEN], [], [sa_len field in struct sockaddr])
-AC_CHECK_MEMBER([struct sockaddr.sa_len], , 
-	[AC_DEFINE(HAVE_SA_LEN)], [
+AC_CHECK_MEMBER([struct sockaddr.sa_len],
+	[AC_DEFINE([HAVE_SA_LEN], [], [sa_len field in struct sockaddr])],, [
 		#include <sys/types.h>
 		#include <sys/socket.h>
 	])
@@ -143,7 +142,8 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([
 		if (pthread_join(tid, NULL) != 0)
 			exit(EXIT_FAILURE);
 		return 0;
-	])], [brokenpth=no], AC_DEFINE([HAVE_BROKEN_RWLOCK]))
+	])], [brokenpth=no], 
+	AC_DEFINE([HAVE_BROKEN_RWLOCK], [], [broken rwlock in libpthread]))
 AC_MSG_RESULT([$brokenpth])
 
 # Options
