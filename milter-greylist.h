@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.19 2004/03/18 09:55:15 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.20 2004/03/20 07:19:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -44,6 +44,7 @@ struct mlfi_priv {
 	char priv_from[ADDRLEN + 1];
 	long priv_elapsed;
 	int priv_whitelist;
+	char *priv_queueid;
 };
 
 extern int debug;

@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.37 2004/03/19 10:16:38 manu Exp $ */
+/* $Id: pending.c,v 1.38 2004/03/20 07:19:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.37 2004/03/19 10:16:38 manu Exp $");
+__RCSID("$Id: pending.c,v 1.38 2004/03/20 07:19:03 manu Exp $");
 #endif
 
 #include "config.h"
@@ -115,7 +115,7 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 		dump_dirty++;
 
 	(void)gettimeofday(&tv, NULL);
-	syslog(LOG_INFO, "created: %s from %s to %s, delayed for %ld s",
+	syslog(LOG_DEBUG, "created: %s from %s to %s, delayed for %ld s",
 	    pending->p_addr, pending->p_from, pending->p_rcpt, 
 	    pending->p_tv.tv_sec - tv.tv_sec);
 
@@ -127,7 +127,7 @@ void
 pending_put(pending) /* pending list should be write-locked */
 	struct pending *pending;
 {
-	syslog(LOG_INFO, "removed: %s from %s to %s",
+	syslog(LOG_DEBUG, "removed: %s from %s to %s",
 	    pending->p_addr, pending->p_from, pending->p_rcpt);
 	TAILQ_REMOVE(&pending_head, pending, p_list);	
 	free(pending);
@@ -170,7 +170,7 @@ pending_del(in, from, rcpt, time)
 		 * Check for expired entries 
 		 */
 		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
-			syslog(LOG_INFO, "del: %s from %s to %s timed out", 
+			syslog(LOG_DEBUG, "del: %s from %s to %s timed out", 
 			    pending->p_addr, pending->p_from, pending->p_rcpt);
 			pending_put(pending);
 
@@ -187,12 +187,13 @@ pending_del(in, from, rcpt, time)
 }
 
 int
-pending_check(in, from, rcpt, remaining, elapsed)
+pending_check(in, from, rcpt, remaining, elapsed, queueid)
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
 	time_t *remaining;
 	time_t *elapsed;
+	char *queueid;
 {
 	char addr[IPADDRLEN + 1];
 	struct pending *pending;
@@ -214,11 +215,10 @@ pending_check(in, from, rcpt, remaining, elapsed)
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
 			rest = (time_t)(pending->p_tv.tv_sec - tv.tv_sec);
 
-			syslog(LOG_DEBUG, "got the entry");
 			if (rest < 0) {
 				peer_delete(pending);
 				pending_put(pending);
-				autowhite_add(in, from, rcpt, NULL);
+				autowhite_add(in, from, rcpt, NULL, queueid);
 				rest = 0;
 				dirty = 1;
 			}
@@ -230,7 +230,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 		 * Check for expired entries 
 		 */
 		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
-			syslog(LOG_INFO, "check: %s from %s to %s timed out", 
+			syslog(LOG_DEBUG, "check: %s from %s to %s timed out", 
 			    pending->p_addr, pending->p_from, pending->p_rcpt);
 			pending_put(pending);
 			dirty = 1;

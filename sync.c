@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.25 2004/03/17 22:28:57 manu Exp $ */
+/* $Id: sync.c,v 1.26 2004/03/20 07:19:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -686,7 +686,7 @@ sync_server(arg)
 		}
 		if (action == PS_DELETE) {
 			pending_del(&addr, from, rcpt, date);
-			autowhite_add(&addr, from, rcpt, NULL);
+			autowhite_add(&addr, from, rcpt, NULL, "(mxsync)");
 		}
 
 		/* Flush modifications to disk */

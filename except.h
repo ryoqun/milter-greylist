@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.14 2004/03/19 10:16:38 manu Exp $ */
+/* $Id: except.h,v 1.15 2004/03/20 07:19:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -81,7 +81,7 @@ void except_clear(void);
 void except_add_netblock(struct in_addr *, int);
 void except_add_from(char *);
 void except_add_rcpt(char *);
-int except_filter(struct in_addr *, char *, char *);
+int except_filter(struct in_addr *, char *, char *, char *);
 
 /* except_filter() return codes */
 #define EXF_NONE	0

@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.23 2004/03/19 10:16:38 manu Exp $ */
+/* $Id: except.c,v 1.24 2004/03/20 07:19:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.23 2004/03/19 10:16:38 manu Exp $");
+__RCSID("$Id: except.c,v 1.24 2004/03/20 07:19:03 manu Exp $");
 #endif
 
 #include "config.h"
@@ -162,10 +162,11 @@ except_add_rcpt(email)	/* exceptlist must be write-locked */
 }
 
 int 
-except_filter(in, from, rcpt)
+except_filter(in, from, rcpt, queueid)
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
+	char *queueid;
 {
 	struct except *ex;
 	char addrstr[IPADDRLEN + 1];
@@ -191,8 +192,8 @@ except_filter(in, from, rcpt)
 		}
 
 		if (!found) {
-			syslog(LOG_INFO, "testmode: skipping greylist "
-			    "for recipient \"%s\"", rcpt);
+			syslog(LOG_INFO, "%s: testmode: skipping greylist "
+			    "for recipient \"%s\"", queueid, rcpt);
 			retval = EXF_RCPT;
 			goto out;
 		}
@@ -203,8 +204,8 @@ except_filter(in, from, rcpt)
 		case E_NETBLOCK: {
 			if ((in->s_addr & ex->e_mask.s_addr) == 
 			    ex->e_addr.s_addr) {
-				syslog(LOG_INFO, "address %s is in "
-				    "exception list", 
+				syslog(LOG_INFO, "%s: address %s is in "
+				    "exception list", queueid,
 				    inet_ntop(AF_INET, in, addrstr, IPADDRLEN));
 				retval = EXF_ADDR;
 				goto out;
@@ -214,8 +215,8 @@ except_filter(in, from, rcpt)
 
 		case E_FROM:
 			if (emailcmp(from, ex->e_from) == 0) {
-				syslog(LOG_INFO, "sender %s is in "
-				    "exception list", from);
+				syslog(LOG_INFO, "%s: sender %s is in "
+				    "exception list", queueid, from);
 				retval = EXF_FROM;
 				goto out;
 			}
@@ -226,8 +227,8 @@ except_filter(in, from, rcpt)
 				break;
 
 			if (emailcmp(rcpt, ex->e_rcpt) == 0) {
-				syslog(LOG_INFO, "recipient %s is in "
-				    "exception list", rcpt);
+				syslog(LOG_INFO, "%s: recipient %s is in "
+				    "exception list", queueid, rcpt);
 				retval = EXF_RCPT;
 				goto out;
 			}

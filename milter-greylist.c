@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.37 2004/03/20 06:36:14 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.38 2004/03/20 07:19:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.37 2004/03/20 06:36:14 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.38 2004/03/20 07:19:03 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -138,9 +138,13 @@ mlfi_envrcpt(ctx, envrcpt)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
+	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
+		priv->priv_queueid = "(unkown id)";
+	}
+
 	if (debug)
-		syslog(LOG_DEBUG, "addr = %s, from = %s, rcpt = %s", 
-		    inet_ntoa(priv->priv_addr), 
+		syslog(LOG_DEBUG, "%s: addr = %s, from = %s, rcpt = %s", 
+		    priv->priv_queueid, inet_ntoa(priv->priv_addr), 
 		    priv->priv_from, *envrcpt);
 
 	/*
@@ -157,19 +161,19 @@ mlfi_envrcpt(ctx, envrcpt)
 	sync_master_restart();
 
 	if ((priv->priv_whitelist = except_filter(&priv->priv_addr, 
-	    priv->priv_from, rcpt)) != EXF_NONE) {
+	    priv->priv_from, rcpt, priv->priv_queueid)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
 
 	if ((priv->priv_whitelist = autowhite_check(&priv->priv_addr,
-	    priv->priv_from, rcpt)) != EXF_NONE) {
+	    priv->priv_from, rcpt, priv->priv_queueid)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
 
 	if (pending_check(&priv->priv_addr, priv->priv_from, 
-	    rcpt, &remaining, &priv->priv_elapsed) != 0) 
+	    rcpt, &remaining, &priv->priv_elapsed, priv->priv_queueid) != 0) 
 		return SMFIS_CONTINUE;
 
 	h = remaining / 3600;
@@ -178,7 +182,8 @@ mlfi_envrcpt(ctx, envrcpt)
 	remaining = remaining % 60;
 	s = remaining;
 
-	syslog(LOG_INFO, "addr %s from %s to %s delayed for %02d:%02d:%02d",
+	syslog(LOG_INFO, "%s: addr %s from %s to %s delayed for %02d:%02d:%02d",
+	    priv->priv_queueid,
 	    inet_ntop(AF_INET, &priv->priv_addr, addrstr, IPADDRLEN),
 	    priv->priv_from, *envrcpt, h, mn, s);
 
@@ -238,8 +243,8 @@ mlfi_eom(ctx)
 			break;
 
 		default:
-			syslog(LOG_ERR, "unexpected priv_whitelist = %d", 	
-			    priv->priv_whitelist);
+			syslog(LOG_ERR, "%s: unexpected priv_whitelist = %d", 	
+			    priv->priv_queueid, priv->priv_whitelist);
 			whystr = "Internal error";
 			break;
 		}

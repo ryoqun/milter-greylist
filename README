@@ -1,9 +1,9 @@
-# $Id: README,v 1.6 2004/03/18 10:09:09 manu Exp $
+# $Id: README,v 1.7 2004/03/20 07:19:03 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/03/18 10:09:09 $
+		       $Date: 2004/03/20 07:19:03 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -36,7 +36,7 @@ You need a few options in sendmail.cf to use milter-greylist:
 
 O InputMailFilters=greylist 
 Xgreylist, S=local:/var/milter-greylist/milter-greylist.sock 
-O Milter.macros.connect=j, {if_addr}
+O Milter.macros.connect=i,j,{if_addr}
 
 
  3 Configuring milter-greylist 

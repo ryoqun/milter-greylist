@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.9 2004/03/19 10:16:38 manu Exp $ */
+/* $Id: autowhite.c,v 1.10 2004/03/20 07:19:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.9 2004/03/19 10:16:38 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.10 2004/03/20 07:19:03 manu Exp $");
 #endif
 
 #include "config.h"
@@ -74,11 +74,12 @@ autowhite_init(void) {
 }
 
 void
-autowhite_add(in, from, rcpt, date)
+autowhite_add(in, from, rcpt, date, queueid)
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
 	time_t *date;
+	char *queueid;
 {
 	struct autowhite *aw = NULL;
 	struct autowhite *prev_aw = NULL;
@@ -136,9 +137,9 @@ autowhite_add(in, from, rcpt, date)
 
 				dirty++;
 
-				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+				syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
 				    "autowhitelisted for more %02d:%02d:%02d", 
-				    addr, from, rcpt, h, mn, s);
+				    queueid, addr, from, rcpt, h, mn, s);
 				break;
 			}
 		}		
@@ -170,9 +171,9 @@ autowhite_add(in, from, rcpt, date)
 
 		dirty++;
 
-		syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+		syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
 		    "autowhitelisted for %02d:%02d:%02d", 
-		    addr, from, rcpt, h, mn, s);
+		    queueid, addr, from, rcpt, h, mn, s);
 	}
 	AUTOWHITE_UNLOCK;
 
@@ -185,10 +186,11 @@ autowhite_add(in, from, rcpt, date)
 }
 
 int
-autowhite_check(in, from, rcpt)
+autowhite_check(in, from, rcpt, queueid)
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
+	char *queueid;
 {
 	struct autowhite *aw = NULL;
 	struct autowhite *prev_aw = NULL;
@@ -246,9 +248,9 @@ autowhite_check(in, from, rcpt)
 
 				dirty++;
 
-				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+				syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
 				    "autowhitelisted for more %02d:%02d:%02d", 
-				    addr, from, rcpt, h, mn, s);
+				    queueid, addr, from, rcpt, h, mn, s);
 				break;
 			}
 		}
