@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.12 2004/03/03 19:17:39 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.13 2004/03/04 08:38:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -134,7 +134,8 @@ mlfi_envrcpt(ctx, envrcpt)
 		    inet_ntoa(priv->priv_addr), 
 		    priv->priv_from, *envrcpt);
 
-	if (except_filter(&priv->priv_addr, priv->priv_from, *envrcpt) != 0) {
+	if ((priv->priv_whitelist = except_filter(&priv->priv_addr, 
+	    priv->priv_from, *envrcpt)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -177,6 +178,7 @@ mlfi_eom(ctx)
 	char *ip = NULL;
 	char time[HDRLEN + 1];
 	struct timeval tv;
+	char *whystr = NULL;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
@@ -189,9 +191,29 @@ mlfi_eom(ctx)
 	strftime(time, HDRLEN, "%a, %d %b %Y %T %z", localtime(&tv.tv_sec));
 
 	if (priv->priv_elapsed == 0) {
-		snprintf(hdr, HDRLEN, "Whitelisted, not "
-		    "delayed by milter-greylist-%s (%s [%s]); %s",
-		    PACKAGE_VERSION, fqdn, ip, time);
+		switch (priv->priv_whitelist) {
+		case EXF_ADDR:
+			whystr = "Sender IP whitelisted";
+			break;
+
+		case EXF_FROM:
+			whystr = "Sender e-mail whitelisted";
+			break;
+
+		case EXF_RCPT:
+			whystr = "Recipient e-mail whitelisted";
+			break;
+
+		default:
+			syslog(LOG_ERR, "unexpected priv_whitelist = %d\n", 	
+			    priv->priv_whitelist);
+			whystr = "Internal error";
+			break;
+		}
+
+		snprintf(hdr, HDRLEN, "%s, not delayed by "
+		    "milter-greylist-%s (%s [%s]); %s",
+		    whystr, PACKAGE_VERSION, fqdn, ip, time);
 
 		smfi_addheader(ctx, HEADERNAME, hdr);
 

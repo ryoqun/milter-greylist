@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.10 2004/03/03 16:28:30 manu Exp $ */
+/* $Id: except.c,v 1.11 2004/03/04 08:38:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -190,7 +190,7 @@ except_filter(in, from, rcpt)
 		if (!found) {
 			syslog(LOG_INFO, "testmode: skipping greylist "
 			    "for recipient \"%s\"\n", rcpt);
-			return 1;
+			return EXF_RCPT;
 		}
 	}
 	
@@ -202,7 +202,7 @@ except_filter(in, from, rcpt)
 				syslog(LOG_INFO, "address %s is in "
 				    "exception list\n", 
 				    inet_ntop(AF_INET, in, addrstr, IPADDRLEN));
-				return 1;
+				return EXF_ADDR;
 			}
 			break;
 		}
@@ -211,7 +211,7 @@ except_filter(in, from, rcpt)
 			if (emailcmp(from, ex->e_from) == 0) {
 				syslog(LOG_INFO, "sender %s is in "
 				    "exception list\n", from);
-				return 1;
+				return EXF_FROM;
 			}
 			break;
 
@@ -222,7 +222,7 @@ except_filter(in, from, rcpt)
 			if (emailcmp(rcpt, ex->e_rcpt) == 0) {
 				syslog(LOG_INFO, "recipient %s is in "
 				    "exception list\n", rcpt);
-				return 1;
+				return EXF_RCPT;
 			}
 			break;
 
@@ -232,7 +232,7 @@ except_filter(in, from, rcpt)
 			break;
 		}
 	}
-	return 0;
+	return EXF_NONE;
 }
 
 static int 
