@@ -1,4 +1,5 @@
 1.1.1:
+	Added a -P pidfile option to dump PID to a file
 	smfi_getsymval does not set errno, so don't display strerror
 	SMTP AUTH support
 	Accept any e-mail address as specified in RFC 2821 from config and dump

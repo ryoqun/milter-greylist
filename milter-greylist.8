@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.20 2004/03/29 23:12:00 manu Exp $
+.\" $Id: milter-greylist.8,v 1.21 2004/03/30 08:00:25 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -49,6 +49,7 @@
 .Op Fl v
 .Op Fl w Ar delay
 .Op Fl L cidrmask
+.Op Fl P pidfile
 .Fl p Ar socket
 .Sh DESCRIPTION
 .Nm 
@@ -133,6 +134,9 @@ IP addresses. With -L 24,
 the matching mask is 255.255.255.0, and all addresses within the same class C
 network are considered the same. Default is -L 32, 
 which corresponds to all addresses considered different.
+.It Fl P Ar pidfile
+write the daemon's PID to 
+.Ar pidfile .
 .It Fl p Ar socket
 Use 
 .Ar socket

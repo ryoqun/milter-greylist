@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.56 2004/03/30 06:39:25 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.57 2004/03/30 08:00:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.56 2004/03/30 06:39:25 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.57 2004/03/30 08:00:25 manu Exp $");
 #endif
 #endif
 
@@ -78,10 +78,12 @@ int debug = 0;
 int dont_fork = 0;
 int quiet = 0;
 int noauth = 0;
+char *pidfile = NULL;
 
 static char *strncpy_rmsp(char *, char *, size_t);
 static int humanized_atoi(char *);
 static char *gmtoffset(time_t *, char *, size_t);
+static void writepid(char *);
 
 struct smfiDesc smfilter =
 {
@@ -402,7 +404,7 @@ main(argc, argv)
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:Tu:rL:")) != -1) {
+	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rL:")) != -1) {
 		switch (ch) {
 		case 'A':
 			noauth = 1;
@@ -480,6 +482,15 @@ main(argc, argv)
 			dumpfile = optarg;
 			break;
 				
+		case 'P':
+			if (optarg == NULL) {
+				fprintf(stderr, "%s: -P needs an argument\n",
+				    argv[0]);
+				usage(argv[0]);
+			}
+			pidfile = optarg;
+			break;
+
 		case 'p':
 			if (optarg == NULL) {
 				fprintf(stderr, "%s: -p needs an argument\n",
@@ -630,6 +641,12 @@ main(argc, argv)
 			exit(EX_OSERR);
 		}
 	}
+
+	/* 
+	 * Write down our PID to a file
+	 */
+	if (pidfile != NULL)
+		writepid(pidfile);
 
 	/*
 	 * Start the dumper thread
@@ -782,3 +799,20 @@ gmtoffset(date, buf, size)
 	return buf;
 }
 
+static void
+writepid(pidfile)
+	char *pidfile;
+{
+	FILE *stream;
+
+	if ((stream = fopen(pidfile, "w")) == NULL) {
+		syslog(LOG_ERR, "Cannot open pidfile \"%s\" for writing: %s", 
+		    pidfile, strerror(errno));
+		return;
+	}
+
+	fprintf(stream, "%ld\n", (long)getpid());
+	fclose(stream);
+
+	return;
+}
