@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.68 2004/03/31 17:02:08 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.69 2004/04/01 09:31:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.68 2004/03/31 17:02:08 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.69 2004/04/01 09:31:34 manu Exp $");
 #endif
 #endif
 
@@ -131,6 +131,17 @@ mlfi_envfrom(ctx, envfrom)
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 	/*
+	 * Strip spaces from the source address
+	 */
+	strncpy_rmsp(priv->priv_from, *envfrom, ADDRLEN);
+	priv->priv_from[ADDRLEN] = '\0';
+
+	/*
+	 * Reload the config file if it has been touched
+	 */
+	conf_update();
+
+	/*
 	 * Is the user authenticated?
 	 */
 	if ((conf.c_noauth == 0) &&
@@ -138,9 +149,24 @@ mlfi_envfrom(ctx, envfrom)
 		syslog(LOG_DEBUG, 
 		    "User %s authenticated, bypassing greylisting", 
 		    auth_authen);
+		priv->priv_elapsed = 0;
 		priv->priv_whitelist = EXF_AUTH;
+
+		return SMFIS_CONTINUE;
 	} 
 
+	/*
+	 * Is the sender IP or its e-mail address in the
+	 * permanent whitelist? We do this before SPF as
+	 * a lookup in the whitelist is less expensive
+	 * than a DNS lookup.
+	 */
+	if ((priv->priv_whitelist = except_sender_filter(&priv->priv_addr, 
+	    priv->priv_from, priv->priv_queueid)) != EXF_NONE) {
+		priv->priv_elapsed = 0;
+
+		return SMFIS_CONTINUE;
+	}
 	/*
 	 * Is the sender address SPF-compliant?
 	 */
@@ -152,14 +178,11 @@ mlfi_envfrom(ctx, envfrom)
 		syslog(LOG_DEBUG, 
 		    "Sender IP %s and address %s are SPF-compliant, "
 		    "bypassing greylist", ipstr, *envfrom);
+		priv->priv_elapsed = 0;
 		priv->priv_whitelist = EXF_SPF;
-	}
 
-	/*
-	 * Strip spaces from the source address
-	 */
-	strncpy_rmsp(priv->priv_from, *envfrom, ADDRLEN);
-	priv->priv_from[ADDRLEN] = '\0';
+		return SMFIS_CONTINUE;
+	}
 
 	return SMFIS_CONTINUE;
 }
@@ -208,10 +231,8 @@ mlfi_envrcpt(ctx, envrcpt)
 		return SMFIS_CONTINUE;
 
 	/* 
-	 * Reload the config file if it has been touched
 	 * Restart the sync master thread if nescessary
 	 */
-	conf_update();
 	sync_master_restart();
 
 	/*
@@ -221,11 +242,10 @@ mlfi_envrcpt(ctx, envrcpt)
 	rcpt[ADDRLEN] = '\0';
 
 	/*
-	 * Check if the sender IP, sender e-mail or recipient e-mail
-	 * is in the permanent whitelist.
+	 * Check if the recipient e-mail is in the permanent whitelist.
 	 */
-	if ((priv->priv_whitelist = except_filter(&priv->priv_addr, 
-	    priv->priv_from, rcpt, priv->priv_queueid)) != EXF_NONE) {
+	if ((priv->priv_whitelist = except_rcpt_filter(rcpt,
+	    priv->priv_queueid)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}

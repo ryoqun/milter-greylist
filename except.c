@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.33 2004/03/31 15:31:59 manu Exp $ */
+/* $Id: except.c,v 1.34 2004/04/01 09:31:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.33 2004/03/31 15:31:59 manu Exp $");
+__RCSID("$Id: except.c,v 1.34 2004/04/01 09:31:34 manu Exp $");
 #endif
 #endif
 
@@ -163,46 +163,71 @@ except_add_rcpt(email)	/* exceptlist must be write-locked */
 }
 
 int 
-except_filter(in, from, rcpt, queueid)
-	struct in_addr *in;
-	char *from;
+except_rcpt_filter(rcpt, queueid)
 	char *rcpt;
 	char *queueid;
 {
 	struct except *ex;
-	char addrstr[IPADDRLEN + 1];
 	int testmode = conf.c_testmode;
 	int retval;
 
 	EXCEPT_RDLOCK;
 
+
 	/*
-	 * Testmode: check if the recipient is in the exception list.
-	 * If not, then avoid grey listing.
+	 * Default if we do not find the recipient in the list
+	 * for testmode: the recipient is whitelisted
+	 * for normal mode: the recipient is not whitelisted.
 	 */
-	if (testmode) {
-		int found = 0;
+	if (testmode)
+		retval = EXF_RCPT;
+	else
+		retval = EXF_NONE;
 
-		LIST_FOREACH(ex, &except_head, e_list) {
-			if (ex->e_type != E_RCPT)
-				continue;
+	LIST_FOREACH(ex, &except_head, e_list) {
+		if (ex->e_type != E_RCPT)
+			continue;
 
-			if (emailcmp(rcpt, ex->e_rcpt) == 0) {
-				found = 1;
-				break;
-			}
-		}
-
-		if (!found) {
-			syslog(LOG_INFO, "%s: testmode: skipping greylist "
-			    "for recipient \"%s\"", queueid, rcpt);
-			retval = EXF_RCPT;
-			goto out;
+		/*
+		 * If we find it in the list this means:
+		 * for testmode: that it is not whitelisted
+		 * for normal mode: that it is whitelisted
+		 */
+		if (emailcmp(rcpt, ex->e_rcpt) == 0) {
+			if (testmode)
+				retval = EXF_NONE;
+			else
+				retval = EXF_RCPT;
+			break;
 		}
 	}
+
+	if (testmode && (retval == EXF_RCPT)) {
+		syslog(LOG_INFO, "%s: testmode: skipping greylist "
+		    "for recipient \"%s\"", queueid, rcpt);
+	}
 	
+	EXCEPT_UNLOCK;
+	return retval;
+}
+
+int 
+except_sender_filter(in, from, queueid)
+	struct in_addr *in;
+	char *from;
+	char *queueid;
+{
+	struct except *ex;
+	char addrstr[IPADDRLEN + 1];
+	int retval;
+
+	EXCEPT_RDLOCK;
+
 	LIST_FOREACH(ex, &except_head, e_list) {
 		switch (ex->e_type) {
+		case E_RCPT:
+			break;
+
 		case E_NETBLOCK: {
 			if ((in->s_addr & ex->e_mask.s_addr) == 
 			    ex->e_addr.s_addr) {
@@ -220,18 +245,6 @@ except_filter(in, from, rcpt, queueid)
 				syslog(LOG_INFO, "%s: sender %s is in "
 				    "exception list", queueid, from);
 				retval = EXF_FROM;
-				goto out;
-			}
-			break;
-
-		case E_RCPT:
-			if (testmode != 0)
-				break;
-
-			if (emailcmp(rcpt, ex->e_rcpt) == 0) {
-				syslog(LOG_INFO, "%s: recipient %s is in "
-				    "exception list", queueid, rcpt);
-				retval = EXF_RCPT;
 				goto out;
 			}
 			break;
