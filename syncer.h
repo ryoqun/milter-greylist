@@ -30,8 +30,13 @@
 #ifndef _SYNCER_H_
 #define _SYNCER_H_
 
+#ifndef DUMPFILE
 #define DUMPFILE "greylist.db"
+#endif
+
+#ifndef DUMPFREQ
 #define DUMPFREQ 60 /* seconds */
+#endif
 
 extern int dumpfreq;
 extern char *dumpfile;

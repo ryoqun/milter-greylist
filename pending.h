@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.1 2004/02/21 00:01:17 manu Exp $ */
+/* $Id: pending.h,v 1.2 2004/02/21 13:55:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -39,10 +39,16 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#ifndef DELAY
+#define DELAY	10	/* seconds */
+#endif
+
+#ifndef TIMEOUT
+#define TIMEOUT (3600 * 24 * 5) /* seconds */
+#endif
+
 #define ADDRLEN	31
 #define IPADDRLEN sizeof("255.255.255.255")
-#define DELAY	10	/* seconds */
-#define TIMEOUT (3600 * 24 * 5) /* seconds */
 
 TAILQ_HEAD(pendinglist, pending);
 

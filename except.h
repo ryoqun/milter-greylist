@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.1 2004/02/21 00:01:17 manu Exp $ */
+/* $Id: except.h,v 1.2 2004/02/21 13:55:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -41,6 +41,7 @@
 #include <arpa/inet.h>
 
 #include "pending.h"
+#include "config.h"
 
 #define EXCEPTFILE "except.conf"
 
