@@ -1,4 +1,5 @@
 1.1.8:
+	Build again on Tru64 Unix and Darwin
 	Use regex for from and rcpt config lines
 1.1.7:	
 	Read the queue Id at envfrom stage, else we miss it there.
