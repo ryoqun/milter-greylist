@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.10 2004/03/06 18:46:09 manu Exp $ */
+/* $Id: pending.c,v 1.11 2004/03/06 19:06:14 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,6 +31,11 @@
 
 #define _XOPEN_SOURCE 500
 #define _BSD_SOURCE
+
+#include <sys/cdefs.h>
+#ifdef __RCSID  
+__RCSID("$Id: pending.c,v 1.11 2004/03/06 19:06:14 manu Exp $");
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>

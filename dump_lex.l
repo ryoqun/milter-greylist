@@ -12,6 +12,11 @@ comment		#.*$
 blank		[ \t]{1,}
 
 %{
+	#include <sys/cdefs.h>
+	#ifdef __RCSID  
+	__RCSID("$Id: dump_lex.l,v 1.3 2004/03/06 19:06:14 manu Exp $");
+	#endif
+
 	#include <string.h>
 	#include <errno.h>
 	#include <sysexits.h>

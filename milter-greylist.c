@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.17 2004/03/06 15:15:05 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.18 2004/03/06 19:06:14 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -30,6 +30,11 @@
  */
 
 #define _BSD_SOURCE
+
+#include <sys/cdefs.h>
+#ifdef __RCSID  
+__RCSID("$Id: milter-greylist.c,v 1.18 2004/03/06 19:06:14 manu Exp $");
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>

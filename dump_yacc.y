@@ -1,7 +1,12 @@
 %token IPADDR EMAIL TIME
 
 %{
-#include "except.h"
+#include <sys/cdefs.h>
+#ifdef __RCSID  
+__RCSID("$Id: dump_yacc.y,v 1.3 2004/03/06 19:06:14 manu Exp $");
+#endif
+
+#include "pending.h"
 %}
 
 %union	{

@@ -14,6 +14,11 @@ from		[Ff][Rr][Oo][Mm]:?
 rcpt		[Rr][Cc][Pp][Tt]:?
 
 %{
+	#include <sys/cdefs.h>
+	#ifdef __RCSID
+	__RCSID("$Id: except_lex.l,v 1.7 2004/03/06 19:06:14 manu Exp $");
+	#endif
+
 	#include <string.h>
 	#include <errno.h>
 	#include <sysexits.h>

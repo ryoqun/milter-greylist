@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.12 2004/03/04 09:40:12 manu Exp $ */
+/* $Id: except.c,v 1.13 2004/03/06 19:06:14 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -30,6 +30,11 @@
  */
 
 #define _XOPEN_SOURCE 500
+
+#include <sys/cdefs.h>
+#ifdef __RCSID
+__RCSID("$Id: except.c,v 1.13 2004/03/06 19:06:14 manu Exp $");
+#endif
 
 #include <errno.h>
 #include <stdio.h>
