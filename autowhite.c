@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.33 2004/06/12 08:41:56 manu Exp $ */
+/* $Id: autowhite.c,v 1.34 2004/06/14 20:43:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.33 2004/06/12 08:41:56 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.34 2004/06/14 20:43:21 manu Exp $");
 #endif
 #endif
 
@@ -117,13 +117,16 @@ autowhite_add(in, from, rcpt, date, queueid)
 		 * Expiration
 		 */
 		if (aw->a_tv.tv_sec < now.tv_sec) {
+			char buf[IPADDRLEN + 1];
+
+			inet_ntop(AF_INET, &aw->a_in, buf, IPADDRLEN);
+			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+			    "autowhitelisted entry expired",
+			    buf, aw->a_from, aw->a_rcpt);
+
 			autowhite_put(aw);
 
 			dirty++;
-
-			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
-				"autowhitelisted entry expired",
-				addr, from, rcpt);
 
 			continue;
 		}
@@ -203,14 +206,17 @@ autowhite_check(in, from, rcpt, queueid)
 		 * an outdated record to match
 		 */
 		if (aw->a_tv.tv_sec < now.tv_sec) {
+			char buf[IPADDRLEN + 1];
+
+			inet_ntop(AF_INET, &aw->a_in, buf, IPADDRLEN);
+			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+			    "autowhitelisted entry expired",
+			    buf, aw->a_from, aw->a_rcpt);
+
 			autowhite_put(aw);
 			aw = NULL;
 
 			dirty++;
-
-			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
-				"autowhitelisted entry expired",
-				addr, from, rcpt);
 
 			continue;
 		}

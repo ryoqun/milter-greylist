@@ -1,4 +1,5 @@
 1.5.1:
+	syslog the expired autowhite entry correctly, from Mattieu Herrb
 	Handle mailing lists with unique sender by removing '^.*=' from sender
 	Minor bug fixes in queue management from Wolfgang Solfrank
 1.3.9:
