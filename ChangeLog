@@ -1,5 +1,6 @@
 1.5.10:
-	FIx a build problem on systems that don't have IPv6 (Hajimu Umemoto)
+	Fix a build problem on systems that don't have IPv6 (Hajimu Umemoto)
+	Fix a minor bug with SPF (Hajimu Umemoto)
 1.5.9:
 	Give credits to the various contributors in the man pages
 	Do not match bogus IPv6 addresses in the dump file (Hajimu Umemoto)
