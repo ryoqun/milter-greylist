@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.60 2004/03/22 00:05:05 manu Exp $
+# $Id: configure.ac,v 1.61 2004/03/22 06:50:00 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -62,13 +62,17 @@ AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], [])
 AC_CHECK_LIB([socket -lnsl], [socket], [LIBS="$LIBS -lsocket -lnsl"], [])
 
 # Check for libpthread. On FreeBSD, the libc_r does the job.
+# On digitalUNIX, libpthreads (with a trailing s) is the library to use
 AC_CHECK_LIB(pthread, pthread_create, 
-	[LIBS="$LIBS -lpthread"],
-	[AC_CHECK_LIB(c_r, pthread_create, 
-		[LIBS="$LIBS -lc_r"],
-		[echo "Required libpthread not found. Use --with-libpthread"; 
-		 exit 1;])
-	 ])
+    [LIBS="$LIBS -lpthread"],
+    [AC_CHECK_LIB(c_r, pthread_create, 
+        [LIBS="$LIBS -lc_r"],
+	[AC_CHECK_LIB(pthreads, pthread_create,
+            [LIBS="$LIBS -lpthreads"],
+                [echo "Required libpthread not found. Use --with-libpthread"; 
+                 exit 1;])
+	])
+     ])
 
 # Check for libmilter. For sendmail-8.12.1, -lsm is required too.
 # This uses a gross hack on the second AC_CHECK_LIB first argument, but using 
