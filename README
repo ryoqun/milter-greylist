@@ -1,9 +1,9 @@
-# $Id: README,v 1.13 2004/04/03 09:26:11 manu Exp $
+# $Id: README,v 1.14 2004/04/04 20:17:37 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/04/03 09:26:11 $
+		       $Date: 2004/04/04 20:17:37 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -125,9 +125,8 @@ class C network is considered the same.
 There is also a right fix for the problem: SPF. SPF is a DNS based
 mechanism that enable domains to publish the identity of machines
 allowed to send mail on behalf of the domain. milter-greylist knows 
-how to use SPF through libspf_alt. configure --with-libspf_alt to 
-enable that feature. libspf (the "not alt" version) might be 
-supported as well in a future release if I manage to get it working.
+how to use SPF through libspf or libspf_alt. See section 8 of this
+document: Building with SPF
 
 Another workaround is simply to whitelist the netblocks allocated to 
 mail farms. As any machine in theses IP address ranges are real SMTP 
@@ -162,7 +161,29 @@ peer 192.0.2.17
 peer 192.0.2.18
 
 
- 8 Things to look at if things get wrong
+ 8 Building with SPF
+ ===================
+
+milter-greylist can use either libspf or libspf_alt to perform SPF
+checks. Use --with-libspf=DIR or --with-libspf_alt=DIR to enable
+this feature. DIR must be the base directory where include and lib
+directories containing the headers and library can be found. 
+
+WARNING: milter-greylist is a multithreaded program. The external
+function it uses must be thread-safe. While libspf and libspf_alt
+contain only thread-safe code, they use the DNS resolver. By default,
+the DNS resolver is used from libc or libresolv. If this resolver
+is not thread-safe, milter-greylist with SPF will quickly crash or
+hang.
+
+You need to make sure that libspf or libspf_alt are linked against
+a thread-safe DNS resolver. For instance, NetBSD-1.6.2 libc-supplied
+resolver is from BIND 4, and it is not thread safe. In order to get
+a stable milter-greylist, you need to link with a BIND 8.2 or higher
+resolver.
+
+
+ 9 Things to look at if things get wrong
  =======================================
 
 First, read the milter-greylist(8) man page! :-)
@@ -189,7 +210,7 @@ At the end of the file, you will find entries with the keyword AUTO
 at the end of the line. Theses are auto-whitelisted tuples. The date
 tells you when the entry will expire.
 
- 9 License
+ 10 License
  =========
 
 This software is available under a 3 clauses BSD license:
