@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.20 2004/05/25 08:37:08 manu Exp $ */
+/* $Id: dump.c,v 1.21 2004/05/25 09:39:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.20 2004/05/25 08:37:08 manu Exp $");
+__RCSID("$Id: dump.c,v 1.21 2004/05/25 09:39:49 manu Exp $");
 #endif
 #endif
 
@@ -86,10 +86,6 @@ void
 dumper_start(void) {
 	pthread_t tid;
 
-	/* XXX This is not dynamically adjustable */
-	if (conf.c_dumpfreq == -1)
-		return;
-
 	if (pthread_create(&tid, NULL, (void *(*)(void *))dumper, NULL) != 0) {
 		syslog(LOG_ERR, 
 		    "cannot start dumper thread: %s", strerror(errno));
@@ -103,12 +99,7 @@ void
 dumper(dontcare) 
 	void *dontcare;
 {
-	FILE *dump;
-	int dumpfd;
-	struct timeval tv1, tv2, tv3;
 	pthread_mutex_t mutex;
-	char newdumpfile[MAXPATHLEN + 1];
-	int done;
 
 	if (pthread_mutex_init(&mutex, NULL) != 0) {
 		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n",
@@ -123,77 +114,30 @@ dumper(dontcare)
 	}
 
 	while (1) {
-		/* XXX Not dynamically adjustable */
-		if (conf.c_dumpfreq != 0) {
-			sleep(conf.c_dumpfreq);
-		} else {
+		/* XXX Not really dynamically adjustable */
+		switch (conf.c_dumpfreq) {
+		case -1:
+			sleep(DUMPFREQ);
+			break;
+
+		case 0:
 			if (pthread_cond_wait(&dump_sleepflag, &mutex) != 0)
 			    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
 				strerror(errno));
+			break;
+
+		default:
+			sleep(conf.c_dumpfreq);
+			break;
 		}
 
 		/*
 		 * If there is no change to dump, go back to sleep
 		 */
-		if (dump_dirty == 0)
+		if ((conf.c_dumpfreq == -1) || (dump_dirty == 0))
 			continue;
 
-		if (conf.c_debug) {
-			(void)gettimeofday(&tv1, NULL);
-			syslog(LOG_DEBUG, "dumping %d modifications", 
-			    dump_dirty);
-		}
-
-		/* 
-		 * dump_dirty is not protected by a lock,
-		 * hence it could be modified between the 
-		 * display and the actual dump. This debug
-		 * message does not give an accurate information
-		 */
-		dump_dirty = 0;
-
-		/* 
-		 * Dump the database in a temporary file and 
-		 * then replace the old one by the new one.
-		 * On decent systems, rename(2) garantees that 
-		 * even if the machine crashes, we will not 
-		 * loose both files.
-		 */
-		snprintf(newdumpfile, MAXPATHLEN, 
-		    "%s-XXXXXXXX", conf.c_dumpfile);
-
-		if ((dumpfd = mkstemp(newdumpfile)) == -1) {
-			syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s", 
-			    newdumpfile, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		if ((dump = fdopen(dumpfd, "w")) == NULL) {
-			syslog(LOG_ERR, "cannot write dumpfile \"%s\": %s", 
-			    newdumpfile, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		dump_header(dump);
-		done = 0;
-		done += pending_textdump(dump);
-		done += autowhite_textdump(dump);
-
-		fclose(dump);
-
-		if (rename(newdumpfile, conf.c_dumpfile) != 0) {
-			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
-			    conf.c_dumpfile, newdumpfile, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		if (conf.c_debug) {
-			(void)gettimeofday(&tv2, NULL);
-			timersub(&tv2, &tv1, &tv3);
-			syslog(LOG_DEBUG, "dumping %d records in %ld.%06lds",
-			    done, tv3.tv_sec, tv3.tv_usec);
-		}
-
+		dump_perform();
 	}
 
 	/* NOTREACHED */
@@ -202,6 +146,74 @@ dumper(dontcare)
 
 	return;
 }
+
+void
+dump_perform(void) {
+	FILE *dump;
+	int dumpfd;
+	struct timeval tv1, tv2, tv3;
+	char newdumpfile[MAXPATHLEN + 1];
+	int done;
+
+	if (conf.c_debug) {
+		(void)gettimeofday(&tv1, NULL);
+		syslog(LOG_DEBUG, "dumping %d modifications", 
+		    dump_dirty);
+	}
+
+	/* 
+	 * dump_dirty is not protected by a lock,
+	 * hence it could be modified between the 
+	 * display and the actual dump. This debug
+	 * message does not give an accurate information
+	 */
+	dump_dirty = 0;
+
+	/* 
+	 * Dump the database in a temporary file and 
+	 * then replace the old one by the new one.
+	 * On decent systems, rename(2) garantees that 
+	 * even if the machine crashes, we will not 
+	 * loose both files.
+	 */
+	snprintf(newdumpfile, MAXPATHLEN, 
+	    "%s-XXXXXXXX", conf.c_dumpfile);
+
+	if ((dumpfd = mkstemp(newdumpfile)) == -1) {
+		syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s", 
+		    newdumpfile, strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if ((dump = fdopen(dumpfd, "w")) == NULL) {
+		syslog(LOG_ERR, "cannot write dumpfile \"%s\": %s", 
+		    newdumpfile, strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	dump_header(dump);
+	done = 0;
+	done += pending_textdump(dump);
+	done += autowhite_textdump(dump);
+
+	fclose(dump);
+
+	if (rename(newdumpfile, conf.c_dumpfile) != 0) {
+		syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
+		    conf.c_dumpfile, newdumpfile, strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if (conf.c_debug) {
+		(void)gettimeofday(&tv2, NULL);
+		timersub(&tv2, &tv1, &tv3);
+		syslog(LOG_DEBUG, "dumping %d records in %ld.%06lds",
+		    done, tv3.tv_sec, tv3.tv_usec);
+	}
+
+	return;
+}
+
 
 void
 dump_reload(void) {

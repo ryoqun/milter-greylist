@@ -1,4 +1,4 @@
-/* $Id: dump.h,v 1.9 2004/05/24 21:57:36 manu Exp $ */
+/* $Id: dump.h,v 1.10 2004/05/25 09:39:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -71,5 +71,6 @@ void dumper_start(void);
 void dump_flush(void);
 void dump_reload(void);
 void dump_header(FILE *);
+void dump_perform(void);
 
 #endif /* _DUMP_H_ */

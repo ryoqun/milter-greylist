@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.87 2004/05/25 09:00:00 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.88 2004/05/25 09:39:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.87 2004/05/25 09:00:00 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.88 2004/05/25 09:39:49 manu Exp $");
 #endif
 #endif
 
@@ -778,6 +778,15 @@ main(argc, argv)
 	sync_sender_start();
 
 	/*
+	 * Install an atexit() callback to perform
+	 * a dump when milter-greylist exits.
+	 */
+	if (atexit(*final_dump) != 0) {
+		syslog(LOG_ERR, "atexit() failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}	
+
+	/*
 	 * Here we go!
 	 */
 	return smfi_main();
@@ -948,4 +957,17 @@ cidr2mask(cidr, mask)
 	}
 	
 	return mask;
+}
+
+void
+final_dump(void) {
+
+	if (dump_dirty != 0) {
+		syslog(LOG_INFO, "Exitting, performing final database dump");
+		dump_perform();
+	} else {
+		syslog(LOG_INFO, "Exitting, no change to dump");
+	}
+
+	return;
 }

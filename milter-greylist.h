@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.30 2004/04/08 15:06:07 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.31 2004/05/25 09:39:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -65,6 +65,7 @@ void usage(char *);
 int humanized_atoi(char *);
 struct in_addr *cidr2mask(int, struct in_addr *);
 void cleanup_sock(char *);
+void final_dump(void);
 int main(int, char **);
 
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT))
