@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.42 2004/03/17 21:58:11 manu Exp $
+# $Id: configure.ac,v 1.43 2004/03/18 07:33:28 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -95,13 +95,29 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([
 		# endif
 		#endif
 
+		#if HAVE_SYS_TIME_H
+		# include <sys/time.h>
+		#else
+		struct timeval {
+			long tv_sec;
+			long tv_usec;
+		};
+		#endif
+
+		#if HAVE_SYS_TYPES_H
+		# include <sys/types.h>
+		#else 
+		#endif
+
 		#if HAVE_UNISTD_H
 		# include <unistd.h>
 		#else
 		# ifdef __cplusplus
 		extern "C" unsigned int exit (unsigned int);
+		extern "C" int select(int, NULL, NULL, NULL, struct timeval *);
 		# else
 		unsigned int exit (unsigned int);
+		int select(int, NULL, NULL, NULL, struct timeval *);
 		# endif
 		#endif
 
@@ -110,9 +126,26 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([
   
 		#ifdef __cplusplus
 		extern "C" void testfunc (void *);
+		extern "C" void yield(void);
 		#else
-		void testfunc ();
+		void testfunc();
+		void yeild(void);
 		#endif
+
+		/*
+		 * On some Linux flavors, using sleep(3) instead
+		 * of select causes an infinite hang.
+		 */
+		void yield (void)
+		{
+			struct timeval tv;
+
+			tv.tv_sec = 1;
+			tv.tv_usec = 0;
+			if (select(0, NULL, NULL, NULL, &tv) != 0)
+				exit(EXIT_FAILURE);
+			return;
+		}
 
 		#ifdef __cplusplus
 		void testfunc (void *dontcare)
@@ -122,7 +155,7 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([
 		{
 			if (pthread_rwlock_rdlock(&lock) != 0)
 				exit(EXIT_FAILURE);
-			sleep(1);
+			yield();
 			if (pthread_rwlock_unlock(&lock) != 0)
 				exit(EXIT_FAILURE);
 			return;
@@ -136,7 +169,7 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([
 			exit(EXIT_FAILURE);
 		if (pthread_rwlock_rdlock(&lock) != 0)
 			exit(EXIT_FAILURE);
-		sleep(1);
+		yield();
 		if (pthread_rwlock_unlock(&lock) != 0)
 			exit(EXIT_FAILURE);
 		if (pthread_join(tid, NULL) != 0)
