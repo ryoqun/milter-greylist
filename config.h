@@ -2,7 +2,7 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
-#define BUILD_ENV "manu@plan:/usr/home/manu/milter-greylist Wed Dec 29 22:42:01 CET 2004"
+#define BUILD_ENV "manu@plan:/usr/home/manu/milter-greylist Wed Dec 29 22:45:48 CET 2004"
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define HAVE_ARPA_INET_H 1
@@ -154,13 +154,13 @@
 #define PACKAGE_NAME "milter-greylist"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "milter-greylist 1.7.4"
+#define PACKAGE_STRING "milter-greylist 1.7.5"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "milter-greylist"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "1.7.4"
+#define PACKAGE_VERSION "1.7.5"
 
 /* Define to 1 if the C compiler supports function prototypes. */
 #define PROTOTYPES 1

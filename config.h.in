@@ -1,5 +1,4 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
-/* $Id: config.h.in,v 1.30 2004/12/19 19:59:24 manu Exp $ */
 
 /* Build environnement */
 #undef BUILD_ENV
@@ -11,7 +10,7 @@
 #undef HAVE_BROKEN_RCSID
 
 /* broken rwlock in libpthread */
-#define HAVE_BROKEN_RWLOCK
+#undef HAVE_BROKEN_RWLOCK
 
 /* Define to 1 if you have the `bzero' function. */
 #undef HAVE_BZERO
