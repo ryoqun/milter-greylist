@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.30 2004/03/11 22:30:17 manu Exp $
+# $Id: configure.ac,v 1.31 2004/03/12 07:52:06 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -29,7 +29,6 @@ AC_ARG_WITH(libpthread,
 	[CFLAGS=$CFLAGS" -I$withval/include" 
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,--rpath=$withval/lib"])
 
-# Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, 
 	[LIBS="$LIBS -lpthread"],
 	[AC_CHECK_LIB(c_r, pthread_create, 

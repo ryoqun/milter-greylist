@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.12 2004/03/11 18:38:48 manu Exp $ */
+/* $Id: sync.c,v 1.13 2004/03/12 07:52:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -133,7 +133,7 @@ peer_create(pending)
 {
 	struct peer *peer;
 
-	PEER_RDLOCK;
+	PEER_WRLOCK;
 	if (LIST_EMPTY(&peer_head))
 		goto out;
 
@@ -251,13 +251,11 @@ peer_connect(peer)	/* peer list is write-locked */
 
 	inet_ntop(AF_INET, &peer->p_addr, peername, IPADDRLEN);
 
-	if ((peer->p_socket = socket(AF_INET, SOCK_STREAM, proto)) == -1) {
+	if ((s = socket(AF_INET, SOCK_STREAM, proto)) == -1) {
 		syslog(LOG_ERR, "cannot sync with peer %s, socket failed: %s", 
 		    peername, strerror(errno));
 		return -1;
 	}
-
-	s = peer->p_socket;
 
 	if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
 		service = MXGLSYNC_PORT;
@@ -275,6 +273,7 @@ peer_connect(peer)	/* peer list is write-locked */
 	if (bind(s, (struct sockaddr *)&laddr, sizeof(laddr)) != 0) { 
 		syslog(LOG_ERR, "cannot syncwith peer %s, bind failed: %s", 
 		    peername, strerror(errno));
+		close(s);
 		return -1;
 	}
 
@@ -289,6 +288,7 @@ peer_connect(peer)	/* peer list is write-locked */
 	if (connect(s, (struct sockaddr *)&raddr, sizeof(raddr)) != 0) {
 		syslog(LOG_ERR, "cannot syncwith peer %s, connect failed: %s", 
 		    peername, strerror(errno));
+		close(s);
 		return -1;
 	}
 
@@ -331,6 +331,7 @@ peer_connect(peer)	/* peer list is write-locked */
 
 	syslog(LOG_INFO, "Connection to %s established\n", peername);
 	peer->p_stream = stream;
+	peer->p_socket = s;
 	return 0;
 
 bad:
@@ -375,6 +376,7 @@ sync_master(dontcare)
 	if ((s = socket(AF_INET, SOCK_STREAM, proto)) == -1) {
 		syslog(LOG_ERR, "cannot start MX sync, socket failed: %s", 
 		    strerror(errno));
+		sync_master_runs = 0;
 		return;
 	}
 
@@ -408,6 +410,7 @@ sync_master(dontcare)
 	if (bind(s, (struct sockaddr *)&laddr, sizeof(laddr)) != 0) {
 		syslog(LOG_ERR, "cannot start MX sync, bind failed: %s", 
 		    strerror(errno));
+		sync_master_runs = 0;
 		close(s);
 		return;
 	}
@@ -415,6 +418,7 @@ sync_master(dontcare)
 	if (listen(s, MXGLSYNC_BACKLOG) != 0) {
 		syslog(LOG_ERR, "cannot start MX sync, listen failed: %s", 
 		    strerror(errno));
+		sync_master_runs = 0;
 		close(s);
 		return;
 	}
@@ -459,8 +463,10 @@ sync_master(dontcare)
 		PEER_RDLOCK;
 
 		if (LIST_EMPTY(&peer_head)) {
-			sync_master_runs = 0;
 			fprintf(stream, "105 No more peers, shutting down!\n");
+
+			PEER_UNLOCK;
+			sync_master_runs = 0;
 			fclose(stream);
 			close(s);
 			return;
