@@ -10,7 +10,7 @@ atext		[A-Za-z0-9!#$%&'*+/=?$^_`}{|~.-]{1,}
 qtext		"\""[!-~]{1,}"\""
 mailbox		{atext}|{qtext}
 domainname	[A-Za-z0-9._-]{1,}
-email		{mailbox}"\@"{domain}
+email		{mailbox}"\@"{domainname}
 comment		#.*$
 blank		[ \t]{1,}
 addr		[Aa][Dd][Dd][Rr]:?
@@ -50,7 +50,7 @@ domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.23 2004/05/26 21:50:12 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.24 2004/05/28 23:35:14 manu Exp $");
 	#endif
 	#endif
 	#endif

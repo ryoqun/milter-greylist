@@ -1,5 +1,6 @@
 1.3.6:
-	Case-insensitive regluar expression matching
+	Big bug fix: rcpt keywords did not work anymore without regex	
+	Case-insensitive regular expression matching
 1.3.5:
 	Fix install bug on some platforms (permissions)
 	Use CC as defined by configure, fix the build on Solaris
