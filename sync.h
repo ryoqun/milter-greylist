@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.7 2004/03/20 11:20:05 manu Exp $ */
+/* $Id: sync.h,v 1.8 2004/03/21 23:51:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -44,6 +44,10 @@
 #define MXGLSYNC_PORT 5252
 
 #define MXGLSYNC_BACKLOG 5 /* Maximum connexions */
+
+#ifdef HAVE_MISSING_SOCKLEN_T
+typedef unsigned int socklen_t;
+#endif
 
 #define PEER_WRLOCK WRLOCK(peer_lock);
 #define PEER_RDLOCK RDLOCK(peer_lock);

@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.56 2004/03/21 23:19:39 manu Exp $
+# $Id: configure.ac,v 1.57 2004/03/21 23:51:47 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -96,6 +96,33 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	])], [oldqueue=no], 
 	[AC_DEFINE([HAVE_OLD_QUEUE_H], [], [old <sys/queue.h>]) oldqueue=yes])
 AC_MSG_RESULT([$oldqueue])
+
+# Darwin seems to have no definition for socklen_t beyond _BSD_SOCKLEN_T_
+AC_MSG_CHECKING([if you have a missing socklen_t])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <sys/types.h>
+		#include <sys/socket.h>
+	],[
+		socklen_t slen;
+	])], [socklen=no], 
+	[AC_DEFINE([HAVE_MISSING_SOCKLEN_T], [], 
+	    [missing socklen_t definition]) socklen=yes])
+AC_MSG_RESULT([$socklen])
+
+# Darwin is unable to define two __RCSID in the same file
+AC_MSG_CHECKING([if __RCSID can be used twice in the same source])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <sys/cdefs.h>
+		#ifdef __RCSID
+		__RCSID("Id1");
+		__RCSID("Id2");
+		#endif
+	],[
+		/* nothing */
+	])], [rcsidtwice=yes], 
+	[AC_DEFINE([HAVE_BROKEN_RCSID], [], 
+	    [unsable to use __RCSID twice]) rcsidtwice=no])
+AC_MSG_RESULT([$rcsidtwice])
 
 # Linux requires -D_XOPEN_SOURCE=500 to build with libpthread and -Wall
 AC_MSG_CHECKING([whether you need -D_XOPEN_SOURCE to use libpthread])
