@@ -1,10 +1,12 @@
 %token ADDR IPADDR CIDR FROM RCPT EMAIL PEER
 
 %{
+#include "config.h"
+
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.4 2004/03/22 07:12:38 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.5 2004/03/22 22:12:39 manu Exp $");
 #endif
 #endif
 

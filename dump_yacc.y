@@ -1,10 +1,12 @@
 %token IPADDR EMAIL TIME AUTO
 
 %{
+#include "config.h"
+
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.12 2004/03/22 10:17:40 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.13 2004/03/22 22:12:39 manu Exp $");
 #endif
 #endif
 

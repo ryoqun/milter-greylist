@@ -13,11 +13,13 @@ blank		[ \t]{1,}
 auto		[Aa][Uu][Tt][Oo]
 
 %{
+	#include "config.h"
+
 	#ifdef HAVE_SYS_CDEFS_H
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.8 2004/03/22 07:12:38 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.9 2004/03/22 22:12:39 manu Exp $");
 	#endif
 	#endif
 	#endif
