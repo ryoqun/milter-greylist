@@ -1,3 +1,6 @@
+1.5.2:
+	Feed strtkok_r with a NULL initialized pointer
+	More mixed I/O fix: another fflush after a fgets() 
 1.5.1:
 	Fix mixed I/O in MX sync on Solaris, from Attila Bruncsak
 	Check that compiler and linker accept -Wall

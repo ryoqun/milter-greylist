@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.43 2004/06/16 21:00:39 manu Exp $ */
+/* $Id: sync.c,v 1.44 2004/06/17 19:57:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.43 2004/06/16 21:00:39 manu Exp $");
+__RCSID("$Id: sync.c,v 1.44 2004/06/17 19:57:33 manu Exp $");
 #endif
 #endif
 
@@ -198,7 +198,7 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 	char *replystr;
 	int replycode;
 	char line[LINELEN + 1];
-	char *cookie;
+	char *cookie = NULL;
 
 	if ((peer->p_stream == NULL) && (peer_connect(peer) != 0))
 		return -1;
@@ -276,7 +276,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	char peername[IPADDRLEN + 1];
 	char line[LINELEN + 1];
 	int param;
-	char *cookie;
+	char *cookie = NULL;
 
 	if (peer->p_stream != NULL)
 		syslog(LOG_ERR, "peer_connect called and peer->p_stream != 0");
@@ -590,6 +590,13 @@ sync_server(arg)
 	for (;;) {
 		if ((fgets(line, LINELEN, stream)) == NULL)
 			break;
+
+		/*
+		 * On some systems, opening a stream on a socket introduce
+		 * weird behavior: the in and out buffers get mixed up. 
+		 * By calling fflush() after each read operation, we fix that
+		 */
+		fflush(peer->p_stream);
 
 		/*
 		 * Get the command { quit | help | add | del }
