@@ -1,5 +1,4 @@
-1.1.1:
-	Use setsid() to detach from the terminal
+1.0.1:
 	Fix the mising units in ps output for -a and -w
 	Fix typos
 
