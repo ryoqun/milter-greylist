@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.28 2004/12/08 22:23:09 manu Exp $
+.\" $Id: milter-greylist.8,v 1.29 2004/12/09 00:04:01 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -178,10 +178,14 @@ was built with SPF support, then SPF-compliant senders bypass greylisting.
 This flag cause messages to be greylisted regardeless if they are 
 SPF-compliant or not.
 .It Fl T
-Enable test mode. This alters the meaning of recipient lines in 
+Enable test mode. This alters the meaning of 
+.Ar rcpt
+lines in 
 .Pa greylist.conf ,
 so that only messages sent to recipient adresses listed there are 
-selected for grey listing.
+selected for greylisting. This option and the 
+.Ar rcpt
+lines have been deprecated in favor of ACL, so do not use it. 
 .It Fl u Ar username
 Drop root privileges and switch to 
 .Ar username

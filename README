@@ -1,9 +1,9 @@
-# $Id: README,v 1.25 2004/12/06 22:16:06 manu Exp $
+# $Id: README,v 1.26 2004/12/09 00:04:01 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/12/06 22:16:06 $
+		       $Date: 2004/12/09 00:04:01 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -24,7 +24,7 @@ Build dependencies:
 - Any POSIX threads library (Provided by libc on some systems)
 
 Optionnal dependencies: 
-- libspf_alt or libspf.
+- libspf2, libspf_alt or libspf.
 
 To build milter-greylist, just do the usual 
 ./configure && make && make install
@@ -44,7 +44,7 @@ On the make install step, the Makefile will install a default config
 file in /etc/mail/greylist.conf, except if there is already such
 a file. In that case the original file is preserved.
 
-Two startup scripts are available: rc-redhat.sh, rc-debian, and rc-gentoo.sh
+Some startup scripts are available: rc-redhat.sh, rc-debian, and rc-gentoo.sh
 for Linux and rc-bsd.sh for NetBSD and FreeBSD. They are not installed by 
 default, you have install the startup script by hand if you want to use one.
 
@@ -82,10 +82,11 @@ define(`confMILTER_MACROS_ENVFROM', `i, {auth_authen}')
  =============================
 
 Edit /etc/mail/greylist.conf, and add addr lines for at least
-all you local network addresses. Here is an example:
+localhost and all you local network addresses. Here is an example:
 
-addr 192.0.2.0/24 
-addr 10.0.0.0/8
+acl whitelist addr 127.0.0.0/8
+acl whitelist addr 192.0.2.0/24 
+acl whitelist addr 10.0.0.0/8
 
 Then consider adding addresses of all the friendly network you get
 mail from. By friendly network, we mean network with no spammers:
@@ -100,14 +101,19 @@ friendly at all.
 Add some rcpt lines to /etc/mail/greylist.conf for the users that
 want to try milter-greylist filtering. Here is an example:
 
-rcpt John.Doe@example.net 
-rcpt webmaster@example.net 
-rcpt postmaster@example.net
+acl greylist rcpt John.Doe@example.net 
+acl greylist rcpt webmaster@example.net 
+acl greylist rcpt postmaster@example.net
 
-Then start milter-greylist with the -T option, which will make
-greylisting effective only for the users listed in the rcpt lines.
+Then finish your ACL with the default rule: here, anything that
+is not for John.Doe@example.net, webmaster@example.net, or
+postmaster@example.net will not get greylisted: it is whitielisted:
 
-milter-greylist -T -u smmsp -p /var/milter-greylist/milter-greylist.sock
+acl whitelist default
+
+Now you can start milter-greylist:
+
+milter-greylist -u smmsp -p /var/milter-greylist/milter-greylist.sock
 
 You might want to add -v and -D to get more debugging output. The
 -w flag is used to choose how long we will refuse a given message.
@@ -122,21 +128,23 @@ disable this feature.
  5 Running it for the whole site 
  ===============================
 
-Remove the rcpt lines from /etc/mail/greylist.conf, and run
-milter-greylist without the -T option:
+Remove the "acl greylist rcpt ..." lines from /etc/mail/greylist.conf, 
+and replace "acl whitelist default" by
 
-milter-greylist -u smmsp -p /var/milter-greylist/milter-greylist.sock
+acl greylist default
 
-If some of your users don't want greylisting, add a rcpt line for
-them in /etc/mail/greylist.conf. Without the -T option, rcpt
-lines will prevent greylisting for the corresponding users: every
-message will get to them without any delay, including spam.
+Now greylisting is enabled for every recipient. If some of your 
+users don't want greylisting, add a "acl whitelist rcpt" line for them 
+in /etc/mail/greylist.conf. Make sure you do it before 
+"acl greylist default": ordering does matter, as the ACL rules are
+evaluated on a first match win basis.
 
 If your mail server handles several domains and you want to enable
 milter-greylist for a whole domain but not for everyone, this is 
-possible: just use a regular expression and run in testmode:
+possible, just use a regular expression:
 
-rcpt /.*@example\.net/
+acl greylist rcpt /.*@example\.net/
+acl whitelist default
 
 
  6 Dealing with mail farms

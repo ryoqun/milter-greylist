@@ -2,6 +2,8 @@
 	Support libspf2 (Eugene Crosser)
 	New ACL framework for whitelist and greylist (Remy Card)
 	Tell MX peers about autowhitelist prolongation (Remy Card)
+	Documentation cleanup
+	Update the Broken MTA list
 1.7.1:
 	Null after 1.6 tag release to help patch contributions
 1.6:
