@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.13 2004/03/06 19:06:14 manu Exp $ */
+/* $Id: except.c,v 1.14 2004/03/06 20:28:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.13 2004/03/06 19:06:14 manu Exp $");
+__RCSID("$Id: except.c,v 1.14 2004/03/06 20:28:44 manu Exp $");
 #endif
 
 #include <errno.h>
@@ -64,17 +64,17 @@ struct timeval exceptfile_modified;
 static int emailcmp(char *, char *);
 
 #define EXCEPT_WRLOCK if (pthread_rwlock_wrlock(&except_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed\n",	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
 		    __FILE__, __LINE__);				\
 		exit(EX_SOFTWARE);					\
 	}
 #define EXCEPT_RDLOCK if (pthread_rwlock_rdlock(&except_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_rdlock failed\n",	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_rdlock failed",	\
 		    __FILE__, __LINE__);				\
 		exit(EX_SOFTWARE);					\
 	}
 #define EXCEPT_UNLOCK if (pthread_rwlock_unlock(&except_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed\n",	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed",	\
 		    __FILE__, __LINE__);				\
 		exit(EX_SOFTWARE);					\
 	}
@@ -227,7 +227,7 @@ except_filter(in, from, rcpt)
 
 		if (!found) {
 			syslog(LOG_INFO, "testmode: skipping greylist "
-			    "for recipient \"%s\"\n", rcpt);
+			    "for recipient \"%s\"", rcpt);
 			retval = EXF_RCPT;
 			goto out;
 		}
@@ -239,7 +239,7 @@ except_filter(in, from, rcpt)
 			if ((in->s_addr & ex->e_mask.s_addr) == 
 			    ex->e_addr.s_addr) {
 				syslog(LOG_INFO, "address %s is in "
-				    "exception list\n", 
+				    "exception list", 
 				    inet_ntop(AF_INET, in, addrstr, IPADDRLEN));
 				retval = EXF_ADDR;
 				goto out;
@@ -250,7 +250,7 @@ except_filter(in, from, rcpt)
 		case E_FROM:
 			if (emailcmp(from, ex->e_from) == 0) {
 				syslog(LOG_INFO, "sender %s is in "
-				    "exception list\n", from);
+				    "exception list", from);
 				retval = EXF_FROM;
 				goto out;
 			}
@@ -262,14 +262,14 @@ except_filter(in, from, rcpt)
 
 			if (emailcmp(rcpt, ex->e_rcpt) == 0) {
 				syslog(LOG_INFO, "recipient %s is in "
-				    "exception list\n", rcpt);
+				    "exception list", rcpt);
 				retval = EXF_RCPT;
 				goto out;
 			}
 			break;
 
 		default:
-			syslog(LOG_ERR, "corrupted exception list\n");
+			syslog(LOG_ERR, "corrupted exception list");
 			exit(EX_SOFTWARE);
 			break;
 		}
@@ -322,7 +322,7 @@ except_update(void) {
 	if (st.st_mtime < exceptfile_modified.tv_sec) 
 		return;
 
-	syslog(LOG_INFO, "reloading \"%s\"\n", exceptfile);
+	syslog(LOG_INFO, "reloading \"%s\"", exceptfile);
 	if (debug)
 		(void)gettimeofday(&tv1, NULL);
 
@@ -335,7 +335,7 @@ except_update(void) {
 
 	if (debug) {
 		(void)gettimeofday(&tv2, NULL);
-		syslog(LOG_DEBUG, "reloaded exception file in %ld.%06lds\n", 
+		syslog(LOG_DEBUG, "reloaded exception file in %ld.%06lds", 
 		    tv2.tv_sec - tv1.tv_sec, tv2.tv_usec - tv1.tv_usec);
 	}
 

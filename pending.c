@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.12 2004/03/06 20:22:43 manu Exp $ */
+/* $Id: pending.c,v 1.13 2004/03/06 20:28:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.12 2004/03/06 20:22:43 manu Exp $");
+__RCSID("$Id: pending.c,v 1.13 2004/03/06 20:28:44 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -70,28 +70,28 @@ char *dumpfile = DUMPFILE;
 int dump_parse(void);
 
 #define PENDING_WRLOCK if (pthread_rwlock_wrlock(&pending_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed\n",	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
 		    __FILE__, __LINE__);				\
 		exit(EX_SOFTWARE);					\
 	}
 #define PENDING_RDLOCK if (pthread_rwlock_rdlock(&pending_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_rdlock failed\n",	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_rdlock failed",	\
 		    __FILE__, __LINE__);				\
 		exit(EX_SOFTWARE);					\
 	}
 #define PENDING_UNLOCK if (pthread_rwlock_unlock(&pending_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed\n",	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed",	\
 		    __FILE__, __LINE__);				\
 		exit(EX_SOFTWARE);					\
 	}
 
 #define DUMP_WRLOCK if (pthread_rwlock_wrlock(&dump_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed\n",	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
 		    __FILE__, __LINE__);				\
 		exit(EX_SOFTWARE);					\
 	}
 #define DUMP_UNLOCK if (pthread_rwlock_unlock(&dump_lock) != 0) {	\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed\n",	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed",	\
 		    __FILE__, __LINE__);				\
 		exit(EX_SOFTWARE);					\
 	}
@@ -145,7 +145,7 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 	pending_dirty++;
 
 	(void)gettimeofday(&tv, NULL);
-	syslog(LOG_INFO, "created: %s from %s to %s, delayed for %ld s\n",
+	syslog(LOG_INFO, "created: %s from %s to %s, delayed for %ld s",
 	    pending->p_addr, pending->p_from, pending->p_rcpt, 
 	    pending->p_tv.tv_sec - tv.tv_sec);
 
@@ -157,7 +157,7 @@ void
 pending_put(pending) /* pending list should be write-locked */
 	struct pending *pending;
 {
-	syslog(LOG_INFO, "removed: %s from %s to %s\n",
+	syslog(LOG_INFO, "removed: %s from %s to %s",
 	    pending->p_addr, pending->p_from, pending->p_rcpt);
 	TAILQ_REMOVE(&pending_head, pending, p_list);	
 	free(pending);
@@ -175,7 +175,7 @@ pending_log(pending)
 
 	gettimeofday(&tv, NULL);
 
-	syslog(LOG_INFO, "log: %s from %s to %s, delayed for %ld s\n",
+	syslog(LOG_INFO, "log: %s from %s to %s, delayed for %ld s",
 	    pending->p_addr, pending->p_from, 
 	    pending->p_rcpt, pending->p_tv.tv_sec - tv.tv_sec);
 
@@ -193,7 +193,7 @@ pending_purge(void) {
 	PENDING_WRLOCK;
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
 		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
-			syslog(LOG_INFO, "purge: %s from %s to %s timed out\n", 
+			syslog(LOG_INFO, "purge: %s from %s to %s timed out", 
 			    pending->p_addr, pending->p_from, pending->p_rcpt);
 			pending_put(pending);
 		}
@@ -230,7 +230,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
 			rest = pending->p_tv.tv_sec - tv.tv_sec;
 
-			syslog(LOG_DEBUG, "got the entry\n");
+			syslog(LOG_DEBUG, "got the entry");
 			if (rest < 0) {
 				pending_put(pending);
 				rest = 0;
@@ -243,8 +243,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 		 * Check for expired entries 
 		 */
 		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
-			syslog(LOG_INFO, 
-			    "check: %s from %s to %s timed out\n", 
+			syslog(LOG_INFO, "check: %s from %s to %s timed out", 
 			    pending->p_addr, pending->p_from, pending->p_rcpt);
 			pending_put(pending);
 		}
@@ -318,7 +317,7 @@ pending_flush(void) {
 	if (pending_dirty > 0) {
 		if (debug) {
 			(void)gettimeofday(&tv1, NULL);
-			syslog(LOG_DEBUG, "dumping %d modifications\n", 
+			syslog(LOG_DEBUG, "dumping %d modifications", 
 			    pending_dirty);
 		}
 
@@ -332,13 +331,13 @@ pending_flush(void) {
 		snprintf(newdumpfile, MAXPATHLEN, "%s-XXXXXXXX", dumpfile);
 
 		if ((dumpfd = mkstemp(newdumpfile)) == -1) {
-			syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s\n", 
+			syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s", 
 			    newdumpfile, strerror(errno));
 			exit(EX_OSERR);
 		}
 
 		if ((dump = fdopen(dumpfd, "w")) == NULL) {
-			syslog(LOG_ERR, "cannot write dumpfile \"%s\": %s\n", 
+			syslog(LOG_ERR, "cannot write dumpfile \"%s\": %s", 
 			    newdumpfile, strerror(errno));
 			exit(EX_OSERR);
 		}
@@ -349,7 +348,7 @@ pending_flush(void) {
 
 		if (debug) {
 			(void)gettimeofday(&tv2, NULL);
-			syslog(LOG_DEBUG, "dumping done in %ld.%06lds\n",
+			syslog(LOG_DEBUG, "dumping done in %ld.%06lds",
 			tv2.tv_sec - tv1.tv_sec, tv2.tv_usec - tv1.tv_usec);
 		}
 
@@ -370,8 +369,8 @@ pending_reload(void) {
 	 * Re-import a saved greylist
 	 */
 	if ((dump = fopen(dumpfile, "r")) == NULL) {
-		syslog(LOG_ERR, "cannot read dumpfile \"%s\"\n", dumpfile);
-		syslog(LOG_ERR, "starting with an empty greylist\n");
+		syslog(LOG_ERR, "cannot read dumpfile \"%s\"", dumpfile);
+		syslog(LOG_ERR, "starting with an empty greylist");
 	} else {
 		dump_in = dump;
 		PENDING_WRLOCK;
