@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.7 2004/02/29 18:07:17 manu Exp $
+# $Id: Makefile.in,v 1.8 2004/03/02 07:45:11 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -42,6 +42,7 @@ USER=		@USER@
 
 MKDEP=		@MKDEP@
 RM=		@RM@
+TEST=		@TEST@
 SED=		@SED@
 INSTALL=	@INSTALL@
 LEX=		@LEX@
@@ -61,7 +62,8 @@ all:	depend milter-greylist
 install:	milter-greylist
 	${INSTALL} -m 755 milter-greylist ${BINDIR}
 	${INSTALL} -m 644 milter-greylist.8 ${MANDIR}/man8
-	${INSTALL} -m 644 greylist.except /etc/mail
+	${TEST} -f /etc/mail/greylist.except || \
+	     ${INSTALL} -m 644 greylist.except /etc/mail
 	${INSTALL} -d -m 755 -o ${USER} /var/milter-greylist
 
 depend:
