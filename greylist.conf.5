@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.13 2004/10/13 10:15:12 manu Exp $
+.\" $Id: greylist.conf.5,v 1.14 2004/10/17 18:35:42 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -113,8 +113,7 @@ an example:
 .Dl peer 192.0.2.18
 .Dl peer 192.0.2.17
 .Pp
-Do not ever list localhost as a peer, as it will cause each entry to 
-be added twice to the greylist.
+You can list the local machine in the peer statements, it will be ignored.
 .Pp
 By default, milter-greylist will listen on all interfaces using TCP port
 5252 or port number given by service named mxglsync if defined in /etc/services
