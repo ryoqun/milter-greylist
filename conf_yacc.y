@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.28 2004/10/11 20:57:42 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.29 2004/10/14 21:53:39 manu Exp $");
 #endif
 #endif
 
@@ -203,8 +203,14 @@ subnetmatch:	SUBNETMATCH CIDR{ if (C_NOTFORCED(C_MATCHMASK))
 					prefix2mask4($2, &conf.c_match_mask);
 				}
 	;	
-subnetmatch6:	SUBNETMATCH6 CIDR{ if (C_NOTFORCED(C_MATCHMASK6))
+subnetmatch6:	SUBNETMATCH6 CIDR{ 
+#ifdef AF_INET6
+				if (C_NOTFORCED(C_MATCHMASK6))
 					prefix2mask6($2, &conf.c_match_mask6);
+#else
+				printf("IPv6 is not supported, "
+				    "ignore line %d\n", conf_line);
+#endif
 				}
 	;
 socket:		SOCKET PATH	{ if (C_NOTFORCED(C_SOCKET)) 
