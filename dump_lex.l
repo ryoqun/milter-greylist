@@ -14,12 +14,14 @@ blank		[ \t]{1,}
 %{
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.4 2004/03/06 20:25:14 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.5 2004/03/11 14:12:48 manu Exp $");
 	#endif
 
 	#include <string.h>
 	#include <errno.h>
 	#include <sysexits.h>
+
+	#define YY_NO_UNPUT
 
 	int dump_line = 1;
 %}

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.13 2004/03/10 21:11:45 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.14 2004/03/11 14:12:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -98,5 +98,15 @@ int main(int, char **);
 #ifndef LIST_EMPTY
 #define LIST_EMPTY(head)                ((head)->lh_first == NULL)
 #endif
+
+#ifndef TAILQ_FIRST
+#define TAILQ_FIRST(head)                ((head)->tqh_first)
+#endif
+
+#ifndef TAILQ_EMPTY
+#define TAILQ_EMPTY(head)                ((head)->tqh_first == NULL)
+#endif
+
+
 		
 #endif /* _MILTER_GREYLIST_H_ */

@@ -17,12 +17,14 @@ peer		[Pp][Ee][Ee][Rr]:?
 %{
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.1 2004/03/10 21:11:45 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.2 2004/03/11 14:12:48 manu Exp $");
 	#endif
 
 	#include <string.h>
 	#include <errno.h>
 	#include <sysexits.h>
+
+	#define YY_NO_UNPUT
 
 	int conf_line = 1;
 %}

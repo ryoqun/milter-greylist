@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.6 2004/03/10 21:11:45 manu Exp $ */
+/* $Id: sync.c,v 1.7 2004/03/11 14:12:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -35,6 +35,7 @@ __RCSID("$Id");
 #endif
 
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -258,7 +259,9 @@ peer_connect(peer)
 		service = se->s_port;
 
 	bzero(&laddr, sizeof(laddr));
+#ifdef HAVE_SA_LEN
 	laddr.sin_len = sizeof(laddr);
+#endif
 	laddr.sin_family = AF_INET;
 	laddr.sin_port = 0;
 	laddr.sin_addr.s_addr = INADDR_ANY;
@@ -270,7 +273,9 @@ peer_connect(peer)
 	}
 
 	bzero(&raddr, sizeof(raddr));
+#ifdef HAVE_SA_LEN
 	raddr.sin_len = sizeof(raddr);
+#endif
 	raddr.sin_family = AF_INET;
 	raddr.sin_port = htons(service);
 	raddr.sin_addr = peer->p_addr;
@@ -312,7 +317,7 @@ peer_connect(peer)
 
 	replycode = atoi(replystr);
 	if (replycode != 200) {
-		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s",
+		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
 		    "closing connexion", line, peername);
 		goto bad;
 	}
@@ -372,9 +377,9 @@ sync_master(dontcare)
 		service = se->s_port;
 
 	optval = 1;
-	if ((setsockopt(s, SOL_SOCKET, SO_REUSEPORT, 
+	if ((setsockopt(s, SOL_SOCKET, SO_REUSEADDR, 
 	    &optval, sizeof(optval))) != 0) {
-		syslog(LOG_ERR, "cannot set SO_REUSEPORT: %s", 
+		syslog(LOG_ERR, "cannot set SO_REUSEADDR: %s", 
 		    strerror(errno));
 	}
 
@@ -386,7 +391,9 @@ sync_master(dontcare)
 	}
 
 	bzero(&laddr, sizeof(laddr));
+#ifdef HAVE_SA_LEN
 	laddr.sin_len = sizeof(laddr);
+#endif
 	laddr.sin_family = AF_INET;
 	laddr.sin_port = htons(service);
 	laddr.sin_addr.s_addr = INADDR_ANY;

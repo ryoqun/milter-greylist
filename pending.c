@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.21 2004/03/10 21:11:45 manu Exp $ */
+/* $Id: pending.c,v 1.22 2004/03/11 14:12:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,12 +29,9 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define _XOPEN_SOURCE 500
-#define _BSD_SOURCE
-
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.21 2004/03/10 21:11:45 manu Exp $");
+__RCSID("$Id: pending.c,v 1.22 2004/03/11 14:12:48 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -260,7 +257,8 @@ pending_textdump(stream)
 	char textdate[DATELEN + 1];
 
 	gettimeofday(&tv, NULL);
-	strftime(textdate, DATELEN, "%c", localtime((time_t *)&tv.tv_sec));
+	strftime(textdate, DATELEN, "%a %b %d %H %G", 
+	    localtime((time_t *)&tv.tv_sec));
 
 	fprintf(stream, "#\n# Greylist database, "
 	    "dumped by milter-greylist-%s on %s.\n",

@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.26 2004/03/10 21:44:15 manu Exp $
+# $Id: configure.ac,v 1.27 2004/03/11 14:12:48 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -59,6 +59,23 @@ AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
+
+AC_MSG_CHECKING([whether you need -D_XOPEN_SOURCE to use libpthread])
+xopen=no
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <sys/types.h>
+		#include <pthread.h>
+	],[
+		pthread_rwlock_t lock;
+	])], [xopen=no], [CFLAGS="$CFLAGS -D_XOPEN_SOURCE=500"; xopen=yes])
+AC_MSG_RESULT([$xopen])
+
+AC_DEFINE([HAVE_SA_LEN], [], [sa_len field in struct sockaddr])
+AC_CHECK_MEMBER([struct sockaddr.sa_len], , 
+	[AC_DEFINE(HAVE_SA_LEN)], [
+		#include <sys/types.h>
+		#include <sys/socket.h>
+	])
 
 # Options
 AC_ARG_WITH(user,

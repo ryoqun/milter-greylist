@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.17 2004/03/10 21:11:45 manu Exp $
+# $Id: Makefile.in,v 1.18 2004/03/11 14:12:48 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,7 +29,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-CFLAGS= 	@CFLAGS@ -Wall -ansi
+CFLAGS= 	@CFLAGS@ -D_BSD_SOURCE -Wall -ansi
 LDFLAGS=	@LDFLAGS@
 LIBS= 		@LIBS@
 prefix=		@prefix@
