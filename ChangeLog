@@ -1,4 +1,5 @@
 2.0b2:
+	Typo in delayedreject 
 	Check for initgroups existence
 2.0b1:
 	Shut down warnings in tolower()
