@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.22 2004/05/27 15:04:43 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.23 2004/05/27 15:05:05 manu Exp $");
 #endif
 #endif
 
@@ -139,6 +139,7 @@ report:		REPORT NONE	{ conf.c_report = C_NONE; }
 dumpfreq:	DUMPFREQ TDELAY { conf.c_dumpfreq =
 				    (time_t)humanized_atoi($2);
 				}
+	;
 timeout:	TIMEOUT TDELAY { conf.c_timeout =
 				    (time_t)humanized_atoi($2);
 				}
