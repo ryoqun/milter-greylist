@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.7 2004/03/11 14:12:48 manu Exp $ */
+/* $Id: sync.c,v 1.8 2004/03/11 16:33:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -238,6 +238,9 @@ peer_connect(peer)
 	char line[LINELEN + 1];
 	int param;
 
+	if (peer->p_stream != NULL)
+		syslog(LOG_ERR, "peer_connect called and peer->p_stream != 0");
+
 	if ((pe = getprotobyname("tcp")) == NULL)
 		proto = 6;
 	else
@@ -295,6 +298,7 @@ peer_connect(peer)
 	if ((stream = fdopen(s, "w+")) == NULL) {
 		syslog(LOG_ERR, "cannot sync with peer %s, fdopen failed: %s", 
 		    peername, strerror(errno));
+		close(s);
 		return -1;
 	}
 
@@ -306,7 +310,7 @@ peer_connect(peer)
 	if (fgets(line, LINELEN, stream) == NULL) {
 		syslog(LOG_ERR, "Lost connexion with peer %s: %s\n", 
 		    peername, strerror(errno));
-		return -1;
+		goto bad;
 	}
 
 	if ((replystr = strtok(line, sep)) == NULL) {
@@ -328,6 +332,7 @@ peer_connect(peer)
 
 bad:
 	fclose(stream);
+	close(s);
 	peer->p_stream = NULL;
 
 	return -1;
@@ -401,12 +406,14 @@ sync_master(dontcare)
 	if (bind(s, (struct sockaddr *)&laddr, sizeof(laddr)) != 0) {
 		syslog(LOG_ERR, "cannot start MX sync, bind failed: %s", 
 		    strerror(errno));
+		close(s);
 		return;
 	}
 
 	if (listen(s, MXGLSYNC_BACKLOG) != 0) {
 		syslog(LOG_ERR, "cannot start MX sync, listen failed: %s", 
 		    strerror(errno));
+		close(s);
 		return;
 	}
 
@@ -436,6 +443,7 @@ sync_master(dontcare)
 			syslog(LOG_ERR, 
 			    "incoming connexion from %s failed, "
 			    "fdopen fail: %s", peerstr, strerror(errno));
+			close(fd);
 			break;
 		}
 
@@ -478,6 +486,7 @@ sync_master(dontcare)
 			syslog(LOG_ERR, "incoming connexion from %s failed, "
 			    "pthread_create failed: %s", 
 			    peerstr, strerror(errno));
+			fclose(stream);
 			break;
 		}
 	}
