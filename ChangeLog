@@ -1,3 +1,5 @@
+1.3.5:
+	Build fix in Yacc file
 1.3.4:
 	DNS support in greylist.conf through the domain keyword
 	Make the greylist timeout a config file option
