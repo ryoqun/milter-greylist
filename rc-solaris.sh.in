@@ -1,0 +1,41 @@
+#!/sbin/sh
+# /etc/init.d/greymilter : link this file with /etc/rc2.d/S78greymilter
+
+# Usage :
+#        /usr/local/bin/milter-greylist [-ADvqST] [-a autowhite] [-d dumpfile]
+#        [-f configfile] [-w delay] [-u username] [-L cidrmask] -p socket
+#
+# Conf  : /etc/mail/greylist.conf
+
+mildir="/var/milter-greylist"
+socket="$mildir/milter-greylist.sock"
+binpath="@BINDIR@"
+user="smmsp"
+
+OPTIONS="-v -w 14m"
+
+case "$1" in
+  start)
+        # Start daemon.
+        echo "Starting milter-greylist: ... \c"
+        chown $user $mildir
+        $binpath/milter-greylist $OPTIONS
+        echo "done."
+        ;;
+  stop)
+        # Stop daemons.
+        echo "Shutting down milter-greylist: ... \c"
+        /usr/bin/pkill milter-greylist
+        echo "done."
+        ;;
+  restart)
+        echo "Restarting milter-greylist: ... \c"
+        /usr/bin/pkill milter-greylist
+        $binpath/milter-greylist $OPTIONS
+        echo "done."
+        ;;
+  *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+esac
+exit 0

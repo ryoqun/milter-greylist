@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.31 2004/05/28 08:59:04 manu Exp $
+# $Id: Makefile.in,v 1.32 2004/06/08 15:57:34 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -57,7 +57,7 @@ SRC= 		milter-greylist.c pending.c except.c sync.c conf.c \
 		autowhite.c dump.c spf.c
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c 
 
-all:		milter-greylist rc-bsd.sh rc-linux.sh
+all:		milter-greylist rc-bsd.sh rc-linux.sh rc-solaris.sh
 
 milter-greylist:	${OBJ}
 	${CC} -o milter-greylist ${OBJ} ${LDFLAGS} ${LIBS}
@@ -70,6 +70,8 @@ rc-bsd.sh:      rc-bsd.sh.in
 	${SED} "s|@BINDIR@|${BINDIR}|g" rc-bsd.sh.in > rc-bsd.sh
 rc-linux.sh:    rc-linux.sh.in
 	${SED} "s|@BINDIR@|${BINDIR}|g" rc-linux.sh.in > rc-linux.sh
+rc-solaris.sh:    rc-solaris.sh.in
+	${SED} "s|@BINDIR@|${BINDIR}|g" rc-solaris.sh.in > rc-solaris.sh
 
 install:	milter-greylist
 	${INSTALL} -d -m 755 ${BINDIR}

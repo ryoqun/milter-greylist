@@ -1,4 +1,5 @@
 1.3.9:
+	Solaris rc script from Christian Pelissier
 	Correctly check pthread function return values
 	Avoid using a thread for the initial config file load (useless)
 	Bug fix: Domain regex were not freed on config file reloads	
