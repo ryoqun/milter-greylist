@@ -1,9 +1,9 @@
-# $Id: README,v 1.16 2004/04/07 17:24:23 manu Exp $
+# $Id: README,v 1.17 2004/04/12 12:40:21 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/04/07 17:24:23 $
+		       $Date: 2004/04/12 12:40:21 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -196,11 +196,20 @@ libbind is only available as a static library. It seems to be the
 default with BIND 8, which causes troubles. BIND 9 is fine.
 
 
+ 9 Working with IPv6
+ ===================
 
- 9 Things to look at if things get wrong
+milter-greylist does not know about IPv6 yet. This is not a real problem
+since spamming from IPv6 addresses is not a real-life issue yet.
+
+Any mail sent from a non-IPv4 address (this include message generated
+locally and mail sent from IPv6 addresses), will be whitelisted. 
+
+
+ 10 Things to look at if things get wrong
  =======================================
 
-First, read the milter-greylist(8) man page! :-)
+First, read the milter-greylist(8) and greylist.conf(5) man page! :-)
 
 Each message will get a X-Greylist header indicating how long the
 message has been delayed. It looks like this:
@@ -224,7 +233,8 @@ At the end of the file, you will find entries with the keyword AUTO
 at the end of the line. Theses are auto-whitelisted tuples. The date
 tells you when the entry will expire.
 
- 10 License
+
+ 11 License
  =========
 
 This software is available under a 3 clauses BSD license:
