@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.72 2004/03/23 10:32:30 manu Exp $
+# $Id: configure.ac,v 1.73 2004/03/23 10:46:52 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -226,7 +226,7 @@ AC_MSG_RESULT([$xopen])
 
 # IRIX requires -D_XOPEN_SOURCE=500 to use <stdio.h> and -ansi
 AC_MSG_CHECKING([whether you need -D_XOPEN_SOURCE to use <stdio.h> with -ansi])
-SAVEDCLFAGS=$CFLAGS
+SAVEDCFLAGS=$CFLAGS
 CFLAGS=$CFLAGS" -ansi"
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <stdio.h>
