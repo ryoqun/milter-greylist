@@ -53,6 +53,7 @@ syncer_thread(dontcare)
 	void *dontcare;
 {
 	FILE *dump;
+	int dumpfd;
 	struct timeval tv1, tv2;
 	char newdumpfile[MAXPATHLEN + 1];
 
@@ -86,13 +87,13 @@ syncer_thread(dontcare)
 		 */
 		snprintf(newdumpfile, MAXPATHLEN, "%s-XXXXXXXX", dumpfile);
 
-		if (mkstemp(newdumpfile) == -1) {
+		if ((dumpfd = mkstemp(newdumpfile)) == -1) {
 			syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s\n", 
 			    newdumpfile, strerror(errno));
 			exit(EX_OSERR);
 		}
 
-		if ((dump = fopen(newdumpfile, "w")) == NULL) {
+		if ((dump = fdopen(dumpfd, "w")) == NULL) {
 			syslog(LOG_ERR, "cannot write dumpfile \"%s\": %s\n", 
 			    newdumpfile, strerror(errno));
 			exit(EX_OSERR);
