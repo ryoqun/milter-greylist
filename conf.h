@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.7 2004/03/31 11:39:26 manu Exp $ */
+/* $Id: conf.h,v 1.8 2004/03/31 12:10:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -65,21 +65,25 @@ struct conf {
 	char *c_dumpfile;
 	struct in_addr c_match_mask;
 	char *c_socket;
+	char *c_user;
+	int c_nodetach;
 };
 
 /* c_forced flags */
-#define C_NONE		0x000
-#define C_DEBUG		0x001
-#define C_QUIET		0x002
-#define C_NOAUTH	0x004
-#define C_NOSPF		0x008 
-#define C_TESTMODE	0x010
-#define C_DELAY		0x020
-#define C_AUTOWHITE	0x040
-#define C_PIDFILE	0x080
-#define C_DUMPFILE	0x100
-#define C_MATCHMASK	0x200
-#define C_SOCKET	0x400
+#define C_NONE		0x0000
+#define C_DEBUG		0x0001
+#define C_QUIET		0x0002
+#define C_NOAUTH	0x0004
+#define C_NOSPF		0x0008 
+#define C_TESTMODE	0x0010
+#define C_DELAY		0x0020
+#define C_AUTOWHITE	0x0040
+#define C_PIDFILE	0x0080
+#define C_DUMPFILE	0x0100
+#define C_MATCHMASK	0x0200
+#define C_SOCKET	0x0400
+#define C_USER		0x0800
+#define C_NODETACH	0x1000
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
 extern struct conf conf;
@@ -87,6 +91,7 @@ extern char *conffile;
 extern char c_pidfile[PATHLEN + 1];
 extern char c_dumpfile[PATHLEN + 1];
 extern char c_socket[PATHLEN + 1];
+extern char c_user[PATHLEN + 1];
 
 void conf_load(void);
 void conf_update(void);

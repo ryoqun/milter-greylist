@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.1 2004/03/31 11:39:26 manu Exp $
+.\" $Id: greylist.conf.5,v 1.2 2004/03/31 12:10:16 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -107,6 +107,9 @@ Do not tell clients how many time remains before their e-mail will
 be accepted. This is equivalent to the
 .Fl q
 flag.
+.It Ar nodetach
+Do not fork and go into the background. This is equivalent to
+.Fl D .
 .It Ar noauth
 Greylist clients regardless if they succeeded SMTP AUTH. Equivalent to
 .Fl A .
@@ -165,7 +168,25 @@ to communicate with
 .Xr sendmail 8 .
 It must be enclosed with quotes:
 .Dl socket Qq /var/milter-greylist/milter-greylist.sock
+.It Ar user
+This keyword should be followed by a quoted user login. Like the 
+.Fl u
+option, this is used to run
+.Xr milter-greylist 8 
+as a non root user. here is an example:
+.Dl user Qq smmsp
 .El
+.Pp
+The configuration file is reloaded automatically once it is modified and
+a new e-mail gets in. Most configuration keywords will take effect
+immediatly, except the following, which will only take effect after 
+a restart of 
+.Xr milter-greylist 8 : 
+.Ar nodetach ,
+.Ar pidfile ,
+.Ar socket ,
+and 
+.Ar user .
 .Sh AUTHOR
 .An Emmanuel Dreyfus Aq manu@netbsd.org
 .Pp

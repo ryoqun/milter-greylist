@@ -28,6 +28,8 @@ pidfile		[Pp][Ii][Dd][Ff][Ii][Ll][Ee]:?
 dumpfile	[Dd][Uu][Mm][Pp][Ff][Ii][Ll][Ee]:?
 subnetmatch	[Ss][Uu][Bb][Nn][Ee][Tt][Mm][Aa][Tt][Cc][Hh]:?
 socket		[Ss][Oo][Cc][Kk][Ee][Tt]:?
+user		[Uu][Ss][Ee][Rr]:?
+nodetach	[Nn][Oo][Dd][Ee][Tt][Aa][Cc][Hh]
 delay		[0-9]{1,}[smhdw]?
 path		"\""[^"\n]{1,}"\""
 
@@ -38,7 +40,7 @@ path		"\""[^"\n]{1,}"\""
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.9 2004/03/31 11:39:26 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.10 2004/03/31 12:10:16 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -70,6 +72,8 @@ path		"\""[^"\n]{1,}"\""
 {dumpfile}	{ return DUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }
 {socket}	{ return SOCKET; }
+{user}		{ return USER; }
+{nodetach}	{ return NODETACH; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);
 			yylval.delay[PATHLEN] = '\0';

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.64 2004/03/31 11:39:26 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.65 2004/03/31 12:10:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.64 2004/03/31 11:39:26 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.65 2004/03/31 12:10:16 manu Exp $");
 #endif
 #endif
 
@@ -74,8 +74,6 @@ __RCSID("$Id: milter-greylist.c,v 1.64 2004/03/31 11:39:26 manu Exp $");
 #include "spf.h"
 #include "autowhite.h"
 #include "milter-greylist.h"
-
-int dont_fork = 0;
 
 static char *strncpy_rmsp(char *, char *, size_t);
 static char *gmtoffset(time_t *, char *, size_t);
@@ -410,7 +408,6 @@ main(argc, argv)
 	char *argv[];
 {
 	int ch;
-	struct passwd *pw = NULL;
 
 	/* Process command line options */
 	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rSL:")) != -1) {
@@ -432,7 +429,8 @@ main(argc, argv)
 			break;
 
 		case 'D':
-			dont_fork = 1;
+			conf.c_nodetach = 1;
+			conf.c_forced |= C_NODETACH;
 			break;
 
 		case 'q':
@@ -458,13 +456,14 @@ main(argc, argv)
 				exit(EX_USAGE);
 			}
 
-			if ((optarg == NULL) || 
-			    ((pw = getpwnam(optarg)) == NULL)) {
+			if (optarg == NULL) {
 				fprintf(stderr, 
 				    "%s: -u needs a valid user as argument\n",
 				    argv[0]);
 				usage(argv[0]);
 			}
+			conf.c_user = optarg;
+			conf.c_forced |= C_USER;
 			break;
 		}
 			
@@ -559,18 +558,6 @@ main(argc, argv)
 		}
 	}
 	
-	/*
-	 * Drop root privs
-	 */
-	if (pw != NULL) {
-		if ((setuid(pw->pw_uid) != 0) ||
-		    (seteuid(pw->pw_uid) != 0)) {
-			fprintf(stderr, "%s: cannot change UID: %s\n",
-			    argv[0], strerror(errno));
-			exit(EX_OSERR);
-		}
-	}
-
 	/* 
 	 * Register our callbacks 
 	 */
@@ -591,11 +578,6 @@ main(argc, argv)
 		exit(EX_SOFTWARE);
 	}
 
-	if (dont_fork != 0)
-		openlog("milter-greylist", LOG_PERROR, LOG_MAIL);
-	else
-		openlog("milter-greylist", 0, LOG_MAIL);
-
 	/*
 	 * Load config file
 	 * We can do this without locking exceptlist, as
@@ -603,12 +585,37 @@ main(argc, argv)
 	 * can access the list yet.
 	 */
 	conf_load();
-	
-	if (conf.c_socket == NULL) {
-		syslog(LOG_ERR, "No socket provided, exitting");
-		exit(EX_USAGE);
+
+	/*
+	 * Drop root privs
+	 */
+	if (conf.c_user != NULL) {
+		struct passwd *pw = NULL;
+
+		if ((pw = getpwnam(conf.c_user)) == NULL) {
+			fprintf(stderr, "%s: Cannot get user %s data: %s\n",
+			    argv[0], conf.c_user, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		if ((setuid(pw->pw_uid) != 0) ||
+		    (seteuid(pw->pw_uid) != 0)) {
+			fprintf(stderr, "%s: cannot change UID: %s\n",
+			    argv[0], strerror(errno));
+			exit(EX_OSERR);
+		}
 	}
 
+	if (conf.c_nodetach != 0)
+		openlog("milter-greylist", LOG_PERROR, LOG_MAIL);
+	else
+		openlog("milter-greylist", 0, LOG_MAIL);
+
+	
+	if (conf.c_socket == NULL) {
+		fprintf(stderr, "%s: No socket provided, exitting", argv[0]);
+		usage(argv[0]);
+	}
 	cleanup_sock(conf.c_socket);
 	(void)smfi_setconn(conf.c_socket);
 
@@ -621,7 +628,7 @@ main(argc, argv)
 	/*
 	 * Turn into a daemon
 	 */
-	if (dont_fork == 0) {
+	if (conf.c_nodetach == 0) {
 
 		(void)close(0);
 		(void)open("/dev/null", O_RDONLY, 0);

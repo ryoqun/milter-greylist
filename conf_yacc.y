@@ -1,4 +1,4 @@
-%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE DUMPFILE PATH DELAY SUBNETMATCH SOCKET
+%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE DUMPFILE PATH DELAY SUBNETMATCH SOCKET USER NODETACH
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.8 2004/03/31 11:39:26 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.9 2004/03/31 12:10:16 manu Exp $");
 #endif
 #endif
 
@@ -49,6 +49,8 @@ lines	:	lines netblock '\n'
 	|	lines dumpfile '\n'
 	|	lines subnetmatch '\n'
 	|	lines socket '\n'
+	|	lines user '\n'
+	|	lines nodetach '\n'
 	|	lines '\n'
 	|
 	;
@@ -80,6 +82,8 @@ nospf:		NOSPF	{ if (C_NOTFORCED(C_NOSPF)) conf.c_nospf = 1; }
 	;
 testmode:	TESTMODE{ if (C_NOTFORCED(C_TESTMODE)) conf.c_testmode = 1; }
 	;
+nodetach:	NODETACH{ if (C_NOTFORCED(C_NODETACH)) conf.c_nodetach = 1; }
+	;
 pidfile:	PIDFILE PATH	{ if (C_NOTFORCED(C_PIDFILE)) 
 					conf.c_pidfile = 
 					    quotepath(c_pidfile, $2, PATHLEN);
@@ -99,5 +103,10 @@ socket:		SOCKET PATH	{ if (C_NOTFORCED(C_SOCKET))
 					    quotepath(c_socket, $2, PATHLEN);
 				}
 	;
+user:		USER PATH	{ if (C_NOTFORCED(C_USER))
+					conf.c_user =
+					    quotepath(c_user, $2, PATHLEN);
+				}
+	;	
 %%
 #include "conf_lex.c"
