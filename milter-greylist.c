@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.2 2004/02/21 23:15:49 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.3 2004/02/22 09:15:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -152,6 +152,7 @@ main(argc, argv)
 	char *argv[];
 {
 	int ch;
+	int gotsocket = 0;
 	pthread_t tid;
 	struct passwd *pw = NULL;
 
@@ -212,6 +213,7 @@ main(argc, argv)
 				usage(argv[0]);
 			}
 			(void) smfi_setconn(optarg);
+			gotsocket = 1;
 			break;
 
 		case 'h':
@@ -221,6 +223,12 @@ main(argc, argv)
 		}
 	}
 	
+	if (gotsocket == 0) {
+		fprintf(stderr, "%s: -p is a mandatory option\n",
+		    argv[0]);
+		usage(argv[0]);
+	}
+
 	/*
 	 * Drop root privs
 	 */
