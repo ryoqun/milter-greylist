@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.54 2005/01/22 13:00:39 manu Exp $ */
+/* $Id: sync.c,v 1.55 2005/01/22 17:23:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.54 2005/01/22 13:00:39 manu Exp $");
+__RCSID("$Id: sync.c,v 1.55 2005/01/22 17:23:17 manu Exp $");
 #endif
 #endif
 
@@ -1202,7 +1202,11 @@ local_addr(sa, salen)
 	}
 
 	if (bind(sfd, sa, salen) == -1) {
-		if (errno != EADDRNOTAVAIL) {
+		if (errno != EADDRNOTAVAIL && 
+#ifdef __FreeBSD__
+		    errno != EINVAL &&
+#endif
+		    1) {
 			syslog(LOG_ERR, "local_addr: bind failed: %s\n",
 			    strerror(errno));
 			islocal = -1;

@@ -4,6 +4,7 @@
 	Generate .spec file from configure
 	Differentiate errors in dump file and config file
 	Fix a build problem if getaddrinfo is absent (Lev Walkin)
+	Don't sync with local addresses on FreeBSD 4.9 (Lev Walkin)
 1.7.4:
 	M4 file for easier sendmail.cf generation (Ivan F. Martinez)
 	.spec file for generating RPM (Ivan F. Martinez)
