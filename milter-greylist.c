@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.52 2004/03/28 14:05:42 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.53 2004/03/29 15:21:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.52 2004/03/28 14:05:42 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.53 2004/03/29 15:21:25 manu Exp $");
 #endif
 #endif
 
@@ -44,6 +44,7 @@ __RCSID("$Id: milter-greylist.c,v 1.52 2004/03/28 14:05:42 manu Exp $");
 #include <strings.h>
 #include <syslog.h>
 #include <ctype.h>
+#include <time.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -60,6 +61,7 @@ __RCSID("$Id: milter-greylist.c,v 1.52 2004/03/28 14:05:42 manu Exp $");
 #endif
 
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/stat.h>
 
 #include <libmilter/mfapi.h>
@@ -78,6 +80,7 @@ int quiet = 0;
 
 static char *strncpy_rmsp(char *, char *, size_t);
 static int humanized_atoi(char *);
+static char *gmtoffset(time_t *, char *, size_t);
 
 struct smfiDesc smfilter =
 {
@@ -274,9 +277,12 @@ mlfi_eom(ctx)
 	char *fqdn = NULL;
 	char *ip = NULL;
 	char timestr[HDRLEN + 1];
-	struct timeval tv;
+	char tzstr[HDRLEN + 1];
+	char tznamestr[HDRLEN + 1];
 	char *whystr = NULL;
 	char host[ADDRLEN + 1];
+	time_t t;
+	struct tm ltm;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
@@ -293,9 +299,11 @@ mlfi_eom(ctx)
 		ip = "0.0.0.0";
 	}
 
-	(void)gettimeofday(&tv, NULL);
-	strftime(timestr, HDRLEN, 
-	    "%a, %d %b %Y %T %Z", localtime((time_t *)&tv.tv_sec));
+	t = time(NULL);
+	localtime_r(&t, &ltm);
+	strftime(timestr, HDRLEN, "%a, %d %b %Y %T", &ltm);
+	gmtoffset(&t, tzstr, HDRLEN);
+	strftime(tznamestr, HDRLEN, "%Z", &ltm);
 
 	if (priv->priv_elapsed == 0) {
 		switch (priv->priv_whitelist) {
@@ -323,8 +331,9 @@ mlfi_eom(ctx)
 		}
 
 		snprintf(hdr, HDRLEN, "%s, not delayed by "
-		    "milter-greylist-%s (%s [%s]); %s",
-		    whystr, PACKAGE_VERSION, fqdn, ip, timestr);
+		    "milter-greylist-%s (%s [%s]); %s %s (%s)",
+		    whystr, PACKAGE_VERSION, fqdn, 
+		    ip, timestr, tzstr, tznamestr);
 
 		smfi_addheader(ctx, HEADERNAME, hdr);
 
@@ -338,8 +347,9 @@ mlfi_eom(ctx)
 	s = priv->priv_elapsed;
 
 	snprintf(hdr, HDRLEN,
-	    "Delayed for %02d:%02d:%02d by milter-greylist-%s (%s [%s]); %s", 
-	    h, mn, s, PACKAGE_VERSION, fqdn, ip, timestr);
+	    "Delayed for %02d:%02d:%02d by milter-greylist-%s "
+	    "(%s [%s]); %s %s (%s)", 
+	    h, mn, s, PACKAGE_VERSION, fqdn, ip, timestr, tzstr, tznamestr);
 	smfi_addheader(ctx, HEADERNAME, hdr);
 
 	return SMFIS_CONTINUE;
@@ -704,3 +714,42 @@ humanized_atoi(str)	/* *str is modified */
 
 	return (atoi(str) * unit);
 }
+
+static char *
+gmtoffset(date, buf, size)
+	time_t *date;
+	char *buf;
+	size_t size;
+{
+	struct tm gmt;
+	struct tm local;
+	int offset;
+	char *sign;
+	int h, mn;
+
+	gmtime_r(date, &gmt);
+	localtime_r(date, &local);
+
+	offset = local.tm_min - gmt.tm_min;
+	offset += (local.tm_hour - gmt.tm_hour) * 60;
+
+	/* Offset cannot be greater than a day */
+	if (local.tm_year <  gmt.tm_year)
+		offset -= 24 * 60;
+	else
+		offset += (local.tm_yday - gmt.tm_yday) * 60 * 24;
+
+	if (offset >= 0) {
+		sign = "+";
+	} else {
+		sign = "-";
+		offset = -offset;
+	}
+	 
+	h = offset / 60;
+	mn = offset % 60;
+
+	snprintf(buf, size, "%s%02d%02d", sign, h, mn);
+	return buf;
+}
+

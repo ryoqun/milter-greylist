@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.16 2004/03/28 14:05:42 manu Exp $ */
+/* $Id: autowhite.c,v 1.17 2004/03/29 15:21:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.16 2004/03/28 14:05:42 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.17 2004/03/29 15:21:25 manu Exp $");
 #endif
 #endif
 
@@ -48,9 +48,11 @@ __RCSID("$Id: autowhite.c,v 1.16 2004/03/28 14:05:42 manu Exp $");
 #include <errno.h>
 #include <sysexits.h>
 #include <string.h>
+#include <time.h>
 #include <strings.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -260,6 +262,7 @@ autowhite_textdump(stream)
 	int done = 0;
 	char textdate[DATELEN + 1];
 	char textaddr[IPADDRLEN + 1];
+	struct tm tm;
 
 	fprintf(stream, "\n\n#\n# Auto-whitelisted tuples\n#\n");
 	fprintf(stream, "# Sender IP    %32s    %32s    Expire\n",
@@ -267,8 +270,8 @@ autowhite_textdump(stream)
 
 	AUTOWHITE_RDLOCK;
 	TAILQ_FOREACH(aw, &autowhite_head, a_list) {
-		strftime(textdate, DATELEN, "%Y-%m-%d %T",
-		    localtime((time_t *)&aw->a_tv.tv_sec));
+		localtime_r((time_t *)&aw->a_tv.tv_sec, &tm);
+		strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
 
 		inet_ntop(AF_INET, &aw->a_in, textaddr, IPADDRLEN);
 

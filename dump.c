@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.10 2004/03/23 13:29:21 manu Exp $ */
+/* $Id: dump.c,v 1.11 2004/03/29 15:21:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.10 2004/03/23 13:29:21 manu Exp $");
+__RCSID("$Id: dump.c,v 1.11 2004/03/29 15:21:25 manu Exp $");
 #endif
 #endif
 
@@ -52,6 +52,7 @@ __RCSID("$Id: dump.c,v 1.10 2004/03/23 13:29:21 manu Exp $");
 #include <errno.h>
 #include <sysexits.h>
 #include <syslog.h>
+#include <time.h>
 
 #include <sys/types.h>
 #include <sys/param.h>
@@ -230,12 +231,13 @@ void
 dump_header(stream)
 	FILE *stream;
 {
-	struct timeval tv;
 	char textdate[DATELEN + 1];
+	struct tm tm;
+	time_t t;
 
-	gettimeofday(&tv, NULL);
-	strftime(textdate, DATELEN, "%Y-%m-%d %T",
-	    localtime((time_t *)&tv.tv_sec));
+	t = time(NULL);
+	localtime_r(&t, &tm);
+	strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
 
 	fprintf(stream, "#\n# milter-greylist databases, "
 	    "dumped by milter-greylist-%s on %s.\n",

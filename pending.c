@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.44 2004/03/28 14:05:42 manu Exp $ */
+/* $Id: pending.c,v 1.45 2004/03/29 15:21:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.44 2004/03/28 14:05:42 manu Exp $");
+__RCSID("$Id: pending.c,v 1.45 2004/03/29 15:21:25 manu Exp $");
 #endif
 #endif
 
@@ -50,6 +50,7 @@ __RCSID("$Id: pending.c,v 1.44 2004/03/28 14:05:42 manu Exp $");
 #include <strings.h>
 #include <pthread.h>
 #include <errno.h>
+#include <time.h>
 #include <sysexits.h>
 #include <syslog.h>
 
@@ -284,6 +285,7 @@ pending_textdump(stream)
 	struct pending *pending;
 	int done = 0;
 	char textdate[DATELEN + 1];
+	struct tm tm;
 
 	fprintf(stream, "\n\n#\n# greylisted tuples\n#\n");
 	fprintf(stream, "# Sender IP	%32s	%32s	Time accepted\n", 
@@ -291,8 +293,8 @@ pending_textdump(stream)
 
 	PENDING_RDLOCK;
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
-		strftime(textdate, DATELEN, "%Y-%m-%d %T", 
-		    localtime((time_t *)&pending->p_tv.tv_sec));
+		localtime_r((time_t *)&pending->p_tv.tv_sec, &tm);
+		strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
 
 		fprintf(stream, "%s	%32s	%32s	%ld # %s\n", 
 		    pending->p_addr, pending->p_from, 
