@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.39 2004/03/16 16:48:25 manu Exp $
+# $Id: configure.ac,v 1.40 2004/03/17 15:36:19 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -162,6 +162,9 @@ AC_ARG_WITH(delay,
 AC_ARG_WITH(timeout,  
 	[  --with-timeout=VALUE   Timeout before we forget about a send],
 	[CFLAGS=$CFLAGS" -DTIMEOUT=$withval"])
+AC_ARG_WITH(autowhite,  
+	[  --with-autowhite=VALUE How long auto-whitelisting lasts],
+	[CFLAGS=$CFLAGS" -DAUTOWHITE_DELAY=$withval"])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.1 2004/03/16 23:16:52 manu Exp $ */
+/* $Id: autowhite.c,v 1.2 2004/03/17 15:36:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.1 2004/03/16 23:16:52 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.2 2004/03/17 15:36:19 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -49,6 +49,8 @@ __RCSID("$Id: autowhite.c,v 1.1 2004/03/16 23:16:52 manu Exp $");
 
 #include "except.h"
 #include "autowhite.h"
+
+time_t autowhite_validity = AUTOWHITE_VALIDITY;
 
 struct autowhitelist autowhite_head;
 pthread_rwlock_t autowhite_lock;
@@ -72,38 +74,64 @@ autowhite_add(in, from, rcpt)
 	char *rcpt;
 {
 	struct autowhite *aw = NULL;
-	struct timeval tv1, tv2, tv3;
+	struct autowhite *prev_aw = NULL;
+	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
+	int h, mn, s;
 
-	gettimeofday(&tv1,NULL);
-	tv2.tv_sec = AUTOWHITE_VALIDITY;
-	tv2.tv_usec = 0;
-	timeradd(&tv1, &tv2, &tv3);
+	gettimeofday(&now, NULL);
+	delay.tv_sec = autowhite_validity;
+	delay.tv_usec = 0;
+
+	h = autowhite_validity / 3600;
+	mn = ((autowhite_validity % 3600) / 60);
+	s = (autowhite_validity % 3600) % 60;
 
 	inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
 	AUTOWHITE_WRLOCK;
 	if (!TAILQ_EMPTY(&autowhite_head)) {
 		TAILQ_FOREACH(aw, &autowhite_head, a_list) {
-			if ((in->s_addr == aw->a_in.s_addr) &&
-			    (strncmp(from, aw->a_from, ADDRLEN) == 0) &&
-			    (strncmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)) {
-				aw->a_tv.tv_sec = tv3.tv_sec;
-				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
-				    "autowhitelisted for one more day", 
-				    addr, from, rcpt);
-				break;
-			}
 
-			if (aw->a_tv.tv_sec < tv1.tv_sec) {
+			/*
+			 * Expiration
+			 */
+			if (aw->a_tv.tv_sec < now.tv_sec) {
 				TAILQ_REMOVE(&autowhite_head, aw, a_list);
+				free(aw);
+				aw = NULL;
+
 				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
 				    "autowhitelisted entry expired",
 				    addr, from, rcpt);
+
+				if (TAILQ_EMPTY(&autowhite_head))
+					break;
+				if ((aw = prev_aw) == NULL)
+					aw = TAILQ_FIRST(&autowhite_head);
+				continue;
 			}
-		}
+			prev_aw = aw;
+
+			/*
+			 * Look for an already existing entry
+			 */
+			if ((in->s_addr == aw->a_in.s_addr) &&
+			    (strncmp(from, aw->a_from, ADDRLEN) == 0) &&
+			    (strncmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)) {
+				timeradd(&now, &delay, &aw->a_tv);
+
+				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+				    "autowhitelisted for more %02d:%02d:%02d", 
+				    addr, from, rcpt, h, mn, s);
+				break;
+			}
+		}		
 	}
 
+	/* 
+	 * Entry not found, create it 
+	 */
 	if (aw == NULL) {
 		if ((aw = malloc(sizeof(*aw))) == NULL) {
 			syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
@@ -117,11 +145,12 @@ autowhite_add(in, from, rcpt)
 		aw->a_from[ADDRLEN] = '\0';
 		strncpy(aw->a_rcpt, rcpt, ADDRLEN);
 		aw->a_rcpt[ADDRLEN] = '\0';
-		aw->a_tv.tv_sec = tv3.tv_sec;
+		timeradd(&now, &delay, &aw->a_tv);
 		TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
 
 		syslog(LOG_INFO, "addr %s from %s rcpt %s: "
-		    "autowhitelisted for a day", addr, from, rcpt);
+		    "autowhitelisted for %02d:%02d:%02d", 
+		    addr, from, rcpt, h, mn, s);
 	}
 	AUTOWHITE_UNLOCK;
 
@@ -135,31 +164,57 @@ autowhite_check(in, from, rcpt)
 	char *rcpt;
 {
 	struct autowhite *aw = NULL;
-	struct timeval tv1, tv2, tv3;
+	struct autowhite *prev_aw = NULL;
+	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
+	int h, mn, s;
 
-	gettimeofday(&tv1,NULL);
-	tv2.tv_sec = AUTOWHITE_VALIDITY;
-	tv2.tv_usec = 0;
-	timeradd(&tv1, &tv2, &tv3);
+	gettimeofday(&now, NULL);
+	delay.tv_sec = autowhite_validity;
+	delay.tv_usec = 0;
+
+	h = autowhite_validity / 3600;
+	mn = ((autowhite_validity % 3600) / 60);
+	s = (autowhite_validity % 3600) % 60;
 
 	inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
 	AUTOWHITE_WRLOCK;
 	if (!TAILQ_EMPTY(&autowhite_head)) {
 		TAILQ_FOREACH(aw, &autowhite_head, a_list) {
-			if ((in->s_addr == aw->a_in.s_addr) &&
-			    (strncmp(from, aw->a_from, ADDRLEN) == 0) &&
-			    (strncmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)) {
-				aw->a_tv.tv_sec = tv3.tv_sec;
-				break;
-			}
-
-			if (aw->a_tv.tv_sec < tv1.tv_sec) {
+			/* 
+			 * Do expiration first as we don't want
+			 * an outdated record to match
+			 */
+			if (aw->a_tv.tv_sec < now.tv_sec) {
 				TAILQ_REMOVE(&autowhite_head, aw, a_list);
+				free(aw);
+				aw = NULL;
+
 				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
 				    "autowhitelisted entry expired",
 				    addr, from, rcpt);
+
+				if (TAILQ_EMPTY(&autowhite_head))
+					break;
+				if ((aw = prev_aw) == NULL)
+					aw = TAILQ_FIRST(&autowhite_head);
+				continue;
+			}
+			prev_aw = aw;
+
+			/*
+			 * Look for our record
+			 */
+			if ((in->s_addr == aw->a_in.s_addr) &&
+			    (strncmp(from, aw->a_from, ADDRLEN) == 0) &&
+			    (strncmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)) {
+				timeradd(&now, &delay, &aw->a_tv);
+
+				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+				    "autowhitelisted for more %02d:%02d:%02d", 
+				    addr, from, rcpt, h, mn, s);
+				break;
 			}
 		}
 	}

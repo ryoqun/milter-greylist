@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.1 2004/03/16 23:16:52 manu Exp $ */
+/* $Id: autowhite.h,v 1.2 2004/03/17 15:36:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,9 @@
 
 #include "milter-greylist.h"
 
+#ifndef AUTOWHITE_VALIDITY
 #define AUTOWHITE_VALIDITY (24 * 2600) /* 1 day */
+#endif
 
 #define AUTOWHITE_WRLOCK WRLOCK(autowhite_lock) 
 #define AUTOWHITE_RDLOCK RDLOCK(autowhite_lock) 
@@ -49,6 +51,8 @@ struct autowhite {
 	struct timeval a_tv;
 	TAILQ_ENTRY(autowhite) a_list;
 };
+
+extern time_t autowhite_validity;
 
 int autowhite_init(void);
 void autowhite_add(struct in_addr *, char *, char *);

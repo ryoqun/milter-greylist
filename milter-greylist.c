@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.32 2004/03/16 23:16:52 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.33 2004/03/17 15:36:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.32 2004/03/16 23:16:52 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.33 2004/03/17 15:36:19 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -278,8 +278,12 @@ main(argc, argv)
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "vDd:qw:f:hp:Tu:")) != -1) {
+	while ((ch = getopt(argc, argv, "a:vDd:qw:f:hp:Tu:")) != -1) {
 		switch (ch) {
+		case 'a':
+			autowhite_validity = (time_t)atoi(optarg);
+			break;
+
 		case 'D':
 			dont_fork = 1;
 			break;
@@ -483,7 +487,7 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, 
-	    "usage: %s [-DvqT] [-d dumpfile] [-f configfile]\n"
+	    "usage: %s [-DvqT] [-a autowhite] [-d dumpfile] [-f configfile]\n"
 	    "       [-w delay] [-u username] -p socket\n", progname);
 	exit(EX_USAGE);
 }
