@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.23 2004/03/10 14:17:13 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.24 2004/03/10 20:36:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.23 2004/03/10 14:17:13 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.24 2004/03/10 20:36:29 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -449,9 +449,10 @@ main(argc, argv)
 	}
 
 	/*
-	 * Run the peer MX greylist sync thread
+	 * Run the peer MX greylist sync threads
 	 */
 	sync_master_restart();
+	sync_sender_start();
 
 	/*
 	 * Here we go!

@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.4 2004/03/10 16:07:07 manu Exp $ */
+/* $Id: sync.c,v 1.5 2004/03/10 20:36:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -58,6 +58,7 @@ extern int debug;
 int sync_master_runs = 0;
 struct peerlist peer_head;
 pthread_rwlock_t peer_lock;
+pthread_cond_t sync_sleepflag;
 
 #define PEER_WRLOCK WRLOCK(peer_lock);
 #define PEER_RDLOCK RDLOCK(peer_lock);
@@ -71,20 +72,33 @@ peer_init(void) {
 	if ((error = pthread_rwlock_init(&peer_lock, NULL)) == 0)
 		return error;
 
+	if ((error = pthread_cond_init(&sync_sleepflag, NULL)) == 0)
+		return error;
+
 	return 0;
 }
 
 void 
 peer_clear(void) {
 	struct peer *peer;
+	struct sync *sync;
 
 	PEER_WRLOCK;
+
 	while(!LIST_EMPTY(&peer_head)) {
 		peer = LIST_FIRST(&peer_head);
+		while(!TAILQ_EMPTY(&peer->p_deferred)) {
+			sync = TAILQ_FIRST(&peer->p_deferred);
+			TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
+			free(sync);
+		}
+			
 		LIST_REMOVE(peer, p_list);
 		free(peer);
 	}
+
 	PEER_UNLOCK;
+
 	return;	
 }
 
@@ -102,6 +116,7 @@ peer_add(addr)
 	peer->p_stream = NULL;
 	memcpy(&peer->p_addr, addr, sizeof(peer->p_addr));
 	inet_ntop(AF_INET, &peer->p_addr, peer->p_name, IPADDRLEN);
+	TAILQ_INIT(&peer->p_deferred);
 
 	PEER_WRLOCK;
 	LIST_INSERT_HEAD(&peer_head, peer, p_list);
@@ -125,7 +140,7 @@ peer_create(pending)
 		goto out;
 
 	LIST_FOREACH(peer, &peer_head, p_list) 
-		peer_send(peer, PS_CREATE, pending);
+		sync_queue(peer, PS_CREATE, pending);
 
 out:
 	PEER_UNLOCK;
@@ -144,7 +159,7 @@ peer_delete(pending)
 		goto out;
 
 	LIST_FOREACH(peer, &peer_head, p_list) 
-		peer_send(peer, PS_DELETE, pending);
+		sync_queue(peer, PS_DELETE, pending);
 
 out:
 	PEER_UNLOCK;
@@ -152,8 +167,8 @@ out:
 	return;
 }
 
-void
-peer_send(peer, type, pending)
+int
+sync_send(peer, type, pending)
 	struct peer *peer;
 	peer_sync_t type;
 	struct pending *pending;
@@ -164,7 +179,7 @@ peer_send(peer, type, pending)
 	char line[LINELEN + 1];
 
 	if ((peer->p_stream == NULL) && (peer_connect(peer) != 0))
-		return;
+		return -1;
 
 	if (type == PS_CREATE)
 		fprintf(peer->p_stream, "add ");
@@ -184,7 +199,7 @@ peer_send(peer, type, pending)
 		syslog(LOG_ERR, "lost connexion with peer %s", peer->p_name);
 		fclose(peer->p_stream);
 		peer->p_stream = NULL;
-		return;
+		return -1;
 	}
 
 	if ((replystr = strtok(line, sep)) == NULL) {
@@ -192,7 +207,7 @@ peer_send(peer, type, pending)
 		    "closing connexion", line, peer->p_name);
 		fclose(peer->p_stream);
 		peer->p_stream = NULL;
-		return;
+		return -1;
 	}
 
 	replycode = atoi(replystr);
@@ -201,10 +216,12 @@ peer_send(peer, type, pending)
 		    "closing connexion", line, peer->p_name);
 		fclose(peer->p_stream);
 		peer->p_stream = NULL;
-		return;
+		return -1;
 	}
 
-	return;
+	syslog(LOG_DEBUG, "sync one entry with %s", peer->p_name);
+
+	return 0;
 }
 
 int
@@ -680,4 +697,106 @@ sync_waitdata(fd)
 	retval = select(fd + 1, &fdr, NULL, &fde, &timeout); 
 
 	return retval;
+}
+
+
+void
+sync_queue(peer, type, pending)	/* peer list must be write-locked */
+	struct peer *peer;
+	peer_sync_t type;
+	struct pending *pending;
+{
+	struct sync *sync;
+
+	if ((sync = malloc(sizeof(*sync))) == NULL) {
+		syslog(LOG_ERR, "cannot allocate memory: %s", strerror(errno)); 
+		exit(EX_OSERR);
+	}
+
+	sync->s_peer = peer;
+	sync->s_type = type;
+	/* 
+	 * Copy it instead of referencing it, since it could
+	 * disapear before been treated. We don't have this
+	 * problem with the peer, since the sync lists get
+	 * purged at the same time the peer list get purged.
+	 * One day, do that better, with refcounts.
+	 */
+	memcpy(&sync->s_pending, pending, sizeof(*pending)); 
+
+	TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
+
+	pthread_cond_signal(&sync_sleepflag);
+	return;
+}
+
+void
+sync_sender_start(void) {
+	pthread_t tid;
+	int error;
+
+	if ((error = pthread_create(&tid, NULL, 
+	    (void *)sync_sender, NULL)) != 0) {
+		syslog(LOG_ERR, "pthread_create failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	return;
+}
+
+void
+sync_sender(dontcare)
+	void *dontcare;
+{
+	int error;
+	int done = 0;
+	struct peer *peer;
+	struct sync *sync;
+	pthread_mutex_t mutex;
+	struct timeval tv1, tv2, tv3;
+
+	if (pthread_mutex_init(&mutex, NULL) != 0) {
+		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n", 
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	while (1) {
+		if ((error = pthread_cond_wait(&sync_sleepflag, &mutex)) != 0)
+			syslog(LOG_ERR, "pthread_cond_wait failed: %s\n", 
+			    strerror(errno));
+		if (debug) {
+			syslog(LOG_DEBUG, "sync_sender running");
+			gettimeofday(&tv1, NULL);
+		}
+		done = 0;
+
+		PEER_WRLOCK;
+		if (LIST_EMPTY(&peer_head))
+			goto out;
+			
+		LIST_FOREACH(peer, &peer_head, p_list) {
+			while (TAILQ_EMPTY(&peer->p_deferred) == 0) {
+				sync = TAILQ_FIRST(&peer->p_deferred);
+
+				if (sync_send(sync->s_peer, sync->s_type, 
+				    &sync->s_pending) != 0)
+					break;
+
+				TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
+				free(sync);
+
+				done++;
+			}
+		}
+out:
+		PEER_UNLOCK;
+
+		if (debug) {
+			gettimeofday(&tv2, NULL);
+			timersub(&tv2, &tv1, &tv3);
+			syslog(LOG_DEBUG, "sync_sender sleeping, "
+			    "done %d entries in %ld.%06lds", done,
+			    tv3.tv_sec, tv3.tv_usec);
+		}
+	}
 }

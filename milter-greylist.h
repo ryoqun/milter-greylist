@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.11 2004/03/10 14:24:34 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.12 2004/03/10 20:36:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -56,20 +56,20 @@ int main(int, char **);
 /*
  * Locking management
  */
-#define WRLOCK(lock) if (pthread_rwlock_wrlock(&(lock)) != 0) {		\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
+#define WRLOCK(lock) if (pthread_rwlock_wrlock(&(lock)) != 0) {		  \
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed: %s", \
+		    __FILE__, __LINE__, strerror(errno));		  \
+		exit(EX_SOFTWARE);					  \
 	}
-#define RDLOCK(lock) if (pthread_rwlock_rdlock(&(lock)) != 0) {		\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
+#define RDLOCK(lock) if (pthread_rwlock_rdlock(&(lock)) != 0) {		  \
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed: %s", \
+		    __FILE__, __LINE__, strerror(errno));		  \
+		exit(EX_SOFTWARE);					  \
 	}
-#define UNLOCK(lock) if (pthread_rwlock_unlock(&(lock)) != 0) {		\
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed",	\
-		    __FILE__, __LINE__);				\
-		exit(EX_SOFTWARE);					\
+#define UNLOCK(lock) if (pthread_rwlock_unlock(&(lock)) != 0) {		  \
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed: %s", \
+		    __FILE__, __LINE__, strerror(errno));		  \
+		exit(EX_SOFTWARE);					  \
 	}
 
 /* 

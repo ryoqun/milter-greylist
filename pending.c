@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.19 2004/03/10 14:24:34 manu Exp $ */
+/* $Id: pending.c,v 1.20 2004/03/10 20:36:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.19 2004/03/10 14:24:34 manu Exp $");
+__RCSID("$Id: pending.c,v 1.20 2004/03/10 20:36:29 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -297,7 +297,7 @@ void
 pending_flush(void) {
 	FILE *dump;
 	int dumpfd;
-	struct timeval tv1, tv2;
+	struct timeval tv1, tv2, tv3;
 	char newdumpfile[MAXPATHLEN + 1];
 
 	PENDING_RDLOCK;
@@ -341,8 +341,9 @@ pending_flush(void) {
 
 		if (debug) {
 			(void)gettimeofday(&tv2, NULL);
+			timersub(&tv2, &tv1, &tv3);
 			syslog(LOG_DEBUG, "dumping done in %ld.%06lds",
-			tv2.tv_sec - tv1.tv_sec, tv2.tv_usec - tv1.tv_usec);
+			tv3.tv_sec, tv3.tv_usec);
 		}
 
 		pending_dirty = 0;

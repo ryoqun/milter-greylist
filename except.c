@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.17 2004/03/10 14:24:34 manu Exp $ */
+/* $Id: except.c,v 1.18 2004/03/10 20:36:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.17 2004/03/10 14:24:34 manu Exp $");
+__RCSID("$Id: except.c,v 1.18 2004/03/10 20:36:29 manu Exp $");
 #endif
 
 #include <errno.h>
@@ -52,6 +52,7 @@ __RCSID("$Id: except.c,v 1.17 2004/03/10 14:24:34 manu Exp $");
 #include <arpa/inet.h>
 
 #include "except.h"
+#include "sync.h"
 #include "milter-greylist.h"
 
 extern int debug;
@@ -296,7 +297,7 @@ emailcmp(big, little)
 void
 except_update(void) {
 	struct stat st;
-	struct timeval tv1, tv2;
+	struct timeval tv1, tv2, tv3;
 	struct except *except;
 	
 	if (stat(exceptfile, &st) != 0) {
@@ -329,8 +330,9 @@ except_update(void) {
 
 	if (debug) {
 		(void)gettimeofday(&tv2, NULL);
+		timersub(&tv2, &tv1, &tv3);
 		syslog(LOG_DEBUG, "reloaded exception file in %ld.%06lds", 
-		    tv2.tv_sec - tv1.tv_sec, tv2.tv_usec - tv1.tv_usec);
+		    tv3.tv_sec, tv3.tv_usec);
 	}
 
 	return;
