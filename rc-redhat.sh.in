@@ -1,8 +1,8 @@
 #!/bin/sh
-# $Id: rc-redhat.sh.in,v 1.2 2004/12/12 23:02:24 manu Exp $
+# $Id: rc-redhat.sh.in,v 1.3 2005/02/03 21:16:53 manu Exp $
 #  init file for milter-greylist
 #
-# chkconfig: - 50 50
+# chkconfig: - 79 21
 # description: Milter Greylist Daemon
 #
 # processname: @BINDIR@/milter-greylist
