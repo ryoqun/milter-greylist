@@ -1,5 +1,6 @@
 2.0b1:
 	Fix build problem on IPv6 disabled systems.
+	Fix build problem with libpsf
 1.7.5:
 	Documentation fixes (Gary Aitken, Per Holm)
 	New broken site in the default whitelist

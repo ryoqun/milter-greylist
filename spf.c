@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.17 2004/12/09 22:01:17 manu Exp $ */
+/* $Id: spf.c,v 1.18 2005/02/03 21:15:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.17 2004/12/09 22:01:17 manu Exp $");
+__RCSID("$Id: spf.c,v 1.18 2005/02/03 21:15:33 manu Exp $");
 #endif
 #endif
 
@@ -76,7 +76,7 @@ spf_check(sa, salen, helo, from)
 		return result;
 
 	if ((p = SPF_init("milter-greylist", addr, 
-	    NULL, NULL, NULL, FALSE, FALSE)) == NULL) {
+	    NULL, NULL, NULL, SPF_FALSE, SPF_FALSE)) == NULL) {
 		syslog(LOG_ERR, "SPF_Init failed");
 		goto out1;
 	}
