@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.16 2004/03/13 16:04:39 manu Exp $ */
+/* $Id: sync.c,v 1.17 2004/03/14 11:05:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -504,7 +504,7 @@ sync_master(dontcare)
 			    "pthread_create failed: %s", 
 			    peerstr, strerror(errno));
 			fclose(stream);
-			continue:
+			continue;
 		}
 	}
 
@@ -667,8 +667,11 @@ state1:
 	fprintf(stream, "201 All right, I'll do that\n");
 	fflush(stream);
 
-	if (action == PS_CREATE)
+	if (action == PS_CREATE) {
+		PENDING_WRLOCK;
 		pending_get(&addr, from, rcpt, date);
+		PENDING_UNLOCK;
+	}
 	if (action == PS_DELETE)
 		pending_del(&addr, from, rcpt, date);
 

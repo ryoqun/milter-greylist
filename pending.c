@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.23 2004/03/11 22:09:45 manu Exp $ */
+/* $Id: pending.c,v 1.24 2004/03/14 11:05:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.23 2004/03/11 22:09:45 manu Exp $");
+__RCSID("$Id: pending.c,v 1.24 2004/03/14 11:05:53 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -151,7 +151,7 @@ pending_del(in, from, rcpt, time)
 	gettimeofday(&tv, NULL);
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
-	PENDING_WRLOCK;
+	PENDING_WRLOCK;	/* XXX take it as read and upgrade it */
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
 		/*
 		 * Look for our entry.
@@ -175,6 +175,7 @@ pending_del(in, from, rcpt, time)
 		}
 	}
 out:
+	PENDING_UNLOCK;
 	return;
 }
 

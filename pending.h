@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.10 2004/03/10 21:11:45 manu Exp $ */
+/* $Id: pending.h,v 1.11 2004/03/14 11:05:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -79,6 +79,7 @@ extern FILE *dump_in;
 extern int dump_line;
 extern int delay;
 extern char *dumpfile;
+extern pthread_rwlock_t pending_lock;
 
 int pending_init(void);
 struct pending *pending_get(struct in_addr *, char *, char *, time_t);
