@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.137 2005/02/08 05:51:16 manu Exp $
+# $Id: configure.ac,v 1.138 2005/02/09 21:06:48 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -278,6 +278,27 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 AC_MSG_RESULT([$dextensions])
 CFLAGS=$SAVEDCFLAGS
 
+# Check if -D_REENTRANT is needed for localtime_r, gmtime_r
+SAVEDCFLAGS=$CFLAGS
+CFLAGS=$CFLAGS" -ansi -Wall -Werror"
+AC_MSG_CHECKING([if -D_REENTRANT is needed to use localtime_r])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <time.h>
+	],[[
+
+		(void)localtime(NULL);
+	]])], [dreentrant=no],
+		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+				#define _REENTRANT
+				#include <stdio.h>
+			],[[
+				 (void)localtime(NULL);
+			]])], 
+			[SAVEDCFLAGS=$SAVEDCFLAGS" -D_REENTRANT"; 
+			 dreentrant=yes], [dreentrant=no])
+	])
+AC_MSG_RESULT([$dreentrant])
+CFLAGS=$SAVEDCFLAGS
 
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use

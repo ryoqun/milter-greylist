@@ -1,4 +1,5 @@
 2.0b2:
+	Check if -D_REENTRANT is needed for localtime_r and friends
 	Typo in delayedreject 
 	Check for initgroups existence
 2.0b1:
