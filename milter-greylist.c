@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.50.2.1 2004/03/27 08:36:05 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.50.2.2 2004/03/27 08:46:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.50.2.1 2004/03/27 08:36:05 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.50.2.2 2004/03/27 08:46:51 manu Exp $");
 #endif
 #endif
 
@@ -624,12 +624,14 @@ strncpy_rmsp(dst, src, len)
 	return dst;
 }
 
+#define TMPSTRLEN 20
 static int
 humanized_atoi(str)	/* *str is modified */
 	char *str;
 {
 	unsigned int unit;
 	size_t len;
+	char tmpstr[TMPSTRLEN + 1];
 
 	if ((len = strlen(str)) == 0)
 		return 0;
@@ -660,7 +662,8 @@ humanized_atoi(str)	/* *str is modified */
 		break;
 	}
 
-	str[len - 1] = '\0';
+	strncpy(tmpstr, str, TMPSTRLEN);
+	tmpstr[len - 1] = '\0';
 
-	return (atoi(str) * unit);
+	return (atoi(tmpstr) * unit);
 }
