@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.104 2005/01/29 18:42:53 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.105 2005/02/07 21:58:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.104 2005/01/29 18:42:53 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.105 2005/02/07 21:58:16 manu Exp $");
 #endif
 #endif
 
@@ -48,6 +48,7 @@ __RCSID("$Id: milter-greylist.c,v 1.104 2005/01/29 18:42:53 manu Exp $");
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
+#include <grp.h>
 #include <unistd.h>
 
 /* On IRIX, <unistd.h> defines a EX_OK that clashes with <sysexits.h> */
@@ -883,10 +884,25 @@ main(argc, argv)
 		struct passwd *pw = NULL;
 
 		if ((pw = getpwnam(conf.c_user)) == NULL) {
-			syslog(LOG_ERR, "%s: Cannot get user %s data: %s\n",
+			syslog(LOG_ERR, "%s: cannot get user %s data: %s\n",
 			    argv[0], conf.c_user, strerror(errno));
 			exit(EX_OSERR);
 		}
+
+		if (initgroups(conf.c_user, pw->pw_gid) != 0) {
+		        syslog(LOG_ERR, "%s: cannot change "
+			    "supplementary groups: %s\n",
+			    argv[0], strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		if (setgid(pw->pw_gid) != 0 ||
+		    setegid(pw->pw_gid) != 0) {
+			syslog(LOG_ERR, "%s: cannot change GID: %s\n",
+			    argv[0], strerror(errno));
+			exit(EX_OSERR);
+		}
+
 
 		if ((setuid(pw->pw_uid) != 0) ||
 		    (seteuid(pw->pw_uid) != 0)) {
