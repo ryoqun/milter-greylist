@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.25 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: except.h,v 1.26 2004/08/02 12:11:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -83,7 +83,7 @@ struct except {
 		struct {
 			struct sockaddr *nb_addr;
 			socklen_t nb_addrlen;
-			ipaddr_t *nb_mask;
+			ipaddr *nb_mask;
 		} d_netblock;
 		char d_from[ADDRLEN + 1];
 		char d_rcpt[ADDRLEN + 1];

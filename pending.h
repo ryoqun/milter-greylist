@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.30 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: pending.h,v 1.31 2004/08/02 12:11:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -84,7 +84,7 @@ void pending_put(struct pending *);
 int pending_textdump(FILE *);
 struct pending *pending_ref(struct pending *);
 void pending_free(struct pending *);
-int ip_match(struct sockaddr *, struct sockaddr *, ipaddr_t *);
+int ip_match(struct sockaddr *, struct sockaddr *, ipaddr *);
 int ip_equal(struct sockaddr *, struct sockaddr *);
 char *iptostring(struct sockaddr *, socklen_t, char *, size_t);
 int ipfromstring(char *, struct sockaddr *, socklen_t *, sa_family_t);

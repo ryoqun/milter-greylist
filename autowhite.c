@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.35 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: autowhite.c,v 1.36 2004/08/02 12:11:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.35 2004/08/01 09:27:03 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.36 2004/08/02 12:11:48 manu Exp $");
 #endif
 #endif
 
@@ -186,7 +186,7 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 	time_t autowhite_validity;
 	int h, mn, s;
 	int dirty = 0;
-	ipaddr_t *mask = NULL;
+	ipaddr *mask = NULL;
 
 	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
 		return EXF_NONE;
@@ -231,11 +231,11 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 		 */
 		switch (sa->sa_family) {
 		case AF_INET:
-			mask = (ipaddr_t *)&conf.c_match_mask;
+			mask = (ipaddr *)&conf.c_match_mask;
 			break;
 #ifdef AF_INET6
 		case AF_INET6:
-			mask = (ipaddr_t *)&conf.c_match_mask6;
+			mask = (ipaddr *)&conf.c_match_mask6;
 			break;
 #endif
 		}

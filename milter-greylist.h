@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.34 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.35 2004/08/02 12:11:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -61,7 +61,7 @@ typedef union {
 #ifdef AF_INET6
 	struct in6_addr in6;
 #endif
-} ipaddr_t;
+} ipaddr;
 
 typedef union {
 	struct sockaddr sa;

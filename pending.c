@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.61 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: pending.c,v 1.62 2004/08/02 12:11:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.61 2004/08/01 09:27:03 manu Exp $");
+__RCSID("$Id: pending.c,v 1.62 2004/08/02 12:11:48 manu Exp $");
 #endif
 #endif
 
@@ -242,7 +242,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
 	time_t accepted = -1;
 	int dirty = 0;
 	int delay = conf.c_delay;
-	ipaddr_t *mask = NULL;
+	ipaddr *mask = NULL;
 
 	now = time(NULL);
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
@@ -278,11 +278,11 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
 		 */
 		switch (pending->p_sa->sa_family) {
 		case AF_INET:
-			mask = (ipaddr_t *)&conf.c_match_mask;
+			mask = (ipaddr *)&conf.c_match_mask;
 			break;
 #ifdef AF_INET6
 		case AF_INET6:
-			mask = (ipaddr_t *)&conf.c_match_mask6;
+			mask = (ipaddr *)&conf.c_match_mask6;
 			break;
 #endif
 		}
@@ -390,7 +390,7 @@ int
 ip_match(sa, pat, mask)
 	struct sockaddr *sa;
 	struct sockaddr *pat;
-	ipaddr_t *mask;
+	ipaddr *mask;
 {
 #ifdef AF_INET6
 	int i;
