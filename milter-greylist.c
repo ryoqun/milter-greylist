@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.48 2004/03/22 23:37:42 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.49 2004/03/22 23:46:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.48 2004/03/22 23:37:42 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.49 2004/03/22 23:46:06 manu Exp $");
 #endif
 #endif
 
@@ -47,8 +47,14 @@ __RCSID("$Id: milter-greylist.c,v 1.48 2004/03/22 23:37:42 manu Exp $");
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
-#include <sysexits.h>
 #include <unistd.h>
+
+/* On IRIX, <unistd.h> defines a EX_OK that clashes with <sysexits.h> */
+#ifdef EX_OK
+#undef EX_OK
+#endif
+#include <sysexits.h>
+
 #if HAVE_GETOPT_H
 #include <getopt.h>
 #endif
