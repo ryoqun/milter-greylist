@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.40 2004/03/17 15:36:19 manu Exp $
+# $Id: configure.ac,v 1.41 2004/03/17 21:51:00 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -85,6 +85,12 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 AC_MSG_CHECKING([for broken rwlock in libpthread])
 brokenpth=yes
 AC_RUN_IFELSE([AC_LANG_PROGRAM([
+		/* 
+		 * _BSD_SOURCE causes this test program 
+		 * to hang on some Linux flavours.
+		 */
+		#undef _BSD_SOURCE
+
 		#if STDC_HEADERS
 		# include <stdlib.h>
 		#else
