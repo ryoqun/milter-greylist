@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.6 2004/02/29 21:08:30 manu Exp $
+# $Id: configure.ac,v 1.7 2004/02/29 23:10:05 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -38,12 +38,16 @@ AC_CHECK_LIB(milter, smfi_register,
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h sys/socket.h sys/time.h syslog.h unistd.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_PID_T
 AC_HEADER_TIME
 
 # Checks for library functions.
+AC_FUNC_FORK
+AC_FUNC_MALLOC
+AC_FUNC_STAT
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror])
 
 # Options
