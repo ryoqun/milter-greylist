@@ -1,3 +1,6 @@
+1.1.6:
+	Buygfix: when using a delay in config file, we overwrote some memory
+	Fix build problems on Linux
 1.1.5:	
 	Bugfix: the dumpfile was not set correctly on command line
 	Bugfix: correctly reset defaults before reloading the config

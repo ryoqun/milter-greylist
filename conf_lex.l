@@ -40,7 +40,7 @@ path		"\""[^"\n]{1,}"\""
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.11 2004/03/31 14:12:49 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.12 2004/04/01 07:19:25 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -76,7 +76,7 @@ path		"\""[^"\n]{1,}"\""
 {nodetach}	{ return NODETACH; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);
-			yylval.delay[PATHLEN] = '\0';
+			yylval.path[PATHLEN] = '\0';
 			return PATH;
 		}
 {delay}		{
