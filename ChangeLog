@@ -1,4 +1,5 @@
 1.5.9:
+	Give credits to the various contributors in the man pages
 	Do not match bogus IPv6 addresses in the dump file (Hajimu Umemoto)
 	Quick statistics at the end of the dump file (Remy Card)
 	Fix build on Tru64 Unix (Attila Bruncsak)

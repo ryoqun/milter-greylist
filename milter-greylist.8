@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.25 2004/08/01 09:27:03 manu Exp $
+.\" $Id: milter-greylist.8,v 1.26 2004/10/13 10:15:12 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -218,14 +218,28 @@ cause each entry in the greylist to be added twice).
 If an MX is down, changes to the greylist will be queued until it gets
 back up again. The queue length is limited (default is 1024 entries), and
 if it overflows, newer entries will be discarded.
-.Sh AUTHOR
+.Sh AUTHORS
 .An Emmanuel Dreyfus Aq manu@netbsd.org
+.Pp 
+.Nm
+received many contributions from (in alphabetic order):
+.An Attila Bruncsak ,
+.An Remy Card ,
+.An Alexandre Cherif ,
+.An Cyril Guibourg ,
+.An Mattieu Herrb ,
+.An Dan Hollis ,
+.An Christian Pelissier ,
+.An Matthias Scheler ,
+.An Wolfgang Solfrank ,
+and
+.An Hajimu Umemoto .
 .Pp
 Thanks to 
 .An Helmut Messerer
 and
 .An Thomas Pfau
-for their feebacks on this software.
+for their feebacks on the first releases of this software.
 .Sh SEE ALSO
 .Xr greylist.conf 5 ,
 .Xr sendmail 8 , 
