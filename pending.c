@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.27 2004/03/14 15:48:39 manu Exp $ */
+/* $Id: pending.c,v 1.28 2004/03/16 16:47:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.27 2004/03/14 15:48:39 manu Exp $");
+__RCSID("$Id: pending.c,v 1.28 2004/03/16 16:47:51 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -266,7 +266,7 @@ pending_textdump(stream)
 	int done = 0;
 
 	gettimeofday(&tv, NULL);
-	strftime(textdate, DATELEN, "%a %b %d %H %G", 
+	strftime(textdate, DATELEN, "%Y-%m-%d %T",
 	    localtime((time_t *)&tv.tv_sec));
 
 	fprintf(stream, "#\n# Greylist database, "
