@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.6 2004/04/08 15:34:30 manu Exp $ */
+/* $Id: spf.h,v 1.7 2004/04/14 08:46:14 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,6 +34,7 @@
 
 #include "config.h"
 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
