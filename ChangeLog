@@ -1,6 +1,7 @@
 1.7.4:
 	M4 file for easier sendmail.cf generation (Ivan F. Martinez)
 	.spec file for generating RPM (Ivan F. Martinez)
+	Install ${DESTDIR}etc/mail for sandbox builds
 1.7.3:
 	SUSe startup script, by Stephane Lentz
 	Builds again with SPF enabled
