@@ -1,3 +1,5 @@
+1.1.15:
+	Fix build problems on FreeBSD
 1.1.14:
 	in greylist.conf, make the netmask opttionnal (default to /32)
 1.1.13:
