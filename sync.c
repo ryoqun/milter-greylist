@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.14 2004/03/12 10:03:11 manu Exp $ */
+/* $Id: sync.c,v 1.15 2004/03/12 10:27:56 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -444,6 +444,9 @@ sync_master(dontcare)
 		    &socklen)) == -1) {
 			syslog(LOG_ERR, "incoming connexion "
 			    "failed: %s\n", strerror(errno));
+
+			if (errno != ECONNABORTED)
+				exit(EX_OSERR);
 			break;
 		}
 
@@ -456,6 +459,7 @@ sync_master(dontcare)
 			    "incoming connexion from %s failed, "
 			    "fdopen fail: %s", peerstr, strerror(errno));
 			close(fd);
+			exit(EX_OSERR);
 			break;
 		}
 
