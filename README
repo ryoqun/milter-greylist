@@ -1,9 +1,9 @@
-# $Id: README,v 1.9 2004/03/28 14:05:42 manu Exp $
+# $Id: README,v 1.10 2004/03/30 08:21:19 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/03/28 14:05:42 $
+		       $Date: 2004/03/30 08:21:19 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -36,7 +36,12 @@ You need a few options in sendmail.cf to use milter-greylist:
 
 O InputMailFilters=greylist 
 Xgreylist, S=local:/var/milter-greylist/milter-greylist.sock 
-O Milter.macros.connect=i,j,{if_addr}
+O Milter.macros.connect=j,{if_addr}
+O Milter.macros.envfrom=i
+
+If you want to bypass greylisting for users that succeeded SMTP AUTH, 
+You also need {auth_authen} in Milter.macros.envfrom:
+O Milter.macros.envfrom=i, {auth_authen}
 
 
  3 Configuring milter-greylist 
