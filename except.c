@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.7 2004/03/02 09:15:03 manu Exp $ */
+/* $Id: except.c,v 1.8 2004/03/02 10:34:37 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -245,7 +245,7 @@ emailcmp(big, little)
 		if (tolower(big[0]) != tolower(little[0]))
 			big++;
 
-		for (i = 0; big[i] && little[i] && (i < ADDRLEN); i++) {
+		for (i = 0; big[0] && little[i] && (i < ADDRLEN); i++) {
 			if (tolower(big[0]) != tolower(little[i]))
 				break;
 			big++;
