@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.97 2004/04/14 16:28:55 manu Exp $
+# $Id: configure.ac,v 1.98 2004/04/15 08:38:57 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -108,6 +108,9 @@ AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"],
 
 # Check for inet_aton (libmilter uses it). On solaris, -lresolv is required
 AC_CHECK_LIB([resolv], [inet_aton], [LIBS="$LIBS -lresolv"], []) 
+
+# Check for inet_pton (libmilter uses it). On solaris, -lnsl is required
+AC_CHECK_LIB([nsl], [inet_pton], [LIBS="$LIBS -lnsl"], []) 
 
 # Check if <syslog.h> defines LOG_PERROR
 AC_MSG_CHECKING([if <syslog.h> defines LOG_PERROR])
