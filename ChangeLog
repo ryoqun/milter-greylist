@@ -1,4 +1,5 @@
 2.0b3:
+	Updated .spec file for running without root privs (Ivan F. Martinez)
 	rc-redhat.sh: move PID file somewhere we can write (Petr Kristof)
 	Fix build problem with spf
 	Fix bad DESTDIR specification for /etc/mail
