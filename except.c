@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.41 2004/05/26 21:50:12 manu Exp $ */
+/* $Id: except.c,v 1.42 2004/05/28 10:54:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.41 2004/05/26 21:50:12 manu Exp $");
+__RCSID("$Id: except.c,v 1.42 2004/05/28 10:54:35 manu Exp $");
 #endif
 #endif
 
@@ -207,7 +207,7 @@ except_add_from_regex(regexstr)	/* exceptlist must be write-locked */
 		exit(EX_OSERR);
 	}
 		
-	if ((error = regcomp(&except->e_from_re, regexstr, 0)) != 0) {
+	if ((error = regcomp(&except->e_from_re, regexstr, REG_ICASE)) != 0) {
 		regerror(error, &except->e_from_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);
@@ -246,7 +246,7 @@ except_add_rcpt_regex(regexstr)	/* exceptlist must be write-locked */
 		exit(EX_OSERR);
 	}
 		
-	if ((error = regcomp(&except->e_rcpt_re, regexstr, 0)) != 0) {
+	if ((error = regcomp(&except->e_rcpt_re, regexstr, REG_ICASE)) != 0) {
 		regerror(error, &except->e_rcpt_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);
@@ -285,7 +285,7 @@ except_add_domain_regex(regexstr)	/* exceptlist must be write-locked */
 		exit(EX_OSERR);
 	}
 		
-	if ((error = regcomp(&except->e_domain_re, regexstr, 0)) != 0) {
+	if ((error = regcomp(&except->e_domain_re, regexstr, REG_ICASE)) != 0) {
 		regerror(error, &except->e_domain_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);
