@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.26 2004/08/08 21:24:20 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.27 2004/08/09 21:44:19 manu Exp $");
 #endif
 #endif
 
@@ -126,7 +126,7 @@ domainregex:	DOMAIN REGEX	 { except_add_domain_regex($2); }
 peeraddr:	PEER IPADDR	{
 			char addr[IPADDRLEN + 1];
 
-			if (IP4TOSTRING($2, addr) != 0) {
+			if (IP4TOSTRING($2, addr) == NULL) {
 				printf("invalid IPv4 address line %d\n",
 				    conf_line);
 				exit(EX_DATAERR);
@@ -137,7 +137,7 @@ peeraddr:	PEER IPADDR	{
 #ifdef AF_INET6
 			char addr[IPADDRSTRLEN + 1];
 
-			if (IP6TOSTRING($2, addr) != 0) {
+			if (IP6TOSTRING($2, addr) == NULL) {
 				printf("invalid IPv6 address line %d\n",
 				    conf_line);
 				exit(EX_DATAERR);
@@ -241,7 +241,7 @@ syncaddr:	SYNCADDR STAR	{
 				   conf.c_syncport = NULL;
 				}
 	|	SYNCADDR IPADDR	{
-				if (IP4TOSTRING($2, c_syncaddr) != 0) {
+				if (IP4TOSTRING($2, c_syncaddr) == NULL) {
 					printf("invalid IPv4 address "
 					    "line %d\n", conf_line);
 					exit(EX_DATAERR);
@@ -251,7 +251,7 @@ syncaddr:	SYNCADDR STAR	{
 	                        }
 	|	SYNCADDR IP6ADDR {
 #ifdef AF_INET6
-				if (IP6TOSTRING($2, c_syncaddr) != 0) {
+				if (IP6TOSTRING($2, c_syncaddr) == NULL) {
 					printf("invalid IPv6 address "
 					    "line %d\n", conf_line);
 					exit(EX_DATAERR);
@@ -270,7 +270,7 @@ syncaddr:	SYNCADDR STAR	{
 				conf.c_syncport[NUMLEN] = '\0';
 				}
 	|	SYNCADDR IPADDR PORT TNUMBER {
-				if (IP4TOSTRING($2, c_syncaddr) != 0) {
+				if (IP4TOSTRING($2, c_syncaddr) == NULL) {
 					printf("invalid IPv4 address "
 					    "line %d\n", conf_line);
 					exit(EX_DATAERR);
@@ -282,7 +282,7 @@ syncaddr:	SYNCADDR STAR	{
 				}
 	|	SYNCADDR IP6ADDR PORT TNUMBER {
 #ifdef AF_INET6
-				if (IP6TOSTRING($2, c_syncaddr) != 0) {
+				if (IP6TOSTRING($2, c_syncaddr) == NULL) {
 					printf("invalid IPv6 address "
 					    "line %d\n", conf_line);
 					exit(EX_DATAERR);
