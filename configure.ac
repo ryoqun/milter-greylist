@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.54 2004/03/21 22:51:41 manu Exp $
+# $Id: configure.ac,v 1.55 2004/03/21 23:06:37 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -19,15 +19,24 @@ AC_CHECK_PROGS(TEST, test)
 AC_CHECK_PROGS(SED, sed)
 AC_CHECK_PROGS(TRUE, true)
 
+# Check if the linker accepts --rpath (for Darwin)
+AC_MSG_CHECKING([if ld accepts --rpath])
+SAVEDLDFLAGS=$LDFLAGS
+LDFLAGS=$LDFLAGS" -Wl,--rpath=/"
+AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], 
+    [rpath="--rpath"; ldrpath=yes], [rpath="-L"; ldrpath=no])
+LDFLAGS=$SAVEDLDFLAGS
+AC_MSG_RESULT([$ldrpath])
+
 # Path to required packages
 AC_ARG_WITH(libmilter, 
 	[  --with-libmilter=DIR   Find libmilter in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
-	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,--rpath=$withval/lib"])
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath=$withval/lib"])
 AC_ARG_WITH(libpthread, 
 	[  --with-libpthread=DIR  Find libpthread in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
-	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,--rpath=$withval/lib"])
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath=$withval/lib"])
 
 # Checks for header files.
 AC_HEADER_STDC
