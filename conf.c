@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.22 2004/06/08 12:04:21 manu Exp $ */
+/* $Id: conf.c,v 1.23 2004/06/08 14:47:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.22 2004/06/08 12:04:21 manu Exp $");
+__RCSID("$Id: conf.c,v 1.23 2004/06/08 14:47:47 manu Exp $");
 #endif
 #endif
 
@@ -85,6 +85,7 @@ conf_load(void) 	/* exceptlist must be write-locked */
 	FILE *stream;
 	pthread_t tid;
 	pthread_attr_t attr;
+	int error;
 
 	/*
 	 * Reset the configuration to its default 
@@ -122,34 +123,35 @@ conf_load(void) 	/* exceptlist must be write-locked */
 		conf.c_cold = 0;
 		defconf.c_cold = 0;
 	} else {
-		if (pthread_attr_init(&attr) != 0) {
+		if ((error = pthread_attr_init(&attr)) != 0) {
 			syslog(LOG_ERR, "pthread_attr_init failed: %s", 
-			    strerror(errno));
+			    strerror(error));
 			exit(EX_OSERR);
 		}
 
-		if (pthread_attr_setstacksize(&attr, 2 * 1024 * 1024) != 0) {
+		if ((error = pthread_attr_setstacksize(&attr, 
+		    2 * 1024 * 1024)) != 0) {
 			syslog(LOG_ERR, "pthread_attr_setstacksize failed: %s", 
-			    strerror(errno));
+			    strerror(error));
 			exit(EX_OSERR);
 		}
 
-		if (pthread_create(&tid, &attr, 
-		    (void *(*)(void *))conf_parse, NULL) != 0) {
+		if ((error = pthread_create(&tid, &attr, 
+		    (void *(*)(void *))conf_parse, NULL)) != 0) {
 			syslog(LOG_ERR, "pthread_create failed: %s", 
-			    strerror(errno));
+			    strerror(error));
 			exit(EX_OSERR);
 		}
 
-		if (pthread_join(tid, NULL) != 0) {
+		if ((error = pthread_join(tid, NULL)) != 0) {
 			syslog(LOG_ERR, "pthread_join failed: %s",
-			    strerror(errno));
+			    strerror(error));
 			exit(EX_OSERR);
 		}
 
-		if (pthread_attr_destroy(&attr) != 0) {
+		if ((error = pthread_attr_destroy(&attr)) != 0) {
 			syslog(LOG_ERR, "pthread_attr_destroy failed: %s",
-			    strerror(errno));
+			    strerror(error));
 			exit(EX_OSERR);
 		}
 	}

@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.10 2004/05/06 13:50:55 manu Exp $ */
+/* $Id: sync.h,v 1.11 2004/06/08 14:47:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -92,7 +92,7 @@ void sync_queue(struct peer *, peer_sync_t, struct pending *);
 
 void sync_sender(void *);
 void sync_master_restart(void);
-void sync_master(void *);
+void *sync_master(void *);
 void sync_server(void *);
 void sync_help(FILE *);
 int sync_waitdata(int);

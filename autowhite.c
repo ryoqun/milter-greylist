@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.31 2004/05/26 09:14:29 manu Exp $ */
+/* $Id: autowhite.c,v 1.32 2004/06/08 14:47:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.31 2004/05/26 09:14:29 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.32 2004/06/08 14:47:47 manu Exp $");
 #endif
 #endif
 
@@ -68,9 +68,14 @@ pthread_rwlock_t autowhite_lock;
 
 void
 autowhite_init(void) {
+	int error;
 
 	TAILQ_INIT(&autowhite_head);
-	pthread_rwlock_init(&autowhite_lock, NULL);
+	if ((error = pthread_rwlock_init(&autowhite_lock, NULL)) != 0) {
+		syslog(LOG_ERR, "pthread_rwlock_init failed: %s",
+		    strerror(error));
+		    exit(EX_OSERR);
+	}	
 
 	return;
 }

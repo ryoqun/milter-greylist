@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.43 2004/06/07 10:03:41 manu Exp $ */
+/* $Id: except.c,v 1.44 2004/06/08 14:47:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.43 2004/06/07 10:03:41 manu Exp $");
+__RCSID("$Id: except.c,v 1.44 2004/06/08 14:47:47 manu Exp $");
 #endif
 #endif
 
@@ -72,9 +72,14 @@ static int emailcmp(char *, char *);
 
 void
 except_init(void) {
+	int error;
 
 	LIST_INIT(&except_head);
-	pthread_rwlock_init(&except_lock, NULL);
+	if ((error = pthread_rwlock_init(&except_lock, NULL)) != 0) {
+		syslog(LOG_ERR, "pthread_rwlock_init failed: %s", 
+		    strerror(error));
+		exit(EX_OSERR);
+	}
 
 	return;
 }

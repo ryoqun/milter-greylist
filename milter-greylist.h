@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.32 2004/05/26 21:50:13 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.33 2004/06/08 14:47:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -79,16 +79,25 @@ int main(int, char **);
 /*
  * Locking management
  */
-#define WRLOCK(lock) if (pthread_rwlock_wrlock(&(lock)) != 0) {		  \
+#define WRLOCK(lock) {							  \
+	int err;							  \
+									  \
+	if ((err = pthread_rwlock_wrlock(&(lock))) != 0) {		  \
 		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed: %s", \
-		    __FILE__, __LINE__, strerror(errno));		  \
+		    __FILE__, __LINE__, strerror(err));			  \
 		exit(EX_SOFTWARE);					  \
-	}
-#define RDLOCK(lock) if (pthread_rwlock_rdlock(&(lock)) != 0) {		  \
+	}								  \
+}
+
+#define RDLOCK(lock) {							  \
+	int err;							  \
+									  \
+	if ((err = pthread_rwlock_rdlock(&(lock))) != 0) {		  \
 		syslog(LOG_ERR, "%s:%d pthread_rwlock_rdlock failed: %s", \
-		    __FILE__, __LINE__, strerror(errno));		  \
+		    __FILE__, __LINE__, strerror(err));			  \
 		exit(EX_SOFTWARE);					  \
-	}
+	}								  \
+}
 
 /*
  * There is a bug in GNU pth-2.0.0 that will cause a spurious EPERM
@@ -97,16 +106,24 @@ int main(int, char **);
  * for that problem, we just avoid quitting on this error.
  */
 #ifndef HAVE_BROKEN_RWLOCK
-#define UNLOCK(lock) if (pthread_rwlock_unlock(&(lock)) != 0) {		  \
+#define UNLOCK(lock) {							  \
+	int err;							  \
+									  \
+	if ((err = pthread_rwlock_unlock(&(lock))) != 0) {		  \
 		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed: %s", \
-		    __FILE__, __LINE__, strerror(errno));		  \
+		    __FILE__, __LINE__, strerror(err));			  \
 		exit(EX_SOFTWARE);					  \
-	}
+	}								  \
+}
 #else
-#define UNLOCK(lock) if (pthread_rwlock_unlock(&(lock)) != 0) {		  \
+#define UNLOCK(lock) {							  \
+	int err;							  \
+									  \
+	if ((err = pthread_rwlock_unlock(&(lock))) != 0) {		  \
 		syslog(LOG_DEBUG, "%s:%d pthread_rwlock_unlock failed: "  \
-		    "%s (ignored)", __FILE__, __LINE__, strerror(errno)); \
-	}
+		    "%s (ignored)", __FILE__, __LINE__, strerror(err));	  \
+	}								  \
+}
 #endif
 
 /*

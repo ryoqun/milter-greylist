@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.22 2004/06/08 12:09:36 manu Exp $ */
+/* $Id: dump.c,v 1.23 2004/06/08 14:47:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.22 2004/06/08 12:09:36 manu Exp $");
+__RCSID("$Id: dump.c,v 1.23 2004/06/08 14:47:47 manu Exp $");
 #endif
 #endif
 
@@ -76,8 +76,13 @@ int dump_dirty = 0;
 
 void
 dump_init(void) {
+	int error;
 
-	pthread_cond_init(&dump_sleepflag, NULL);
+	if ((error = pthread_cond_init(&dump_sleepflag, NULL)) != 0) {
+		syslog(LOG_ERR, 
+		    "pthread_cond_init failed: %s", strerror(error));
+		exit(EX_OSERR);
+	}
 
 	return;
 }
@@ -85,31 +90,33 @@ dump_init(void) {
 void
 dumper_start(void) {
 	pthread_t tid;
+	int error;
 
-	if (pthread_create(&tid, NULL, (void *(*)(void *))dumper, NULL) != 0) {
-		syslog(LOG_ERR, 
-		    "cannot start dumper thread: %s", strerror(errno));
+	if ((error = pthread_create(&tid, NULL, dumper, NULL)) != 0) {
+		syslog(LOG_ERR,
+		    "cannot start dumper thread: %s", strerror(error));
 		exit(EX_OSERR);
 	}
 	return;
 }
 	
 /* ARGSUSED0 */
-void
+void *
 dumper(dontcare) 
 	void *dontcare;
 {
+	int error;
 	pthread_mutex_t mutex;
 
-	if (pthread_mutex_init(&mutex, NULL) != 0) {
+	if ((error = pthread_mutex_init(&mutex, NULL)) != 0) {
 		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n",
-		    strerror(errno));
+		    strerror(error));
 		exit(EX_OSERR);
 	}
 
-	if (pthread_mutex_lock(&mutex) != 0) {
+	if ((error = pthread_mutex_lock(&mutex)) != 0) {
 		syslog(LOG_ERR, "pthread_mutex_lock failed: %s\n", 
-		    strerror(errno));
+		    strerror(error));
 		exit(EX_OSERR);
 	}
 
@@ -121,9 +128,10 @@ dumper(dontcare)
 			break;
 
 		case 0:
-			if (pthread_cond_wait(&dump_sleepflag, &mutex) != 0)
+			if ((error = pthread_cond_wait(&dump_sleepflag, 
+			    &mutex)) != 0)
 			    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
-				strerror(errno));
+				strerror(error));
 			break;
 
 		default:
@@ -144,7 +152,7 @@ dumper(dontcare)
 	syslog(LOG_ERR, "dumper unexpectedly exitted");
 	exit(EX_SOFTWARE);
 
-	return;
+	return NULL;
 }
 
 void
@@ -247,8 +255,10 @@ dump_reload(void) {
 
 void
 dump_flush(void) {
-	if (pthread_cond_signal(&dump_sleepflag) != 0) {
-		syslog(LOG_ERR, "cannot wakeup dumper: %s", strerror(errno));
+	int error;
+
+	if ((error = pthread_cond_signal(&dump_sleepflag)) != 0) {
+		syslog(LOG_ERR, "cannot wakeup dumper: %s", strerror(error));
 		exit(EX_SOFTWARE);
 	}
 

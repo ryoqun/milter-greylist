@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.41 2004/06/08 12:09:36 manu Exp $ */
+/* $Id: sync.c,v 1.42 2004/06/08 14:47:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.41 2004/06/08 12:09:36 manu Exp $");
+__RCSID("$Id: sync.c,v 1.42 2004/06/08 14:47:47 manu Exp $");
 #endif
 #endif
 
@@ -68,11 +68,26 @@ pthread_cond_t sync_sleepflag;
 
 void
 peer_init(void) {
+	int error;
 
 	LIST_INIT(&peer_head);
-	pthread_rwlock_init(&peer_lock, NULL);
-	pthread_rwlock_init(&sync_lock, NULL);
-	pthread_cond_init(&sync_sleepflag, NULL);
+	if ((error = pthread_rwlock_init(&peer_lock, NULL)) != 0) {
+		syslog(LOG_ERR, 
+		    "pthread_rwlock_init failed: %s", strerror(error));
+		exit(EX_OSERR);
+	}
+
+	if ((error = pthread_rwlock_init(&sync_lock, NULL)) != 0) {
+		syslog(LOG_ERR, 
+		    "pthread_rwlock_init failed: %s", strerror(error));
+		exit(EX_OSERR);
+	}
+
+	if ((error = pthread_cond_init(&sync_sleepflag, NULL)) != 0) {
+		syslog(LOG_ERR, 
+		    "pthread_cond_init failed: %s", strerror(error));
+		exit(EX_OSERR);
+	}
 
 	return;
 }
@@ -365,6 +380,7 @@ void
 sync_master_restart(void) {
 	pthread_t tid;
 	int empty;
+	int error;
 
 	PEER_RDLOCK;
 	empty = LIST_EMPTY(&peer_head);
@@ -374,16 +390,15 @@ sync_master_restart(void) {
 		return;
 
 	sync_master_runs = 1;
-	if (pthread_create(&tid, NULL, 
-	    (void *(*)(void *))sync_master, NULL) != 0) {
+	if ((error = pthread_create(&tid, NULL, sync_master, NULL)) != 0) {
 		syslog(LOG_ERR, "Cannot run MX sync thread: %s\n",
-		    strerror(errno));
+		    strerror(error));
 		exit(EX_OSERR);
 	}
 }
 
 /* ARGSUSED0 */
-void
+void *
 sync_master(dontcare)
 	void *dontcare;
 {
@@ -404,7 +419,7 @@ sync_master(dontcare)
 		syslog(LOG_ERR, "cannot start MX sync, socket failed: %s", 
 		    strerror(errno));
 		sync_master_runs = 0;
-		return;
+		return NULL;
 	}
 
 	if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
@@ -439,7 +454,7 @@ sync_master(dontcare)
 		    strerror(errno));
 		sync_master_runs = 0;
 		close(s);
-		return;
+		return NULL;
 	}
 
 	if (listen(s, MXGLSYNC_BACKLOG) != 0) {
@@ -447,7 +462,7 @@ sync_master(dontcare)
 		    strerror(errno));
 		sync_master_runs = 0;
 		close(s);
-		return;
+		return NULL;
 	}
 
 	for (;;) {
@@ -458,6 +473,7 @@ sync_master(dontcare)
 		pthread_t tid;
 		struct peer *peer;
 		char peerstr[IPADDRLEN + 1];
+		int error;
 
 		bzero((void *)&raddr, sizeof(raddr));
 		socklen = sizeof(raddr);
@@ -499,7 +515,7 @@ sync_master(dontcare)
 			sync_master_runs = 0;
 			fclose(stream);
 			close(s);
-			return;
+			return NULL;
 		}
 			
 		LIST_FOREACH(peer, &peer_head, p_list) {
@@ -519,11 +535,11 @@ sync_master(dontcare)
 			continue;
 		}
 
-		if (pthread_create(&tid, NULL, (void *(*)(void *))sync_server, 
-		    (void *)stream) != 0) {
+		if ((error = pthread_create(&tid, NULL, 
+		    (void *(*)(void *))sync_server, (void *)stream)) != 0) {
 			syslog(LOG_ERR, "incoming connexion from %s failed, "
 			    "pthread_create failed: %s", 
-			    peerstr, strerror(errno));
+			    peerstr, strerror(error));
 			fclose(stream);
 			continue;
 		}
@@ -531,7 +547,7 @@ sync_master(dontcare)
 
 	/* NOTREACHED */
 	syslog(LOG_ERR, "sync_master quitted unexpectedly");
-	return;
+	return NULL;
 }
 
 void
@@ -764,6 +780,7 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 	peer_sync_t type;
 	struct pending *pending;
 {
+	int error;
 	struct sync *sync;
 
 	/*
@@ -799,9 +816,9 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 		peer->p_qlen++;
 	}
 
-	if (pthread_cond_signal(&sync_sleepflag) != 0) {
+	if ((error = pthread_cond_signal(&sync_sleepflag)) != 0) {
 		syslog(LOG_ERR, 
-		    "cannot wakeup sync_sender: %s", strerror(errno));
+		    "cannot wakeup sync_sender: %s", strerror(error));
 		exit(EX_SOFTWARE);
 	}
 	return;
@@ -810,10 +827,11 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 void
 sync_sender_start(void) {
 	pthread_t tid;
+	int error;
 
-	if (pthread_create(&tid, NULL, 
-	    (void *(*)(void *))sync_sender, NULL) != 0) {
-		syslog(LOG_ERR, "pthread_create failed: %s", strerror(errno));
+	if ((error = pthread_create(&tid, NULL, 
+	    (void *(*)(void *))sync_sender, NULL)) != 0) {
+		syslog(LOG_ERR, "pthread_create failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
 	return;
@@ -829,23 +847,24 @@ sync_sender(dontcare)
 	struct sync *sync;
 	pthread_mutex_t mutex;
 	struct timeval tv1, tv2, tv3;
+	int error;
 
-	if (pthread_mutex_init(&mutex, NULL) != 0) {
+	if ((error = pthread_mutex_init(&mutex, NULL)) != 0) {
 		syslog(LOG_ERR, "pthread_mutex_init failed: %s", 
-		    strerror(errno));
+		    strerror(error));
 		exit(EX_OSERR);
 	}
 
-	if (pthread_mutex_lock(&mutex) != 0) {
+	if ((error = pthread_mutex_lock(&mutex)) != 0) {
 		syslog(LOG_ERR, "pthread_mutex_lock failed: %s", 
-		    strerror(errno));
+		    strerror(error));
 		exit(EX_OSERR);
 	}
 
 	for (;;) {
-		if (pthread_cond_wait(&sync_sleepflag, &mutex) != 0)
+		if ((error = pthread_cond_wait(&sync_sleepflag, &mutex)) != 0)
 			syslog(LOG_ERR, "pthread_cond_wait failed: %s\n", 
-			    strerror(errno));
+			    strerror(error));
 		if (conf.c_debug) {
 			syslog(LOG_DEBUG, "sync_sender running");
 			gettimeofday(&tv1, NULL);
