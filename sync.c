@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.3 2004/03/10 15:57:18 manu Exp $ */
+/* $Id: sync.c,v 1.4 2004/03/10 16:07:07 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -93,7 +93,6 @@ peer_add(addr)
 	struct in_addr *addr;
 {
 	struct peer *peer;
-	char peername[IPADDRLEN + 1];
 
 	if ((peer = malloc(sizeof(*peer))) == NULL) {
 		perror("cannot allocate memory");
@@ -102,14 +101,15 @@ peer_add(addr)
 
 	peer->p_stream = NULL;
 	memcpy(&peer->p_addr, addr, sizeof(peer->p_addr));
+	inet_ntop(AF_INET, &peer->p_addr, peer->p_name, IPADDRLEN);
 
 	PEER_WRLOCK;
 	LIST_INSERT_HEAD(&peer_head, peer, p_list);
 	PEER_UNLOCK;
 
 	if (debug)
-		printf("load peer %s\n", 
-		    inet_ntop(AF_INET, &peer->p_addr, peername, IPADDRLEN));
+		printf("load peer %s\n", peer->p_name);
+		    
 
 	return;
 }
@@ -162,12 +162,9 @@ peer_send(peer, type, pending)
 	char *replystr;
 	int replycode;
 	char line[LINELEN + 1];
-	char peerstr[IPADDRLEN + 1];
 
 	if ((peer->p_stream == NULL) && (peer_connect(peer) != 0))
 		return;
-
-	inet_ntop(AF_INET, &peer->p_addr, peerstr, IPADDRLEN);
 
 	if (type == PS_CREATE)
 		fprintf(peer->p_stream, "add ");
@@ -184,7 +181,7 @@ peer_send(peer, type, pending)
 	 */
 	sync_waitdata(peer->p_socket);
 	if (fgets(line, LINELEN, peer->p_stream) == NULL) {
-		syslog(LOG_ERR, "lost connexion with peer %s", peerstr);
+		syslog(LOG_ERR, "lost connexion with peer %s", peer->p_name);
 		fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return;
@@ -192,7 +189,7 @@ peer_send(peer, type, pending)
 
 	if ((replystr = strtok(line, sep)) == NULL) {
 		syslog(LOG_ERR, "Unexpected reply \"%s\" from %s, "
-		    "closing connexion", line, peerstr);
+		    "closing connexion", line, peer->p_name);
 		fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return;
@@ -201,7 +198,7 @@ peer_send(peer, type, pending)
 	replycode = atoi(replystr);
 	if (replycode != 201) {
 		syslog(LOG_ERR, "Unexpected reply \"%s\" from %s, "
-		    "closing connexion", line, peerstr);
+		    "closing connexion", line, peer->p_name);
 		fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return;
@@ -414,7 +411,8 @@ sync_master(dontcare)
 		}
 
 		inet_ntop(AF_INET, &raddr.sin_addr, peerstr, IPADDRLEN);
-		syslog(LOG_INFO, "Incoming MX sync connexion from %s", peerstr);
+		syslog(LOG_INFO, "Incoming MX sync connexion from %s", 
+		    peerstr);
 
 		if ((stream = fdopen(fd, "w+")) == NULL) {
 			syslog(LOG_ERR, 

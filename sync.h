@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.2 2004/03/10 15:57:18 manu Exp $ */
+/* $Id: sync.h,v 1.3 2004/03/10 16:07:07 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -45,7 +45,7 @@
 LIST_HEAD(peerlist, peer);
 
 struct peer {
-	char p_name[ADDRLEN + 1];
+	char p_name[IPADDRLEN + 1];
 	struct in_addr p_addr;
 	FILE *p_stream;
 	int p_socket;
