@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.25 2004/05/23 13:03:41 manu Exp $ */
+/* $Id: autowhite.c,v 1.26 2004/05/23 19:40:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,18 +29,12 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.25 2004/05/23 13:03:41 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.26 2004/05/23 19:40:45 manu Exp $");
 #endif
-#endif
-
-#include "config.h"
-#ifdef HAVE_OLD_QUEUE_H
-#include "queue.h"
-#else
-#include <sys/queue.h>
 #endif
 
 #include <stdlib.h>
