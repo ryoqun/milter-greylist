@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.11 2004/03/16 23:16:52 manu Exp $ */
+/* $Id: autowhite.h,v 1.1 2004/03/16 23:16:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,60 +29,29 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _EXCEPT_H_
-#define _EXCEPT_H_
+#ifndef _AUTOWHITE_H_
+#define _AUTOWHITE_H_
 
-#include <stdio.h>
-#include <pthread.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/queue.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-#include "pending.h"
-#include "config.h"
 #include "milter-greylist.h"
 
-#define EXCEPT_WRLOCK WRLOCK(except_lock) 
-#define EXCEPT_RDLOCK RDLOCK(except_lock) 
-#define EXCEPT_UNLOCK UNLOCK(except_lock)
+#define AUTOWHITE_VALIDITY (24 * 2600) /* 1 day */
 
-LIST_HEAD(exceptlist, except);
+#define AUTOWHITE_WRLOCK WRLOCK(autowhite_lock) 
+#define AUTOWHITE_RDLOCK RDLOCK(autowhite_lock) 
+#define AUTOWHITE_UNLOCK UNLOCK(autowhite_lock)
 
-typedef enum { E_NETBLOCK, E_FROM, E_RCPT } except_type_t;
-#define e_addr e_data.d_netblock.nb_addr
-#define e_mask e_data.d_netblock.nb_mask
-#define e_from e_data.d_from
-#define e_rcpt e_data.d_rcpt
-struct except {
-	except_type_t e_type;
-	union {
-		struct {
-			struct in_addr nb_addr;
-			struct in_addr nb_mask;
-		} d_netblock;
-		char d_from[ADDRLEN + 1];
-		char d_rcpt[ADDRLEN + 1];
-	} e_data;
-	LIST_ENTRY(except) e_list;
+TAILQ_HEAD(autowhitelist, autowhite);
+
+struct autowhite {
+	struct in_addr a_in;
+	char a_from[ADDRLEN + 1];
+	char a_rcpt[ADDRLEN + 1];
+	struct timeval a_tv;
+	TAILQ_ENTRY(autowhite) a_list;
 };
 
-extern int testmode;
-extern pthread_rwlock_t except_lock;
+int autowhite_init(void);
+void autowhite_add(struct in_addr *, char *, char *);
+int autowhite_check(struct in_addr *, char *, char *);
 
-int except_init(void);
-void except_clear(void);
-void except_add_netblock(struct in_addr *, int);
-void except_add_from(char *);
-void except_add_rcpt(char *);
-int except_filter(struct in_addr *, char *, char *);
-
-/* except_filter() return codes */
-#define EXF_NONE	0
-#define EXF_ADDR	1
-#define EXF_FROM	2
-#define EXF_RCPT	3
-#define EXF_AUTO	4
-
-#endif /* _EXCEPT_H_ */
+#endif /* _AUTOWHITE_H_ */

@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.29 2004/03/16 21:58:34 manu Exp $ */
+/* $Id: pending.c,v 1.30 2004/03/16 23:16:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.29 2004/03/16 21:58:34 manu Exp $");
+__RCSID("$Id: pending.c,v 1.30 2004/03/16 23:16:52 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -55,6 +55,7 @@ __RCSID("$Id: pending.c,v 1.29 2004/03/16 21:58:34 manu Exp $");
 #include "config.h"
 #include "sync.h"
 #include "pending.h"
+#include "autowhite.h"
 #include "milter-greylist.h"
 
 struct pendinglist pending_head;
@@ -210,6 +211,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 			if (rest < 0) {
 				peer_delete(pending);
 				pending_put(pending);
+				autowhite_add(in, from, rcpt);
 				rest = 0;
 				dirty = 1;
 			}

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.31 2004/03/16 21:58:34 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.32 2004/03/16 23:16:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.31 2004/03/16 21:58:34 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.32 2004/03/16 23:16:52 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -56,6 +56,7 @@ __RCSID("$Id: milter-greylist.c,v 1.31 2004/03/16 21:58:34 manu Exp $");
 #include "conf.h"
 #include "pending.h"
 #include "sync.h"
+#include "autowhite.h"
 #include "milter-greylist.h"
 
 int debug = 0;
@@ -146,6 +147,12 @@ mlfi_envrcpt(ctx, envrcpt)
 		return SMFIS_CONTINUE;
 	}
 
+	if ((priv->priv_whitelist = autowhite_check(&priv->priv_addr,
+	    priv->priv_from, *envrcpt)) != EXF_NONE) {
+		priv->priv_elapsed = 0;
+		return SMFIS_CONTINUE;
+	}
+
 	if (pending_check(&priv->priv_addr, priv->priv_from, 
 	    *envrcpt, &remaining, &priv->priv_elapsed) != 0) 
 		return SMFIS_CONTINUE;
@@ -209,6 +216,10 @@ mlfi_eom(ctx)
 
 		case EXF_RCPT:
 			whystr = "Recipient e-mail whitelisted";
+			break;
+
+		case EXF_AUTO:
+			whystr = "IP, sender and recipient auto-whitelisted";
 			break;
 
 		default:
@@ -387,6 +398,11 @@ main(argc, argv)
 	}
 
 	if (peer_init() != 0) {
+		fprintf(stderr, "%s: list init failed\n", argv[0]);
+		exit(EX_SOFTWARE);
+	}
+
+	if (autowhite_init() != 0) {
 		fprintf(stderr, "%s: list init failed\n", argv[0]);
 		exit(EX_SOFTWARE);
 	}

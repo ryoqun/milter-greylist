@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.21 2004/03/16 21:58:34 manu Exp $ */
+/* $Id: sync.c,v 1.22 2004/03/16 23:16:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -52,6 +52,7 @@ __RCSID("$Id");
 
 #include "pending.h"
 #include "sync.h"
+#include "autowhite.h"
 #include "milter-greylist.h"
 
 int sync_master_runs = 0;
@@ -683,8 +684,10 @@ sync_server(arg)
 			pending_get(&addr, from, rcpt, date);
 			PENDING_UNLOCK;
 		}
-		if (action == PS_DELETE)
+		if (action == PS_DELETE) {
 			pending_del(&addr, from, rcpt, date);
+			autowhite_add(&addr, from, rcpt);
+		}
 
 		/* Flush modifications to disk */
 		pending_flush();
