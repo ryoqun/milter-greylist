@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.28 2004/10/11 20:57:42 manu Exp $ */
+/* $Id: acl.h,v 1.1 2004/12/08 22:23:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,8 +29,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _EXCEPT_H_
-#define _EXCEPT_H_
+#ifndef _ACL_H_
+#define _ACL_H_
 
 #include "config.h"
 #ifdef HAVE_OLD_QUEUE_H
@@ -51,76 +51,72 @@
 #include "pending.h"
 #include "milter-greylist.h"
 
-#define EXCEPT_WRLOCK WRLOCK(except_lock) 
-#define EXCEPT_RDLOCK RDLOCK(except_lock) 
-#define EXCEPT_UNLOCK UNLOCK(except_lock)
+#define ACL_WRLOCK WRLOCK(acl_lock) 
+#define ACL_RDLOCK RDLOCK(acl_lock) 
+#define ACL_UNLOCK UNLOCK(acl_lock)
 
-LIST_HEAD(exceptlist, glexcept);
+TAILQ_HEAD(acllist, acl_entry);
 
 typedef enum { 
-	E_NETBLOCK, 
-	E_DOMAIN,
-	E_DOMAIN_RE,
-	E_FROM, 
-	E_RCPT, 
-	E_FROM_RE, 
-	E_RCPT_RE 
-} except_type_t;
+	A_GREYLIST,
+	A_WHITELIST
+} acl_type_t;
 
-#define e_addr e_data.d_netblock.nb_addr
-#define e_addrlen e_data.d_netblock.nb_addrlen
-#define e_mask e_data.d_netblock.nb_mask
-#define e_from e_data.d_from
-#define e_rcpt e_data.d_rcpt
-#define e_from_re e_data.d_from_re
-#define e_rcpt_re e_data.d_rcpt_re
-#define e_domain e_data.d_domain
-#define e_domain_re e_data.d_domain_re
+#define a_addr a_netblock.nb_addr
+#define a_addrlen a_netblock.nb_addrlen
+#define a_mask a_netblock.nb_mask
 
-struct glexcept {
-	except_type_t e_type;
-	union {
-		struct {
-			struct sockaddr *nb_addr;
-			socklen_t nb_addrlen;
-			ipaddr *nb_mask;
-		} d_netblock;
-		char *d_from;
-		char *d_rcpt;
-		char *d_domain;
-		regex_t d_from_re;
-		regex_t d_rcpt_re;
-		regex_t d_domain_re;
-	} e_data;
-	LIST_ENTRY(glexcept) e_list;
+struct acl_entry {
+	acl_type_t a_type;
+	struct {
+		struct sockaddr *nb_addr;
+		socklen_t nb_addrlen;
+		ipaddr *nb_mask;
+	} a_netblock;
+	char *a_from;
+	char *a_rcpt;
+	char *a_domain;
+	regex_t *a_from_re;
+	char *a_from_re_copy;
+	regex_t *a_rcpt_re;
+	char *a_rcpt_re_copy;
+	regex_t *a_domain_re;
+	char *a_domain_re_copy;
+	TAILQ_ENTRY(acl_entry) a_list;
 };
 
 extern int testmode;
-extern pthread_rwlock_t except_lock;
+extern pthread_rwlock_t acl_lock;
 
-void except_init(void);
-void except_clear(void);
-void except_add_netblock(struct sockaddr *, socklen_t, int);
-void except_add_domain(char *);
-void except_add_domain_regex(char *);
-void except_add_from(char *);
-void except_add_rcpt(char *);
-void except_add_from_regex(char *);
-void except_add_rcpt_regex(char *);
-int except_rcpt_filter(char *, char *);
-int except_sender_filter(struct sockaddr *, socklen_t, char *, char *, char *);
+void acl_init(void);
+void acl_clear(void);
+void acl_add_netblock(struct sockaddr *, socklen_t, int);
+void acl_add_domain(char *);
+void acl_add_domain_regex(char *);
+void acl_add_from(char *);
+void acl_add_rcpt(char *);
+void acl_add_from_regex(char *);
+void acl_add_rcpt_regex(char *);
+struct acl_entry *acl_register_entry_first (acl_type_t);
+struct acl_entry *acl_register_entry_last (acl_type_t);
+int acl_filter(struct sockaddr *, socklen_t, char *, char *, char *, char *);
+char *acl_entry(struct acl_entry  *);
+void acl_dump(void);
 
-/* except_filter() return codes */
-#define EXF_UNSET	0
-#define EXF_ADDR	1
-#define EXF_FROM	2
-#define EXF_RCPT	3
-#define EXF_AUTO	4
-#define EXF_NONE	5
-#define EXF_AUTH	6
-#define EXF_SPF		7
-#define EXF_NONIPV4	8
-#define EXF_STARTTLS	9
-#define EXF_DOMAIN	10
+/* acl_filter() return codes */
+#define	EXF_UNSET	0
+#define	EXF_GREYLIST	(1 << 0)
+#define EXF_WHITELIST	(1 << 1)
 
-#endif /* _EXCEPT_H_ */
+#define	EXF_DEFAULT	(1 << 2)
+#define	EXF_ADDR	(1 << 3)
+#define	EXF_DOMAIN	(1 << 4)
+#define	EXF_FROM	(1 << 5)
+#define	EXF_RCPT	(1 << 6)
+#define	EXF_AUTO	(1 << 7)
+#define	EXF_NONE	(1 << 8)
+#define	EXF_AUTH	(1 << 9)
+#define	EXF_SPF		(1 << 10)
+#define	EXF_NONIPV4	(1 << 11)
+#define	EXF_STARTTLS	(1 << 12)
+#endif /* _ACL_H_ */
