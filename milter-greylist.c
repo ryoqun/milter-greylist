@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.50 2004/03/23 14:01:03 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.51 2004/03/25 23:35:02 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.50 2004/03/23 14:01:03 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.51 2004/03/25 23:35:02 manu Exp $");
 #endif
 #endif
 
@@ -554,6 +554,12 @@ main(argc, argv)
 		default:
 			exit(EX_OK);	
 			break;
+		}
+
+		if (setsid() == -1) {
+			fprintf(stderr, "%s: setsid failed: %s\n",
+			    argv[0], strerror(errno));
+			exit(EX_OSERR);
 		}
 	}
 
