@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.78 2004/03/30 08:43:53 manu Exp $
+# $Id: configure.ac,v 1.79 2004/03/30 11:39:28 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -37,6 +37,11 @@ AC_ARG_WITH(libpthread,
 	[  --with-libpthread=DIR  Find libpthread in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
+AC_ARG_WITH(libspf_alt, 
+	[  --with-libspf_alt=DIR  Find libspf_alt in DIR],
+	[CFLAGS=$CFLAGS" -I$withval/include" 
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+	    AC_DEFINE([HAVE_SPF_ALT], [], [we use libspf_alt])])
 
 # Checks for header files.
 AC_HEADER_STDC

@@ -1,8 +1,5 @@
-/* $Id: config.h.in,v 1.15 2004/03/22 21:56:35 manu Exp $ */
+/* $Id: config.h.in,v 1.16 2004/03/30 11:39:27 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
-
-#ifndef _CONFIG_H_
-#define _CONFIG_H_
 
 /* Build environnement */
 #undef BUILD_ENV
@@ -69,6 +66,9 @@
 
 /* Define to 1 if you have the `socket' function. */
 #undef HAVE_SOCKET
+
+/* we use libspf_alt */
+#undef HAVE_SPF_ALT
 
 /* Define to 1 if `stat' has the bug that it succeeds when given the
    zero-length file name argument. */
@@ -188,5 +188,3 @@
 
 /* Define as `fork' if `vfork' does not work. */
 #undef vfork
-
-#endif /* _CONFIG_H_ */
