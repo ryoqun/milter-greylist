@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: rc-redhat.sh.in,v 1.4 2005/02/03 21:23:50 manu Exp $
+# $Id: rc-redhat.sh.in,v 1.5 2005/03/13 16:43:52 manu Exp $
 #  init file for milter-greylist
 #
 # chkconfig: - 79 21
@@ -7,12 +7,12 @@
 #
 # processname: @BINDIR@/milter-greylist
 # config: /etc/mail/greylist.conf
-# pidfile: /var/run/milter-greylist.pid
+# pidfile: /var/milter-greylist/milter-greylist.pid
 
 # source function library
 . /etc/init.d/functions
 
-pidfile="/var/run/milter-greylist.pid"
+pidfile="/var/milter-greylist/milter-greylist.pid"
 socket="/var/milter-greylist/milter-greylist.sock"
 user="@USER@"
 OPTIONS="-P $pidfile -p $socket"
