@@ -1,4 +1,5 @@
 1.1.10:
+	Support libspf
 	Initialisation scripts
 	Write the pidfile before changing UID (/var/run is not world-writable)
 	Add a config option to suprress the X-Greylist header

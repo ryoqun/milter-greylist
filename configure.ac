@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.89 2004/04/02 15:06:53 manu Exp $
+# $Id: configure.ac,v 1.90 2004/04/04 14:14:00 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -81,6 +81,24 @@ AC_ARG_WITH(libspf_alt,
 LDFLAGS=$SAVEDLDFLAGS
 CFLAGS=$SAVEDCFLAGS
 
+# Try to configure for libspf
+SAVEDLDFLAGS=$LDFLAGS
+SAVEDCFLAGS=$CFLAGS
+AC_ARG_WITH(libspf, 
+	[  --with-libspf=DIR  Find libspf in DIR],
+	[LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+	    CFLAGS=$CFLAGS" -I$withval/include"
+	    AC_CHECK_LIB(spf, SPF_init, [
+		SAVEDLDFLAGS=$LDFLAGS
+		SAVEDCFLAGS=$CFLAGS
+		LIBS=$LIBS"-lspf"
+		AC_DEFINE([HAVE_SPF], [], [we use libspf])
+		], [echo "libspf not found, check config.log for details"
+		    echo "Remove --with-libspf to build without SPF support"
+		    exit 1;])
+])
+LDFLAGS=$SAVEDLDFLAGS
+CFLAGS=$SAVEDCFLAGS
 
 # Check for socket functions linking. On Solaris, -lsocket -lnsl is required
 AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], 

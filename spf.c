@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.7 2004/04/01 14:03:52 manu Exp $ */
+/* $Id: spf.c,v 1.8 2004/04/04 14:14:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.7 2004/04/01 14:03:52 manu Exp $");
+__RCSID("$Id: spf.c,v 1.8 2004/04/04 14:14:00 manu Exp $");
 #endif
 #endif
 
@@ -53,12 +53,48 @@ __RCSID("$Id: spf.c,v 1.7 2004/04/01 14:03:52 manu Exp $");
 
 
 #ifdef HAVE_SPF
+#include <spf.h>
 int
 spf_check(in, from)
 	struct in_addr *in;
 	char *from;
 {
-	return EXF_NONE;	/* Unimplemented */
+	peer_info_t *p = NULL;
+	char addr[IPADDRLEN + 1];
+	int result = EXF_NONE;
+	struct timeval tv1, tv2, tv3;
+
+	if (conf.c_debug)
+		gettimeofday(&tv1, NULL);
+
+	inet_ntop(AF_INET, in, addr, IPADDRLEN);
+
+	if ((p = SPF_init("milter-greylist", addr, 
+	    NULL, NULL, NULL, FALSE, FALSE)) == NULL) {
+		syslog(LOG_ERR, "SPF_Init failed");
+		goto out1;
+	}
+	/* SPF_smtp_helo(p, helo); */ /* For when from is <> */
+	SPF_smtp_from(p, from);
+	p->RES = SPF_policy_main(p);
+
+	if (conf.c_debug)
+		syslog(LOG_DEBUG, "SPF return code %d", p->RES);
+
+	if (p->RES == SPF_PASS)
+		result = EXF_SPF;
+
+	SPF_close(p);
+
+out1:
+	if (conf.c_debug) {
+		gettimeofday(&tv2, NULL);
+		timersub(&tv2, &tv1, &tv3);
+		syslog(LOG_DEBUG, "SPF lookup performed in %ld.%06lds",  
+		    tv3.tv_sec, tv3.tv_usec);
+	}
+	
+	return result;
 }
 #endif /* HAVE_SPF */
 
