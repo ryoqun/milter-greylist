@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.13 2004/05/23 13:03:41 manu Exp $ */
+/* $Id: autowhite.h,v 1.14 2004/05/24 21:22:02 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,17 +34,6 @@
 
 #include "milter-greylist.h"
 
-#include <time.h>
-#include <sys/time.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-
-#ifdef HAVE_DB_185_H
-#include <db_185.h>
-#else 
-#include <db.h>
-#endif
-
 #ifndef AUTOWHITE_VALIDITY
 #define AUTOWHITE_VALIDITY (24 * 3600) /* 1 day */
 #endif
@@ -53,32 +42,23 @@
 #define AUTOWHITE_RDLOCK RDLOCK(autowhite_lock) 
 #define AUTOWHITE_UNLOCK UNLOCK(autowhite_lock)
 
-#ifndef KEYLEN
-#define KEYLEN 1024
-#endif
+TAILQ_HEAD(autowhitelist, autowhite);
 
 struct autowhite {
 	struct in_addr a_in;
 	char a_from[ADDRLEN + 1];
 	char a_rcpt[ADDRLEN + 1];
-	time_t a_expire;
+	struct timeval a_tv;
+	TAILQ_ENTRY(autowhite) a_list;
 };
 
-typedef enum {AS_COLD, AS_WARM} autowhite_startup_t;
-
-extern DB *aw_db;
 extern pthread_rwlock_t autowhite_lock;
 
-int autowhite_init(void);
-void autowhite_get(struct in_addr *, char *, 
-    char *, time_t *, struct autowhite *);
-void autowhite_put(char *);
+void autowhite_init(void);
+struct autowhite *autowhite_get(struct in_addr *, char *, char *, time_t *);
+void autowhite_put(struct autowhite *);
 void autowhite_add(struct in_addr *, char *, char *, time_t *, char *);
 int autowhite_check(struct in_addr *, char *, char *, char *);
-char *autowhite_makekey(char *, size_t, struct in_addr *, char *, char *);
-int autowhite_update(int, FILE *);
-int autowhite_db_options(autowhite_startup_t);
-void autowhite_destroy(void);
-void autowhite_shutdown(void);
+int autowhite_textdump(FILE *);
 
 #endif /* _AUTOWHITE_H_ */

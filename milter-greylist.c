@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.84 2004/05/23 13:03:41 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.85 2004/05/24 21:22:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.84 2004/05/23 13:03:41 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.85 2004/05/24 21:22:03 manu Exp $");
 #endif
 #endif
 
@@ -44,7 +44,6 @@ __RCSID("$Id: milter-greylist.c,v 1.84 2004/05/23 13:03:41 manu Exp $");
 #include <strings.h>
 #include <syslog.h>
 #include <ctype.h>
-#include <signal.h>
 #include <time.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -157,7 +156,7 @@ mlfi_envfrom(ctx, envfrom)
 
 	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
 		syslog(LOG_DEBUG, "smfi_getsymval failed for {i}");
-		priv->priv_queueid = "(unknown id)";
+		priv->priv_queueid = "(unkown id)";
 	}
 
 	/*
@@ -659,9 +658,20 @@ main(argc, argv)
 		exit(EX_UNAVAILABLE);
 	}
 
+	/*
+	 * Various init
+	 */
+	except_init();
+	pending_init();
+	peer_init();
+	autowhite_init();
+	dump_init();
 
 	/*
 	 * Load config file
+	 * We can do this without locking exceptlist, as
+	 * normal operation has not started: no other thread
+	 * can access the list yet.
 	 */
 	conf_load();
 
@@ -670,34 +680,19 @@ main(argc, argv)
 	else
 		openlog("milter-greylist", 0, LOG_MAIL);
 
-	/*
-	 * Various init
-	 */
-	except_init();
-	peer_init();
-	dump_init();
-
-	/*
-	 * If one of the database was not correctly shut down,
-	 * destroy the databases and reload from the text dump.
-	 */
-	if ((pending_init() != 0) || (autowhite_init() != 0)) {
-		syslog(LOG_INFO, "Database not propely shut down, "
-		    "reloading from text dump");
-		pending_destroy();
-		autowhite_destroy();
-		dump_reload();
-	}
-
-	/*
-	 * Handle the socket
-	 */
+	
 	if (conf.c_socket == NULL) {
 		fprintf(stderr, "%s: No socket provided, exitting\n", argv[0]);
 		usage(argv[0]);
 	}
 	cleanup_sock(conf.c_socket);
 	(void)smfi_setconn(conf.c_socket);
+
+	/*
+	 * Reload a saved greylist
+	 * No lock needed here either.
+	 */
+	dump_reload();
 
 	/*
 	 * Turn into a daemon

@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.38 2004/05/15 08:41:54 manu Exp $ */
+/* $Id: sync.c,v 1.39 2004/05/24 21:22:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.38 2004/05/15 08:41:54 manu Exp $");
+__RCSID("$Id: sync.c,v 1.39 2004/05/24 21:22:03 manu Exp $");
 #endif
 #endif
 
@@ -183,7 +183,6 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 	char *replystr;
 	int replycode;
 	char line[LINELEN + 1];
-	char addr[IPADDRLEN + 1];
 
 	if ((peer->p_stream == NULL) && (peer_connect(peer) != 0))
 		return -1;
@@ -193,10 +192,9 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 	else
 		fprintf(peer->p_stream, "del ");
 
-	inet_ntop(AF_INET, &pending->p_addr, addr, IPADDRLEN);
 	fprintf(peer->p_stream, "addr %s from %s rcpt %s date %ld\r\n", 
-	    addr, pending->p_from, pending->p_rcpt, 
-	    (unsigned long)pending->p_accepted);
+	    pending->p_addr, pending->p_from, 
+	    pending->p_rcpt, (long)pending->p_tv.tv_sec);
 	fflush(peer->p_stream);
 
 	/* 
@@ -696,7 +694,9 @@ sync_server(arg)
 		fflush(stream);
 
 		if (action == PS_CREATE) {
-			pending_get(&addr, from, rcpt, date, NULL);
+			PENDING_WRLOCK;
+			pending_get(&addr, from, rcpt, date);
+			PENDING_UNLOCK;
 		}
 		if (action == PS_DELETE) {
 			pending_del(&addr, from, rcpt, date);

@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.27 2004/05/15 08:41:54 manu Exp $
+# $Id: Makefile.in,v 1.28 2004/05/24 21:22:02 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -93,24 +93,6 @@ install:	milter-greylist
 		echo "	 Please rename /etc/mail/greylist.except, the   "; \
 		echo "	 default name is now in /etc/mail/greylist.conf "; \
 		echo "	================================================"; \
-	) || ${TRUE}
-	@${TEST} -f /var/milter-greylist/greylist.db && (	 	   \
-		echo "	================================================"; \
-		echo "	 WARNING: The greylist dump file has changed    "; \
-		echo "   I will rename it for you from                  "; \
-		echo "        /var/milter-greylist/greylist.db          "; \
-		echo "   to its new name:                               "; \
-		echo "        /var/milter-greylist/dump2.txt            "; \
-		echo "                                                  "; \
-		echo "   Note that this file is now a backup storage.   "; \
-		echo "   The primary databse is now a Berkeley DB split "; \
-		echo "   in two files:                                  "; \
-		echo "        /var/milter-greylist/greylist2.db         "; \
-		echo "        /var/milter-greylist/autowhite2.db        "; \
-		echo "   Theses two files will be created automatically "; \
-		echo "	================================================"; \
-		${MV} /var/milter-greylist/greylist.db 			   \
-		    /var/milter-greylist/dump2.txt
 	) || ${TRUE}
 
 depend:

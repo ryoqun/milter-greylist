@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.26 2004/05/23 19:40:45 manu Exp $ */
+/* $Id: autowhite.c,v 1.27 2004/05/24 21:22:02 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,41 +29,33 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.h"
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.26 2004/05/23 19:40:45 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.27 2004/05/24 21:22:02 manu Exp $");
 #endif
 #endif
 
+#include "config.h"
+#ifdef HAVE_OLD_QUEUE_H
+#include "queue.h"
+#else
+#include <sys/queue.h>
+#endif
+
 #include <stdlib.h>
-#include <fcntl.h>
 #include <syslog.h>
 #include <errno.h>
 #include <sysexits.h>
-#include <ctype.h>
-#include <signal.h>
 #include <string.h>
 #include <time.h>
 #include <strings.h>
-#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
 
-#ifdef HAVE_DB_185_H
-#include <db_185.h>
-#else
-#include <db.h>
-#endif
-
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
-#ifndef O_EXLOCK
-#define O_EXLOCK 0
-#endif
 
 #include "conf.h"
 #include "except.h"
@@ -71,41 +63,16 @@ __RCSID("$Id: autowhite.c,v 1.26 2004/05/23 19:40:45 manu Exp $");
 #include "dump.h"
 #include "autowhite.h"
 
-DB *aw_db = NULL;
+struct autowhitelist autowhite_head;
 pthread_rwlock_t autowhite_lock;
 
-int
+void
 autowhite_init(void) {
 
+	TAILQ_INIT(&autowhite_head);
 	pthread_rwlock_init(&autowhite_lock, NULL);
 
-	if ((aw_db = dbopen(conf.c_autowhitedb, 
-	    O_RDWR|O_EXLOCK|O_CREAT, 0644, DB_BTREE, NULL)) == NULL) {
-		syslog(LOG_ERR, "dbopen \"%s\" failed: %s",
-		    conf.c_autowhitedb, strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	/*
-	 * Create or update the option record 
-	 * Check if we need to reload from the text dump
-	 */
-	return autowhite_db_options(AS_COLD);
-}
-
-void  
-autowhite_destroy(void) {
-        aw_db->close(aw_db);
- 
-        if (unlink(conf.c_autowhitedb) != 0) {
-                syslog(LOG_ERR, "Cannot delete \"%s\": %s",
-                    conf.c_autowhitedb, strerror(errno));
-                exit(EX_OSERR);
-        }
- 
-        autowhite_init();
- 
-        return;
+	return;
 }
 
 void
@@ -116,21 +83,20 @@ autowhite_add(in, from, rcpt, date, queueid)
 	time_t *date;
 	char *queueid;
 {
-	struct autowhite *aw;
-	struct autowhite awrec;
-	time_t now;
+	struct autowhite *aw = NULL;
+	struct autowhite *prev_aw = NULL;
+	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
 	time_t autowhite_validity;
 	int h, mn, s;
-	DBT key;
-	DBT rec;
-	char keystr[KEYLEN + 1];
-	int found;
+	int dirty = 0;
 
 	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
 		return;
 
-	now = time(NULL);
+	gettimeofday(&now, NULL);
+	delay.tv_sec = autowhite_validity;
+	delay.tv_usec = 0;
 
 	h = autowhite_validity / 3600;
 	mn = ((autowhite_validity % 3600) / 60);
@@ -138,47 +104,68 @@ autowhite_add(in, from, rcpt, date, queueid)
 
 	inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
-	key.data = autowhite_makekey(keystr, KEYLEN, in, from, rcpt);
-	key.size = strlen(keystr) + 1;
+	AUTOWHITE_WRLOCK;
+	if (!TAILQ_EMPTY(&autowhite_head)) {
+		TAILQ_FOREACH(aw, &autowhite_head, a_list) {
 
-	AUTOWHITE_RDLOCK;
-	found = aw_db->get(aw_db, &key, &rec, 0);
-	AUTOWHITE_UNLOCK;
+			/*
+			 * Expiration
+			 */
+			if (aw->a_tv.tv_sec < now.tv_sec) {
+				autowhite_put(aw);
+				aw = NULL;
 
-	switch(found) {
-	case 0: /* Tuple found */
-		aw = (struct autowhite *)rec.data;
+				dirty++;
 
-		/*
-		 * Renew the autowhitelisting expiration delay
-		 */
-		aw->a_expire = now + autowhite_validity;
+				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+				    "autowhitelisted entry expired",
+				    addr, from, rcpt);
 
-		AUTOWHITE_WRLOCK;
-		if ((aw_db->put(aw_db, &key, &rec, 0)) != 0)
-			syslog(LOG_ERR, "db->put failed: %s", strerror(errno));
-		dump_dirty++;
-		AUTOWHITE_UNLOCK;
+				if (TAILQ_EMPTY(&autowhite_head))
+					break;
+				if ((aw = prev_aw) == NULL)
+					aw = TAILQ_FIRST(&autowhite_head);
+				continue;
+			}
+			prev_aw = aw;
 
-		syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
-		    "autowhitelisted for more %02d:%02d:%02d", 
-		    queueid, addr, from, rcpt, h, mn, s);
+			/*
+			 * Look for an already existing entry
+			 */
+			if ((in->s_addr == aw->a_in.s_addr) &&
+			    ((conf.c_lazyaw == 1) ||
+			    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
+			    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
+				timeradd(&now, &delay, &aw->a_tv);
 
-		break;
+				dirty++;
 
-	case 1: /* Not found, create it */
-		autowhite_get(in, from, rcpt, date, &awrec);
-		break;
-
-	default:
-		syslog(LOG_ERR, "db->get failed: %s", strerror(errno));
-		break;
+				syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
+				    "autowhitelisted for more %02d:%02d:%02d", 
+				    queueid, addr, from, rcpt, h, mn, s);
+				break;
+			}
+		}		
 	}
 
-	/* Flush changes to disk */
-	AUTOWHITE_RDLOCK;
-	aw_db->sync(aw_db, 0);
+	/* 
+	 * Entry not found, create it 
+	 */
+	if (aw == NULL) {
+		aw = autowhite_get(in, from, rcpt, date);
+
+		dirty++;
+
+		syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
+		    "autowhitelisted for %02d:%02d:%02d", 
+		    queueid, addr, from, rcpt, h, mn, s);
+	}
 	AUTOWHITE_UNLOCK;
+
+	if (dirty != 0) {
+		dump_dirty += dirty;
+		dump_flush();
+	}
 
 	return;
 }
@@ -190,21 +177,20 @@ autowhite_check(in, from, rcpt, queueid)
 	char *rcpt;
 	char *queueid;
 {
-	struct autowhite *aw;
-	time_t now;
+	struct autowhite *aw = NULL;
+	struct autowhite *prev_aw = NULL;
+	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
-	time_t autowhite_validity = conf.c_autowhite_validity;
+	time_t autowhite_validity;
 	int h, mn, s;
-	DBT key;
-	DBT rec;
-	char keystr[KEYLEN + 1];
-	int found;
-	int retval;
+	int dirty = 0;
 
-	if (autowhite_validity == 0)
+	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
 		return EXF_NONE;
 
-	now = time(NULL);
+	gettimeofday(&now, NULL);
+	delay.tv_sec = autowhite_validity;
+	delay.tv_usec = 0;
 
 	h = autowhite_validity / 3600;
 	mn = ((autowhite_validity % 3600) / 60);
@@ -212,488 +198,136 @@ autowhite_check(in, from, rcpt, queueid)
 
 	inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
-	key.data = autowhite_makekey(keystr, KEYLEN, in, from, rcpt);
-	key.size = strlen(keystr) + 1;
+	AUTOWHITE_WRLOCK;
+	if (!TAILQ_EMPTY(&autowhite_head)) {
+		TAILQ_FOREACH(aw, &autowhite_head, a_list) {
+			/* 
+			 * Do expiration first as we don't want
+			 * an outdated record to match
+			 */
+			if (aw->a_tv.tv_sec < now.tv_sec) {
+				autowhite_put(aw);
+				aw = NULL;
 
-	AUTOWHITE_RDLOCK;
-	found = aw_db->get(aw_db, &key, &rec, 0);
+				dirty++;
+
+				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+				    "autowhitelisted entry expired",
+				    addr, from, rcpt);
+
+				if (TAILQ_EMPTY(&autowhite_head))
+					break;
+				if ((aw = prev_aw) == NULL)
+					aw = TAILQ_FIRST(&autowhite_head);
+				continue;
+			}
+			prev_aw = aw;
+
+			/*
+			 * Look for our record
+			 */
+			if ((IP_MATCH(in, &aw->a_in)) &&
+			    (strncmp(from, aw->a_from, ADDRLEN) == 0) &&
+			    (strncmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)) {
+				timeradd(&now, &delay, &aw->a_tv);
+
+				dirty++;
+
+				syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
+				    "autowhitelisted for more %02d:%02d:%02d", 
+				    queueid, addr, from, rcpt, h, mn, s);
+				break;
+			}
+		}
+	}
 	AUTOWHITE_UNLOCK;
 
-	switch(found) {
-	case 0: /* Tuple found */
-		aw = (struct autowhite *)rec.data;
-
-		/* 
-		 * Is it expired?
-		 */
-		if (aw->a_expire < now) {
-			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
-			    "autowhitelisted entry expired",
-			    addr, from, rcpt);
-			autowhite_put(keystr);
-			retval = EXF_NONE;
-			break;
-		}
-
-		/*
-		 * Renew the autowhitelisting expiration delay
-		 */
-		aw->a_expire = now + autowhite_validity;
-
-		AUTOWHITE_WRLOCK;
-		if ((aw_db->put(aw_db, &key, &rec, 0)) != 0)
-			syslog(LOG_ERR, "db->put failed: %s", strerror(errno));
-		dump_dirty++;
-		aw_db->sync(aw_db, 0); /* Flush changes to disk */
-		AUTOWHITE_UNLOCK;
-
-		syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
-		    "autowhitelisted for more %02d:%02d:%02d", 
-		    queueid, addr, from, rcpt, h, mn, s);
-		retval = EXF_AUTO;	
-		break;
-
-	case 1: /* Not found */
-		retval = EXF_NONE;
-		break;
-
-	default:
-		retval = EXF_NONE;
-		syslog(LOG_ERR, "db->get failed: %s", strerror(errno));
-		break;
+	if (dirty != 0) {
+		dump_dirty += dirty;
+		dump_flush();
 	}
 
-	return retval;
+	if (aw != NULL) 
+		return EXF_AUTO;	
+
+	return EXF_NONE;
 }
 
-void
-autowhite_get(in, from, rcpt, date, awp)
+int
+autowhite_textdump(stream)
+	FILE *stream;
+{
+	struct autowhite *aw;
+	int done = 0;
+	char textdate[DATELEN + 1];
+	char textaddr[IPADDRLEN + 1];
+	struct tm tm;
+
+	fprintf(stream, "\n\n#\n# Auto-whitelisted tuples\n#\n");
+	fprintf(stream, "# Sender IP    %32s    %32s    Expire\n",
+	    "Sender e-mail", "Recipient e-mail");
+
+	AUTOWHITE_RDLOCK;
+	TAILQ_FOREACH(aw, &autowhite_head, a_list) {
+		localtime_r((time_t *)&aw->a_tv.tv_sec, &tm);
+		strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
+
+		inet_ntop(AF_INET, &aw->a_in, textaddr, IPADDRLEN);
+
+		fprintf(stream, 
+		    "%s     %32s    %32s    %ld AUTO # %s\n",
+		    textaddr, aw->a_from, aw->a_rcpt, 
+		    (long)aw->a_tv.tv_sec, textdate);
+	}
+	AUTOWHITE_UNLOCK;
+
+	return done;
+}
+
+struct autowhite *
+autowhite_get(in, from, rcpt, date) /* autowhite list must be locked */
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
 	time_t *date;
-	struct autowhite *awp;
 {
-	struct autowhite aw;
-	time_t now;
+	struct autowhite *aw;
+	struct timeval now, delay;
 	time_t autowhite_validity = conf.c_autowhite_validity;
-	DBT key;
-	DBT rec;
-	char keystr[KEYLEN + 1];
 
-	if (awp == NULL)
-		awp = &aw;
+	gettimeofday(&now, NULL);
+	delay.tv_sec = autowhite_validity;
+	delay.tv_usec = 0;
 
-	bzero(awp, sizeof(*awp));
-	now = time(NULL);
+	if ((aw = malloc(sizeof(*aw))) == NULL) {
+		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
 
-	awp->a_in.s_addr = in->s_addr;
-	strncpy(awp->a_from, from, ADDRLEN);
-	awp->a_from[ADDRLEN] = '\0';
-	strncpy(awp->a_rcpt, rcpt, ADDRLEN);
-	awp->a_rcpt[ADDRLEN] = '\0';
+	bzero((void *)aw, sizeof(*aw));
+
+	aw->a_in.s_addr = in->s_addr;
+	strncpy(aw->a_from, from, ADDRLEN);
+	aw->a_from[ADDRLEN] = '\0';
+	strncpy(aw->a_rcpt, rcpt, ADDRLEN);
+	aw->a_rcpt[ADDRLEN] = '\0';
 
 	if (date == NULL)
-		awp->a_expire = now + autowhite_validity;
+		timeradd(&now, &delay, &aw->a_tv);
 	else
-		awp->a_expire = *date;
+		aw->a_tv.tv_sec = *date;
 
-	key.data = autowhite_makekey(keystr, KEYLEN, in, from, rcpt);
-	key.size = strlen(key.data) + 1;
-	rec.data = awp;
-	rec.size = sizeof(*awp);
+	TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
 
-	AUTOWHITE_WRLOCK;
-	if (aw_db->put(aw_db, &key, &rec, 0) != 0)
-		syslog(LOG_ERR, "db->put failed: %s", strerror(errno));
-	dump_dirty++;
-	AUTOWHITE_UNLOCK;
-
-	if (conf.c_debug) {
-		char addr[IPADDRLEN + 1];
-
-		 inet_ntop(AF_INET, in, addr, IPADDRLEN);
-		 syslog(LOG_DEBUG, "%s from %s to %s autowhitelisted for %lds",
-		     addr, awp->a_from, awp->a_rcpt, awp->a_expire - now);
-	}
-
-	return;
+	return aw;
 }
 
 void
-autowhite_put(keystr)
-	char *keystr;
-{
-	DBT key;
-
-	if (conf.c_debug)
-		syslog(LOG_DEBUG, "removing key \"%s\" from autowhite", keystr);
-
-	key.data = keystr;
-	key.size = strlen(keystr) + 1;
-
-	AUTOWHITE_WRLOCK;
-	if (aw_db->del(aw_db, &key, 0) != 0)
-		syslog(LOG_ERR, "db->del failed: %s", strerror(errno));
-	dump_dirty++;
-	aw_db->sync(aw_db, 0); /* Flush changes to disk */
-	AUTOWHITE_UNLOCK;
-
-	return;
-}
-
-char *
-autowhite_makekey(data, len, in, from, rcpt)
-	char *data;
-	size_t len;
-	struct in_addr *in;
-	char *from;
-	char *rcpt;
-{
-	char addr[IPADDRLEN + 1];
-	struct in_addr masked_addr;
-	char fromcase[ADDRLEN + 1];
-	char rcptcase[ADDRLEN + 1];
-	unsigned int i;
-
-	masked_addr.s_addr = in->s_addr & conf.c_match_mask.s_addr;
-	inet_ntop(AF_INET, &masked_addr, addr, IPADDRLEN);
-
-	if (conf.c_lazyaw) {
-		snprintf(data, len, "%s", addr);
-	} else {
-		for (i = 0; (i < ADDRLEN) && (from[i] != '\0'); i++)
-			fromcase[i] = tolower(from[i]);
-		fromcase[i] = '\0';
-
-		for (i = 0; (i < ADDRLEN) && (rcpt[i] != '\0'); i++)
-			rcptcase[i] = tolower(rcpt[i]);
-		rcptcase[i] = '\0';
-
-		snprintf(data, len, "A\t%s\t%s\t%s", addr, fromcase, rcptcase); 
-	}
-	data[len] = '\0';
-
-	printf("key = \"%s\"\n", data);
-	return data;
-}
-
-int
-autowhite_update(update, stream) /* aw_db must be write-locked */
-	int update;
-	FILE *stream;
-{
-	int finished = 0;
-	DBT key;
-	char keystr[KEYLEN + 1];
-	DBT rec;
+autowhite_put(aw)	/* autowhite list must be write-locked */
 	struct autowhite *aw;
-	int res;
-	int flag = R_FIRST;
-	struct timeval begin;
-	time_t now;
-	int count = 0;
-	int deleted = 0;
-	int dirty = dump_dirty;
-	char textdate[DATELEN + 1];
-	char addr[IPADDRLEN + 1];
-	struct tm tm;
-	DB *new_db = NULL;
-	char new_db_name[MAXPATHLEN + 1];
-
-	gettimeofday(&begin, NULL);
-	now = (time_t)begin.tv_sec;
-
-	if (update) {
-		syslog(LOG_INFO, "Rebuilding autowhite database keys");
-
-		snprintf(new_db_name, MAXPATHLEN, "%s.new", conf.c_autowhitedb);
-		if ((new_db = dbopen(new_db_name,
-		    O_TRUNC|O_RDWR|O_EXLOCK|O_CREAT,
-		    0644, DB_BTREE, NULL)) == NULL) {
-			syslog(LOG_ERR, "dbopen \"%s\" failed: %s",
-			    new_db_name, strerror(errno));
-			exit(EX_OSERR);
-		}
-	}
-
-	if (stream != NULL) {
-		fprintf(stream, "\n\n#\n# Auto-whitelisted tuples\n#\n");
-		fprintf(stream, "# Sender IP    %32s    %32s    Expire\n",
-		    "Sender e-mail", "Recipient e-mail");
-	}
-
-	while (!finished) {
-		res = aw_db->seq(aw_db, &key, &rec, flag);
-		flag = R_NEXT;
-
-		printf("key.size = %d  rec.size = %d\n", key.size, rec.size);
-		switch (res) {
-		case 0:
-			/* Skip the DB option record */
-			if (strcmp(key.data, DB_OPTIONS) == 0)
-				break;
-
-			count++;
-			aw = (struct autowhite *)rec.data;
-
-			/* 
-			 * Handle timeouts 
-			 */
-			if (aw->a_expire < now) {
-				deleted++;
-
-				if (conf.c_debug) {
-					char addr[IPADDRLEN + 1];
-
-					inet_ntop(AF_INET, &aw->a_in,
-					    addr, IPADDRLEN);
-					syslog(LOG_DEBUG,
-					    "awdel: %s from %s to %s timed out",
-					    addr, aw->a_from, aw->a_rcpt);
-				}
-
-				if (aw_db->del(aw_db, &key, 0) != 0)
-					syslog(LOG_ERR, "db->del failed: %s",
-					    strerror(errno));
-				dump_dirty++;
-
-				/* 
-				 * Break: we don't want to update this key
-				 * as it has just gone away
-				 */
-				break;
-			}
-
-			/*
-			 * Update the key by overwriting the current record. 
-			 */
-			if (update) {
-				key.data = autowhite_makekey(keystr, 
-				    KEYLEN, &aw->a_in, aw->a_from, aw->a_rcpt);
-				key.size = strlen(keystr) + 1;
-
-				if (new_db->put(new_db, &key, 
-				    &rec, R_CURSOR) != 0)
-					syslog(LOG_ERR, "db->put failed: %s",
-					    strerror(errno));
-			}
-
-			/*
-			 * Output the data to a text dumpfile
-			 */
-			if (stream == NULL)
-				break;
-
-			localtime_r(&aw->a_expire, &tm);
-			strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
-
-			inet_ntop(AF_INET, &aw->a_in, addr, IPADDRLEN);
-
-			fprintf(stream, 
-			    "%s     %32s    %32s    %ld AUTO # %s\n",
-			    addr, aw->a_from, aw->a_rcpt, 
-			    (unsigned long)aw->a_expire, textdate);
-
-			break;
-		case 1:
-			finished = 1;
-			break;
-
-		case -1:
-			/* FALLTHROUGH */
-		default:
-			syslog(LOG_ERR, "db->seq failed (%d): %s",
-			    res, strerror(errno));
-			finished = 1;
-			break;
-		}
-	}
-
-	if (update) {
-		if (aw_db->close(aw_db) != 0)
-			syslog(LOG_ERR, "cannot close greylist db: %s",
-			    strerror(errno));
-
-		if (rename(new_db_name, conf.c_autowhitedb) != 0) {
-			syslog(LOG_ERR, "rename \"%s\" to  \"%s\" failed: %s",
-			    new_db_name, conf.c_autowhitedb, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		aw_db = new_db;
-	}
-
-	if (dump_dirty != dirty)
-		aw_db->sync(aw_db, 0);
-
-	if (conf.c_debug) {
-		struct timeval end;
-		struct timeval duration;
-
-		gettimeofday(&end, NULL);
-		timersub(&end, &begin, &duration);
-
-		syslog(LOG_DEBUG, 
-		    "autowhite_update done in %ld.%06lds, deleted %d over %d",
-		    duration.tv_sec, duration.tv_usec, deleted, count);
-	}
-
-	return count;
-}
-
-int
-autowhite_db_options(as) 
-	autowhite_startup_t as;
 {
-	DBT key;
-	DBT rec;
-	struct db_options *dbo;
-	struct db_options dborec;
-	int found;
-
-	key.data = DB_OPTIONS;
-	key.size = strlen(DB_OPTIONS) + 1;
-
-	AUTOWHITE_RDLOCK;
-	found = aw_db->get(aw_db, &key, &rec, 0);
-	AUTOWHITE_UNLOCK;
-
-	switch(found) {
-	case 0:	/* found */
-		dbo = rec.data;
-
-		/*
-		 * If this is a cold reload, check for improper shutdown
-		 */
-		if ((as == AS_COLD) && (dbo->dbo_busy != 0)) {
-			if (kill(dbo->dbo_busy, 0) == 0) {
-				syslog(LOG_ERR,
-				    "milter-greylist already running (pid %d)",
-				    dbo->dbo_busy);
-				exit(EX_USAGE);
-			}
-
-			/*
-			 * Bad shutdown: Cause a reload from test dump
-			 * No need to update the dbo_busy field as the
-			 * database will be destroyed and recreated.
-			 */
-			return -1;
-		}
-
-		/*
-		 * Update the dbo_busy record with our PID
-		 */
-		if (as == AS_COLD) {
-			if (atexit(*autowhite_shutdown) != 0) {
-				syslog(LOG_ERR, "atexit failed: %s",
-				    strerror(errno));
-				exit(EX_OSERR);
-			}
-
-			dbo->dbo_busy = getpid();
-
-			AUTOWHITE_WRLOCK;
-			if (aw_db->put(aw_db, &key, &rec, 0) != 0) {
-				syslog(LOG_ERR, "option record could "
-				    "not be saved: db->put failed: %s",
-				    strerror(errno));
-				exit(EX_OSERR);
-			}
-			AUTOWHITE_UNLOCK;
-		}
-
-		/*
-		 * If the database does not need a key fixup, get away now
-		 */
-		if ((dbo->dbo_match_mask.s_addr == conf.c_match_mask.s_addr) &&
-		    (dbo->dbo_lazyaw == conf.c_lazyaw))
-			break;
-
-		autowhite_update(1, NULL);
-		/* FALLTRHOUGH */
-
-	/*
-	 * If the options changed (the case above), or if
-	 * the option record was not found (brand new database)
-	 * then we put a new option record.
-	 */
-	case 1: /* not found */
-		dborec.dbo_match_mask = conf.c_match_mask;
-		dborec.dbo_lazyaw = conf.c_lazyaw;
-
-		rec.data = &dborec;
-		rec.size = sizeof(dborec);
-
-		AUTOWHITE_WRLOCK;
-		if (aw_db->put(aw_db, &key, &rec, 0) != 0)
-			syslog(LOG_ERR, "option record could not be saved: "
-			    "db->put failed: %s", strerror(errno));
-		dump_dirty++;
-		AUTOWHITE_UNLOCK;
-
-		break;
-
-	default: /* error */
-		syslog(LOG_ERR, "option record could not be found: "
-		    "db->get failed: %s", strerror(errno));
-		break;
-	}
-
-	AUTOWHITE_RDLOCK;
-	aw_db->sync(aw_db, 0);
-	AUTOWHITE_UNLOCK;
-
-	return 0;
-}
-
-void
-autowhite_shutdown(void) { /* Access with no lock: exitting is monothread */
-	DBT key;
-	DBT rec;
-	struct db_options *dbo;
-	int found;
-
-	syslog(LOG_INFO, "shuting down autowhite database");
-
-	key.data = DB_OPTIONS;
-	key.size = strlen(DB_OPTIONS) + 1;
-
-	found = aw_db->get(aw_db, &key, &rec, 0);
-
-	if (found != 0) {
-		syslog(LOG_ERR, "No %s record in autowhite database",
-		    DB_OPTIONS);
-
-		if (aw_db->close(aw_db) != 0)
-			syslog(LOG_ERR, "closing autowhite database failed: %s",
-			    strerror(errno));
-
-		return;
-	}
-
-	dbo = rec.data;
-	
-	if (aw_db->sync(aw_db, 0) != 0) {
-		syslog(LOG_ERR, "sync failed on autowhite database: %s",
-		    strerror(errno));
-		return;
-	}
-
-	dbo->dbo_busy = 0;
-
-	if (aw_db->put(aw_db, &key, &rec, 0) != 0) {
-		syslog(LOG_ERR, "put %s record failed for autowhite db: %s",
-		    DB_OPTIONS, strerror(errno));
-		return;
-	}
-
-	if (aw_db->close(aw_db) != 0) {
-		syslog(LOG_ERR, "close failed on autowhite database: %s",
-		    strerror(errno));
-		return;
-	}
+	TAILQ_REMOVE(&autowhite_head, aw, a_list);	
+	free(aw);
 
 	return;
 }
