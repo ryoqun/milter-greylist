@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.3 2004/02/22 09:15:54 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.4 2004/02/22 09:16:56 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -288,7 +288,8 @@ void
 usage(progname)
 	char *progname;
 {
-	fprintf(stderr, "usage: %s [-v] [-d dumpfile] [-f exceptionfile] "
-	    "[-w delay] [-u username] -p socket\n", progname);
+	fprintf(stderr, 
+	    "usage: %s [-v] [-d dumpfile] [-f exceptionfile]\n"
+	    "       [-w delay] [-u username] -p socket\n", progname);
 	exit(EX_USAGE);
 }
