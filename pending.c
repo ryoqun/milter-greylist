@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.6 2004/03/05 14:28:59 manu Exp $ */
+/* $Id: pending.c,v 1.7 2004/03/06 12:56:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -37,6 +37,7 @@
 #include <string.h>
 #include <strings.h>
 #include <pthread.h>
+#include <errno.h>
 #include <sysexits.h>
 #include <syslog.h>
 
@@ -54,8 +55,12 @@
 extern int debug;
 
 struct pendinglist pending_head;
-pthread_rwlock_t pending_lock;
+int pending_dirty;
+pthread_rwlock_t pending_lock; 	/* protects pending_head and pending_dirty */
+pthread_rwlock_t dump_lock;	/* protects against simulataneous dumps */
+
 int delay = DELAY;
+char *dumpfile = DUMPFILE;
 
 #define PENDING_WRLOCK if (pthread_rwlock_wrlock(&pending_lock) != 0) {	\
 		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed\n",	\
@@ -73,12 +78,28 @@ int delay = DELAY;
 		exit(EX_SOFTWARE);					\
 	}
 
+#define DUMP_WRLOCK if (pthread_rwlock_wrlock(&dump_lock) != 0) {	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed\n",	\
+		    __FILE__, __LINE__);				\
+		exit(EX_SOFTWARE);					\
+	}
+#define DUMP_UNLOCK if (pthread_rwlock_unlock(&dump_lock) != 0) {	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed\n",	\
+		    __FILE__, __LINE__);				\
+		exit(EX_SOFTWARE);					\
+	}
+
 int
 pending_init(void) {
 	int error;
 
 	TAILQ_INIT(&pending_head);
+	pending_dirty = 0;
+
 	if ((error = pthread_rwlock_init(&pending_lock, NULL)) == 0)
+		return error;
+
+	if ((error = pthread_rwlock_init(&dump_lock, NULL)) == 0)
 		return error;
 
 	return 0;
@@ -116,6 +137,8 @@ pending_get(addr, in, from, rcpt, date)  /* pending_lock must be write-locked */
 	pending->p_rcpt[ADDRLEN] = '\0';
 	TAILQ_INSERT_TAIL(&pending_head, pending, p_list); 
 
+	pending_dirty++;
+
 	(void)gettimeofday(&tv, NULL);
 	syslog(LOG_INFO, "created: %s from %s to %s, delayed for %ld s\n",
 	    pending->p_addr, pending->p_from, pending->p_rcpt, 
@@ -133,6 +156,8 @@ pending_put(pending) /* pending list should be write-locked */
 	    pending->p_addr, pending->p_from, pending->p_rcpt);
 	TAILQ_REMOVE(&pending_head, pending, p_list);	
 	free(pending);
+
+	pending_dirty++;
 
 	return;
 }
@@ -298,3 +323,79 @@ pending_import(stream)
 	return;
 }
 
+void
+pending_flush(void) {
+	FILE *dump;
+	int dumpfd;
+	struct timeval tv1, tv2;
+	char newdumpfile[MAXPATHLEN + 1];
+
+	PENDING_RDLOCK;
+	DUMP_WRLOCK;
+
+	if (pending_dirty > 0) {
+		if (debug) {
+			(void)gettimeofday(&tv1, NULL);
+			syslog(LOG_DEBUG, "dumping %d modifications\n", 
+			    pending_dirty);
+		}
+
+		/* 
+		 * Dump the database in a temporary file and 
+		 * then replace the old one by the new one.
+		 * On decent systems, rename(2) garantees that 
+		 * even if the machine crashes, we will not 
+		 * loose both files.
+		 */
+		snprintf(newdumpfile, MAXPATHLEN, "%s-XXXXXXXX", dumpfile);
+
+		if ((dumpfd = mkstemp(newdumpfile)) == -1) {
+			syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s\n", 
+			    newdumpfile, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		if ((dump = fdopen(dumpfd, "w")) == NULL) {
+			syslog(LOG_ERR, "cannot write dumpfile \"%s\": %s\n", 
+			    newdumpfile, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		pending_textdump(dump);
+		fclose(dump);
+		rename(newdumpfile, dumpfile);
+
+		if (debug) {
+			(void)gettimeofday(&tv2, NULL);
+			syslog(LOG_DEBUG, "dumping done in %ld.%06lds\n",
+			tv2.tv_sec - tv1.tv_sec, tv2.tv_usec - tv1.tv_usec);
+		}
+
+		pending_dirty = 0;
+	}
+
+	DUMP_UNLOCK;
+	PENDING_UNLOCK;
+
+	return;
+}
+
+void
+pending_reload(void) {
+	FILE *dump;
+
+	/* 
+	 * Re-import a saved greylist
+	 * This is intented for startup, not for 
+	 * concurent runtime: nothing is locked properly.
+	 */
+	if ((dump = fopen(dumpfile, "r")) == NULL) {
+		syslog(LOG_ERR, "cannot read dumpfile \"%s\"\n", dumpfile);
+		syslog(LOG_ERR, "starting with an empty greylist\n");
+	} else {
+		pending_import(dump);
+		fclose(dump);
+	}
+
+	return;
+}

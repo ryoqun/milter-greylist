@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.20 2004/03/05 15:30:26 manu Exp $
+# $Id: configure.ac,v 1.21 2004/03/06 12:56:32 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -70,9 +70,6 @@ AC_ARG_WITH(delay,
 AC_ARG_WITH(timeout,  
 	[  --with-timeout=VALUE   Timeout before we forget about a send],
 	[CFLAGS=$CFLAGS" -DTIMEOUT=$withval"])
-AC_ARG_WITH(dumpfreq,  
-	[  --with-dumpfreq=VALUE  Delay between grey list dump], 
-	[CFLAGS=$CFLAGS" -DDUMPFREQ=$withval"])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

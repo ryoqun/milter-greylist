@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.15 2004/03/05 14:15:39 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.16 2004/03/06 12:56:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -51,7 +51,6 @@
 #include "config.h"
 #include "except.h"
 #include "pending.h"
-#include "syncer.h"
 #include "milter-greylist.h"
 
 int debug = 0;
@@ -251,6 +250,9 @@ mlfi_close(ctx)
 		smfi_setpriv(ctx, NULL);
 	}
 
+	/* Flush modifications to the greylist to disj */
+	pending_flush();
+
 	return SMFIS_CONTINUE;
 }
 
@@ -399,13 +401,10 @@ main(argc, argv)
 	except_load();
 	
 	/*
-	 * Spawn syncer thread
+	 * Reload a saved greylist
+	 * No lock needed here either.
 	 */
-	if (pthread_create(&tid, NULL, (void *)syncer_thread, NULL) != 0) {
-		fprintf(stderr, "%s: cannot spawn syncer thread: %s\n", 
-		    argv[0], strerror(errno));
-		exit(EX_OSERR);
-	}
+	pending_reload();
 
 	/*
 	 * Turn into a daemon
@@ -441,7 +440,6 @@ main(argc, argv)
 			break;
 		}
 	}
-		
 
 	/*
 	 * Here we go!

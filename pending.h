@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.4 2004/03/03 16:30:12 manu Exp $ */
+/* $Id: pending.h,v 1.5 2004/03/06 12:56:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -47,6 +47,10 @@
 #define TIMEOUT (3600 * 24 * 5) /* 432000 seconds = 5 days */
 #endif
 
+#ifndef DUMPFILE
+#define DUMPFILE "/var/milter-greylist/greylist.db"
+#endif
+
 #define ADDRLEN	31
 #define IPADDRLEN sizeof("255.255.255.255")
 
@@ -62,6 +66,7 @@ struct pending {
 };
 
 extern int delay;
+extern char *dumpfile;
 
 int pending_init(void);
 struct pending *pending_get(char *, struct in_addr *, char *, char *, long);
@@ -70,5 +75,7 @@ void pending_put(struct pending *);
 void pending_log(struct pending *);
 void pending_textdump(FILE *);
 void pending_import(FILE *);
+void pending_flush(void);
+void pending_reload(void);
 
 #endif /* _PENDING_H_ */
