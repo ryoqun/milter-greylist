@@ -1,3 +1,5 @@
+1.7.1:
+	Null after 1.6 tag release to help patch contributions
 1.6:
 	New stable branch
 	Missing flags in milter-greylist usage display
