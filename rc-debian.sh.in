@@ -1,0 +1,68 @@
+#! /bin/sh
+
+# Greylist init script
+# July 2004
+# BERTRAND Joël
+
+# Based on skeleton by Miquel van Smoorenburg and Ian Murdock
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
+DAEMON=@BINDIR@/milter-greylist
+NAME=greylist
+SNAME=greylist
+DESC="Greylist Mail Filter Daemon"
+PIDFILE="/var/run/$NAME.pid"
+PNAME="milter-greylist"
+USER="@USER@"
+SOCKET=/var/run/milter-greylist/greylist.sock
+DOPTIONS="-P $PIDFILE -u $USER -p $SOCKET"
+
+export TMPDIR=/tmp
+# Apparently people have trouble if this isn't explicitly set...
+
+ENABLED=1
+OPTIONS=""
+NICE=
+
+test "$ENABLED" != "0" || exit 0
+
+set -e
+
+case "$1" in
+  start)
+	echo -n "Starting $DESC: "
+	start-stop-daemon --start --pidfile $PIDFILE --name $PNAME \
+	    $NICE --oknodo --startas $DAEMON -- $OPTIONS $DOPTIONS
+	echo "$NAME."
+	;;
+
+  stop)
+	echo -n "Stopping $DESC: "
+	start-stop-daemon --stop --pidfile $PIDFILE --name $PNAME --oknodo
+	echo "$NAME."
+	;;
+
+  reload|force-reload)
+	echo -n "Reloading $DESC: "
+	start-stop-daemon --stop --pidfile $PIDFILE --signal HUP --name $PNAME
+	echo "$NAME."
+	;;
+
+  restart)
+	echo -n "Restarting $DESC: "
+	start-stop-daemon --stop --pidfile $PIDFILE --name $PNAME \
+	    --retry 5 --oknodo
+	start-stop-daemon --start --pidfile $PIDFILE --name $PNAME \
+	    $NICE --oknodo --startas $DAEMON -- $OPTIONS $DOPTIONS
+
+	echo "$NAME."
+	;;
+
+  *)
+	N=/etc/init.d/$SNAME
+	echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
+	exit 1
+	;;
+esac
+
+exit 0

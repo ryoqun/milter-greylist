@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: rc-bsd.sh.in,v 1.1 2004/04/03 09:26:11 manu Exp $
+# $Id: rc-bsd.sh.in,v 1.2 2004/07/29 06:53:02 manu Exp $
 
 # PROVIDE: miltergreylist
 # REQUIRE: LOGIN
@@ -11,7 +11,7 @@ name="miltergreylist"
 rcvar=$name
 command="@BINDIR@/milter-greylist"
 pidfile="/var/run/milter-greylist.pid"
-command_args="-P ${pidfile}"
+command_args="-P ${pidfile} -u @USER@"
 required_files="/etc/mail/greylist.conf"
 
 load_rc_config ${name}

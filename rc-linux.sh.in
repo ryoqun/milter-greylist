@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: rc-linux.sh.in,v 1.1 2004/04/03 09:26:11 manu Exp $
+# $Id: rc-linux.sh.in,v 1.2 2004/07/29 06:53:02 manu Exp $
 #  init file for milter-greylist
 #
 # chkconfig: - 50 50
@@ -14,7 +14,7 @@
 
 pidfile="/var/run/milter-greylist.pid"
 socket="/var/milter-greylist/milter-greylist.sock"
-user="smmsp"
+user="@USER@"
 OPTIONS="-P $pidfile -u $user -p $socket"
 RETVAL=0
 prog="Milter-Greylist"

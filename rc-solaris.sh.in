@@ -10,7 +10,7 @@
 mildir="/var/milter-greylist"
 socket="$mildir/milter-greylist.sock"
 binpath="@BINDIR@"
-user="smmsp"
+user="@USER@"
 
 OPTIONS="-v -w 14m"
 
