@@ -3,10 +3,13 @@
 %{
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.3 2004/03/06 19:06:14 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.4 2004/03/11 22:22:31 manu Exp $");
 #endif
 
 #include "pending.h"
+
+int dump_lex(void);
+void dump_error(char *);
 %}
 
 %union	{

@@ -3,11 +3,14 @@
 %{
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.1 2004/03/10 21:11:45 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.2 2004/03/11 22:22:31 manu Exp $");
 #endif
 
 #include "except.h"
 #include "sync.h"
+
+int conf_lex(void);
+void conf_error(char *);
 %}
 
 %union	{
