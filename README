@@ -1,9 +1,9 @@
-# $Id: README,v 1.20 2004/04/30 21:52:25 manu Exp $
+# $Id: README,v 1.21 2004/05/24 22:01:21 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/04/30 21:52:25 $
+		       $Date: 2004/05/24 22:01:21 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -70,7 +70,6 @@ INPUT_MAIL_FILTER(`greylist',
 define(`confMILTER_MACROS_CONNECT', `j, {if_addr}')
 define(`confMILTER_MACROS_HELO', `{verify}, {cert_subject}')
 define(`confMILTER_MACROS_ENVFROM', `i, {auth_authen}')
-define(`confINPUT_MAIL_FILTERS', `greylist')
 
 
  3 Configuring milter-greylist 
