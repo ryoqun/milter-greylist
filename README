@@ -1,0 +1,141 @@
+# $Id: README,v 1.1 2004/03/03 20:00:49 manu Exp $
+###########################################################################
+
+		     ======================================
+		       milter-greylist installation notes 
+		       $Date: 2004/03/03 20:00:49 $
+		     ======================================
+
+		       Emmanuel Dreyfus <manu@netbsd.org>
+
+Table of contents:  
+==================
+
+Run this command to produce a table of contents:
+ sed '/^.====/{g;p;};h;d' README
+
+ 1 Building and installing milter-greylist 
+ =========================================
+
+Just do the usual ./configure && make && make install
+
+If libpthread and libmilter are not automatically located, use
+--with-libpthread and --with-libmilter flags to the configure
+script.  If you intend to run milter-greylist under an unprivileged
+UID, use the --with-user flag.
+
+On the make install step, the Makefile will install a default config
+file in /etc/mail/greylist.except, except if there is already such
+a file. In that case the original file is preserved.
+
+
+ 2 Configuring sendmail with milter-greylist
+ ===========================================
+
+You need a few options in sendmail.cf to use milter-greylist:
+
+O InputMailFilters=greylist Xgreylist,
+S=local:/var/milter-greylist/milter-greylist.sock O
+Milter.macros.connect=j, {if_addr}
+
+
+ 3 Configuring milter-greylist 
+ =============================
+
+Edit /etc/mail/greylist.except, and add addr lines for at least
+all you local network addresses. Here is an example:
+
+addr 192.0.2.0/24 addr 10.0.0.0/8
+
+Then consider adding addresses of all the friendly network you get
+mail from. By friendly network, we mean network with no spammers:
+Universities are usually friendly, some companies are friendly,
+some other are not, and dial-up and ADSL ISP are definitively not
+friendly at all.
+
+
+ 4 Trying it out for a few users 
+ ===============================
+
+Add some rcpt lines to /etc/mail/greylist.except for the users that
+want to try milter-greylist filtering. Here is an example:
+
+rcpt John.Doe@example.net rcpt webmaster@example.net rcpt
+postmaster@example.net
+
+Then start milter-greylist with the -T option, which will make
+greylisting effective only for the users listed in the rcpt lines.
+
+milter-greylist -T -u smmsp -p /var/milter-greylist/milter-greylist.sock
+
+You might want to add -v and -D to get more debugging output. The
+-w flag is used to choose how long we will refuse a given message.
+If you want to check that things work, try 10 seconds with -w10.
+
+
+ 5 Running it for the whole site 
+ ===============================
+
+Remove the rcpt lines from /etc/mail/greylist.except, and run
+milter-greylist without the -T option:
+
+milter-greylist -u smmsp -p /var/milter-greylist/milter-greylist.sock
+
+If some of your users don't want greylisting, add a rcpt line for
+them in /etc/mail/greylist.except. Without the -T option, rcpt
+lines will prevent greylisting for the corresponding users: every
+message will get to them without any delay, including spam.
+
+
+ 6 Things to look at if things get wrong
+ =======================================
+
+First, read the milter-greylist(8) man page! :-)
+
+Each message will get a X-Greylist header indicating how long the
+message has been delayed. It looks like this:
+
+X-Greylist: Delayed for 00:53:21 by milter-greylist-0.7 (mail.example.net
+	    [192.0.2.16]); Wed, 3 Mar 2004 17:01:06 -0000
+
+The file /var/milter-greylist/greylist.db is a dump of the greylist.
+It is done every 5 minutes and is used to restore state after
+milter-greylist has been restarted. The file contains an entry per
+line, with four columns:  IP address, sender e-mail address,
+recipient e-mail address, and time when the message will be accepted
+(in seconds since 00:00:00 01-01-1970).  Here is an example:
+
+10.0.23.1  <evilspammer@example.com>  <pooruser@example.net>  1078344409
+
+
+ 7 License
+ =========
+
+This software is available under a 3 clauses BSD license:
+
+  Copyright (c) 2004 Emmanuel Dreyfus
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+  1. Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+  2. Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
+  3. All advertising materials mentioning features or use of this software
+     must display the following acknowledgement:
+         This product includes software developed by Emmanuel Dreyfus
+
+  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+  OF THE POSSIBILITY OF SUCH DAMAGE.
