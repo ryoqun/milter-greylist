@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.3 2004/03/30 16:00:10 manu Exp $ */
+/* $Id: spf.c,v 1.4 2004/03/30 16:07:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id");
+__RCSID("$Id: spf.c,v 1.4 2004/03/30 16:07:21 manu Exp $");
 #endif
 #endif
 
