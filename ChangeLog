@@ -1,4 +1,5 @@
 1.5.5:
+	Fix bad substitutions in rc scripts
 	Fix build problems on Solaris
 1.5.4:
 	Avoid race conditions when reloading the config (Attila Bruncsak)
