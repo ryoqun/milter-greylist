@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.10 2004/03/03 13:51:47 manu Exp $
+# $Id: Makefile.in,v 1.11 2004/03/03 16:28:05 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -90,5 +90,4 @@ realclean:	clean
 	yacc -p`echo $@|${SED} 's/^\([^_]\{1,\}_\).*$$/\1/'` -o$@ $<
 
 start:	milter-greylist
-	${RM} -f /home/manu/milter-greylist.sock
-	./milter-greylist -v -p milter-greylist.sock	
+	./milter-greylist -D -v -p milter-greylist.sock	
