@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.22 2005/01/29 18:42:53 manu Exp $
+.\" $Id: greylist.conf.5,v 1.23 2005/03/19 07:39:21 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -111,7 +111,6 @@ follow the format described in
 .Xr re_format 7 .
 Here is an example:
 .Dl acl greylist rcpt /.*@example\.net/
-
 .Pp
 Entries in the access-list are evaluated sequentialy, so order is
 very important. The first matching entry is used to decide if 
@@ -365,6 +364,8 @@ This option has no command line equivalent:
 is used to control how long greylist tuples are retained in the database. 
 Value is in seconds, except if a suffix is given (m for minutes, h for hours,
 d for days). Default is 5 days.
+.It Ar extendedregex
+Use extended regular expressions instead of basic regular expressions.
 .El
 .Pp
 The configuration file is reloaded automatically once it is modified when
