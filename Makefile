@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.17 2004/12/08 22:48:52 manu Exp $
+# $Id: Makefile,v 1.18 2004/12/09 22:19:40 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -58,7 +58,7 @@ SRC= 		milter-greylist.c pending.c sync.c conf.c \
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c 
 
 all:		milter-greylist rc-bsd.sh rc-redhat.sh \
-		rc-solaris.sh rc-debian.sh rc-gentoo.sh
+		rc-solaris.sh rc-debian.sh rc-gentoo.sh rc-suse.sh
 
 milter-greylist:	${OBJ}
 	${CC} -o milter-greylist ${OBJ} ${LDFLAGS} ${LIBS}
