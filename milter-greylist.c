@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.10 2004/03/03 16:30:12 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.11 2004/03/03 16:52:04 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -70,7 +70,7 @@ struct smfiDesc smfilter =
 	NULL,		/* header filter */
 	NULL,		/* end of header */
 	NULL,		/* body block filter */
-	NULL,		/* end of message */
+	mlfi_eom,	/* end of message */
 	NULL,		/* message aborted */
 	mlfi_close,	/* connection cleanup */
 };
@@ -124,7 +124,6 @@ mlfi_envrcpt(ctx, envrcpt)
 {
 	struct mlfi_priv *priv;
 	long remaining;
-	long elapsed;
 	char hdr[HDRLEN + 1];
 	char addrstr[IPADDRLEN + 1];
 	int h, mn, s;
@@ -137,28 +136,13 @@ mlfi_envrcpt(ctx, envrcpt)
 		    priv->priv_from, *envrcpt);
 
 	if (except_filter(&priv->priv_addr, priv->priv_from, *envrcpt) != 0) {
-		snprintf(hdr, HDRLEN, 
-		    "Not delayed by milter-greylist-%s [whitelist]", 
-		    PACKAGE_VERSION);
-		smfi_addheader(ctx, HEADERNAME, hdr);
+		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
 
 	if (pending_check(&priv->priv_addr, priv->priv_from, 
-	    *envrcpt, &remaining, &elapsed) != 0) {
-		h = elapsed / 3600;
-		elapsed = elapsed % 3600;
-		mn = (elapsed / 60);
-		elapsed = elapsed % 60;
-		s = elapsed;
-
-		snprintf(hdr, HDRLEN, 
-		    "Delayed for %02d:%02d:%02d by milter-greylist-%s", 
-		    h, mn, s, PACKAGE_VERSION);
-		smfi_addheader(ctx, HEADERNAME, hdr);
-
+	    *envrcpt, &remaining, &priv->priv_elapsed) != 0) 
 		return SMFIS_CONTINUE;
-	}
 
 	h = remaining / 3600;
 	remaining = remaining % 3600;
@@ -181,6 +165,39 @@ mlfi_envrcpt(ctx, envrcpt)
 	}
 
 	return SMFIS_TEMPFAIL;
+}
+
+sfsistat
+mlfi_eom(ctx)
+	SMFICTX *ctx;
+{
+	struct mlfi_priv *priv;
+	char hdr[HDRLEN + 1];
+	int h, mn, s;
+
+	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+
+	if (priv->priv_elapsed == 0) {
+		snprintf(hdr, HDRLEN, "Not delayed by milter-greylist-%s "
+		    "[whitelist]", PACKAGE_VERSION);
+
+		smfi_addheader(ctx, HEADERNAME, hdr);
+
+		return SMFIS_CONTINUE;
+	}
+
+	h = priv->priv_elapsed / 3600;
+	priv->priv_elapsed = priv->priv_elapsed % 3600;
+	mn = (priv->priv_elapsed / 60);
+	priv->priv_elapsed = priv->priv_elapsed % 60;
+	s = priv->priv_elapsed;
+
+	snprintf(hdr, HDRLEN,
+	    "Delayed for %02d:%02d:%02d by milter-greylist-%s", 
+	    h, mn, s, PACKAGE_VERSION);
+	smfi_addheader(ctx, HEADERNAME, hdr);
+
+	return SMFIS_CONTINUE;
 }
 
 sfsistat
