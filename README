@@ -1,9 +1,9 @@
-# $Id: README,v 1.24.2.1 2004/12/06 22:17:35 manu Exp $
+# $Id: README,v 1.24.2.2 2004/12/09 22:34:43 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/12/06 22:17:35 $
+		       $Date: 2004/12/09 22:34:43 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -18,7 +18,7 @@ Run this command to produce a table of contents:
  =========================================
 
 Build dependencies: 
-- lex or flex
+- flex (AT&T lex cannot build milter-greylist sources)
 - yacc or bison
 - libmilter (comes with Sendmail)
 - Any POSIX threads library (Provided by libc on some systems)
