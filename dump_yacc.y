@@ -6,7 +6,7 @@
 
 %union	{
 	struct in_addr ipaddr;
-	char *email;
+	char email[ADDRLEN + 1];
 	time_t time;
 	}
 %type <ipaddr> IPADDR;

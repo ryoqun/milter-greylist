@@ -7,7 +7,7 @@
 %union	{
 	struct in_addr ipaddr;
 	int cidr;
-	char *email;
+	char email[ADDRLEN + 1];
 	}
 %type <ipaddr> IPADDR;
 %type <cidr> CIDR;

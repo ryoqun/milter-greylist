@@ -23,7 +23,8 @@ blank		[ \t]{1,}
 {blank}
 {comment}
 {email}|{void_email} {
-			yylval.email = yytext;
+			strncpy(yylval.email, yytext, ADDRLEN);
+			yylval.email[ADDRLEN] = '\0';
 			return EMAIL;
 		}
 {ipaddr}	{ 

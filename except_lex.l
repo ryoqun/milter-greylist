@@ -29,7 +29,8 @@ rcpt		[Rr][Cc][Pp][Tt]:?
 {from}		{ return FROM; }
 {rcpt}		{ return RCPT; }
 {email}		{
-			yylval.email = yytext;
+			strncpy(yylval.email, yytext, ADDRLEN);
+			yylval.email[ADDRLEN] = '\0';
 			return EMAIL;
 		}
 {ipaddr}	{ 
