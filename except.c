@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.37 2004/04/02 08:57:18 manu Exp $ */
+/* $Id: except.c,v 1.38 2004/04/10 07:51:10 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.37 2004/04/02 08:57:18 manu Exp $");
+__RCSID("$Id: except.c,v 1.38 2004/04/10 07:51:10 manu Exp $");
 #endif
 #endif
 
@@ -314,6 +314,7 @@ except_sender_filter(in, from, queueid)
 	LIST_FOREACH(ex, &except_head, e_list) {
 		switch (ex->e_type) {
 		case E_RCPT:
+		case E_RCPT_RE:
 			break;
 
 		case E_NETBLOCK: {
