@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.89 2004/05/25 10:20:48 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.90 2004/05/26 21:50:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.89 2004/05/25 10:20:48 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.90 2004/05/26 21:50:13 manu Exp $");
 #endif
 #endif
 
@@ -111,6 +111,9 @@ mlfi_connect(ctx, hostname, addr)
 	smfi_setpriv(ctx, priv);
 	bzero((void *)priv, sizeof(*priv));
 	priv->priv_whitelist = EXF_UNSET;
+
+	strncpy(priv->priv_hostname, hostname, ADDRLEN);
+	priv->priv_hostname[ADDRLEN] = '\0';
 
 	addr_in = (struct sockaddr_in *)addr;
 
@@ -213,7 +216,8 @@ mlfi_envfrom(ctx, envfrom)
 	 * than a DNS lookup.
 	 */
 	if ((priv->priv_whitelist = except_sender_filter(&priv->priv_addr, 
-	    priv->priv_from, priv->priv_queueid)) != EXF_NONE) {
+	    priv->priv_hostname, priv->priv_from, 
+	    priv->priv_queueid)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 
 		return SMFIS_CONTINUE;
@@ -273,6 +277,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * of them would not.
 	 */
 	if ((priv->priv_whitelist == EXF_ADDR) ||
+	    (priv->priv_whitelist == EXF_DOMAIN) ||
 	    (priv->priv_whitelist == EXF_FROM) ||
 	    (priv->priv_whitelist == EXF_AUTH) ||
 	    (priv->priv_whitelist == EXF_SPF) ||
@@ -403,6 +408,10 @@ mlfi_eom(ctx)
 			return SMFIS_CONTINUE;
 			
 		switch (priv->priv_whitelist) {
+		case EXF_DOMAIN:
+			whystr = "Sender DNS name whitelisted";
+			break;
+
 		case EXF_ADDR:
 			whystr = "Sender IP whitelisted";
 			break;

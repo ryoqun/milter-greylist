@@ -1,4 +1,4 @@
-%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW DUMPFREQ TIMEOUT
+%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW DUMPFREQ TIMEOUT DOMAIN DOMAINNAME
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.20 2004/05/26 09:14:29 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.21 2004/05/26 21:50:12 manu Exp $");
 #endif
 #endif
 
@@ -24,6 +24,7 @@ void conf_error(char *);
 	struct in_addr ipaddr;
 	int cidr;
 	char email[ADDRLEN + 1];
+	char domainname[ADDRLEN + 1];
 	char path[PATHLEN + 1];
 	char delay[NUMLEN + 1];
 	char regex[REGEXLEN + 1];
@@ -31,6 +32,7 @@ void conf_error(char *);
 %type <ipaddr> IPADDR;
 %type <cidr> CIDR;
 %type <email> EMAIL;
+%type <domainname> DOMAINNAME;
 %type <delay> TDELAY;
 %type <path> PATH;
 %type <regex> REGEX;
@@ -41,6 +43,8 @@ lines	:	lines netblock '\n'
 	|	lines rcptaddr '\n' 
 	|	lines fromregex '\n' 
 	|	lines rcptregex '\n' 
+	|	lines domainaddr '\n'
+	|	lines domainregex '\n'
 	|	lines peeraddr '\n' 
 	|	lines verbose '\n' 
 	|	lines quiet '\n' 
@@ -72,6 +76,10 @@ rcptaddr:	RCPT EMAIL	{ except_add_rcpt($2); }
 fromregex:	FROM REGEX	{ except_add_from_regex($2); }
 	;
 rcptregex:	RCPT REGEX	{ except_add_rcpt_regex($2); }
+	;
+domainaddr:	DOMAIN DOMAINNAME { except_add_domain($2); }
+	;
+domainregex:	DOMAIN REGEX	 { except_add_domain_regex($2); }
 	;
 peeraddr:	PEER IPADDR	{ peer_add(&$2); }
 	;

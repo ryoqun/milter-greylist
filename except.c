@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.40 2004/05/06 13:50:55 manu Exp $ */
+/* $Id: except.c,v 1.41 2004/05/26 21:50:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.40 2004/05/06 13:50:55 manu Exp $");
+__RCSID("$Id: except.c,v 1.41 2004/05/26 21:50:12 manu Exp $");
 #endif
 #endif
 
@@ -162,6 +162,28 @@ except_add_rcpt(email)	/* exceptlist must be write-locked */
 	return;
 }
 
+void
+except_add_domain(domain)	/* exceptlist must be write-locked */
+	char *domain;
+{
+	struct except *except;
+
+	if ((except = malloc(sizeof(*except))) == NULL) {
+		perror("cannot allocate memory");
+		exit(EX_OSERR);
+	}
+		
+	except->e_type = E_DOMAIN;
+	strncpy(except->e_domain, domain, ADDRLEN);
+	except->e_domain[ADDRLEN] = '\0';
+	LIST_INSERT_HEAD(&except_head, except, e_list);
+
+	if (conf.c_debug)
+		printf("load exception domain %s\n", domain);
+
+	return;
+}
+
 #define ERRLEN 1024
 void
 except_add_from_regex(regexstr)	/* exceptlist must be write-locked */
@@ -225,7 +247,7 @@ except_add_rcpt_regex(regexstr)	/* exceptlist must be write-locked */
 	}
 		
 	if ((error = regcomp(&except->e_rcpt_re, regexstr, 0)) != 0) {
-		regerror(error, &except->e_from_re, errstr, ERRLEN);
+		regerror(error, &except->e_rcpt_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);
 		free(except);
@@ -237,6 +259,45 @@ except_add_rcpt_regex(regexstr)	/* exceptlist must be write-locked */
 
 	if (conf.c_debug)
 		printf("load exception rcpt regex %s\n", regexstr);
+
+	return;
+}
+
+void
+except_add_domain_regex(regexstr)	/* exceptlist must be write-locked */
+	char *regexstr;
+{
+	struct except *except;
+	size_t len;
+	int error;
+	char errstr[ERRLEN + 1];
+
+	/* 
+	 * Strip leading and trailing slashes
+	 */
+	len = strlen(regexstr);
+	if (len > 0)
+		regexstr[len - 1] = '\0';
+	regexstr++;
+
+	if ((except = malloc(sizeof(*except))) == NULL) {
+		perror("cannot allocate memory");
+		exit(EX_OSERR);
+	}
+		
+	if ((error = regcomp(&except->e_domain_re, regexstr, 0)) != 0) {
+		regerror(error, &except->e_domain_re, errstr, ERRLEN);
+		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
+		    regexstr, errstr);
+		free(except);
+		exit(EX_OSERR);
+	}
+
+	except->e_type = E_DOMAIN_RE;
+	LIST_INSERT_HEAD(&except_head, except, e_list);
+
+	if (conf.c_debug)
+		printf("load exception domain regex %s\n", regexstr);
 
 	return;
 }
@@ -299,8 +360,9 @@ except_rcpt_filter(rcpt, queueid)
 }
 
 int 
-except_sender_filter(in, from, queueid)
+except_sender_filter(in, hostname, from, queueid)
 	struct in_addr *in;
+	char *hostname;
 	char *from;
 	char *queueid;
 {
@@ -323,6 +385,28 @@ except_sender_filter(in, from, queueid)
 				    "exception list", queueid,
 				    inet_ntop(AF_INET, in, addrstr, IPADDRLEN));
 				retval = EXF_ADDR;
+				goto out;
+			}
+			break;
+		}
+
+		case E_DOMAIN: {
+			/* Use emailcmp even if it's not an e-mail */
+			if (emailcmp(hostname, ex->e_domain) == 0) {
+				syslog(LOG_INFO, "%s: sender DNS name %s is in "
+				    "exception list", queueid, hostname);
+				retval = EXF_DOMAIN;
+				goto out;
+			}
+			break;
+		}
+
+		case E_DOMAIN_RE: {
+			if (regexec(&ex->e_domain_re, 
+			    hostname, 0, NULL, 0) == 0) {
+				syslog(LOG_INFO, "%s: sender DNS name %s is in "
+				    "exception list", queueid, hostname);
+				retval = EXF_DOMAIN;
 				goto out;
 			}
 			break;

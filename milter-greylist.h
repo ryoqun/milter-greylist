@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.31 2004/05/25 09:39:49 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.32 2004/05/26 21:50:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -48,6 +48,7 @@
 
 struct mlfi_priv {
 	struct in_addr priv_addr;
+	char priv_hostname[ADDRLEN + 1];
 	char priv_helo[ADDRLEN + 1];
 	char priv_from[ADDRLEN + 1];
 	time_t priv_elapsed;

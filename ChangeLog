@@ -1,4 +1,5 @@
 1.3.4:
+	DNS support in greylist.conf through the domain keyword
 	Make the greylist timeout a config file option
 1.3.3:
 	Bug fix: lazyaw did not work properly in some situations

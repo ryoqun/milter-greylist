@@ -9,7 +9,7 @@ cidr		"/"{byte}
 atext		[A-Za-z0-9!#$%&'*+/=?$^_`}{|~.-]{1,}
 qtext		"\""[!-~]{1,}"\""
 mailbox		{atext}|{qtext}
-domain		[A-Za-z0-9._-]{1,}
+domainname	[A-Za-z0-9._-]{1,}
 email		{mailbox}"\@"{domain}
 comment		#.*$
 blank		[ \t]{1,}
@@ -41,6 +41,7 @@ path		"\""[^"\n]{1,}"\""
 regex		"/"[^/\n]{1,}"/"
 dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
 timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
+domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 
 %{
 	#include "config.h"
@@ -49,7 +50,7 @@ timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.22 2004/05/26 09:14:29 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.23 2004/05/26 21:50:12 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -91,6 +92,7 @@ timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
 {all}		{ return ALL; }
 {dumpfreq}	{ return DUMPFREQ; }
 {timeout}	{ return TIMEOUT; }
+{domain}	{ return DOMAIN; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);
 			yylval.path[PATHLEN] = '\0';
@@ -113,6 +115,11 @@ timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
 				exit(EX_DATAERR);
 			}
 			return IPADDR; 
+		}
+{domainname}	{ 
+			strncpy(yylval.domainname, yytext, ADDRLEN);
+			yylval.domainname[ADDRLEN] = '\0';
+			return DOMAINNAME; 
 		}
 {regex}		{
 			strncpy(yylval.regex, yytext, REGEXLEN);

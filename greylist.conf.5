@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.7 2004/05/26 09:14:29 manu Exp $
+.\" $Id: greylist.conf.5,v 1.8 2004/05/26 21:50:13 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -61,6 +61,15 @@ You should at least whitelist localhost (127.0.0.1/8), and if you have
 some user clients connecting to the machine, you should whitelist the
 addresses they connect from if you don't want them to get error 
 messages when sending e-mail.
+.It Ar domain
+This keyword enable whitelisting of machines based on their DNS name.
+For instance, this will whitelist any machine in the example.net domain:
+.Dl domain example.net
+.Pp
+The name resolution is made by Sendmail, which hands it to 
+.Xr milter-greylist 8 .
+As a result, it is impossible to use DNS aliases here. On the other
+hand, this will work even if your DNS resolver is not thread-safe.
 .It Ar from
 This is used to whitelist sender e-mail addresses. You should not use
 that feature, because sender e-mail addresses can be trivially forged.
@@ -80,12 +89,12 @@ Example:
 .Dl rcpt John.Doe@example.net
 .El
 .Pp
-Both 
+.Ar domain ,
 .Ar from
 and
 .Ar rcpt
 may be used with regulax expressions. The regular expressions must be
-enclosed by slashes (/). No scaping is available to provide a slash
+enclosed by slashes (/). No escaping is available to provide a slash
 inside a regular expression, so just do not use it. Regular expressions
 follow the format desribed in 
 .Xr re_format 7 .

@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.23 2004/05/06 13:50:55 manu Exp $ */
+/* $Id: except.h,v 1.24 2004/05/26 21:50:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -57,13 +57,25 @@
 
 LIST_HEAD(exceptlist, except);
 
-typedef enum { E_NETBLOCK, E_FROM, E_RCPT, E_FROM_RE, E_RCPT_RE } except_type_t;
+typedef enum { 
+	E_NETBLOCK, 
+	E_DOMAIN,
+	E_DOMAIN_RE,
+	E_FROM, 
+	E_RCPT, 
+	E_FROM_RE, 
+	E_RCPT_RE 
+} except_type_t;
+
 #define e_addr e_data.d_netblock.nb_addr
 #define e_mask e_data.d_netblock.nb_mask
 #define e_from e_data.d_from
 #define e_rcpt e_data.d_rcpt
 #define e_from_re e_data.d_from_re
 #define e_rcpt_re e_data.d_rcpt_re
+#define e_domain e_data.d_domain
+#define e_domain_re e_data.d_domain_re
+
 struct except {
 	except_type_t e_type;
 	union {
@@ -73,8 +85,10 @@ struct except {
 		} d_netblock;
 		char d_from[ADDRLEN + 1];
 		char d_rcpt[ADDRLEN + 1];
+		char d_domain[ADDRLEN + 1];
 		regex_t d_from_re;
 		regex_t d_rcpt_re;
+		regex_t d_domain_re;
 	} e_data;
 	LIST_ENTRY(except) e_list;
 };
@@ -85,12 +99,14 @@ extern pthread_rwlock_t except_lock;
 void except_init(void);
 void except_clear(void);
 void except_add_netblock(struct in_addr *, int);
+void except_add_domain(char *);
+void except_add_domain_regex(char *);
 void except_add_from(char *);
 void except_add_rcpt(char *);
 void except_add_from_regex(char *);
 void except_add_rcpt_regex(char *);
 int except_rcpt_filter(char *, char *);
-int except_sender_filter(struct in_addr *, char *, char *);
+int except_sender_filter(struct in_addr *, char *, char *, char *);
 
 /* except_filter() return codes */
 #define EXF_UNSET	0
@@ -103,5 +119,6 @@ int except_sender_filter(struct in_addr *, char *, char *);
 #define EXF_SPF		7
 #define EXF_NONIPV4	8
 #define EXF_STARTTLS	9
+#define EXF_DOMAIN	10
 
 #endif /* _EXCEPT_H_ */
