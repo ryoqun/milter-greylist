@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.42 2004/05/28 10:54:35 manu Exp $ */
+/* $Id: except.c,v 1.43 2004/06/07 10:03:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.42 2004/05/28 10:54:35 manu Exp $");
+__RCSID("$Id: except.c,v 1.43 2004/06/07 10:03:41 manu Exp $");
 #endif
 #endif
 
@@ -480,6 +480,9 @@ except_clear(void) {	/* exceptlist must be write locked */
 
 		if (except->e_type == E_RCPT_RE)
 			regfree(&except->e_rcpt_re);
+
+		if (except->e_type == E_DOMAIN_RE)
+			regfree(&except->e_domain_re);
 
 		free(except);
 	}
