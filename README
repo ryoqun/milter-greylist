@@ -1,9 +1,9 @@
-# $Id: README,v 1.26 2004/12/09 00:04:01 manu Exp $
+# $Id: README,v 1.27 2004/12/09 00:06:02 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/12/09 00:04:01 $
+		       $Date: 2004/12/09 00:06:02 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -98,8 +98,8 @@ friendly at all.
  4 Trying it out for a few users 
  ===============================
 
-Add some rcpt lines to /etc/mail/greylist.conf for the users that
-want to try milter-greylist filtering. Here is an example:
+Add some rcpt access-lists to /etc/mail/greylist.conf for the users 
+that want to try milter-greylist filtering. Here is an example:
 
 acl greylist rcpt John.Doe@example.net 
 acl greylist rcpt webmaster@example.net 
@@ -107,7 +107,7 @@ acl greylist rcpt postmaster@example.net
 
 Then finish your ACL with the default rule: here, anything that
 is not for John.Doe@example.net, webmaster@example.net, or
-postmaster@example.net will not get greylisted: it is whitielisted:
+postmaster@example.net will not get greylisted:
 
 acl whitelist default
 
