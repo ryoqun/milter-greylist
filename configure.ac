@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.115 2004/06/12 08:41:56 manu Exp $
+# $Id: configure.ac,v 1.116 2004/06/16 20:45:18 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -24,7 +24,7 @@ AC_MSG_CHECKING([if compiler accepts -Wall])
 SAVEDCFLAGS=$CFLAGS
 CFLAGS=$CFLAGS" -Wall"
 wall="no"
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])], [wall="yes"; SAVEDCFLAGS=$CFLAGS])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], [wall="yes"; SAVEDCFLAGS=$CFLAGS])
 AC_MSG_RESULT([$wall])
 CFLAGS=$SAVEDCFLAGS
 

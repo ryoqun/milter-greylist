@@ -1,4 +1,5 @@
 1.5.1:
+	Check that compiler and linker accept -Wall
 	Document the comment on end of line bug
 	Clean up rc-solaris.sh on make clean
 	syslog the expired autowhite entry correctly, from Mattieu Herrb
