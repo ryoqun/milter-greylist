@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.63 2004/03/22 07:26:51 manu Exp $
+# $Id: configure.ac,v 1.64 2004/03/22 10:34:23 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -58,16 +58,21 @@ AC_FUNC_STAT
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
 
 # Check for socket functions linking. On Solaris, -lsocket -lnsl is required
-AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], [])
-AC_CHECK_LIB([socket -lnsl], [socket], [LIBS="$LIBS -lsocket -lnsl"], [])
+AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], 
+	[AC_CHECK_LIB([socket -lnsl], [socket], 
+		[LIBS="$LIBS -lsocket -lnsl"], [])
+	])
+
+# Check for inet_aton (libmilter uses it). On solaris, -lresolv is required
+AC_CHECK_LIB([resolv], [inet_aton], [LIBS="$LIBS -lresolv"], []) 
 
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use
-AC_CHECK_LIB(pthread, pthread_create, 
+AC_CHECK_LIB([pthread], [pthread_create], 
     [LIBS="$LIBS -lpthread"],
-    [AC_CHECK_LIB(c_r, pthread_create, 
+    [AC_CHECK_LIB([c_r], [pthread_create], 
         [LIBS="$LIBS -lc_r"],
-	[AC_CHECK_LIB(pthreads -lpthread, pthread_create,
+	[AC_CHECK_LIB([pthreads -lpthread], [pthread_create],
             [LIBS="$LIBS -lpthreads -lpthread"],
                 [echo "Required libpthread not found. Use --with-libpthread"; 
                  exit 1;])
