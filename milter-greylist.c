@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.65 2004/03/31 12:10:16 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.66 2004/03/31 15:13:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.65 2004/03/31 12:10:16 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.66 2004/03/31 15:13:50 manu Exp $");
 #endif
 #endif
 
@@ -537,11 +537,12 @@ main(argc, argv)
 				    "%s: -L requires a CIDR mask\n", argv[0]);
 				usage(argv[0]);
 			}
-			cidr2mask(cidr, &match_mask);
+			cidr2mask(cidr, &conf.c_match_mask);
+			conf.c_forced |= C_MATCHMASK;
 
 			if (conf.c_debug)
 				printf("match mask: %s\n", inet_ntop(AF_INET, 
-				    &match_mask, maskstr, IPADDRLEN));
+				    &conf.c_match_mask, maskstr, IPADDRLEN));
 
 			break;
 		}
