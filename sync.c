@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.19 2004/03/14 13:47:49 manu Exp $ */
+/* $Id: sync.c,v 1.20 2004/03/14 15:43:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -746,6 +746,7 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 	peer_sync_t type;
 	struct pending *pending;
 {
+	int error;
 	struct sync *sync;
 
 	if ((sync = malloc(sizeof(*sync))) == NULL) {
@@ -768,7 +769,11 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 	TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
 	SYNC_UNLOCK;
 
-	pthread_cond_signal(&sync_sleepflag);
+	if ((error = pthread_cond_signal(&sync_sleepflag)) != 0) {
+		syslog(LOG_ERR, 
+		    "cannot wakeup sync_sender: %s", strerror(errno));
+		exit(EX_SOFTWARE);
+	}
 	return;
 }
 

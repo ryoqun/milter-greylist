@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.25 2004/03/14 11:36:22 manu Exp $ */
+/* $Id: pending.c,v 1.26 2004/03/14 15:43:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.25 2004/03/14 11:36:22 manu Exp $");
+__RCSID("$Id: pending.c,v 1.26 2004/03/14 15:43:33 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -408,7 +408,12 @@ pending_reload(void) {
 
 void
 pending_flush(void) {
+	int error; 
 
-	pthread_cond_signal(&dump_sleepflag);
+	if ((error = pthread_cond_signal(&dump_sleepflag)) != 0) {
+		syslog(LOG_ERR, "cannot wakeup dumper: %s", strerror(errno));
+		exit(EX_SOFTWARE);
+	}
+
 	return;
 }
