@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.20 2004/03/06 20:33:07 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.21 2004/03/08 09:45:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.20 2004/03/06 20:33:07 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.21 2004/03/08 09:45:12 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -87,7 +87,6 @@ mlfi_connect(ctx, hostname, addr)
 {
 	struct mlfi_priv *priv;
 	struct sockaddr_in *sin;
-	char addrstr[IPADDRLEN + 1];
 
 	if ((priv = malloc(sizeof(*priv))) == NULL)
 		return SMFIS_TEMPFAIL;	
