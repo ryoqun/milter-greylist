@@ -15,10 +15,12 @@ rcpt		[Rr][Cc][Pp][Tt]:?
 peer		[Pp][Ee][Ee][Rr]:?
 
 %{
+	#ifdef HAVE_SYS_CDEFS_H
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.3 2004/03/21 23:51:47 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.4 2004/03/22 07:12:38 manu Exp $");
+	#endif
 	#endif
 	#endif
 

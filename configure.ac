@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.61 2004/03/22 06:50:00 manu Exp $
+# $Id: configure.ac,v 1.62 2004/03/22 07:12:38 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -40,7 +40,7 @@ AC_ARG_WITH(libpthread,
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h sys/param.h netdb.h, getopt.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h sys/param.h netdb.h getopt.h sys/cdefs.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T

@@ -1,4 +1,4 @@
-/* $Id: config.h.in,v 1.11 2004/03/21 23:51:47 manu Exp $ */
+/* $Id: config.h.in,v 1.12 2004/03/22 07:12:38 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
@@ -7,7 +7,7 @@
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #undef HAVE_ARPA_INET_H
 
-/* unsable to use __RCSID twice */
+/* __RCSID cannot be used twice */
 #undef HAVE_BROKEN_RCSID
 
 /* broken rwlock in libpthread */
@@ -43,7 +43,7 @@
 /* missing socklen_t definition */
 #undef HAVE_MISSING_SOCKLEN_T
 
-/* Define to 1 if you have the <netdb.h */
+/* Define to 1 if you have the <netdb.h> header file. */
 #undef HAVE_NETDB_H
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
@@ -85,6 +85,9 @@
 
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H
+
+/* Define to 1 if you have the <sys/cdefs.h> header file. */
+#undef HAVE_SYS_CDEFS_H
 
 /* Define to 1 if you have the <sys/param.h> header file. */
 #undef HAVE_SYS_PARAM_H

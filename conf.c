@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.5 2004/03/19 10:16:38 manu Exp $ */
+/* $Id: conf.c,v 1.6 2004/03/22 07:12:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,9 +29,11 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.5 2004/03/19 10:16:38 manu Exp $");
+__RCSID("$Id: conf.c,v 1.6 2004/03/22 07:12:38 manu Exp $");
+#endif
 #endif
 
 #include "config.h"
