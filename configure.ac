@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.52 2004/03/21 20:17:48 manu Exp $
+# $Id: configure.ac,v 1.53 2004/03/21 21:42:25 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -135,10 +135,11 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([
 		#else
 		# ifdef __cplusplus
 		extern "C" unsigned int exit (unsigned int);
-		extern "C" int select(int, NULL, NULL, NULL, struct timeval *);
+		extern "C" int 
+		    select(int, void *, void *, void *, struct timeval *);
 		# else
 		unsigned int exit (unsigned int);
-		int select(int, NULL, NULL, NULL, struct timeval *);
+		int select(int, void *, void *, void *, struct timeval *);
 		# endif
 		#endif
 
