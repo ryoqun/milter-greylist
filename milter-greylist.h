@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.14 2004/03/11 14:12:48 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.15 2004/03/12 11:00:10 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -64,12 +64,12 @@ int main(int, char **);
 		exit(EX_SOFTWARE);					  \
 	}
 #define RDLOCK(lock) if (pthread_rwlock_rdlock(&(lock)) != 0) {		  \
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed: %s", \
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_rdlock failed: %s", \
 		    __FILE__, __LINE__, strerror(errno));		  \
 		exit(EX_SOFTWARE);					  \
 	}
 #define UNLOCK(lock) if (pthread_rwlock_unlock(&(lock)) != 0) {		  \
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed: %s", \
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed: %s", \
 		    __FILE__, __LINE__, strerror(errno));		  \
 		exit(EX_SOFTWARE);					  \
 	}
