@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.62 2004/08/02 12:11:48 manu Exp $ */
+/* $Id: pending.c,v 1.63 2004/08/02 20:17:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.62 2004/08/02 12:11:48 manu Exp $");
+__RCSID("$Id: pending.c,v 1.63 2004/08/02 20:17:38 manu Exp $");
 #endif
 #endif
 
@@ -412,10 +412,10 @@ ip_match(sa, pat, mask)
 			return 0;
 #endif
 		for (i = 0; i < 16; i += 4) {
-			if ((*(u_int32_t *)&SADDR6(sa)->s6_addr[i] &
-			     *(u_int32_t *)&mask->in6.s6_addr[i]) !=
-			    (*(u_int32_t *)&SADDR6(pat)->s6_addr[i] &
-			     *(u_int32_t *)&mask->in6.s6_addr[i]))
+			if ((*(uint32_t *)&SADDR6(sa)->s6_addr[i] &
+			     *(uint32_t *)&mask->in6.s6_addr[i]) !=
+			    (*(uint32_t *)&SADDR6(pat)->s6_addr[i] &
+			     *(uint32_t *)&mask->in6.s6_addr[i]))
 				return 0;
 		}
 		break;

@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.46 2004/08/02 12:11:48 manu Exp $ */
+/* $Id: except.c,v 1.47 2004/08/02 20:17:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.46 2004/08/02 12:11:48 manu Exp $");
+__RCSID("$Id: except.c,v 1.47 2004/08/02 20:17:38 manu Exp $");
 #endif
 #endif
 
@@ -131,8 +131,8 @@ except_add_netblock(sa, salen, cidr)	/* exceptlist must be write-locked */
 	case AF_INET6:
 		prefix2mask6(cidr, &mask.in6);
 		for (i = 0; i < 16; i += 4)
-			*(u_int32_t *)&SADDR6(sa)->s6_addr[i] &=
-			    *(u_int32_t *)&mask.in6.s6_addr[i];
+			*(uint32_t *)&SADDR6(sa)->s6_addr[i] &=
+			    *(uint32_t *)&mask.in6.s6_addr[i];
 		break;
 #endif
 	}

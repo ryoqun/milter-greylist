@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.93 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.94 2004/08/02 20:17:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.93 2004/08/01 09:27:03 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.94 2004/08/02 20:17:38 manu Exp $");
 #endif
 #endif
 
@@ -1066,7 +1066,7 @@ prefix2mask6(plen, mask)
 	struct in6_addr *mask;
 {
 	int i;
-	u_int32_t m;
+	uint32_t m;
 
 	if (plen == 0 || plen > 128)
 		bzero((void *)mask, sizeof(*mask));
@@ -1076,7 +1076,7 @@ prefix2mask6(plen, mask)
 				m = ~(0xffffffff >> plen);
 			else
 				m = 0xffffffff;
-			*(u_int32_t *)&mask->s6_addr[i] = htonl(m);
+			*(uint32_t *)&mask->s6_addr[i] = htonl(m);
 			plen -= 32;
 			if (plen < 0)
 				plen = 0;
@@ -1099,7 +1099,7 @@ unmappedaddr(sa, salen)
 	if (SA6(sa)->sin6_family != AF_INET6 ||
 	    !IN6_IS_ADDR_V4MAPPED(SADDR6(sa)))
 		return;
-	addr4.s_addr = *(u_int32_t *)&SADDR6(sa)->s6_addr[12];
+	addr4.s_addr = *(uint32_t *)&SADDR6(sa)->s6_addr[12];
 	port = SA6(sa)->sin6_port;
 	bzero(sa, sizeof(struct sockaddr_in));
 	SADDR4(sa)->s_addr = addr4.s_addr;
