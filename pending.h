@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.11 2004/03/14 11:05:53 manu Exp $ */
+/* $Id: pending.h,v 1.12 2004/03/14 11:36:22 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -60,10 +60,6 @@
 #define PENDING_RDLOCK RDLOCK(pending_lock)
 #define PENDING_UNLOCK UNLOCK(pending_lock)
 
-#define DUMP_WRLOCK WRLOCK(dump_lock)
-#define DUMP_RDLOCK RDLOCK(dump_lock)
-#define DUMP_UNLOCK UNLOCK(dump_lock)
-
 TAILQ_HEAD(pendinglist, pending);
 
 struct pending {
@@ -86,8 +82,9 @@ struct pending *pending_get(struct in_addr *, char *, char *, time_t);
 int pending_check(struct in_addr *, char *, char *, time_t *, time_t *);
 void pending_del(struct in_addr *, char *, char *, time_t);
 void pending_put(struct pending *);
-void pending_textdump(FILE *);
+int pending_textdump(FILE *);
 void pending_import(FILE *);
+void pending_dumper(void *);
 void pending_flush(void);
 void pending_reload(void);
 

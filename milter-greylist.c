@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.27 2004/03/11 14:12:48 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.28 2004/03/14 11:36:22 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.27 2004/03/11 14:12:48 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.28 2004/03/14 11:36:22 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -250,9 +250,6 @@ mlfi_close(ctx)
 		free(priv);
 		smfi_setpriv(ctx, NULL);
 	}
-
-	/* Flush modifications to the greylist to disj */
-	pending_flush();
 
 	return SMFIS_CONTINUE;
 }

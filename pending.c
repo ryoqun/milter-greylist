@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.24 2004/03/14 11:05:53 manu Exp $ */
+/* $Id: pending.c,v 1.25 2004/03/14 11:36:22 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.24 2004/03/14 11:05:53 manu Exp $");
+__RCSID("$Id: pending.c,v 1.25 2004/03/14 11:36:22 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -60,7 +60,7 @@ __RCSID("$Id: pending.c,v 1.24 2004/03/14 11:05:53 manu Exp $");
 struct pendinglist pending_head;
 int pending_dirty;
 pthread_rwlock_t pending_lock; 	/* protects pending_head and pending_dirty */
-pthread_rwlock_t dump_lock;	/* protects against simulataneous dumps */
+pthread_cond_t dump_sleepflag;
 
 int delay = DELAY;
 char *dumpfile = DUMPFILE;
@@ -69,16 +69,19 @@ int dump_parse(void);
 int
 pending_init(void) {
 	int error;
+	pthread_t tid;
 
 	TAILQ_INIT(&pending_head);
-	pending_dirty = 0;
 
 	if ((error = pthread_rwlock_init(&pending_lock, NULL)) == 0)
 		return error;
 
-	if ((error = pthread_rwlock_init(&dump_lock, NULL)) == 0)
+	if ((error = pthread_cond_init(&dump_sleepflag, NULL)) == 0)
 		return error;
 
+	if (pthread_create(&tid, NULL, (void *)pending_dumper, NULL) != 0) 
+		return error;
+	
 	return 0;
 }
 
@@ -112,7 +115,8 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 	pending->p_rcpt[ADDRLEN] = '\0';
 	TAILQ_INSERT_TAIL(&pending_head, pending, p_list); 
 
-	pending_dirty++;
+	if (debug)
+		pending_dirty++;
 
 	(void)gettimeofday(&tv, NULL);
 	syslog(LOG_INFO, "created: %s from %s to %s, delayed for %ld s",
@@ -132,7 +136,8 @@ pending_put(pending) /* pending list should be write-locked */
 	TAILQ_REMOVE(&pending_head, pending, p_list);	
 	free(pending);
 
-	pending_dirty++;
+	if (debug)
+		pending_dirty++;
 
 	return;
 }
@@ -160,7 +165,6 @@ pending_del(in, from, rcpt, time)
 		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0) &&
 		    (pending->p_tv.tv_sec == time)) {
-			peer_delete(pending);
 			pending_put(pending);
 			goto out;
 		}
@@ -169,7 +173,7 @@ pending_del(in, from, rcpt, time)
 		 * Check for expired entries 
 		 */
 		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
-			syslog(LOG_INFO, "check: %s from %s to %s timed out", 
+			syslog(LOG_INFO, "del: %s from %s to %s timed out", 
 			    pending->p_addr, pending->p_from, pending->p_rcpt);
 			pending_put(pending);
 		}
@@ -191,11 +195,12 @@ pending_check(in, from, rcpt, remaining, elapsed)
 	struct pending *pending;
 	struct timeval tv;
 	time_t rest = -1;
+	int dirty = 0;
 
 	gettimeofday(&tv, NULL);
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
-	PENDING_WRLOCK;
+	PENDING_WRLOCK;	/* XXX take a read lock and upgrade */
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
 		/*
 		 * Look for our entry.
@@ -210,6 +215,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 				peer_delete(pending);
 				pending_put(pending);
 				rest = 0;
+				dirty = 1;
 			}
 
 			goto out;
@@ -222,6 +228,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 			syslog(LOG_INFO, "check: %s from %s to %s timed out", 
 			    pending->p_addr, pending->p_from, pending->p_rcpt);
 			pending_put(pending);
+			dirty = 1;
 		}
 	}
 
@@ -232,6 +239,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 	pending = pending_get(in, from, rcpt, 0);
 	peer_create(pending);
 	rest = delay;
+	dirty = 1;
 
 out:
 	PENDING_UNLOCK;
@@ -242,6 +250,9 @@ out:
 	if (elapsed != NULL)
 		*elapsed = (time_t)(tv.tv_sec - (pending->p_tv.tv_sec - delay));
 
+	if (dirty)
+		pending_flush();
+
 	if (rest == 0)
 		return 1;
 	else
@@ -249,13 +260,14 @@ out:
 }
 
 #define DATELEN	40
-void
+int
 pending_textdump(stream)
 	FILE *stream;
 {
 	struct pending *pending;
 	struct timeval tv;
 	char textdate[DATELEN + 1];
+	int done = 0;
 
 	gettimeofday(&tv, NULL);
 	strftime(textdate, DATELEN, "%a %b %d %H %G", 
@@ -277,26 +289,48 @@ pending_textdump(stream)
 		fprintf(stream, "%s	%32s	%32s	%ld # %s\n", 
 		    pending->p_addr, pending->p_from, 
 		    pending->p_rcpt, pending->p_tv.tv_sec, textdate);
+		
+		done++;
 	}
 	PENDING_UNLOCK;
-	return;
+
+	return done;
 }
 
 void
-pending_flush(void) {
+pending_dumper(dontcare) 
+	void *dontcare;
+{
 	FILE *dump;
 	int dumpfd;
 	struct timeval tv1, tv2, tv3;
+	pthread_mutex_t mutex;
 	char newdumpfile[MAXPATHLEN + 1];
+	int error;
+	int done;
 
-	PENDING_RDLOCK;
-	DUMP_WRLOCK;
+	if (pthread_mutex_init(&mutex, NULL) != 0) {
+		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n",
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
 
-	if (pending_dirty > 0) {
+	while (1) {
+		if ((error = pthread_cond_wait(&dump_sleepflag, &mutex)) != 0)
+		    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
+			strerror(errno));
+
 		if (debug) {
 			(void)gettimeofday(&tv1, NULL);
 			syslog(LOG_DEBUG, "dumping %d modifications", 
 			    pending_dirty);
+			/* 
+			 * pending_dirty is not protected by a lock,
+			 * hence it could be modified between the 
+			 * display and the actual dump. This debug
+			 * message does not give an accurate information
+			 */
+			pending_dirty = 0;
 		}
 
 		/* 
@@ -320,7 +354,7 @@ pending_flush(void) {
 			exit(EX_OSERR);
 		}
 
-		pending_textdump(dump);
+		done = pending_textdump(dump);
 		fclose(dump);
 		if (rename(newdumpfile, dumpfile) != 0) {
 			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
@@ -331,15 +365,15 @@ pending_flush(void) {
 		if (debug) {
 			(void)gettimeofday(&tv2, NULL);
 			timersub(&tv2, &tv1, &tv3);
-			syslog(LOG_DEBUG, "dumping done in %ld.%06lds",
-			tv3.tv_sec, tv3.tv_usec);
+			syslog(LOG_DEBUG, "dumping %d records in %ld.%06lds",
+			    done, tv3.tv_sec, tv3.tv_usec);
 		}
 
-		pending_dirty = 0;
 	}
 
-	DUMP_UNLOCK;
-	PENDING_UNLOCK;
+	/* NOTREACHED */
+	syslog(LOG_ERR, "pending_dumper unexpectedly exitted");
+	exit(EX_SOFTWARE);
 
 	return;
 }
@@ -369,5 +403,12 @@ pending_reload(void) {
 		fclose(dump);
 	}
 
+	return;
+}
+
+void
+pending_flush(void) {
+
+	pthread_cond_signal(&dump_sleepflag);
 	return;
 }
