@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.32 2004/06/08 14:47:47 manu Exp $ */
+/* $Id: autowhite.c,v 1.33 2004/06/12 08:41:56 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.32 2004/06/08 14:47:47 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.33 2004/06/12 08:41:56 manu Exp $");
 #endif
 #endif
 
@@ -88,8 +88,8 @@ autowhite_add(in, from, rcpt, date, queueid)
 	time_t *date;
 	char *queueid;
 {
-	struct autowhite *aw = NULL;
-	struct autowhite *prev_aw = NULL;
+	struct autowhite *aw;
+	struct autowhite *next_aw;
 	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
 	time_t autowhite_validity;
@@ -110,51 +110,44 @@ autowhite_add(in, from, rcpt, date, queueid)
 	inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
 	AUTOWHITE_WRLOCK;
-	if (!TAILQ_EMPTY(&autowhite_head)) {
-		TAILQ_FOREACH(aw, &autowhite_head, a_list) {
+	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
+		next_aw = TAILQ_NEXT(aw, a_list);
 
-			/*
-			 * Expiration
-			 */
-			if (aw->a_tv.tv_sec < now.tv_sec) {
-				autowhite_put(aw);
-				aw = NULL;
+		/*
+		 * Expiration
+		 */
+		if (aw->a_tv.tv_sec < now.tv_sec) {
+			autowhite_put(aw);
 
-				dirty++;
+			dirty++;
 
-				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
-				    "autowhitelisted entry expired",
-				    addr, from, rcpt);
+			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+				"autowhitelisted entry expired",
+				addr, from, rcpt);
 
-				if (TAILQ_EMPTY(&autowhite_head))
-					break;
-				if ((aw = prev_aw) == NULL)
-					aw = TAILQ_FIRST(&autowhite_head);
-				continue;
-			}
-			prev_aw = aw;
+			continue;
+		}
 
-			/*
-			 * Look for an already existing entry
-			 */
-			if ((in->s_addr == aw->a_in.s_addr) &&
-			    ((conf.c_lazyaw == 1) ||
-			    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
-			    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
-				timeradd(&now, &delay, &aw->a_tv);
+		/*
+		 * Look for an already existing entry
+		 */
+		if ((in->s_addr == aw->a_in.s_addr) &&
+		    ((conf.c_lazyaw == 1) ||
+		    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
+		    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
+			timeradd(&now, &delay, &aw->a_tv);
 
-				dirty++;
+			dirty++;
 
-				syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
-				    "autowhitelisted for more %02d:%02d:%02d", 
-				    queueid, addr, from, rcpt, h, mn, s);
-				break;
-			}
-		}		
+			syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
+				"autowhitelisted for more %02d:%02d:%02d",
+				queueid, addr, from, rcpt, h, mn, s);
+			break;
+		}
 	}
 
-	/* 
-	 * Entry not found, create it 
+	/*
+	 * Entry not found, create it
 	 */
 	if (aw == NULL) {
 		aw = autowhite_get(in, from, rcpt, date);
@@ -180,8 +173,8 @@ autowhite_check(in, from, rcpt, queueid)
 	char *rcpt;
 	char *queueid;
 {
-	struct autowhite *aw = NULL;
-	struct autowhite *prev_aw = NULL;
+	struct autowhite *aw;
+	struct autowhite *next_aw;
 	struct timeval now, delay;
 	char addr[IPADDRLEN + 1];
 	time_t autowhite_validity;
@@ -202,46 +195,41 @@ autowhite_check(in, from, rcpt, queueid)
 	inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
 	AUTOWHITE_WRLOCK;
-	if (!TAILQ_EMPTY(&autowhite_head)) {
-		TAILQ_FOREACH(aw, &autowhite_head, a_list) {
-			/* 
-			 * Do expiration first as we don't want
-			 * an outdated record to match
-			 */
-			if (aw->a_tv.tv_sec < now.tv_sec) {
-				autowhite_put(aw);
-				aw = NULL;
+	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
+		next_aw = TAILQ_NEXT(aw, a_list);
 
-				dirty++;
+		/*
+		 * Do expiration first as we don't want
+		 * an outdated record to match
+		 */
+		if (aw->a_tv.tv_sec < now.tv_sec) {
+			autowhite_put(aw);
+			aw = NULL;
 
-				syslog(LOG_INFO, "addr %s from %s rcpt %s: "
-				    "autowhitelisted entry expired",
-				    addr, from, rcpt);
+			dirty++;
 
-				if (TAILQ_EMPTY(&autowhite_head))
-					break;
-				if ((aw = prev_aw) == NULL)
-					aw = TAILQ_FIRST(&autowhite_head);
-				continue;
-			}
-			prev_aw = aw;
+			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+				"autowhitelisted entry expired",
+				addr, from, rcpt);
 
-			/*
-			 * Look for our record
-			 */
-			if ((IP_MATCH(in, &aw->a_in)) &&
-			    ((conf.c_lazyaw == 1) ||
-			    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
-			    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
-				timeradd(&now, &delay, &aw->a_tv);
+			continue;
+		}
 
-				dirty++;
+		/*
+		 * Look for our record
+		 */
+		if ((IP_MATCH(in, &aw->a_in)) &&
+		    ((conf.c_lazyaw == 1) ||
+		    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
+		    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
+			timeradd(&now, &delay, &aw->a_tv);
 
-				syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
-				    "autowhitelisted for more %02d:%02d:%02d", 
-				    queueid, addr, from, rcpt, h, mn, s);
-				break;
-			}
+			dirty++;
+
+			syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
+				"autowhitelisted for more %02d:%02d:%02d",
+				queueid, addr, from, rcpt, h, mn, s);
+			break;
 		}
 	}
 	AUTOWHITE_UNLOCK;

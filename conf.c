@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.23 2004/06/08 14:47:47 manu Exp $ */
+/* $Id: conf.c,v 1.24 2004/06/12 08:41:56 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.23 2004/06/08 14:47:47 manu Exp $");
+__RCSID("$Id: conf.c,v 1.24 2004/06/12 08:41:56 manu Exp $");
 #endif
 #endif
 
@@ -214,8 +214,8 @@ quotepath(dst, path, len)
 	dst[len] = '\0';
 
 	/* Strip trailing quote */
-	if (strlen(dst) > 0)
-		dst[strlen(dst) - 1] = '\0';
+	if ((len = strlen(dst)) > 0)
+		dst[len - 1] = '\0';
 
 	return dst;
 }

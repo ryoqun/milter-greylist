@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.59 2004/06/08 14:47:47 manu Exp $ */
+/* $Id: pending.c,v 1.60 2004/06/12 08:41:56 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.59 2004/06/08 14:47:47 manu Exp $");
+__RCSID("$Id: pending.c,v 1.60 2004/06/12 08:41:56 manu Exp $");
 #endif
 #endif
 
@@ -157,14 +157,16 @@ pending_del(in, from, rcpt, time)
 {
 	char addr[IPADDRLEN + 1];
 	struct pending *pending;
-	struct pending *prev_pending = NULL;
+	struct pending *next;
 	struct timeval tv;
 
 	gettimeofday(&tv, NULL);
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
 	PENDING_WRLOCK;	/* XXX take it as read and upgrade it */
-	TAILQ_FOREACH(pending, &pending_head, p_list) {
+	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
+		next = TAILQ_NEXT(pending, p_list);
+
 		/*
 		 * Look for our entry.
 		 */
@@ -177,25 +179,19 @@ pending_del(in, from, rcpt, time)
 		}
 
 		/*
-		 * Check for expired entries 
+		 * Check for expired entries
 		 */
 		if (tv.tv_sec - pending->p_tv.tv_sec > conf.c_timeout) {
 			if (conf.c_debug) {
-				syslog(LOG_DEBUG, 
-				    "del: %s from %s to %s timed out", 
-				    pending->p_addr, pending->p_from, 
+				syslog(LOG_DEBUG,
+				    "del: %s from %s to %s timed out",
+				    pending->p_addr, pending->p_from,
 				    pending->p_rcpt);
 			}
 
 			pending_put(pending);
-
-			if (TAILQ_EMPTY(&pending_head))
-				break;
-			if ((pending = prev_pending) == NULL)
-				pending = TAILQ_FIRST(&pending_head);
 			continue;
 		}
-		prev_pending = pending;
 	}
 	PENDING_UNLOCK;
 	return;
@@ -212,7 +208,7 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 {
 	char addr[IPADDRLEN + 1];
 	struct pending *pending;
-	struct pending *prev_pending = NULL;
+	struct pending *next;
 	time_t now;
 	time_t rest = -1;
 	time_t accepted = -1;
@@ -223,7 +219,8 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
 	PENDING_WRLOCK;	/* XXX take a read lock and upgrade */
-	TAILQ_FOREACH(pending, &pending_head, p_list) {
+	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
+		next = TAILQ_NEXT(pending, p_list);
 
 		/*
 		 * The time the entry shall be accepted
@@ -231,12 +228,28 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 		accepted = pending->p_tv.tv_sec;
 
 		/*
+		 * Check for expired entries
+		 */
+		if (now - accepted > conf.c_timeout) {
+			if (conf.c_debug) {
+				syslog(LOG_DEBUG,
+				    "check: %s from %s to %s timed out",
+				    pending->p_addr, pending->p_from,
+				    pending->p_rcpt);
+			}
+
+			pending_put(pending);
+			dirty = 1;
+			continue;
+		}
+
+		/*
 		 * Look for our entry.
 		 */
 		if ((IP_MATCH(&pending->p_in, in)) &&
 		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
-			rest = accepted - now; 
+			rest = accepted - now;
 
 			if (rest < 0) {
 				peer_delete(pending);
@@ -248,28 +261,6 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 
 			goto out;
 		}
-
-		/*
-		 * Check for expired entries 
-		 */
-		if (now - accepted > conf.c_timeout) {
-			if (conf.c_debug) {
-				syslog(LOG_DEBUG, 
-				    "check: %s from %s to %s timed out", 
-				    pending->p_addr, pending->p_from, 
-				    pending->p_rcpt);
-			}
-
-			pending_put(pending);
-			dirty = 1;
-
-			if (TAILQ_EMPTY(&pending_head))
-				break;
-			if ((pending = prev_pending) == NULL)
-				pending = TAILQ_FIRST(&pending_head);
-			continue;
-		}
-		prev_pending = pending;
 	}
 
 	/* 
