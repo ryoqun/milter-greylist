@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.66 2004/03/22 17:56:33 manu Exp $
+# $Id: configure.ac,v 1.67 2004/03/22 21:19:09 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -50,7 +50,6 @@ AC_HEADER_TIME
 # Checks for library functions.
 AC_FUNC_FORK
 AC_FUNC_STRFTIME
-AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_SETVBUF_REVERSED
@@ -189,6 +188,18 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	[AC_DEFINE([HAVE_BROKEN_RCSID], [], 
 	    [__RCSID cannot be used twice]) rcsidtwice=no])
 AC_MSG_RESULT([$rcsidtwice])
+
+# Digital UNIX's native compiler require -pthread when using libpthread
+AC_MSG_CHECKING([whether <pthreads.h> wants -pthread])
+SAVEDCFLAGS=$CFLAGS
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],[])],
+	[pthreadfl=no], 
+	[CFLAGS=$CFLAGS" -pthread";
+	 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],[])],
+		[pthreadfl=yes; SAVEDCLFAGS=$CFLAGS], [pthreadfl=no])
+	])
+CLFAGS=$SAVEDCFLAGS
+AC_MSG_RESULT([$pthreadfl])
 
 # Linux requires -D_XOPEN_SOURCE=500 to build with libpthread and -Wall
 AC_MSG_CHECKING([whether you need -D_XOPEN_SOURCE to use libpthread])

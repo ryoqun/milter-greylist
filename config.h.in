@@ -1,4 +1,4 @@
-/* $Id: config.h.in,v 1.13 2004/03/22 17:55:25 manu Exp $ */
+/* $Id: config.h.in,v 1.14 2004/03/22 21:19:09 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
@@ -176,9 +176,6 @@
 
 /* Define like PROTOTYPES; this can be used by system headers. */
 #undef __PROTOTYPES
-
-/* Define to rpl_malloc if the replacement function should be used. */
-#undef malloc
 
 /* Define to `int' if <sys/types.h> does not define. */
 #undef pid_t
