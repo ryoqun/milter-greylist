@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.9 2004/03/02 16:26:40 manu Exp $ */
+/* $Id: except.c,v 1.10 2004/03/03 16:28:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -84,6 +84,8 @@ except_add_netblock(in, cidr)
 {
 	struct in_addr mask;
 	struct except *except;
+	char addrstr[IPADDRLEN + 1];
+	char maskstr[IPADDRLEN + 1];
 
 	if ((cidr > 32) || (cidr < 0)) {
 		fprintf(stderr, "bad mask in exception list line %d\n", 
@@ -109,15 +111,10 @@ except_add_netblock(in, cidr)
 	memcpy(&except->e_mask, &mask, sizeof(mask));
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
-	if (debug) {
-		/*
-		 * inet_ntoa result is a static char[], so we cannot use
-		 * inet_ntoa two times in the same function call, else we 
-		 * get the same result twice.
-		 */
-		printf("load exception net %s", inet_ntoa(except->e_addr));
-		printf("/%s\n", inet_ntoa(except->e_mask));
-	}
+	if (debug)
+		printf("load exception net %s/%s\n", 
+		inet_ntop(AF_INET, &except->e_addr, addrstr, IPADDRLEN),
+		inet_ntop(AF_INET, &except->e_mask, maskstr, IPADDRLEN));
 
 	return;
 }
@@ -171,6 +168,7 @@ except_filter(in, from, rcpt)
 	char *rcpt;
 {
 	struct except *ex;
+	char addrstr[IPADDRLEN + 1];
 
 	/*
 	 * Testmode: check if the recipient is in the exception list.
@@ -202,7 +200,8 @@ except_filter(in, from, rcpt)
 			if ((in->s_addr & ex->e_mask.s_addr) == 
 			    ex->e_addr.s_addr) {
 				syslog(LOG_INFO, "address %s is in "
-				    "exception list\n", inet_ntoa(*in));
+				    "exception list\n", 
+				    inet_ntop(AF_INET, in, addrstr, IPADDRLEN));
 				return 1;
 			}
 			break;
