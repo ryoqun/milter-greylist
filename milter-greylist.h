@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.16 2004/03/13 13:54:30 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.17 2004/03/13 15:12:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -84,10 +84,8 @@ int main(int, char **);
 	}
 #else
 #define UNLOCK(lock) if (pthread_rwlock_unlock(&(lock)) != 0) {		  \
-		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed: %s", \
-		    __FILE__, __LINE__, strerror(errno));		  \
-		if (errno != EPERM)					  \
-			exit(EX_SOFTWARE);				  \
+		syslog(LOG_DEBUG, "%s:%d pthread_rwlock_unlock failed: "  \
+		    "%s (ignored)", __FILE__, __LINE__, strerror(errno)); \
 	}
 #endif
 
