@@ -6,11 +6,14 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.16 2004/08/01 09:27:03 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.17 2005/02/03 09:41:27 manu Exp $");
 #endif
 #endif
 
 #include <stdlib.h>
+#include <string.h>
+#include <sysexits.h>
+#include "conf.h"
 #include "pending.h"
 #include "autowhite.h"
 

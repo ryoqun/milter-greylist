@@ -1,3 +1,5 @@
+2.0b1:
+	Fix build problem on IPv6 disabled systems.
 1.7.5:
 	Documentation fixes (Gary Aitken, Per Holm)
 	New broken site in the default whitelist
