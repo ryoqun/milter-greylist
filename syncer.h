@@ -31,7 +31,7 @@
 #define _SYNCER_H_
 
 #ifndef DUMPFILE
-#define DUMPFILE "/var/db/greylist.db"
+#define DUMPFILE "/var/milter-greylist/greylist.db"
 #endif
 
 #ifndef DUMPFREQ

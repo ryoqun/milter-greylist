@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.9 2004/03/02 16:26:39 manu Exp $
+# $Id: Makefile.in,v 1.10 2004/03/03 13:51:47 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -65,6 +65,13 @@ install:	milter-greylist
 	${TEST} -f /etc/mail/greylist.except || \
 	     ${INSTALL} -m 644 greylist.except /etc/mail
 	${INSTALL} -d -m 755 -o ${USER} /var/milter-greylist
+	@${TEST} -f /var/db/greylist.db && (			 	   \
+		echo "	================================================"; \
+		echo "	  WARNING: the dump file location has changed,  "; \
+		echo "	  Please move /var/db/greylist.db, the default  "; \
+		echo "	  location is now in /var/milter-greylist/      "; \
+		echo "	================================================"; \
+	) 
 
 depend:
 	${MKDEP} ${CFLAGS} ${SRC}

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.6 2004/02/29 23:01:27 manu Exp $
+.\" $Id: milter-greylist.8,v 1.7 2004/03/03 13:51:47 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -96,10 +96,10 @@ Do not fork and run in the foreground. Without this flag,
 will become a daemon.
 .It Fl d Ar dumpfile
 Location of the dump file. Default is 
-.Pa /etc/mail/greylist.except
+.Pa /var/milter-greylist/greylist.db
 .It Fl f Ar exceptfile
 Location of the white list file. Default is
-.Pa /var/milter-greylist/greylist.db .
+.Pa /etc/mail/greylist.except .
 .It Fl p Ar socket
 Use 
 .Ar socket
