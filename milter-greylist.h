@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.25 2004/03/31 15:31:59 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.26 2004/04/01 07:16:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,6 +31,10 @@
 
 #ifndef _MILTER_GREYLIST_H_
 #define _MILTER_GREYLIST_H_
+
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #include <libmilter/mfapi.h>
 #include "config.h"
