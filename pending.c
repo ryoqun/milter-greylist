@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.16 2004/03/08 09:31:54 manu Exp $ */
+/* $Id: pending.c,v 1.17 2004/03/08 21:58:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.16 2004/03/08 09:31:54 manu Exp $");
+__RCSID("$Id: pending.c,v 1.17 2004/03/08 21:58:21 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -119,7 +119,7 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
-	long date;
+	time_t date;
 {
 	struct pending *pending;
 	struct timeval tv;
@@ -210,13 +210,13 @@ pending_check(in, from, rcpt, remaining, elapsed)
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
-	long *remaining;
-	long *elapsed;
+	time_t *remaining;
+	time_t *elapsed;
 {
 	char addr[IPADDRLEN + 1];
 	struct pending *pending;
 	struct timeval tv;
-	long rest = -1;
+	time_t rest = -1;
 
 	gettimeofday(&tv, NULL);
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
@@ -229,7 +229,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 		if ((strncmp(addr, pending->p_addr, IPADDRLEN) == 0) &&
 		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
-			rest = pending->p_tv.tv_sec - tv.tv_sec;
+			rest = (time_t)(pending->p_tv.tv_sec - tv.tv_sec);
 
 			syslog(LOG_DEBUG, "got the entry");
 			if (rest < 0) {
@@ -264,7 +264,7 @@ out:
 		*remaining = rest; 
 
 	if (elapsed != NULL)
-		*elapsed = tv.tv_sec - (pending->p_tv.tv_sec - delay);
+		*elapsed = (time_t)(tv.tv_sec - (pending->p_tv.tv_sec - delay));
 
 	if (rest == 0)
 		return 1;
@@ -282,7 +282,7 @@ pending_textdump(stream)
 	char textdate[DATELEN + 1];
 
 	gettimeofday(&tv, NULL);
-	strftime(textdate, DATELEN, "%c", localtime(&tv.tv_sec));
+	strftime(textdate, DATELEN, "%c", localtime((time_t *)&tv.tv_sec));
 
 	fprintf(stream, "#\n# Greylist database, "
 	    "dumped by milter-greylist-%s on %s.\n",
@@ -295,7 +295,7 @@ pending_textdump(stream)
 	PENDING_RDLOCK;
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
 		strftime(textdate, DATELEN, "%F %T", 
-		    localtime(&pending->p_tv.tv_sec));
+		    localtime((time_t *)&pending->p_tv.tv_sec));
 
 		fprintf(stream, "%s	%32s	%32s	%ld # %s\n", 
 		    pending->p_addr, pending->p_from, 
