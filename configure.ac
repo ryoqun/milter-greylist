@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.23 2004/03/08 09:42:47 manu Exp $
+# $Id: configure.ac,v 1.24 2004/03/08 21:41:53 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -31,7 +31,11 @@ AC_ARG_WITH(libpthread,
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, 
 	[LIBS="$LIBS -lpthread"],
-	[echo "Required libpthread not found. Use --with-libpthread"; exit 1;])
+	[AC_CHECK_LIB(c_r, pthread_create, 
+		[LIBS="$LIBS -lc_r"],
+		[echo "Required libpthread not found. Use --with-libpthread"; 
+		 exit 1;])
+	 ])
 
 AC_CHECK_LIB(milter, smfi_register,
 	[LIBS="$LIBS -lmilter"],
