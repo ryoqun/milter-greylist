@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.18 2004/03/17 17:33:40 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.19 2004/03/18 09:55:15 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -90,39 +90,4 @@ int main(int, char **);
 	}
 #endif
 
-/* 
- * Theses definitions are missing from Linux's <sys/queue.h>
- */
-#ifndef TAILQ_FOREACH
-#define TAILQ_FOREACH(var, head, field)			\
-	for ((var) = ((head)->tqh_first);		\
-		(var);					\
-		(var) = ((var)->field.tqe_next))
-#endif
-
-#ifndef LIST_FOREACH
-#define LIST_FOREACH(var, head, field)			\
-	for ((var) = ((head)->lh_first);		\
-		(var);					\
-		(var) = ((var)->field.le_next))
-#endif
-
-#ifndef LIST_FIRST
-#define LIST_FIRST(head)                ((head)->lh_first)
-#endif
-
-#ifndef LIST_EMPTY
-#define LIST_EMPTY(head)                ((head)->lh_first == NULL)
-#endif
-
-#ifndef TAILQ_FIRST
-#define TAILQ_FIRST(head)                ((head)->tqh_first)
-#endif
-
-#ifndef TAILQ_EMPTY
-#define TAILQ_EMPTY(head)                ((head)->tqh_first == NULL)
-#endif
-
-
-		
 #endif /* _MILTER_GREYLIST_H_ */

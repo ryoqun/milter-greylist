@@ -1,4 +1,4 @@
-/* $Id: config.h.in,v 1.6 2004/03/13 13:54:30 manu Exp $ */
+/* $Id: config.h.in,v 1.7 2004/03/18 09:55:14 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
@@ -36,6 +36,9 @@
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
 #undef HAVE_NETINET_IN_H
+
+/* old <sys/queue.h> */
+#undef HAVE_OLD_QUEUE_H
 
 /* sa_len field in struct sockaddr */
 #undef HAVE_SA_LEN

@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.3 2004/03/17 22:31:05 manu Exp $ */
+/* $Id: dump.c,v 1.4 2004/03/18 09:55:14 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.3 2004/03/17 22:31:05 manu Exp $");
+__RCSID("$Id: dump.c,v 1.4 2004/03/18 09:55:14 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -45,12 +45,17 @@ __RCSID("$Id: dump.c,v 1.3 2004/03/17 22:31:05 manu Exp $");
 
 #include <sys/types.h>
 #include <sys/param.h>
-#include <sys/queue.h>
 #include <sys/time.h>
 #include <sys/socket.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#ifndef HAVE_OLD_QUEUE_H
+#include "queue.h"
+#else
+#include <sys/queue.h>
+#endif 
 
 #include "config.h"
 #include "sync.h"

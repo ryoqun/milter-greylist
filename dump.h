@@ -1,4 +1,4 @@
-/* $Id: dump.h,v 1.2 2004/03/17 22:21:36 manu Exp $ */
+/* $Id: dump.h,v 1.3 2004/03/18 09:55:15 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,10 +34,15 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/time.h>
-#include <sys/queue.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#ifndef HAVE_OLD_QUEUE_H
+#include "queue.h"
+#else
+#include <sys/queue.h>
+#endif 
 
 #ifndef DUMPFILE
 #define DUMPFILE "/var/milter-greylist/greylist.db"

@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.11 2004/03/16 23:16:52 manu Exp $ */
+/* $Id: except.h,v 1.12 2004/03/18 09:55:15 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -36,9 +36,14 @@
 #include <pthread.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-#include <sys/queue.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#ifndef HAVE_OLD_QUEUE_H
+#include "queue.h"
+#else 
+#include <sys/queue.h>
+#endif
 
 #include "pending.h"
 #include "config.h"

@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.43 2004/03/18 07:33:28 manu Exp $
+# $Id: configure.ac,v 1.44 2004/03/18 09:55:14 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -62,6 +62,19 @@ AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
+
+# Some Linux flavors have an outdated <sys/queue.h>
+AC_MSG_CHECKING([if your <sys/queue.h> is outdated])
+oldqueue=no
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <sys/queue.h>
+	],[
+		#ifndef TAILQ_FIRST
+		# error Your <sys/queue.h> is outdated
+		#endif
+	])], [oldqueue=no], 
+	[AC_DEFINE([HAVE_OLD_QUEUE_H], [], [old <sys/queue.h>]) oldqueue=yes])
+AC_MSG_RESULT([$oldqueue])
 
 # Linux requires -D_XOPEN_SOURCE=500 to build with libpthread and -Wall
 AC_MSG_CHECKING([whether you need -D_XOPEN_SOURCE to use libpthread])
