@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.122 2004/09/13 18:41:54 manu Exp $
+# $Id: configure.ac,v 1.123 2004/09/14 18:58:34 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 1.5.7, manu@netbsd.org)
+AC_INIT(milter-greylist, 1.5.8, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -190,8 +190,12 @@ else
   ifelse([$3], , :, [$3])
 fi])
 
-IPv6_CHECK_FUNC(getaddrinfo)
-IPv6_CHECK_FUNC(getnameinfo)
+IPv6_CHECK_FUNC(getaddrinfo, 
+    AC_DEFINE([HAVE_GETADDRINFO], [], 
+    [Define to 1 if you have the `getaddrinfo' function.]))
+IPv6_CHECK_FUNC(getnameinfo, 
+    AC_DEFINE([HAVE_GETNAMEINFO], [], 
+    [Define to 1 if you have the `getnameinfo' function.]))
 
 # Check if <syslog.h> defines LOG_PERROR
 AC_MSG_CHECKING([if <syslog.h> defines LOG_PERROR])

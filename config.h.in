@@ -1,5 +1,5 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
-/* $Id: config.h.in,v 1.20 2004/09/13 18:59:59 manu Exp $ */
+/* $Id: config.h.in,v 1.21 2004/09/14 18:58:34 manu Exp $ */
 
 /* Build environnement */
 #undef BUILD_ENV
@@ -21,6 +21,12 @@
 
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
+
+/* Define to 1 if you have the `getaddrinfo' function. */
+#undef HAVE_GETADDRINFO
+
+/* Define to 1 if you have the `getnameinfo' function. */
+#undef HAVE_GETNAMEINFO
 
 /* Define to 1 if you have the <getopt.h> header file. */
 #undef HAVE_GETOPT_H
