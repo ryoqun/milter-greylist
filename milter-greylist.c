@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.63 2004/03/31 10:07:17 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.64 2004/03/31 11:39:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.63 2004/03/31 10:07:17 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.64 2004/03/31 11:39:26 manu Exp $");
 #endif
 #endif
 
@@ -410,7 +410,6 @@ main(argc, argv)
 	char *argv[];
 {
 	int ch;
-	int gotsocket = 0;
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
@@ -519,9 +518,8 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			cleanup_sock(optarg);
-			(void)smfi_setconn(optarg);
-			gotsocket = 1;
+			conf.c_socket = optarg;
+			conf.c_forced |= C_SOCKET;
 			break;
 
 		case 'L': {
@@ -561,12 +559,6 @@ main(argc, argv)
 		}
 	}
 	
-	if (gotsocket == 0) {
-		fprintf(stderr, "%s: -p is a mandatory option\n",
-		    argv[0]);
-		usage(argv[0]);
-	}
-
 	/*
 	 * Drop root privs
 	 */
@@ -612,6 +604,14 @@ main(argc, argv)
 	 */
 	conf_load();
 	
+	if (conf.c_socket == NULL) {
+		syslog(LOG_ERR, "No socket provided, exitting");
+		exit(EX_USAGE);
+	}
+
+	cleanup_sock(conf.c_socket);
+	(void)smfi_setconn(conf.c_socket);
+
 	/*
 	 * Reload a saved greylist
 	 * No lock needed here either.

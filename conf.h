@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.6 2004/03/31 10:07:17 manu Exp $ */
+/* $Id: conf.h,v 1.7 2004/03/31 11:39:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -64,7 +64,7 @@ struct conf {
 	char *c_pidfile;
 	char *c_dumpfile;
 	struct in_addr c_match_mask;
-
+	char *c_socket;
 };
 
 /* c_forced flags */
@@ -79,12 +79,14 @@ struct conf {
 #define C_PIDFILE	0x080
 #define C_DUMPFILE	0x100
 #define C_MATCHMASK	0x200
+#define C_SOCKET	0x400
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
 extern struct conf conf;
 extern char *conffile;
 extern char c_pidfile[PATHLEN + 1];
 extern char c_dumpfile[PATHLEN + 1];
+extern char c_socket[PATHLEN + 1];
 
 void conf_load(void);
 void conf_update(void);

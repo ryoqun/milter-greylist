@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.22 2004/03/30 12:26:03 manu Exp $
+.\" $Id: milter-greylist.8,v 1.23 2004/03/31 11:39:26 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -85,12 +85,9 @@ a
 .Li kill -1
 as it will just terminate it (libmilter works that way).
 .Pp
-The format of the file is rather simple: each line gives a network address
-block or an e-mail address that is excluded from grey list filtering. 
-Here is an example:
-.Dl addr 127.0.0.0/8
-.Dl addr 192.168.3.0/24
-.Dl rcpt John.Doe@example.net
+See 
+.Xr greylist.conf 5
+for documentation on the file's format.
 .Pp
 The second file is
 .Pa greylist.db .
@@ -220,6 +217,7 @@ and
 .An Thomas Pfau
 for their feebacks on this software.
 .Sh SEE ALSO
+.Xr greylist.conf 5 ,
 .Xr sendmail 8 , 
 .Xr syslogd 8 .
 .Pp

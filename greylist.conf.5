@@ -1,0 +1,183 @@
+.\"
+.\" $Id: greylist.conf.5,v 1.1 2004/03/31 11:39:26 manu Exp $
+.\"
+.\" Copyright (c) 2004 Emmanuel Dreyfus
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"        This product includes software developed by Emmanuel Dreyfus
+.\"
+.\" THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+.\" WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+.\" DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+.\" INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+.\" (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+.\" SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+.\" STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+.\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+.\" OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+
+.Dd Mar 31, 2004
+.Dt greylist.conf 5
+.Os
+.Sh NAME
+.Nm greylist.conf
+.Nd milter-greylist configuration file
+.Sh DESCRIPTION
+.Nm 
+configures 
+.Xr milter-greylist 8
+operation. The format is simple: each line contains a keyword and an 
+optionnal argument. Anything between a # and the end of a line is 
+considered as a comment and is ignored. Blank lines are ignored as well.
+.Sh WHITELIST
+The primary use of 
+.Nm
+is to setup 
+.Xr milter-greylist 8 
+white list. This is done with three keywords:
+.Bl -tag -width flag
+.It Ar addr
+This keyword is used to specify a netblock of whitelisted source IP 
+addresses. The syntax is an IP address followed by a slash and a CIDR
+netmask. Here is an example:
+.Dl addr 127.0.0.0/8
+.Dl addr 192.168.3.0/24
+.Pp
+You should at least whitelist localhost (127.0.0.1/8), and if you have
+some user clients connecting to the machine, you should whitelist the
+addresses they connect from if you don't want them to get error 
+messages when sending e-mail.
+.It Ar from
+This is used to whitelist sender e-mail addresses. You should not use
+that feature, because sender e-mail addresses can be trivially forged.
+Example:
+.Dl from postmaster@example.com
+
+.It Ar rcpt
+This is used to configure what recipient addresses will have their
+incoming e-mail whitelisted. When running in testmode (The
+.Fl T 
+command-line option), addresses listed with the rcpt keyword will have
+their incoming e-mail greylisted. Without testmode, addresses listed
+with the rcpt keyword will not have their incoming e-mail greylisted.
+Example:
+.Dl rcpt John.Doe@example.net
+.El
+
+.Sh MX SYNC
+Synchronization of the greylist among multiple MX is configured using the peer 
+keyword. List each other MX IP addresses using the 
+.Ar peer 
+keyword. Here is
+an example:
+.Dl peer 192.0.2.18
+.Dl peer 192.0.2.17
+.Pp
+Do not ever list localhost as a peer, as it will cause each entry to 
+be added twice to the greylist.
+.Sh COMMAND-LINE FLAG EQUIVALENTS
+Most 
+.Xr milter-greylist 8
+command-line options have equivalent that can be used in the 
+configuration file. Note that if a command line option is supplied,
+it will always override the configuration file.
+.Pp
+If a command-line equivalent keyword is used more than once, the last 
+keyword will override the previous ones.
+.Bl -tag -width flag
+.It Ar verbose
+Enable debug output. This is equivalent to the
+.Fl d
+flag.
+.It Ar quiet
+Do not tell clients how many time remains before their e-mail will
+be accepted. This is equivalent to the
+.Fl q
+flag.
+.It Ar noauth
+Greylist clients regardless if they succeeded SMTP AUTH. Equivalent to
+.Fl A .
+.It Ar nospf
+Greylist clients regardless if they are SPF-compliant. Equivalent to
+.Fl S .
+.It Ar testmode
+Enable test mode. Equivalent to 
+.Fl T .
+.It Ar greylist
+The argument sets how many time 
+.Xr milter-greylist 8
+will want the client to wait between the first attempt and the time
+the message is accepted. The time is given in seconds, except if a 
+unit is given: m for minutes, h pour hours, and d for day. 
+The 
+.Ar greylist 
+keyword is equivalent to the
+.Fl w 
+option. Here is an example that sets the delay to 45 minutes:
+.Dl greylist 45m
+.It Ar autowhite
+This sets the auto-whitelisting duration, like the
+.Fl a
+command-line option. As for the 
+.Ar greylist keywords , 
+units can be
+supplied. Here is an example for a 3 days long auto-whitelisting:
+.Dl autowhite 3d
+.It Ar pidfile
+This cause 
+.Xr milter-greylist 8
+to write its PID in the file given in argument, like the 
+.Fl P
+command line argument does. The path to the file
+must be absolute and it must be enclosed with quotes. Here is an example:
+.Dl pidfile Qq /var/run/greylist.pid 
+.It Ar dumpfile
+This chooses the location of the greylist dump file, like the
+.Fl d
+command line option does. The path must be absolute and enclosed by quotes.
+Example:
+.Dl dumpfile Qq /var/milter-greylist/greylist.db
+.It Ar subnetmatch
+This is equivalent to the 
+.Fl L 
+command line option. It takes a slash followed by a CIDR mask as argument, 
+and it commands the subnet matching feature. Example, for a class C wide
+matching:
+.Dl subnetmatch /24
+.It Ar socket
+Like the 
+.Fl p
+command line option, this keywords is used to specify the socket used
+to communicate with
+.Xr sendmail 8 .
+It must be enclosed with quotes:
+.Dl socket Qq /var/milter-greylist/milter-greylist.sock
+.El
+.Sh AUTHOR
+.An Emmanuel Dreyfus Aq manu@netbsd.org
+.Pp
+Thanks to 
+.An Helmut Messerer
+and
+.An Thomas Pfau
+for their feebacks on this software.
+.Sh SEE ALSO
+.Xr milter-greylist 8 ,
+.Xr sendmail 8 , 
+.Xr syslogd 8 .
+.Pp
+Evan Harris's paper
+.Pa http://projects.puremagic.com/greylisting

@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.8 2004/03/31 09:49:16 manu Exp $ */
+/* $Id: conf.c,v 1.9 2004/03/31 11:39:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.8 2004/03/31 09:49:16 manu Exp $");
+__RCSID("$Id: conf.c,v 1.9 2004/03/31 11:39:26 manu Exp $");
 #endif
 #endif
 
@@ -81,6 +81,7 @@ struct conf conf = {
 };
 char c_pidfile[PATHLEN + 1];
 char c_dumpfile[PATHLEN + 1];
+char c_socket[PATHLEN + 1];
 
 char *conffile = CONFFILE;
 struct timeval conffile_modified;
