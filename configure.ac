@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.31 2004/03/12 07:52:06 manu Exp $
+# $Id: configure.ac,v 1.32 2004/03/12 10:27:46 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -39,8 +39,11 @@ AC_CHECK_LIB(pthread, pthread_create,
 
 AC_CHECK_LIB(milter, smfi_register,
 	[LIBS="$LIBS -lmilter"],
-	[echo "Required libmilter not found. Use --with-libmilter"; exit 1;],
-	[-lpthread])
+	[AC_CHECK_LIB(milter, smfi_register,
+		[LIBS="$LIBS -lmilter -lsm"],
+		[echo "Required libmilter not found. Use --with-libmilter"; 
+		 exit 1;], [-lsm])
+	])
 
 # Checks for header files.
 AC_HEADER_STDC
