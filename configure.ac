@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.33 2004/03/12 10:29:01 manu Exp $
+# $Id: configure.ac,v 1.34 2004/03/12 14:49:51 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -20,7 +20,7 @@ AC_CHECK_PROGS(SED, sed)
 AC_CHECK_PROGS(TRUE, true)
 
 # Path to required packages
-AC_ARG_WITH(libmiter, 
+AC_ARG_WITH(libmilter, 
 	[  --with-libmilter=DIR   Find libmilter in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,--rpath=$withval/lib"])
