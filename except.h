@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.21 2004/04/13 08:31:50 manu Exp $ */
+/* $Id: except.h,v 1.22 2004/04/30 21:52:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -102,5 +102,6 @@ int except_sender_filter(struct in_addr *, char *, char *);
 #define EXF_AUTH	6
 #define EXF_SPF		7
 #define EXF_NONIPV4	8
+#define EXF_STARTTLS	9
 
 #endif /* _EXCEPT_H_ */

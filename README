@@ -1,9 +1,9 @@
-# $Id: README,v 1.19 2004/04/22 23:12:25 manu Exp $
+# $Id: README,v 1.20 2004/04/30 21:52:25 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/04/22 23:12:25 $
+		       $Date: 2004/04/30 21:52:25 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -57,12 +57,18 @@ If you want to bypass greylisting for users that succeeded SMTP AUTH,
 You also need {auth_authen} in Milter.macros.envfrom:
 O Milter.macros.envfrom=i, {auth_authen}
 
+If you want to bybass greylisting for users that use STARTTLS with 
+a client certificate, you also need {verify} and {cert_subject}
+in Milter.macros.helo: 
+O Milter.macros.helo={verify},{cert_subject}
+
 Alternatively, you can use the following m4 macros definitions 
 if you bouild sendmail.cf with m4 (contributed by Hubert Ulliac):
 
 INPUT_MAIL_FILTER(`greylist',
 `S=local:/var/milter-greylist/milter-greylist.sock')
 define(`confMILTER_MACROS_CONNECT', `j, {if_addr}')
+define(`confMILTER_MACROS_HELO', `{verify}, {cert_subject}')
 define(`confMILTER_MACROS_ENVFROM', `i, {auth_authen}')
 define(`confINPUT_MAIL_FILTERS', `greylist')
 

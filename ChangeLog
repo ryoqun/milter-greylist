@@ -1,4 +1,5 @@
 1.3.2:
+	Support STARTTLS (Contribution from Matthieu Herrb)
 	Add a list of broken MTA in the default whitelist
 	Fix a bug that caused wrong delay time.
 1.3.1:

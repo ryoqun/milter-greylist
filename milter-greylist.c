@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.78 2004/04/12 12:28:56 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.79 2004/04/30 21:52:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.78 2004/04/12 12:28:56 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.79 2004/04/30 21:52:25 manu Exp $");
 #endif
 #endif
 
@@ -133,8 +133,10 @@ mlfi_helo(ctx, helostr)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT)) 
 	strncpy_rmsp(priv->priv_helo, helostr, ADDRLEN);
 	priv->priv_helo[ADDRLEN] = '\0';
+#endif
 
 	return SMFIS_CONTINUE;
 }
@@ -147,6 +149,8 @@ mlfi_envfrom(ctx, envfrom)
 {
 	struct mlfi_priv *priv;
 	char *auth_authen;
+	char *verify;
+	char *cert_subject;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
@@ -154,7 +158,7 @@ mlfi_envfrom(ctx, envfrom)
 		syslog(LOG_DEBUG, "smfi_getsymval failed for {i}");
 		priv->priv_queueid = "(unkown id)";
 	}
-	
+
 	/*
 	 * Strip spaces from the source address
 	 */
@@ -186,6 +190,22 @@ mlfi_envfrom(ctx, envfrom)
 		return SMFIS_CONTINUE;
 	} 
 
+	/* 
+	 * STARTTLS authentication?
+	 */
+	if ((conf.c_noauth == 0) &&
+	    ((verify = smfi_getsymval(ctx, "{verify}")) != NULL) &&
+	    (strcmp(verify, "OK") == 0) &&
+	    ((cert_subject = smfi_getsymval(ctx, "{cert_subject}")) != NULL)) {
+		syslog(LOG_DEBUG, 
+		    "STARTTLS succeeded for DN=\"%s\", bypassing greylisting", 
+		    cert_subject);
+		priv->priv_elapsed = 0;
+		priv->priv_whitelist = EXF_STARTTLS;
+
+		return SMFIS_CONTINUE;
+	}
+
 	/*
 	 * Is the sender IP or its e-mail address in the
 	 * permanent whitelist? We do this before SPF as
@@ -198,6 +218,7 @@ mlfi_envfrom(ctx, envfrom)
 
 		return SMFIS_CONTINUE;
 	}
+
 	/*
 	 * Is the sender address SPF-compliant?
 	 */
@@ -255,7 +276,8 @@ mlfi_envrcpt(ctx, envrcpt)
 	    (priv->priv_whitelist == EXF_FROM) ||
 	    (priv->priv_whitelist == EXF_AUTH) ||
 	    (priv->priv_whitelist == EXF_SPF) ||
-	    (priv->priv_whitelist == EXF_NONIPV4))
+	    (priv->priv_whitelist == EXF_NONIPV4) ||
+	    (priv->priv_whitelist == EXF_STARTTLS))
 		return SMFIS_CONTINUE;
 
 	/* 
@@ -390,7 +412,7 @@ mlfi_eom(ctx)
 			break;
 
 		case EXF_AUTH:
-			whystr = "Sender succeded SMTP authentication";
+			whystr = "Sender succeded SMTP AUTH authentication";
 			break;
 
 		case EXF_SPF:
@@ -399,6 +421,10 @@ mlfi_eom(ctx)
 
 		case EXF_NONIPV4:
 			whystr = "Message not sent from an IPv4 address";
+			break;
+
+		case EXF_STARTTLS:
+			whystr = "Sender succeeded STARTTLS authentication";
 			break;
 
 		case EXF_RCPT:
