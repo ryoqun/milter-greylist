@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.30 2005/01/29 18:42:53 manu Exp $ */
+/* $Id: conf.h,v 1.31 2005/03/19 07:38:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -84,6 +84,7 @@ struct conf {
 	int c_lazyaw;
 	int c_dumpfreq;
 	int c_timeout;
+	int c_extendedregex;
 };
 
 /* c_forced flags */

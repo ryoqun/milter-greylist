@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.32 2005/01/29 18:42:53 manu Exp $ */
+/* $Id: conf.c,v 1.33 2005/03/19 07:38:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.32 2005/01/29 18:42:53 manu Exp $");
+__RCSID("$Id: conf.c,v 1.33 2005/03/19 07:38:53 manu Exp $");
 #endif
 #endif
 
@@ -292,6 +292,7 @@ conf_defaults(c)
 	c->c_report = C_ALL;
 	c->c_dumpfreq = DUMPFREQ;
 	c->c_timeout = TIMEOUT;
+	c->c_extendedregex = 0;
 
 	return;
 }

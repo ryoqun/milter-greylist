@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.4 2005/03/18 23:48:20 manu Exp $ */
+/* $Id: acl.c,v 1.5 2005/03/19 07:38:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.4 2005/03/18 23:48:20 manu Exp $");
+__RCSID("$Id: acl.c,v 1.5 2005/03/19 07:38:53 manu Exp $");
 #endif
 #endif
 
@@ -261,7 +261,8 @@ acl_add_from_regex(regexstr)
 		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
-	if ((error = regcomp(gacl.a_from_re, regexstr, REG_ICASE)) != 0) {
+	if ((error = regcomp(gacl.a_from_re, regexstr, 
+	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
 		regerror(error, gacl.a_from_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);
@@ -305,7 +306,8 @@ acl_add_rcpt_regex(regexstr)
 		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
-	if ((error = regcomp(gacl.a_rcpt_re, regexstr, REG_ICASE)) != 0) {
+	if ((error = regcomp(gacl.a_rcpt_re, regexstr,
+	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
 		regerror(error, gacl.a_rcpt_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);
@@ -349,7 +351,8 @@ acl_add_domain_regex(regexstr)
 		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
-	if ((error = regcomp(gacl.a_domain_re, regexstr, REG_ICASE)) != 0) {
+	if ((error = regcomp(gacl.a_domain_re, regexstr,
+	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
 		regerror(error, gacl.a_domain_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);

@@ -22,6 +22,7 @@ verbose		[Vv][Ee][Rr][Bb][Oo][Ss][Ee]
 quiet		[Qq][Uu][Ii][Ee][Tt]
 noauth		[Nn][Oo][Aa][Uu][Tt][Hh]
 noaccessdb	[Nn][Oo][Aa][Cc][Cc][Ee][Ss][Ss][Dd][Bb]
+extendedregex	[Ee][Xx][Tt][Ee][Nn][Dd][Ee][Dd][Rr][Ee][Gg][Ee][Xx]
 nospf		[Nn][Oo][Ss][Pp][Ff]
 delayedreject	[Dd][Ee][Ll][Aa][Yy][Ee][Dd][Rr][Ee][Jj][Ee][Cc][Tt]
 testmode	[Tt][Ee][Ss][Tt][Mm][Oo][Dd][Ee]
@@ -63,7 +64,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.36 2005/02/13 23:43:47 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.37 2005/03/19 07:38:53 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -89,6 +90,7 @@ star		"*"
 {greylist}	{ return GREYLIST; }
 {noauth}	{ return NOAUTH; }
 {noaccessdb}	{ return NOACCESSDB; }
+{extendedregex}	{ return EXTENDEDREGEX; }
 {delayedreject}	{ return DELAYEDREJECT; }
 {nospf}		{ return NOSPF; }
 {quiet}		{ return QUIET; }
