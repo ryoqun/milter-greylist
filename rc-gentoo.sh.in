@@ -1,0 +1,44 @@
+#!/sbin/runscript
+# $Header: /milter-greylist/milter-greylist/rc-gentoo.sh.in,v 1.1 2004/11/28 17:40:13 manu Exp $Id 
+
+# NB: Gentoo Config is in /etc/conf.d/milter-greylist
+
+opts="start stop restart status"
+
+# For a true ebuild the following variables should be put in 
+#/etc/conf.d/milter-greylist
+NAME=milter-greylist
+DAEMON=/usr/local/bin/$NAME
+USER=@USER@
+# SOCKET should be the socket specified  in the MILTER definition sendmail.mc 
+# INPUT_MAIL_FILTER(`greylist',`S=local:/var/milter-greylist/milter-greylist.sock')
+SOCKET=/var/$NAME/milter-greylist.sock
+PIDFILE="/var/$NAME/$NAME.pid"
+DOPTIONS="-p $SOCKET -u $USER -P $PIDFILE"
+
+depend() {
+	need net 
+	use logger
+	before sendmail
+}
+
+start() {
+	ebegin "Starting $DESC"
+	start-stop-daemon --quiet --start --startas $DAEMON --pidfile $PIDFILE  -- $DOPTIONS
+	eend $? "Failed to start ${DAEMON}"
+}
+
+stop() {
+	ebegin "Stopping $DESC"
+	start-stop-daemon --stop --name $NAME
+	eend $? "Failed to stop ${DAEMON}"
+}
+
+restart() {
+	svc_stop 
+	# needed to avoid potential mi_stop errors 
+	sleep 4
+	svc_start
+	kill -HUP `head -n 1 /var/run/sendmail.pid` 
+}
+
