@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.47 2004/08/02 20:17:38 manu Exp $ */
+/* $Id: except.c,v 1.48 2004/08/09 20:29:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.47 2004/08/02 20:17:38 manu Exp $");
+__RCSID("$Id: except.c,v 1.48 2004/08/09 20:29:08 manu Exp $");
 #endif
 #endif
 
@@ -140,7 +140,7 @@ except_add_netblock(sa, salen, cidr)	/* exceptlist must be write-locked */
 	if ((except = malloc(sizeof(*except))) == NULL ||
 	    (except->e_addr = malloc(salen)) == NULL ||
 	    (except->e_mask = malloc(masklen)) == NULL) {
-		perror("cannot allocate memory");
+		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
@@ -168,7 +168,7 @@ except_add_from(email)	/* exceptlist must be write-locked */
 	struct except *except;
 
 	if ((except = malloc(sizeof(*except))) == NULL) {
-		perror("cannot allocate memory");
+		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
@@ -190,7 +190,7 @@ except_add_rcpt(email)	/* exceptlist must be write-locked */
 	struct except *except;
 
 	if ((except = malloc(sizeof(*except))) == NULL) {
-		perror("cannot allocate memory");
+		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
@@ -212,7 +212,7 @@ except_add_domain(domain)	/* exceptlist must be write-locked */
 	struct except *except;
 
 	if ((except = malloc(sizeof(*except))) == NULL) {
-		perror("cannot allocate memory");
+		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
@@ -246,7 +246,7 @@ except_add_from_regex(regexstr)	/* exceptlist must be write-locked */
 	regexstr++;
 
 	if ((except = malloc(sizeof(*except))) == NULL) {
-		perror("cannot allocate memory");
+		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
@@ -285,7 +285,7 @@ except_add_rcpt_regex(regexstr)	/* exceptlist must be write-locked */
 	regexstr++;
 
 	if ((except = malloc(sizeof(*except))) == NULL) {
-		perror("cannot allocate memory");
+		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
@@ -324,7 +324,7 @@ except_add_domain_regex(regexstr)	/* exceptlist must be write-locked */
 	regexstr++;
 
 	if ((except = malloc(sizeof(*except))) == NULL) {
-		perror("cannot allocate memory");
+		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		

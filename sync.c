@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.48 2004/08/08 21:24:20 manu Exp $ */
+/* $Id: sync.c,v 1.49 2004/08/09 20:26:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.48 2004/08/08 21:24:20 manu Exp $");
+__RCSID("$Id: sync.c,v 1.49 2004/08/09 20:26:52 manu Exp $");
 #endif
 #endif
 
@@ -138,7 +138,7 @@ peer_add(peername)
 
 	if ((peer = malloc(sizeof(*peer))) == NULL ||
 	    (peer->p_name = strdup(peername)) == NULL) {
-		perror("cannot allocate memory");
+		syslog(LOG_ERR, "cannot add peer: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
