@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.60 2004/03/30 14:17:47 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.61 2004/03/30 15:59:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.60 2004/03/30 14:17:47 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.61 2004/03/30 15:59:32 manu Exp $");
 #endif
 #endif
 
@@ -351,7 +351,7 @@ mlfi_eom(ctx)
 			break;
 
 		case EXF_SPF:
-			whystr = "Sender IP is SPF-compliant";
+			whystr = "Sender is SPF-compliant";
 			break;
 
 		case EXF_RCPT:
