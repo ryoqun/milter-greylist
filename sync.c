@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.2 2004/03/10 14:24:34 manu Exp $ */
+/* $Id: sync.c,v 1.3 2004/03/10 15:57:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -36,6 +36,7 @@ __RCSID("$Id");
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <errno.h>
 #include <string.h>
 #include <strings.h>
@@ -161,16 +162,19 @@ peer_send(peer, type, pending)
 	char *replystr;
 	int replycode;
 	char line[LINELEN + 1];
+	char peerstr[IPADDRLEN + 1];
 
 	if ((peer->p_stream == NULL) && (peer_connect(peer) != 0))
 		return;
+
+	inet_ntop(AF_INET, &peer->p_addr, peerstr, IPADDRLEN);
 
 	if (type == PS_CREATE)
 		fprintf(peer->p_stream, "add ");
 	else
 		fprintf(peer->p_stream, "del ");
 
-	fprintf(peer->p_stream, "addr %s from %s rcpt %s date %ld\n", 
+	fprintf(peer->p_stream, "addr %s from %s rcpt %s date %ld\r\n", 
 	    pending->p_addr, pending->p_from, 
 	    pending->p_rcpt, pending->p_tv.tv_sec);
 	fflush(peer->p_stream);
@@ -178,28 +182,29 @@ peer_send(peer, type, pending)
 	/* 
 	 * Check the return code 
 	 */
+	sync_waitdata(peer->p_socket);
 	if (fgets(line, LINELEN, peer->p_stream) == NULL) {
-		syslog(LOG_ERR, "lost connexion with peer");
+		syslog(LOG_ERR, "lost connexion with peer %s", peerstr);
 		fclose(peer->p_stream);
-		close(peer->p_socket);
 		peer->p_stream = NULL;
+		return;
 	}
 
 	if ((replystr = strtok(line, sep)) == NULL) {
-		syslog(LOG_ERR, "Unexpected reply \"%s\", closing connexion",
-		    line);
+		syslog(LOG_ERR, "Unexpected reply \"%s\" from %s, "
+		    "closing connexion", line, peerstr);
 		fclose(peer->p_stream);
-		close(peer->p_socket);
 		peer->p_stream = NULL;
+		return;
 	}
 
 	replycode = atoi(replystr);
 	if (replycode != 201) {
-		syslog(LOG_ERR, "Unexpected reply \"%s\", closing connexion",
-		    line);
+		syslog(LOG_ERR, "Unexpected reply \"%s\" from %s, "
+		    "closing connexion", line, peerstr);
 		fclose(peer->p_stream);
-		close(peer->p_socket);
 		peer->p_stream = NULL;
+		return;
 	}
 
 	return;
@@ -216,13 +221,13 @@ peer_connect(peer)
 	struct sockaddr_in raddr;
 	int service;
 	int s;
-	int fd;
 	char *replystr;
 	int replycode;
 	FILE *stream;
 	char sep[] = " \n\t\r";
 	char peername[IPADDRLEN + 1];
 	char line[LINELEN + 1];
+	int param;
 
 	if ((pe = getprotobyname("tcp")) == NULL)
 		proto = 6;
@@ -262,13 +267,19 @@ peer_connect(peer)
 	raddr.sin_port = htons(service);
 	raddr.sin_addr = peer->p_addr;
 
-	if ((fd = connect(s, (struct sockaddr *)&raddr, sizeof(raddr))) != 0) {
+	if (connect(s, (struct sockaddr *)&raddr, sizeof(raddr)) != 0) {
 		syslog(LOG_ERR, "cannot syncwith peer %s, connect failed: %s", 
 		    peername, strerror(errno));
 		return -1;
 	}
 
-	if ((stream = fdopen(fd, "w+")) == NULL) {
+	param = O_NONBLOCK;
+	if (fcntl(s, F_SETFL, &param) != 0) {
+		syslog(LOG_ERR, "cannot set non blockinf I/O with %s: %s\n",
+		    peername, strerror(errno));
+	}
+
+	if ((stream = fdopen(s, "w+")) == NULL) {
 		syslog(LOG_ERR, "cannot sync with peer %s, fdopen failed: %s", 
 		    peername, strerror(errno));
 		return -1;
@@ -278,10 +289,11 @@ peer_connect(peer)
 		syslog(LOG_ERR, "cannot set line buffering with peer %s: %s\n", 
 		    peername, strerror(errno));	
 
+	sync_waitdata(s);	
 	if (fgets(line, LINELEN, stream) == NULL) {
 		syslog(LOG_ERR, "Lost connexion with peer %s: %s\n", 
 		    peername, strerror(errno));
-		goto bad;
+		return -1;
 	}
 
 	if ((replystr = strtok(line, sep)) == NULL) {
@@ -304,7 +316,6 @@ peer_connect(peer)
 bad:
 	fclose(stream);
 	peer->p_stream = NULL;
-	close(s);
 
 	return -1;
 }
@@ -648,4 +659,27 @@ sync_help(stream)
 	fflush(stream);
 
 	return;
+}
+
+#define COM_TIMEOUT 3
+int
+sync_waitdata(fd)
+	int fd;
+{
+	fd_set fdr, fde;
+	struct timeval timeout;
+	int retval;
+
+	FD_ZERO(&fdr);
+	FD_SET(fd, &fdr);
+
+	FD_ZERO(&fde);
+	FD_SET(fd, &fde);
+
+	timeout.tv_sec = COM_TIMEOUT;
+	timeout.tv_usec = 0;
+
+	retval = select(fd + 1, &fdr, NULL, &fde, &timeout); 
+
+	return retval;
 }

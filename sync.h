@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.1 2004/03/10 14:17:14 manu Exp $ */
+/* $Id: sync.h,v 1.2 2004/03/10 15:57:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -66,6 +66,7 @@ void sync_master_restart(void);
 void sync_master(void *);
 void sync_server(void *);
 void sync_help(FILE *);
+int sync_waitdata(int);
 
 
 #endif /* _MXGLSYNC_H_ */
