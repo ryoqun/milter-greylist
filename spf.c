@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.2 2004/03/30 14:17:47 manu Exp $ */
+/* $Id: spf.c,v 1.3 2004/03/30 16:00:10 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -40,6 +40,8 @@ __RCSID("$Id");
 
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
+#include <strings.h>
 #include <syslog.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -47,6 +49,7 @@ __RCSID("$Id");
 
 #include "spf.h"
 #include "except.h"
+
 
 #ifdef HAVE_SPF
 int
@@ -66,14 +69,18 @@ spf_check(in, from)
 SPF_config_t spfconf = NULL;
 SPF_dns_config_t dnsconf = NULL;
 
+/* SMTP needs at least 64 chars for local part and 255 for doamin... */
+#define NS_MAXDNAME 1025 
 int
-spf_alt_check(in, from)
+spf_alt_check(in, fromp)
 	struct in_addr *in;
-	char *from;
+	char *fromp;
 {
 	char addr[IPADDRLEN + 1];
+	char from[NS_MAXDNAME + 1];
 	SPF_output_t out;
 	int result = EXF_NONE;
+	size_t len;
 
 	if (spfconf == NULL)
 		spfconf = SPF_create_config();
@@ -85,18 +92,37 @@ spf_alt_check(in, from)
 		return EXF_NONE;
 	}
 
+	/* 
+	 * Get the IP address
+	 */
+	inet_ntop(AF_INET, in, addr, IPADDRLEN);
 	if (SPF_set_ip_str(spfconf, addr) != 0) {
 		syslog(LOG_ERR, "SPF_set_ip_str failed");
+		SPF_reset_config(spfconf);
 		return EXF_NONE;
 	}
+
+	/* 
+	 * And the enveloppe source e-mail
+	 */
+	strncpy(from, fromp, NS_MAXDNAME);
+	from[NS_MAXDNAME] = '\0';
+	len = strlen(from);
+	if (fromp[len - 1] == '>')
+		from[len - 1] = '\0'; /* strip trailing > */
 
 	if (SPF_set_env_from(spfconf, from) != 0) {
 		syslog(LOG_ERR, "SPF_set_env_from failed");
+		SPF_reset_config(spfconf);
 		return EXF_NONE;
 	}
 
+	/*
+	 * Get the SPF result
+	 */
 	SPF_init_output(&out);
 	out = SPF_result(spfconf, dnsconf, NULL);
+	syslog(LOG_DEBUG, "SPF out.result = %d", out.result);
 
 	if (out.result == SPF_RESULT_PASS) 
 		result = EXF_SPF;

@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.2 2004/03/30 14:17:47 manu Exp $ */
+/* $Id: spf.h,v 1.3 2004/03/30 16:00:10 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,6 +33,10 @@
 #define _SPF_H_
 
 #include "config.h"
+
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 
 #if defined(HAVE_SPF_ALT)
 int spf_alt_check(struct in_addr *, char *);
