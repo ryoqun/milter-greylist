@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.73 2004/04/02 15:06:53 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.74 2004/04/03 08:58:14 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.73 2004/04/02 15:06:53 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.74 2004/04/03 08:58:14 manu Exp $");
 #endif
 #endif
 
@@ -620,26 +620,6 @@ main(argc, argv)
 	 */
 	conf_load();
 
-	/*
-	 * Drop root privs
-	 */
-	if (conf.c_user != NULL) {
-		struct passwd *pw = NULL;
-
-		if ((pw = getpwnam(conf.c_user)) == NULL) {
-			fprintf(stderr, "%s: Cannot get user %s data: %s\n",
-			    argv[0], conf.c_user, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		if ((setuid(pw->pw_uid) != 0) ||
-		    (seteuid(pw->pw_uid) != 0)) {
-			fprintf(stderr, "%s: cannot change UID: %s\n",
-			    argv[0], strerror(errno));
-			exit(EX_OSERR);
-		}
-	}
-
 	if (conf.c_nodetach != 0)
 		openlog("milter-greylist", LOG_PERROR, LOG_MAIL);
 	else
@@ -693,7 +673,7 @@ main(argc, argv)
 		}
 
 		if (setsid() == -1) {
-			fprintf(stderr, "%s: setsid failed: %s\n",
+			syslog(LOG_ERR, "%s: setsid failed: %s\n",
 			    argv[0], strerror(errno));
 			exit(EX_OSERR);
 		}
@@ -704,6 +684,26 @@ main(argc, argv)
 	 */
 	if (conf.c_pidfile != NULL)
 		writepid(conf.c_pidfile);
+
+	/*
+	 * Drop root privs
+	 */
+	if (conf.c_user != NULL) {
+		struct passwd *pw = NULL;
+
+		if ((pw = getpwnam(conf.c_user)) == NULL) {
+			syslog(LOG_ERR, "%s: Cannot get user %s data: %s\n",
+			    argv[0], conf.c_user, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		if ((setuid(pw->pw_uid) != 0) ||
+		    (seteuid(pw->pw_uid) != 0)) {
+			syslog(LOG_ERR, "%s: cannot change UID: %s\n",
+			    argv[0], strerror(errno));
+			exit(EX_OSERR);
+		}
+	}
 
 	/*
 	 * Start the dumper thread
