@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.29 2004/12/09 00:04:01 manu Exp $
+.\" $Id: milter-greylist.8,v 1.30 2004/12/28 19:54:50 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -101,13 +101,24 @@ exist or is unreadable,
 .Nm
 will start with an empty grey list. 
 .Pp
-The following options are available:
+The default location for the grey list database and the socket for
+communicating with sendmail is normally /var/milter-greylist.
+That directory must be owned and writeable by the user id under
+which 
+.Nm
+will run.
+.Pp
+The following options are available;
+if present, they override their equivalents specified in the configuration file:
 .Bl -tag -width flag
 .It Fl A
 Normally, 
 .Nm
-does not greylist senders that succeeded SMTP AUTH. This option disable that
-feature and cause authentication to be ignored.
+does not greylist senders that succeeded SMTP AUTH. This option disables that
+feature and causes authentication to be ignored.
+Equivalent to the
+"noauth"
+option in the configuration file.
 .It Fl a Ar delay
 Configure auto-whitelisting. After a tuple (sender IP, sender e-mail, 
 recipient e-mail) has been accepted, other identical tuples will get
@@ -115,19 +126,28 @@ accepted for
 .Ar delay .
 The default is one day. Use zero to disable auto-whitelisting.
 A suffix can be added to specify seconds (s), minutes (m), hours (h), 
-days (d) or weeks (w). Whithout suffix, values are treated as seconds.
+days (d) or weeks (w). Whithout any suffix, values are treated as seconds.
+Equivalent to the
+"autowhite"
+option in the configuration file.
 .It Fl c
 Only check the configuration file and exit. Return value is 0 if the
 configuration is valid, or an error code from 
 .Aq Pa sysexit.h
 otherwise.
 .It Fl D
-Do not fork and run in the foreground. Without this flag, 
+Do not fork; run in the foreground instead. Without this flag, 
 .Nm
 will become a daemon.
+Equivalent to the
+"nodetach"
+option in the configuration file.
 .It Fl d Ar dumpfile
 Location of the dump file. Default is 
 .Pa /var/milter-greylist/greylist.db
+Equivalent to the
+"dumpfile"
+option in the configuration file.
 .It Fl f Ar configfile
 Location of the config file. Default is
 .Pa /etc/mail/greylist.conf .
@@ -154,19 +174,24 @@ Enable debug output in the access-list management code.
 .It Fl P Ar pidfile
 write the daemon's PID to 
 .Ar pidfile .
+Equivalent to the
+"pidfile"
+option in the configuration file.
 .It Fl p Ar socket
 Use 
 .Ar socket
 as the socket used by 
 .Xr sendmail 8
-to talk with
+to communicate with
 .Nm .
-This option is mandatory.
 .It Fl q
 Quiet mode. 
 .Nm
-will not tell SMTP clients how many time they have to wait before the
-message is accepted.
+will not tell SMTP clients how much time they have to wait before the
+message will be accepted.
+Equivalent to the
+"quiet"
+option in the configuration file.
 .It Fl r
 Display 
 .Nm
@@ -175,8 +200,11 @@ version and build environnement, then exit.
 If
 .Nm
 was built with SPF support, then SPF-compliant senders bypass greylisting.
-This flag cause messages to be greylisted regardeless if they are 
+This flag causes messages to be greylisted regardless of whether they are 
 SPF-compliant or not.
+Equivalent to the
+"nospf"
+option in the configuration file.
 .It Fl T
 Enable test mode. This alters the meaning of 
 .Ar rcpt
@@ -189,8 +217,11 @@ lines have been deprecated in favor of ACL, so do not use it.
 .It Fl u Ar username
 Drop root privileges and switch to 
 .Ar username
-credentials'. Make sure this user has write access to 
+credentials.  Make sure this user has write access to 
 .Pa greylist.db .
+Equivalent to the
+"user"
+option in the configuration file.
 .It Fl v
 Enable debug output. 
 .Nm 
@@ -199,11 +230,17 @@ will send messages (and debug output if it is given the
 flag) to 
 .Xr syslogd 8
 with facility LOG_MAIL.
+Equivalent to the
+"verbose"
+option in the configuration file.
 .It Fl w Ar delay
 sets the minimum delay between the first attempt and the time
 the message can be accepted. Default is 30 minutes. 
 A suffix can be added to specify seconds (s), minutes (m), hours (h), 
-days (d) or weeks (w). Whithout suffix, values are treated as seconds.
+days (d) or weeks (w). Whithout any suffix, values are treated as seconds.
+Equivalent to the
+"greylist"
+option in the configuration file.
 .El
 .Sh GREYLIST MX SYNC
 .Nm
