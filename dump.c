@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.9 2004/03/22 23:29:59 manu Exp $ */
+/* $Id: dump.c,v 1.10 2004/03/23 13:29:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.9 2004/03/22 23:29:59 manu Exp $");
+__RCSID("$Id: dump.c,v 1.10 2004/03/23 13:29:21 manu Exp $");
 #endif
 #endif
 
@@ -108,6 +108,12 @@ dumper(dontcare)
 
 	if (pthread_mutex_init(&mutex, NULL) != 0) {
 		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n",
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if (pthread_mutex_lock(&mutex) != 0) {
+		syslog(LOG_ERR, "pthread_mutex_lock failed: %s\n", 
 		    strerror(errno));
 		exit(EX_OSERR);
 	}
