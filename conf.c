@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.14 2004/04/02 08:57:18 manu Exp $ */
+/* $Id: conf.c,v 1.15 2004/04/02 15:06:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.14 2004/04/02 08:57:18 manu Exp $");
+__RCSID("$Id: conf.c,v 1.15 2004/04/02 15:06:52 manu Exp $");
 #endif
 #endif
 
@@ -184,6 +184,7 @@ conf_defaults(c)
 	c->c_socket = NULL;
 	c->c_user = NULL;
 	c->c_nodetach = 0;
+	c->c_report = C_ALL;
 
 	return;
 }

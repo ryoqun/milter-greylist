@@ -1,4 +1,4 @@
-%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX
+%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.12 2004/04/01 21:07:36 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.13 2004/04/02 15:06:52 manu Exp $");
 #endif
 #endif
 
@@ -55,6 +55,7 @@ lines	:	lines netblock '\n'
 	|	lines socket '\n'
 	|	lines user '\n'
 	|	lines nodetach '\n'
+	|	lines report '\n'
 	|	lines '\n'
 	|
 	;
@@ -116,5 +117,10 @@ user:		USER PATH	{ if (C_NOTFORCED(C_USER))
 					    quotepath(c_user, $2, PATHLEN);
 				}
 	;	
+report:		REPORT NONE	{ conf.c_report = C_NONE; }
+	|	REPORT DELAYS	{ conf.c_report = C_DELAYS; }
+	|	REPORT NODELAYS	{ conf.c_report = C_NODELAYS; }
+	|	REPORT ALL	{ conf.c_report = C_ALL; }
+	;
 %%
 #include "conf_lex.c"

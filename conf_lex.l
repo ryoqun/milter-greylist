@@ -30,6 +30,11 @@ subnetmatch	[Ss][Uu][Bb][Nn][Ee][Tt][Mm][Aa][Tt][Cc][Hh]:?
 socket		[Ss][Oo][Cc][Kk][Ee][Tt]:?
 user		[Uu][Ss][Ee][Rr]:?
 nodetach	[Nn][Oo][Dd][Ee][Tt][Aa][Cc][Hh]
+report		[Rr][Ee][Pp][Oo][Rr][Tt]:?
+none		[Nn][Oo][Nn][Ee]
+delays		[Dd][Ee][Ll][Aa][Yy][Ss]
+nodelays	[Nn][Oo][Dd][Ee][Ll][Aa][Yy][Ss]
+all		[Aa][Ll][Ll]
 delay		[0-9]{1,}[smhdw]?
 path		"\""[^"\n]{1,}"\""
 regex		"/"[^/\n]{1,}"/"
@@ -41,7 +46,7 @@ regex		"/"[^/\n]{1,}"/"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.14 2004/04/01 21:07:36 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.15 2004/04/02 15:06:52 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -75,6 +80,11 @@ regex		"/"[^/\n]{1,}"/"
 {socket}	{ return SOCKET; }
 {user}		{ return USER; }
 {nodetach}	{ return NODETACH; }
+{report}	{ return REPORT; }
+{none}		{ return NONE; }
+{delays}	{ return DELAYS; }
+{nodelays}	{ return NODELAYS; }
+{all}		{ return ALL; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);
 			yylval.path[PATHLEN] = '\0';

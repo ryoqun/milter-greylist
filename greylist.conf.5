@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.3 2004/04/01 21:23:08 manu Exp $
+.\" $Id: greylist.conf.5,v 1.4 2004/04/02 15:06:53 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -102,6 +102,29 @@ an example:
 .Pp
 Do not ever list localhost as a peer, as it will cause each entry to 
 be added twice to the greylist.
+.Sh REPORTING
+By default, 
+.Xr milter-greylist 8 
+will add a 
+.Ar X-Greylist
+header to any message it handles. The header shows what happenned to the
+message: delayed or not delayed, and why. The following options can be
+used in
+.Nm
+to alter this behavior:
+.Bl -tag -width flag
+.It Ar report none
+Never add a 
+.Ar X-Greylist
+header.
+.It Ar report delays
+Only add a header when the message was delayed.
+.It Ar report nodelays
+Add a header when the message was not delayed. The header explains why 
+the message was not delayed.
+.It Ar report all
+Always add a header. This is the default.
+.El
 .Sh COMMAND-LINE FLAG EQUIVALENTS
 Most 
 .Xr milter-greylist 8

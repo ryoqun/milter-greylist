@@ -1,3 +1,5 @@
+1.1.10:
+	Add a config option to suprress the X-Greylist header
 1.1.9:
 	Build problems on some Linux systems
 1.1.8:

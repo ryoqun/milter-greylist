@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.72 2004/04/02 08:57:18 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.73 2004/04/02 15:06:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.72 2004/04/02 08:57:18 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.73 2004/04/02 15:06:53 manu Exp $");
 #endif
 #endif
 
@@ -349,6 +349,9 @@ mlfi_eom(ctx)
 	strftime(tznamestr, HDRLEN, "%Z", &ltm);
 
 	if (priv->priv_elapsed == 0) {
+		if ((conf.c_report & C_NODELAYS) == 0)
+			return SMFIS_CONTINUE;
+			
 		switch (priv->priv_whitelist) {
 		case EXF_ADDR:
 			whystr = "Sender IP whitelisted";
@@ -401,7 +404,9 @@ mlfi_eom(ctx)
 	    "Delayed for %02d:%02d:%02d by milter-greylist-%s "
 	    "(%s [%s]); %s %s (%s)", 
 	    h, mn, s, PACKAGE_VERSION, fqdn, ip, timestr, tzstr, tznamestr);
-	smfi_addheader(ctx, HEADERNAME, hdr);
+
+	if (conf.c_report & C_DELAYS)
+		smfi_addheader(ctx, HEADERNAME, hdr);
 
 	return SMFIS_CONTINUE;
 }
