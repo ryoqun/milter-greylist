@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.1 2004/03/30 12:26:03 manu Exp $ */
+/* $Id: spf.h,v 1.2 2004/03/30 14:17:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -38,7 +38,7 @@
 int spf_alt_check(struct in_addr *, char *);
 #define SPF_CHECK(x,y) spf_alt_check((x),(y))
 
-#elsif defined(HAVE_SPF)
+#elif defined(HAVE_SPF)
 int spf_check(struct in_addr *, char *);
 #define SPF_CHECK(x,y) spf_check((x),(y))
 

@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.1 2004/03/30 12:26:03 manu Exp $ */
+/* $Id: spf.c,v 1.2 2004/03/30 14:17:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -38,11 +38,15 @@ __RCSID("$Id");
 #endif
 #endif
 
+#include <stdio.h>
+#include <errno.h>
+#include <syslog.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include "spf.h"
+#include "except.h"
 
 #ifdef HAVE_SPF
 int
@@ -50,18 +54,57 @@ spf_check(in, from)
 	struct in_addr *in;
 	char *from;
 {
-	return 0;
+	return EXF_NONE;	/* Unimplemented */
 }
-#endif
+#endif /* HAVE_SPF */
 
-#ifdef HAVE_ALT_SPF
+
+#ifdef HAVE_SPF_ALT
+#include <spf_alt/spf.h>
+#include <spf_alt/spf_dns_resolv.h>
+
+SPF_config_t spfconf = NULL;
+SPF_dns_config_t dnsconf = NULL;
+
 int
 spf_alt_check(in, from)
 	struct in_addr *in;
 	char *from;
 {
-	return 0;
+	char addr[IPADDRLEN + 1];
+	SPF_output_t out;
+	int result = EXF_NONE;
+
+	if (spfconf == NULL)
+		spfconf = SPF_create_config();
+	if (dnsconf == NULL)
+		dnsconf = SPF_dns_create_config_resolv(NULL, 0);
+
+	if ((spfconf == NULL) || (dnsconf == NULL)) {
+		syslog(LOG_ERR, "spf_alt_check init failed");
+		return EXF_NONE;
+	}
+
+	if (SPF_set_ip_str(spfconf, addr) != 0) {
+		syslog(LOG_ERR, "SPF_set_ip_str failed");
+		return EXF_NONE;
+	}
+
+	if (SPF_set_env_from(spfconf, from) != 0) {
+		syslog(LOG_ERR, "SPF_set_env_from failed");
+		return EXF_NONE;
+	}
+
+	SPF_init_output(&out);
+	out = SPF_result(spfconf, dnsconf, NULL);
+
+	if (out.result == SPF_RESULT_PASS) 
+		result = EXF_SPF;
+
+	SPF_reset_config(spfconf);
+	SPF_free_output(&out);
+
+	return result;
 }
-#endif
 
-
+#endif /* HAVE_SPF_ALT */
