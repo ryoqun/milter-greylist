@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.27 2004/03/20 11:20:05 manu Exp $ */
+/* $Id: sync.c,v 1.28 2004/03/21 23:21:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -195,7 +195,7 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 
 	fprintf(peer->p_stream, "addr %s from %s rcpt %s date %ld\r\n", 
 	    pending->p_addr, pending->p_from, 
-	    pending->p_rcpt, pending->p_tv.tv_sec);
+	    pending->p_rcpt, (long)pending->p_tv.tv_sec);
 	fflush(peer->p_stream);
 
 	/* 
