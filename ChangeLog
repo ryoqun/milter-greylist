@@ -1,3 +1,6 @@
+1.5.11:
+	Document ressource shortage for memory and file descriptor
+	Remove oudated documentation about IPv6
 1.5.10:
 	Fix a build problem on systems that don't have IPv6 (Hajimu Umemoto)
 	Fix a minor bug with SPF (Hajimu Umemoto)
