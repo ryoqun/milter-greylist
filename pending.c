@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.22 2004/03/11 14:12:48 manu Exp $ */
+/* $Id: pending.c,v 1.23 2004/03/11 22:09:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.22 2004/03/11 14:12:48 manu Exp $");
+__RCSID("$Id: pending.c,v 1.23 2004/03/11 22:09:45 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -270,7 +270,7 @@ pending_textdump(stream)
 
 	PENDING_RDLOCK;
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
-		strftime(textdate, DATELEN, "%F %T", 
+		strftime(textdate, DATELEN, "%Y-%m-%d %T", 
 		    localtime((time_t *)&pending->p_tv.tv_sec));
 
 		fprintf(stream, "%s	%32s	%32s	%ld # %s\n", 
