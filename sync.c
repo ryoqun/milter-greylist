@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.17 2004/03/14 11:05:53 manu Exp $ */
+/* $Id: sync.c,v 1.18 2004/03/14 11:42:22 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -534,152 +534,156 @@ sync_server(arg)
 	fprintf(stream, "200 Yeah, what do you want?\n");
 	fflush(stream);
 
-state1:
-	if ((fgets(line, LINELEN, stream)) == NULL)
-		goto out;
+	while (1) {
+		if ((fgets(line, LINELEN, stream)) == NULL)
+			break;
 
-	/*
-	 * Get the command { quit | help | add | del }
-	 */
-	cookie = NULL;
-	if ((cmd = strtok_r(line, sep, &cookie)) == NULL) {
-		fprintf(stream, "101 No command\n");
+		/*
+		 * Get the command { quit | help | add | del }
+		 */
+		cookie = NULL;
+		if ((cmd = strtok_r(line, sep, &cookie)) == NULL) {
+			fprintf(stream, "101 No command\n");
+			fflush(stream);
+			continue;
+		}
+
+		if (strncmp(cmd, "quit", CMDLEN) == 0) {
+			break;
+		} else if ((strncmp(cmd, "help", CMDLEN)) == 0) {
+			sync_help(stream);
+			continue;
+		} else if ((strncmp(cmd, "add", CMDLEN)) == 0) {
+			action = PS_CREATE;
+		} else if ((strncmp(cmd, "del", CMDLEN)) == 0) {
+			action = PS_DELETE;
+		} else {
+			fprintf(stream, "102 Invalid command \"%s\"\n", cmd);
+			fflush(stream);
+			continue;
+		}
+
+		/*
+		 * get { "addr" ip_address }
+		 */
+		if ((keyword = strtok_r(NULL, sep, &cookie)) == NULL) {
+			fprintf(stream, "103 Incomplete command\n");
+			fflush(stream);
+			continue;
+		}
+
+		if (strncmp(keyword, "addr", CMDLEN) != 0) {
+			fprintf(stream, 
+			    "104 Unexpected keyword \"%s\"\n", keyword);
+			fflush(stream);
+			continue;
+		}
+
+		if ((addrstr = strtok_r(NULL, sep, &cookie)) == NULL) {
+			fprintf(stream, "103 Incomplete command\n");
+			fflush(stream);
+			continue;
+		}
+			
+		if (inet_pton(AF_INET, addrstr, (void *)&addr) != 1) {
+			fprintf(stream, "107 Invalid IP address\n");
+			fflush(stream);
+			continue;
+		}	
+
+		/*
+		 * get { "from" email_address }
+		 */
+		if ((keyword = strtok_r(NULL, sep, &cookie)) == NULL) {
+			fprintf(stream, "103 Incomplete command\n");
+			fflush(stream);
+			continue;
+		}
+
+		if (strncmp(keyword, "from", CMDLEN) != 0) {
+			fprintf(stream, 
+			    "104 Unexpected keyword \"%s\"\n", keyword);
+			fflush(stream);
+			continue;
+		}
+
+		if ((from = strtok_r(NULL, sep, &cookie)) == NULL) {
+			fprintf(stream, "103 Incomplete command\n");
+			fflush(stream);
+			continue;
+		}
+
+		/*
+		 * get { "rcpt" email_address }
+		 */
+		if ((keyword = strtok_r(NULL, sep, &cookie)) == NULL) {
+			fprintf(stream, "103 Incomplete command\n");
+			fflush(stream);
+			continue;
+		}
+
+		if (strncmp(keyword, "rcpt", CMDLEN) != 0) {
+			fprintf(stream, 
+			    "104 Unexpected keyword \"%s\"\n", keyword);
+			fflush(stream);
+			continue;
+		}
+
+		if ((rcpt = strtok_r(NULL, sep, &cookie)) == NULL) {
+			fprintf(stream, "103 Incomplete command\n");
+			fflush(stream);
+			continue;
+		}
+
+		/*
+		 * get { "date" valid_date }
+		 */
+		if ((keyword = strtok_r(NULL, sep, &cookie)) == NULL) {
+			fprintf(stream, "103 Incomplete command\n");
+			fflush(stream);
+			continue;
+		}
+
+		if (strncmp(keyword, "date", CMDLEN) != 0) {
+			fprintf(stream, 
+			    "104 Unexpected keyword \"%s\"\n", keyword);
+			fflush(stream);
+			continue;
+		}
+
+		if ((datestr = strtok_r(NULL, sep, &cookie)) == NULL) {
+			fprintf(stream, "103 Incomplete command\n");
+			fflush(stream);
+			continue;
+		}
+
+		date = atoi(datestr);
+
+		/* 
+		 * Check nothing remains
+		 */
+		if ((keyword = strtok_r(NULL, sep, &cookie)) != NULL) {	
+			fprintf(stream, 
+			    "104 Unexpected keyword \"%s\"\n", keyword);
+			fflush(stream);
+			continue;
+		}
+
+		fprintf(stream, "201 All right, I'll do that\n");
 		fflush(stream);
-		goto state1;
+
+		if (action == PS_CREATE) {
+			PENDING_WRLOCK;
+			pending_get(&addr, from, rcpt, date);
+			PENDING_UNLOCK;
+		}
+		if (action == PS_DELETE)
+			pending_del(&addr, from, rcpt, date);
+
+		/* Flush modifications to disk */
+		pending_flush();
 	}
 
-	if (strncmp(cmd, "quit", CMDLEN) == 0) {
-		goto out;
-	} else if ((strncmp(cmd, "help", CMDLEN)) == 0) {
-		sync_help(stream);
-		goto state1;
-	} else if ((strncmp(cmd, "add", CMDLEN)) == 0) {
-		action = PS_CREATE;
-	} else if ((strncmp(cmd, "del", CMDLEN)) == 0) {
-		action = PS_DELETE;
-	} else {
-		fprintf(stream, "102 Invalid command \"%s\"\n", cmd);
-		fflush(stream);
-		goto state1;
-	}
-
-	/*
-	 * get { "addr" ip_address }
-	 */
-	if ((keyword = strtok_r(NULL, sep, &cookie)) == NULL) {
-		fprintf(stream, "103 Incomplete command\n");
-		fflush(stream);
-		goto state1;
-	}
-
-	if (strncmp(keyword, "addr", CMDLEN) != 0) {
-		fprintf(stream, "104 Unexpected keyword \"%s\"\n", keyword);
-		fflush(stream);
-		goto state1;
-	}
-
-	if ((addrstr = strtok_r(NULL, sep, &cookie)) == NULL) {
-		fprintf(stream, "103 Incomplete command\n");
-		fflush(stream);
-		goto state1;
-	}
-		
-	if (inet_pton(AF_INET, addrstr, (void *)&addr) != 1) {
-		fprintf(stream, "104 Invalid IP address\n");
-		fflush(stream);
-		goto state1;
-	}	
-
-	/*
-	 * get { "from" email_address }
-	 */
-	if ((keyword = strtok_r(NULL, sep, &cookie)) == NULL) {
-		fprintf(stream, "103 Incomplete command\n");
-		fflush(stream);
-		goto state1;
-	}
-
-	if (strncmp(keyword, "from", CMDLEN) != 0) {
-		fprintf(stream, "104 Unexpected keyword \"%s\"\n", keyword);
-		fflush(stream);
-		goto state1;
-	}
-
-	if ((from = strtok_r(NULL, sep, &cookie)) == NULL) {
-		fprintf(stream, "103 Incomplete command\n");
-		fflush(stream);
-		goto state1;
-	}
-
-	/*
-	 * get { "rcpt" email_address }
-	 */
-	if ((keyword = strtok_r(NULL, sep, &cookie)) == NULL) {
-		fprintf(stream, "103 Incomplete command\n");
-		fflush(stream);
-		goto state1;
-	}
-
-	if (strncmp(keyword, "rcpt", CMDLEN) != 0) {
-		fprintf(stream, "104 Unexpected keyword \"%s\"\n", keyword);
-		fflush(stream);
-		goto state1;
-	}
-
-	if ((rcpt = strtok_r(NULL, sep, &cookie)) == NULL) {
-		fprintf(stream, "103 Incomplete command\n");
-		fflush(stream);
-		goto state1;
-	}
-
-	/*
-	 * get { "date" valid_date }
-	 */
-	if ((keyword = strtok_r(NULL, sep, &cookie)) == NULL) {
-		fprintf(stream, "103 Incomplete command\n");
-		fflush(stream);
-		goto state1;
-	}
-
-	if (strncmp(keyword, "date", CMDLEN) != 0) {
-		fprintf(stream, "104 Unexpected keyword \"%s\"\n", keyword);
-		fflush(stream);
-		goto state1;
-	}
-
-	if ((datestr = strtok_r(NULL, sep, &cookie)) == NULL) {
-		fprintf(stream, "103 Incomplete command\n");
-		fflush(stream);
-		goto state1;
-	}
-
-	date = atoi(datestr);
-
-	/* 
-	 * Check nothing remains
-	 */
-	if ((keyword = strtok_r(NULL, sep, &cookie)) != NULL) {	
-		fprintf(stream, "104 Unexpected keyword \"%s\"\n", keyword);
-		fflush(stream);
-		goto state1;
-	}
-
-	fprintf(stream, "201 All right, I'll do that\n");
-	fflush(stream);
-
-	if (action == PS_CREATE) {
-		PENDING_WRLOCK;
-		pending_get(&addr, from, rcpt, date);
-		PENDING_UNLOCK;
-	}
-	if (action == PS_DELETE)
-		pending_del(&addr, from, rcpt, date);
-
-	/* Flush modifications to disk */
-	pending_flush();
-
-	goto state1;
-out:
 	fprintf(stream, "202 Good bye\n");
 	fclose(stream);
 
