@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.13 2004/03/06 20:28:44 manu Exp $ */
+/* $Id: pending.c,v 1.14 2004/03/06 20:32:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.13 2004/03/06 20:28:44 manu Exp $");
+__RCSID("$Id: pending.c,v 1.14 2004/03/06 20:32:53 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -375,6 +375,13 @@ pending_reload(void) {
 		dump_in = dump;
 		PENDING_WRLOCK;
 		dump_parse();
+
+		/* 
+		 * pending_dirty has been bumped on each pending_get call,
+		 * whereas there is nothing to flush. Fix that.
+		 */
+		pending_dirty = 0;
+
 		PENDING_UNLOCK;
 		fclose(dump);
 	}
