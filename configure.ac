@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.2 2004/02/21 17:46:10 manu Exp $
+# $Id: configure.ac,v 1.3 2004/02/21 23:15:49 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -9,19 +9,19 @@ AC_CONFIG_HEADER([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_INSTALL
 AC_CHECK_PROGS(MKDEP, mkdep)
 AC_CHECK_PROGS(RM, rm)
-AC_CHECK_PROGS(AWK, awk)
 
 # Path to required packages
 AC_ARG_WITH(libmiter, 
 	[  --with-libmilter=DIR   Find libmilter in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
-	    LDFLAGS=$LDFLAGS" -L$withval/lib"])
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,--rpath=$withval/lib"])
 AC_ARG_WITH(libpthread, 
 	[  --with-libpthread=DIR  Find libpthread in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
-	    LDFLAGS=$LDFLAGS" -L$withval/lib"])
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,--rpath=$withval/lib"])
 
 # Checks for libraries.
 AC_CHECK_LIB(pthread, pthread_create, 

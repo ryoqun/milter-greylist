@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.1 2004/02/21 00:01:17 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.2 2004/02/21 23:15:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,6 +34,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <errno.h>
+#include <pwd.h>
 #include <sysexits.h>
 #include <unistd.h>
 
@@ -152,10 +153,27 @@ main(argc, argv)
 {
 	int ch;
 	pthread_t tid;
+	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "vd:w:f:hp:")) != -1) {
+	while ((ch = getopt(argc, argv, "vd:w:f:hp:u:")) != -1) {
 		switch (ch) {
+		case 'u': {
+			if (geteuid() != 0) {
+				fprintf(stderr, "%s: only root can use -u\n", 
+				    argv[0]);
+				exit(EX_USAGE);
+			}
+
+			if ((optarg == NULL) || 
+			    ((pw = getpwnam(optarg)) == NULL)) {
+				fprintf(stderr, 
+				    "%s: -u needs a valid user as argument\n",
+				    argv[0]);
+				usage(argv[0]);
+			}
+		}
+			
 		case 'v':
 			debug = 1;
 			break;
@@ -203,6 +221,18 @@ main(argc, argv)
 		}
 	}
 	
+	/*
+	 * Drop root privs
+	 */
+	if (pw != NULL) {
+		if ((setuid(pw->pw_uid) != 0) ||
+		    (seteuid(pw->pw_uid) != 0)) {
+			fprintf(stderr, "%s: cannot change UID: %s\n",
+			    argv[0], strerror(errno));
+			exit(EX_OSERR);
+		}
+	}
+
 	/* 
 	 * Register our callbacks 
 	 */
@@ -251,6 +281,6 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, "usage: %s [-v] [-d dumpfile] [-f exceptionfile] "
-	    "[-w delay] -p socket\n", progname);
+	    "[-w delay] [-u username] -p socket\n", progname);
 	exit(EX_USAGE);
 }
