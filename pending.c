@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.38 2004/03/20 07:19:03 manu Exp $ */
+/* $Id: pending.c,v 1.39 2004/03/21 23:19:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.38 2004/03/20 07:19:03 manu Exp $");
+__RCSID("$Id: pending.c,v 1.39 2004/03/21 23:19:16 manu Exp $");
 #endif
 
 #include "config.h"
@@ -290,7 +290,7 @@ pending_textdump(stream)
 
 		fprintf(stream, "%s	%32s	%32s	%ld # %s\n", 
 		    pending->p_addr, pending->p_from, 
-		    pending->p_rcpt, pending->p_tv.tv_sec, textdate);
+		    pending->p_rcpt, (long)pending->p_tv.tv_sec, textdate);
 		
 		done++;
 	}
