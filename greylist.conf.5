@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.4 2004/04/02 15:06:53 manu Exp $
+.\" $Id: greylist.conf.5,v 1.5 2004/04/12 17:26:03 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -55,6 +55,7 @@ addresses. The syntax is an IP address followed by a slash and a CIDR
 netmask. Here is an example:
 .Dl addr 127.0.0.0/8
 .Dl addr 192.168.3.0/24
+If the netmask is ommitted, /32 is assumed.
 .Pp
 You should at least whitelist localhost (127.0.0.1/8), and if you have
 some user clients connecting to the machine, you should whitelist the

@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.13 2004/04/02 15:06:52 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.14 2004/04/12 17:26:03 manu Exp $");
 #endif
 #endif
 
@@ -60,6 +60,7 @@ lines	:	lines netblock '\n'
 	|
 	;
 netblock:	ADDR IPADDR CIDR{ except_add_netblock(&$2, $3); }
+	|	ADDR IPADDR	{ except_add_netblock(&$2, 32); }
 	;
 fromaddr:	FROM EMAIL	{ except_add_from($2); }
 	;
