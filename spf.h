@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.3 2004/03/30 16:00:10 manu Exp $ */
+/* $Id: spf.h,v 1.4 2004/03/30 16:43:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -38,6 +38,8 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include "except.h"
+
 #if defined(HAVE_SPF_ALT)
 int spf_alt_check(struct in_addr *, char *);
 #define SPF_CHECK(x,y) spf_alt_check((x),(y))
@@ -47,7 +49,7 @@ int spf_check(struct in_addr *, char *);
 #define SPF_CHECK(x,y) spf_check((x),(y))
 
 #else
-#define SPF_CHECK(x,y) 0
+#define SPF_CHECK(x,y) EXF_NONE
 
 #endif
 
