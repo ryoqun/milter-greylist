@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.23 2004/06/08 12:04:21 manu Exp $ */
+/* $Id: conf.h,v 1.24 2004/06/25 22:28:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -51,6 +51,10 @@
 #ifndef CONFFILE
 #define CONFFILE "/etc/mail/greylist.conf"
 #endif
+
+#define CONF_WRLOCK WRLOCK(conf_lock) 
+#define CONF_RDLOCK RDLOCK(conf_lock) 
+#define CONF_UNLOCK UNLOCK(conf_lock)
 
 struct conf {
 	int c_cold;
@@ -105,7 +109,9 @@ extern char c_pidfile[PATHLEN + 1];
 extern char c_dumpfile[PATHLEN + 1];
 extern char c_socket[PATHLEN + 1];
 extern char c_user[PATHLEN + 1];
+extern pthread_rwlock_t conf_lock;
 
+void conf_init(void);
 void conf_load(void);
 void conf_update(void);
 

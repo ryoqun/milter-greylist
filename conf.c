@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.24 2004/06/12 08:41:56 manu Exp $ */
+/* $Id: conf.c,v 1.25 2004/06/25 22:28:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.24 2004/06/12 08:41:56 manu Exp $");
+__RCSID("$Id: conf.c,v 1.25 2004/06/25 22:28:08 manu Exp $");
 #endif
 #endif
 
@@ -78,6 +78,21 @@ char c_user[PATHLEN + 1];
 
 char *conffile = CONFFILE;
 struct timeval conffile_modified;
+
+pthread_rwlock_t conf_lock; 	/* protects conf_update */
+
+void
+conf_init(void) {
+	int error;
+
+	if ((error = pthread_rwlock_init(&conf_lock, NULL)) != 0) {
+		syslog(LOG_ERR, 
+		    "pthread_rwlock_init failed: %s", strerror(error));
+		exit(EX_OSERR);
+	}
+
+	return;
+}
 
 void
 conf_load(void) 	/* exceptlist must be write-locked */
