@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.23 2004/06/08 14:47:47 manu Exp $ */
+/* $Id: dump.c,v 1.24 2004/10/13 09:35:23 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.23 2004/06/08 14:47:47 manu Exp $");
+__RCSID("$Id: dump.c,v 1.24 2004/10/13 09:35:23 manu Exp $");
 #endif
 #endif
 
@@ -162,6 +162,8 @@ dump_perform(void) {
 	struct timeval tv1, tv2, tv3;
 	char newdumpfile[MAXPATHLEN + 1];
 	int done;
+	int greylisted_count;
+	int whitelisted_count;
 
 	if (conf.c_debug) {
 		(void)gettimeofday(&tv1, NULL);
@@ -200,9 +202,12 @@ dump_perform(void) {
 	}
 
 	dump_header(dump);
-	done = 0;
-	done += pending_textdump(dump);
-	done += autowhite_textdump(dump);
+	greylisted_count = pending_textdump(dump);
+	whitelisted_count = autowhite_textdump(dump);
+	done = greylisted_count + whitelisted_count;
+
+	fprintf(dump, "#\n# Summary: %d records, %d greylisted, %d "
+	    "whitelisted\n#\n", done, greylisted_count, whitelisted_count);
 
 	fclose(dump);
 
