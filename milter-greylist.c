@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.49 2004/03/22 23:46:06 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.50 2004/03/23 14:01:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.49 2004/03/22 23:46:06 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.50 2004/03/23 14:01:03 manu Exp $");
 #endif
 #endif
 
@@ -294,7 +294,7 @@ mlfi_eom(ctx)
 
 	(void)gettimeofday(&tv, NULL);
 	strftime(timestr, HDRLEN, 
-	    "%a, %d %b %Y %T %z", localtime((time_t *)&tv.tv_sec));
+	    "%a, %d %b %Y %T %Z", localtime((time_t *)&tv.tv_sec));
 
 	if (priv->priv_elapsed == 0) {
 		switch (priv->priv_whitelist) {
