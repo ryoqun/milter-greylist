@@ -1,4 +1,6 @@
 1.5.6:
+	malloc e-mail addresses, avoids truncation at 32 chars (Hajimu Umemoto)
+1.5.6:
 	Configurable MX sync bind port and address (Cyril Guibourg)
 1.5.5:
 	Disable getnameinfo as in causes an ABI clash in Linux

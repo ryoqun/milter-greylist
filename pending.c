@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.64 2004/08/03 21:56:07 manu Exp $ */
+/* $Id: pending.c,v 1.65 2004/09/13 18:41:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.64 2004/08/03 21:56:07 manu Exp $");
+__RCSID("$Id: pending.c,v 1.65 2004/09/13 18:41:55 manu Exp $");
 #endif
 #endif
 
@@ -134,10 +134,21 @@ pending_get(sa, salen, from, rcpt, date)  /* pending_lock must be write-locked *
 		pending = NULL;
 		goto out;
 	}
-	strncpy(pending->p_from, from, ADDRLEN);
-	pending->p_from[ADDRLEN] = '\0';
-	strncpy(pending->p_rcpt, rcpt, ADDRLEN);
-	pending->p_rcpt[ADDRLEN] = '\0';
+	if ((pending->p_from = strdup(from)) == NULL) {
+		free(pending->p_addr);
+		free(pending->p_sa);
+		free(pending);
+		pending = NULL;
+		goto out;
+	}
+	if ((pending->p_rcpt = strdup(rcpt)) == NULL) {
+		free(pending->p_from);
+		free(pending->p_addr);
+		free(pending->p_sa);
+		free(pending);
+		pending = NULL;
+		goto out;
+	}
 
 	pending->p_refcnt = 1;
 
@@ -198,8 +209,8 @@ pending_del(sa, salen, from, rcpt, time)
 		 * Look for our entry.
 		 */
 		if ((strncmp(addr, pending->p_addr, sizeof(addr)) == 0) &&
-		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
-		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0) &&
+		    (strcmp(from, pending->p_from) == 0) &&
+		    (strcmp(rcpt, pending->p_rcpt) == 0) &&
 		    (pending->p_tv.tv_sec == time)) {
 			pending_put(pending);
 			break;
@@ -287,8 +298,8 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
 #endif
 		}
 		if (ip_match(sa, pending->p_sa, mask) &&
-		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
-		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
+		    (strcmp(from, pending->p_from) == 0) &&
+		    (strcmp(rcpt, pending->p_rcpt) == 0)) {
 			rest = accepted - now;
 
 			if (rest < 0) {
@@ -341,7 +352,7 @@ pending_textdump(stream)
 	struct tm tm;
 
 	fprintf(stream, "\n\n#\n# greylisted tuples\n#\n");
-	fprintf(stream, "# Sender IP	%32s	%32s	Time accepted\n", 
+	fprintf(stream, "# Sender IP\t%s\t%s\tTime accepted\n", 
 	    "Sender e-mail", "Recipient e-mail");
 
 	PENDING_RDLOCK;
@@ -349,7 +360,7 @@ pending_textdump(stream)
 		localtime_r((time_t *)&pending->p_tv.tv_sec, &tm);
 		strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
 
-		fprintf(stream, "%s	%32s	%32s	%ld # %s\n", 
+		fprintf(stream, "%s\t%s\t%s\t%ld # %s\n", 
 		    pending->p_addr, pending->p_from, 
 		    pending->p_rcpt, (long)pending->p_tv.tv_sec, textdate);
 		
@@ -383,6 +394,8 @@ pending_free(pending)
 	UNLOCK(refcnt_lock);
 	free(pending->p_sa);
 	free(pending->p_addr);
+	free(pending->p_from);
+	free(pending->p_rcpt);
 	free(pending);
 }
 

@@ -1,4 +1,4 @@
-/* $Id: dump.h,v 1.11 2004/06/08 14:47:47 manu Exp $ */
+/* $Id: dump.h,v 1.12 2004/09/13 18:41:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -53,8 +53,15 @@
 #define DUMPFREQ 600
 #endif
 
+/* 
+ * Maximum e-mail length, according to RFC 2821
+ * <?"?local-part"?@domain>?
+ * local-part maximum length is 64 chars
+ * domain maximum length is 255 chars
+ * Total: 324
+ */
+#define ADDRLEN	324
 #define DATELEN 40
-#define ADDRLEN	31
 #define IPADDRLEN sizeof("255.255.255.255")
 
 #include "milter-greylist.h"

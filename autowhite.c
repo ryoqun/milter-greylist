@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.36 2004/08/02 12:11:48 manu Exp $ */
+/* $Id: autowhite.c,v 1.37 2004/09/13 18:41:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.36 2004/08/02 12:11:48 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.37 2004/09/13 18:41:54 manu Exp $");
 #endif
 #endif
 
@@ -138,8 +138,8 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 		 */
 		if (ip_equal(sa, aw->a_sa) &&
 		    ((conf.c_lazyaw == 1) ||
-		    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
-		    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
+		    ((strcasecmp(from, aw->a_from) == 0) &&
+		    (strcasecmp(rcpt, aw->a_rcpt) == 0)))) {
 			timeradd(&now, &delay, &aw->a_tv);
 
 			dirty++;
@@ -241,8 +241,8 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 		}
 		if (ip_match(sa, aw->a_sa, mask) &&
 		    ((conf.c_lazyaw == 1) ||
-		    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
-		    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
+		    ((strcasecmp(from, aw->a_from) == 0) &&
+		    (strcasecmp(rcpt, aw->a_rcpt) == 0)))) {
 			timeradd(&now, &delay, &aw->a_tv);
 
 			dirty++;
@@ -275,7 +275,7 @@ autowhite_textdump(stream)
 	struct tm tm;
 
 	fprintf(stream, "\n\n#\n# Auto-whitelisted tuples\n#\n");
-	fprintf(stream, "# Sender IP    %32s    %32s    Expire\n",
+	fprintf(stream, "# Sender IP\t%s\t%s\tExpire\n",
 	    "Sender e-mail", "Recipient e-mail");
 
 	AUTOWHITE_RDLOCK;
@@ -286,7 +286,7 @@ autowhite_textdump(stream)
 		iptostring(aw->a_sa, aw->a_salen, textaddr, sizeof(textaddr));
 
 		fprintf(stream, 
-		    "%s     %32s    %32s    %ld AUTO # %s\n",
+		    "%s\t%s\t%s\t%ld AUTO # %s\n",
 		    textaddr, aw->a_from, aw->a_rcpt, 
 		    (long)aw->a_tv.tv_sec, textdate);
 
@@ -320,17 +320,15 @@ autowhite_get(sa, salen, from, rcpt, date) /* autowhite list must be locked */
 
 	bzero((void *)aw, sizeof(*aw));
 
-	if ((aw->a_sa = malloc(salen)) == NULL) {
+	if ((aw->a_sa = malloc(salen)) == NULL ||
+	    (aw->a_from = strdup(from)) == NULL ||
+	    (aw->a_rcpt = strdup(rcpt)) == NULL) {
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
 	memcpy(aw->a_sa, sa, salen);
 	aw->a_salen = salen;
-	strncpy(aw->a_from, from, ADDRLEN);
-	aw->a_from[ADDRLEN] = '\0';
-	strncpy(aw->a_rcpt, rcpt, ADDRLEN);
-	aw->a_rcpt[ADDRLEN] = '\0';
 
 	if (date == NULL)
 		timeradd(&now, &delay, &aw->a_tv);
@@ -348,6 +346,8 @@ autowhite_put(aw)	/* autowhite list must be write-locked */
 {
 	TAILQ_REMOVE(&autowhite_head, aw, a_list);	
 	free(aw->a_sa);
+	free(aw->a_from);
+	free(aw->a_rcpt);
 	free(aw);
 
 	return;

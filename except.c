@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.48 2004/08/09 20:29:08 manu Exp $ */
+/* $Id: except.c,v 1.49 2004/09/13 18:41:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.48 2004/08/09 20:29:08 manu Exp $");
+__RCSID("$Id: except.c,v 1.49 2004/09/13 18:41:55 manu Exp $");
 #endif
 #endif
 
@@ -167,14 +167,13 @@ except_add_from(email)	/* exceptlist must be write-locked */
 {
 	struct except *except;
 
-	if ((except = malloc(sizeof(*except))) == NULL) {
+	if ((except = malloc(sizeof(*except))) == NULL ||
+	    (except->e_from = strdup(email)) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
 	except->e_type = E_FROM;
-	strncpy(except->e_from, email, ADDRLEN);
-	except->e_from[ADDRLEN] = '\0';
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
 	if (conf.c_debug)
@@ -189,14 +188,13 @@ except_add_rcpt(email)	/* exceptlist must be write-locked */
 {
 	struct except *except;
 
-	if ((except = malloc(sizeof(*except))) == NULL) {
+	if ((except = malloc(sizeof(*except))) == NULL ||
+	    (except->e_rcpt = strdup(email)) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
 	except->e_type = E_RCPT;
-	strncpy(except->e_rcpt, email, ADDRLEN);
-	except->e_rcpt[ADDRLEN] = '\0';
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
 	if (conf.c_debug)
@@ -211,14 +209,13 @@ except_add_domain(domain)	/* exceptlist must be write-locked */
 {
 	struct except *except;
 
-	if ((except = malloc(sizeof(*except))) == NULL) {
+	if ((except = malloc(sizeof(*except))) == NULL ||
+	    (except->e_domain = strdup(domain)) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
 	except->e_type = E_DOMAIN;
-	strncpy(except->e_domain, domain, ADDRLEN);
-	except->e_domain[ADDRLEN] = '\0';
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
 	if (conf.c_debug)
@@ -498,7 +495,7 @@ emailcmp(big, little)
 		if (tolower(big[0]) != tolower(little[0]))
 			big++;
 
-		for (i = 0; big[0] && little[i] && (i < ADDRLEN); i++) {
+		for (i = 0; big[0] && little[i]; i++) {
 			if (tolower(big[0]) != tolower(little[i]))
 				break;
 			big++;
@@ -519,20 +516,30 @@ except_clear(void) {	/* exceptlist must be write locked */
 		except = LIST_FIRST(&except_head);
 		LIST_REMOVE(except, e_list);
 
-		if (except->e_type == E_NETBLOCK) {
+		switch (except->e_type) {
+		case E_NETBLOCK:
 			free(except->e_addr);
 			free(except->e_mask);
-		}
-
-		if (except->e_type == E_FROM_RE)
+			break;
+		case E_FROM:
+			free(except->e_from);
+			break;
+		case E_RCPT:
+			free(except->e_rcpt);
+			break;
+		case E_DOMAIN:
+			free(except->e_domain);
+			break;
+		case E_FROM_RE:
 			regfree(&except->e_from_re);
-
-		if (except->e_type == E_RCPT_RE)
+			break;
+		case E_RCPT_RE:
 			regfree(&except->e_rcpt_re);
-
-		if (except->e_type == E_DOMAIN_RE)
+			break;
+		case E_DOMAIN_RE:
 			regfree(&except->e_domain_re);
-
+			break;
+		}
 		free(except);
 	}
 

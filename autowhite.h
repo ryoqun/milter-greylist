@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.15 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: autowhite.h,v 1.16 2004/09/13 18:41:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -47,8 +47,8 @@ TAILQ_HEAD(autowhitelist, autowhite);
 struct autowhite {
 	struct sockaddr *a_sa;
 	socklen_t a_salen;
-	char a_from[ADDRLEN + 1];
-	char a_rcpt[ADDRLEN + 1];
+	char *a_from;
+	char *a_rcpt;
 	struct timeval a_tv;
 	TAILQ_ENTRY(autowhite) a_list;
 };

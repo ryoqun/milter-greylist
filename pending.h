@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.31 2004/08/02 12:11:48 manu Exp $ */
+/* $Id: pending.h,v 1.32 2004/09/13 18:41:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -65,8 +65,8 @@ struct pending {
 	char *p_addr;
 	struct sockaddr *p_sa;
 	socklen_t p_salen;
-	char p_from[ADDRLEN + 1];
-	char p_rcpt[ADDRLEN + 1];
+	char *p_from;
+	char *p_rcpt;
 	struct timeval p_tv;
 	int p_refcnt;
 	TAILQ_ENTRY(pending) p_list;
