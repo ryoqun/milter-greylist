@@ -36,7 +36,7 @@ delays		[Dd][Ee][Ll][Aa][Yy][Ss]
 nodelays	[Nn][Oo][Dd][Ee][Ll][Aa][Yy][Ss]
 lazyaw		[Ll][Aa][Zz][Yy][Aa][Ww]
 all		[Aa][Ll][Ll]
-delay		[0-9]{1,}[smhdw]?
+delay		-?[0-9]{1,}[smhdw]?
 path		"\""[^"\n]{1,}"\""
 regex		"/"[^/\n]{1,}"/"
 dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
@@ -48,7 +48,7 @@ dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.20 2004/05/24 21:57:36 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.21 2004/05/25 10:19:01 manu Exp $");
 	#endif
 	#endif
 	#endif
