@@ -26,18 +26,18 @@ greylist	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt]:?
 autowhite	[Aa][Uu][Tt][Oo][Ww][Hh][Ii][Tt][Ee]:?
 pidfile		[Pp][Ii][Dd][Ff][Ii][Ll][Ee]:?
 dumpfile	[Dd][Uu][Mm][Pp][Ff][Ii][Ll][Ee]:?
+subnetmatch	[Ss][Uu][Bb][Nn][Ee][Tt][Mm][Aa][Tt][Cc][Hh]:?
 delay		[0-9]{1,}[smhdw]?
 path		"\""[^"\n]{1,}"\""
-%{
 
-/* mailbox		[A-Za-z0-9!#$%&'"*+/=?$^_`}{|~\-]+ */
+%{
 	#include "config.h"
 
 	#ifdef HAVE_SYS_CDEFS_H
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.7 2004/03/31 09:49:16 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.8 2004/03/31 10:07:17 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -67,6 +67,7 @@ path		"\""[^"\n]{1,}"\""
 {verbose}	{ return VERBOSE; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return DUMPFILE; }
+{subnetmatch}	{ return SUBNETMATCH; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);
 			yylval.delay[PATHLEN] = '\0';

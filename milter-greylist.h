@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.23 2004/03/31 09:49:16 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.24 2004/03/31 10:07:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -56,6 +56,7 @@ sfsistat mlfi_eom(SMFICTX *);
 sfsistat mlfi_close(SMFICTX *);
 void usage(char *);
 int humanized_atoi(char *);
+struct in_addr * cidr2mask(int, struct in_addr *);
 void cleanup_sock(char *);
 int main(int, char **);
 

@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.5 2004/03/31 09:49:16 manu Exp $ */
+/* $Id: conf.h,v 1.6 2004/03/31 10:07:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -63,6 +63,7 @@ struct conf {
 	int c_autowhite_validity;
 	char *c_pidfile;
 	char *c_dumpfile;
+	struct in_addr c_match_mask;
 
 };
 
@@ -77,6 +78,7 @@ struct conf {
 #define C_AUTOWHITE	0x040
 #define C_PIDFILE	0x080
 #define C_DUMPFILE	0x100
+#define C_MATCHMASK	0x200
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
 extern struct conf conf;

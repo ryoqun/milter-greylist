@@ -1,4 +1,4 @@
-%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE DUMPFILE PATH DELAY
+%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE DUMPFILE PATH DELAY SUBNETMATCH
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.6 2004/03/31 09:49:16 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.7 2004/03/31 10:07:17 manu Exp $");
 #endif
 #endif
 
@@ -47,6 +47,7 @@ lines	:	lines netblock '\n'
 	|	lines greylist '\n'
 	|	lines pidfile '\n'
 	|	lines dumpfile '\n'
+	|	lines subnetmatch '\n'
 	|	lines '\n'
 	|
 	;
@@ -88,5 +89,9 @@ dumpfile:	DUMPFILE PATH	{ if (C_NOTFORCED(C_DUMPFILE))
 					    quotepath(c_dumpfile, $2, PATHLEN);
 				}
 	;
+subnetmatch:	SUBNETMATCH CIDR{ if (C_NOTFORCED(C_MATCHMASK))
+					cidr2mask($2, &conf.c_match_mask);
+				}
+	;	
 %%
 #include "conf_lex.c"

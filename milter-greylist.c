@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.62 2004/03/31 09:49:16 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.63 2004/03/31 10:07:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.62 2004/03/31 09:49:16 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.63 2004/03/31 10:07:17 manu Exp $");
 #endif
 #endif
 
@@ -540,14 +540,7 @@ main(argc, argv)
 				    "%s: -L requires a CIDR mask\n", argv[0]);
 				usage(argv[0]);
 			}
-
-			if (cidr == 0) {
-				bzero((void *)&match_mask, sizeof(match_mask));
-			} else {
-				cidr = 32 - cidr;
-				match_mask = 
-				    inet_makeaddr(~((1UL << cidr) - 1), 0L);
-			}
+			cidr2mask(cidr, &match_mask);
 
 			if (conf.c_debug)
 				printf("match mask: %s\n", inet_ntop(AF_INET, 
@@ -836,4 +829,20 @@ writepid(pidfile)
 	fclose(stream);
 
 	return;
+}
+
+
+struct in_addr *
+cidr2mask(cidr, mask)
+	int cidr;
+	struct in_addr *mask;
+{
+	if ((cidr == 0) || (cidr > 32)) {
+		bzero((void *)mask, sizeof(*mask));
+	} else {
+		cidr = 32 - cidr;
+		*mask = inet_makeaddr(~((1UL << cidr) - 1), 0L);
+	}
+	
+	return mask;
 }

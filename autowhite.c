@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.18 2004/03/31 09:49:16 manu Exp $ */
+/* $Id: autowhite.c,v 1.19 2004/03/31 10:07:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.18 2004/03/31 09:49:16 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.19 2004/03/31 10:07:17 manu Exp $");
 #endif
 #endif
 
@@ -295,7 +295,7 @@ autowhite_get(in, from, rcpt, date) /* autowhite list must be locked */
 {
 	struct autowhite *aw;
 	struct timeval now, delay;
-	time_t autowhite_validity;
+	time_t autowhite_validity = conf.c_autowhite_validity;
 
 	gettimeofday(&now, NULL);
 	delay.tv_sec = autowhite_validity;
