@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.82 2004/03/31 12:10:58 manu Exp $
+# $Id: configure.ac,v 1.83 2004/03/31 13:56:40 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -37,11 +37,6 @@ AC_ARG_WITH(libpthread,
 	[  --with-libpthread=DIR  Find libpthread in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
-AC_ARG_WITH(libspf_alt, 
-	[  --with-libspf_alt=DIR  Find libspf_alt in DIR],
-	[CFLAGS=$CFLAGS" -I$withval/include" LIBS=$LIBS"-lspf_alt -lintl"
-	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
-	    AC_DEFINE([HAVE_SPF_ALT], [], [we use libspf_alt])])
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -60,6 +55,32 @@ AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
+
+# Try to configure for libspf_alt
+SAVEDLDFLAGS=$LDFLAGS
+SAVEDCFLAGS=$CFLAGS
+AC_ARG_WITH(libspf_alt, 
+	[  --with-libspf_alt=DIR  Find libspf_alt in DIR],
+	[LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+	    CFLAGS=$CFLAGS" -I$withval/include"
+	    AC_CHECK_LIB(spf_alt, SPF_create_config, [
+		SAVEDLDFLAGS=$LDFLAGS
+		SAVEDCFLAGS=$CFLAGS
+		LIBS=$LIBS"-lspf_alt"
+		AC_DEFINE([HAVE_SPF_ALT], [], [we use libspf_alt])
+		],[AC_CHECK_LIB([spf_alt -lintl],  SPF_create_config, [
+			SAVEDLDFLAGS=$LDFLAGS
+			SAVEDCFLAGS=$CFLAGS
+			LIBS=$LIBS"-lspf_alt -lintl"
+			AC_DEFINE([HAVE_SPF_ALT], [], [we use libspf_alt])
+		], [echo "libspf_alt not found, check config.log for details"
+		    echo "Remove --with-libspf_alt to build without SPF support"
+		    exit 1;])
+	])
+])
+LDFLAGS=$SAVEDLDFLAGS
+CFLAGS=$SAVEDCFLAGS
+
 
 # Check for socket functions linking. On Solaris, -lsocket -lnsl is required
 AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], 

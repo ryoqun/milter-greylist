@@ -1,4 +1,5 @@
 1.1.4:
+	Better libspf testing in configure
 	Add flag equivalents to the config file
 1.1.3:
 	Bugfix: without SPF enabled, everything was accepted
