@@ -1,6 +1,6 @@
-# $Id: milter-greylist.spec,v 1.9 2005/02/13 23:43:47 manu Exp $
+# $Id: milter-greylist.spec,v 1.10 2005/03/19 07:40:46 manu Exp $
 # Contributed by Ivan F. Martinez
-%define ver 2.0b2
+%define ver 2.0b3
 %define rel 1
 %define user root
 
@@ -55,9 +55,20 @@ mkdir -p ${RPM_BUILD_ROOT}%{_datadir}/sendmail-cf/feature
 install -m 755 rc-redhat.sh ${RPM_BUILD_ROOT}%{_initrddir}/milter-greylist
 install -m 644 milter-greylist.m4 ${RPM_BUILD_ROOT}%{_datadir}/sendmail-cf/feature/milter-greylist.m4
 touch ${RPM_BUILD_ROOT}%{_localstatedir}/milter-greylist/greylist.db
-make DESTDIR=${RPM_BUILD_ROOT} install
+# use root user, as the %files section define the correct install user
+make DESTDIR=${RPM_BUILD_ROOT} USER=root install
+
+%clean
+[ "$RPM_BUILD_ROOT" != "/" ] && rm -rf $RPM_BUILD_ROOT
 
 %pre
+/usr/bin/id "%{user}" &> /dev/null
+if [ $? -ne 0 ]
+then 
+    /usr/sbin/useradd -r -d /etc/mail -s /sbin/nologin \
+        -c "GreyList Milter" %{user} >/dev/null 2>&1 || :
+fi
+
 
 %post
 /sbin/chkconfig --add milter-greylist
@@ -71,7 +82,7 @@ fi
 
 
 %preun
-if [ $1 = 0 ]; then
+if [ $1 -eq 0 ]; then
 	/sbin/service milter-greylist stop > /dev/null 2>&1 || :
 	/sbin/chkconfig --del milter-greylist
 	/bin/grep -q -E '(FEATURE|INPUT_MAIL_FILTER).*milter-greylist' /etc/mail/sendmail.mc
@@ -85,7 +96,13 @@ fi
 %postun
 if [ $1 -eq 0 ]; then
 	rm -rf %{_localstatedir}/milter-greylist/
-   else
+        grep -q "$%{user}:.*GreyList Milter:"
+	if [ $? -eq 0 ]
+        then
+		/usr/sbin/userdel %{user} >/dev/null 2>&1 || :
+		/usr/sbin/groupdel %{user} >/dev/null 2>&1 || :
+	fi
+else
 	/sbin/service milter-greylist condrestart > /dev/null 2>&1 || :
 fi
 
@@ -102,6 +119,9 @@ fi
 %attr(0600,%{user},root) %ghost %{_localstatedir}/milter-greylist/greylist.db
 
 %changelog
+* Sun Mar 13 2005 Petr Kristof <Petr|Kristof_CZ> 1.7.4-3
+- support for running as specific user
+
 * Tue Jan 25 2005 Petr Kristof <Petr|Kristof_CZ> 1.7.4-3
 - Use more %macros
 - Add conditional restart during upgrade
