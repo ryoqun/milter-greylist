@@ -1,3 +1,5 @@
+1.1.5:	
+	Bugfix: The subnet match mask was not set in the configuration file
 1.1.4:
 	Better libspf testing in configure
 	Add flag equivalents to the config file
