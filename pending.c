@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.15 2004/03/08 09:31:24 manu Exp $ */
+/* $Id: pending.c,v 1.16 2004/03/08 09:31:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.15 2004/03/08 09:31:24 manu Exp $");
+__RCSID("$Id: pending.c,v 1.16 2004/03/08 09:31:54 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -348,6 +348,7 @@ pending_flush(void) {
 		if (rename(newdumpfile, dumpfile) != 0) {
 			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
 			    dumpfile, newdumpfile, strerror(errno));
+			exit(EX_OSERR);
 		}
 
 		if (debug) {
