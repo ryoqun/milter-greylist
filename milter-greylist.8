@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.19 2004/03/28 14:05:42 manu Exp $
+.\" $Id: milter-greylist.8,v 1.20 2004/03/29 23:12:00 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -37,6 +37,7 @@
 .Nd grey listing filter for sendmail
 .Sh SYNOPSIS
 .Nm
+.Op Fl A
 .Op Fl a Ar delay
 .Op Fl D
 .Op Fl d Ar dumpfile
@@ -100,6 +101,11 @@ will start with an empty grey list.
 .Pp
 The following options are available:
 .Bl -tag -width flag
+.It Fl A
+Normally, 
+.Nm
+does not greylist senders that succeeded SMTP AUTH. This option disable that
+feature and cause authentication to be ignored.
 .It Fl a Ar delay
 Configure auto-whitelisting. After a tuple (sender IP, sender e-mail, 
 recipient e-mail) has been accepted, other identical tuples will get

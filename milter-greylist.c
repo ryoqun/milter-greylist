@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.54 2004/03/29 15:27:57 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.55 2004/03/29 23:12:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.54 2004/03/29 15:27:57 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.55 2004/03/29 23:12:00 manu Exp $");
 #endif
 #endif
 
@@ -77,6 +77,7 @@ __RCSID("$Id: milter-greylist.c,v 1.54 2004/03/29 15:27:57 manu Exp $");
 int debug = 0;
 int dont_fork = 0;
 int quiet = 0;
+int noauth = 0;
 
 static char *strncpy_rmsp(char *, char *, size_t);
 static int humanized_atoi(char *);
@@ -129,8 +130,20 @@ mlfi_envfrom(ctx, envfrom)
 	char **envfrom;
 {
 	struct mlfi_priv *priv;
+	char *auth_authen;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+
+	/*
+	 * Is the user authenticated?
+	 */
+	if ((noauth == 0) &&
+	    ((auth_authen = smfi_getsymval(ctx, "{auth_authen}")) != NULL)) {
+		syslog(LOG_DEBUG, 
+		    "User %s authenticated, bypassing greylisting", 
+		    auth_authen);
+		priv->priv_whitelist = EXF_AUTH;
+	} 
 
 	/*
 	 * Strip spaces from the source address
@@ -156,7 +169,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval faild for {i}: %s",
+		syslog(LOG_DEBUG, "smfi_getsymval failed for {i}: %s",
 		    strerror(errno));
 		priv->priv_queueid = "(unkown id)";
 	}
@@ -168,8 +181,9 @@ mlfi_envrcpt(ctx, envrcpt)
 
 	/*
 	 * For multiple-recipients messages, if the sender IP or the
-	 * sender e-mail address is whitelisted, then there is no
-	 * need to check again, it is whitelisted for all the recipients.
+	 * sender e-mail address is whitelisted, authenticated, or
+	 * SPF compliant, then there is no need to check again, 
+	 * it is whitelisted for all the recipients.
 	 * 
 	 * Moreover, this will prevent a wrong X-Greylist header display
 	 * if the {IP, sender e-mail} address was whitelisted and the
@@ -179,7 +193,9 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * of them would not.
 	 */
 	if ((priv->priv_whitelist == EXF_ADDR) ||
-	    (priv->priv_whitelist == EXF_FROM))
+	    (priv->priv_whitelist == EXF_FROM) ||
+	    (priv->priv_whitelist == EXF_AUTH) ||
+	    (priv->priv_whitelist == EXF_SPF))
 		return SMFIS_CONTINUE;
 
 	/* 
@@ -287,14 +303,14 @@ mlfi_eom(ctx)
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 	if ((fqdn = smfi_getsymval(ctx, "{j}")) == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval faild for {j}: %s",
+		syslog(LOG_DEBUG, "smfi_getsymval failed for {j}: %s",
 		    strerror(errno));
 		gethostname(host, ADDRLEN);
 		fqdn = host;
 	}
 
 	if ((ip = smfi_getsymval(ctx, "{if_addr}")) == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval faild for {if_addr}: %s",
+		syslog(LOG_DEBUG, "smfi_getsymval failed for {if_addr}: %s",
 		    strerror(errno));
 		ip = "0.0.0.0";
 	}
@@ -313,6 +329,14 @@ mlfi_eom(ctx)
 
 		case EXF_FROM:
 			whystr = "Sender e-mail whitelisted";
+			break;
+
+		case EXF_AUTH:
+			whystr = "Sender succeded SMTP authentication";
+			break;
+
+		case EXF_SPF:
+			whystr = "Sender IP is SPF-compliant";
 			break;
 
 		case EXF_RCPT:
@@ -381,8 +405,12 @@ main(argc, argv)
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "a:vDd:qw:f:hp:Tu:rL:")) != -1) {
+	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:Tu:rL:")) != -1) {
 		switch (ch) {
+		case 'A':
+			noauth = 1;
+			break;
+
 		case 'a':
 			if (optarg == NULL) {
 				fprintf(stderr, "%s: -a needs an argument\n",
@@ -628,7 +656,7 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, 
-	    "usage: %s [-DvqT] [-a autowhite] [-d dumpfile] [-f configfile]\n"
+	    "usage: %s [-ADvqT] [-a autowhite] [-d dumpfile] [-f configfile]\n"
 	    "       [-w delay] [-u username] [-L cidrmask] -p socket\n", 
 	    progname);
 	exit(EX_USAGE);
