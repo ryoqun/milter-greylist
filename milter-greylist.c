@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.39 2004/03/20 08:25:15 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.40 2004/03/20 09:30:01 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.39 2004/03/20 08:25:15 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.40 2004/03/20 09:30:01 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -98,6 +98,7 @@ mlfi_connect(ctx, hostname, addr)
 
 	smfi_setpriv(ctx, priv);
 	bzero(priv, sizeof(*priv));
+	priv->priv_whitelist = EXF_UNSET;
 
 	addr_in = (struct sockaddr_in *)addr;
 	if ((addr_in != NULL) && (addr_in->sin_family == AF_INET))
@@ -138,20 +139,29 @@ mlfi_envrcpt(ctx, envrcpt)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
-	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
+	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL)
 		priv->priv_queueid = "(unkown id)";
-	}
-
+	
 	if (debug)
 		syslog(LOG_DEBUG, "%s: addr = %s, from = %s, rcpt = %s", 
 		    priv->priv_queueid, inet_ntoa(priv->priv_addr), 
 		    priv->priv_from, *envrcpt);
 
 	/*
-	 * Strip spaces from the recipient address
+	 * For multiple-recipients messages, if the sender IP or the
+	 * sender e-mail address is whitelisted, then there is no
+	 * need to check again, it is whitelisted for all the recipients.
+	 * 
+	 * Moreover, this will prevent a wrong X-Greylist header display
+	 * if the {IP, sender e-mail} address was whitelisted and the
+	 * last recipient was also whitelisted. If we would set priv_whitelist
+	 * on the last recipient, all recipient would have a X-Greylist
+	 * header explaining that they were whitelisted, whereas some
+	 * of them would not.
 	 */
-	strncpy_rmsp(rcpt, *envrcpt, ADDRLEN);
-	rcpt[ADDRLEN] = '\0';
+	if ((priv->priv_whitelist == EXF_ADDR) ||
+	    (priv->priv_whitelist == EXF_FROM))
+		return SMFIS_CONTINUE;
 
 	/* 
 	 * Reload the config file if it has been touched
@@ -160,22 +170,60 @@ mlfi_envrcpt(ctx, envrcpt)
 	conf_update();
 	sync_master_restart();
 
+	/*
+	 * Strip spaces from the recipient address
+	 */
+	strncpy_rmsp(rcpt, *envrcpt, ADDRLEN);
+	rcpt[ADDRLEN] = '\0';
+
+	/*
+	 * Check if the sender IP, sender e-mail or recipient e-mail
+	 * is in the permanent whitelist.
+	 */
 	if ((priv->priv_whitelist = except_filter(&priv->priv_addr, 
 	    priv->priv_from, rcpt, priv->priv_queueid)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
 
+	/* 
+	 * Check if the tuple {sender IP, sender e-mail, recipient e-mail}
+	 * was autowhitelisted
+	 */
 	if ((priv->priv_whitelist = autowhite_check(&priv->priv_addr,
 	    priv->priv_from, rcpt, priv->priv_queueid)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
 
+	/*
+	 * On a multi-recipient message, one message can be whitelisted,
+	 * and the next ones be greylisted. The first one would
+	 * pass through immediatly (priv->priv_delay = 0) with a 
+	 * priv->priv_whitelist = EXF_NONE. This would cause improper
+	 * X-Greylist header display in mlfi_eom()
+	 *
+	 * The fix: if we make it to mlfi_eom() with priv_elapsed = 0, this
+	 * means that some recipients were whitelisted. 
+	 * We can set priv_whitelist now, because if the message is greylisted
+	 * for everyone, it will not go to mlfi_eom(), and priv_whitelist 
+	 * will not be used.
+	 */
+	priv->priv_whitelist = EXF_RCPT;
+
+	/*
+	 * Check if the tuple {sender IP, sender e-mail, recipient e-mail}
+	 * is in the greylist and if it ca now be accepted. If it is not
+	 * in the greylist, it will be added.
+	 */
 	if (pending_check(&priv->priv_addr, priv->priv_from, 
 	    rcpt, &remaining, &priv->priv_elapsed, priv->priv_queueid) != 0) 
 		return SMFIS_CONTINUE;
 
+	/*
+	 * The message has been added to the greylist and will be delayed.
+	 * Log this and report to the client.
+	 */
 	h = remaining / 3600;
 	remaining = remaining % 3600;
 	mn = (remaining / 60);
