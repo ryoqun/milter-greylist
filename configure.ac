@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.58 2004/03/21 23:54:55 manu Exp $
+# $Id: configure.ac,v 1.59 2004/03/22 00:02:22 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -24,7 +24,7 @@ AC_MSG_CHECKING([if ld accepts --rpath])
 SAVEDLDFLAGS=$LDFLAGS
 LDFLAGS=$LDFLAGS" -Wl,--rpath=/"
 AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], 
-    [rpath="--rpath"; ldrpath=yes], [rpath="-L"; ldrpath=no])
+    [rpath="--rpath="; ldrpath=yes], [rpath="-L"; ldrpath=no])
 LDFLAGS=$SAVEDLDFLAGS
 AC_MSG_RESULT([$ldrpath])
 
@@ -32,11 +32,11 @@ AC_MSG_RESULT([$ldrpath])
 AC_ARG_WITH(libmilter, 
 	[  --with-libmilter=DIR   Find libmilter in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
-	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath=$withval/lib"])
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
 AC_ARG_WITH(libpthread, 
 	[  --with-libpthread=DIR  Find libpthread in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
-	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath=$withval/lib"])
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
 
 # Checks for header files.
 AC_HEADER_STDC
