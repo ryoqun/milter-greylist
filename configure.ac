@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.69 2004/03/23 08:00:56 manu Exp $
+# $Id: configure.ac,v 1.70 2004/03/23 08:10:58 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -58,11 +58,8 @@ AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
 
 # Check for socket functions linking. On Solaris, -lsocket -lnsl is required
 AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], 
-	[AC_CHECK_LIB([nsl], [socket], 
-		[LIBS="$LIBS -lnsl"], 
-		[AC_CHECK_LIB([socket -lnsl], [socket], 
-			[LIBS="$LIBS -lsocket -lnsl"], [])
-		])
+	[AC_CHECK_LIB([socket -lnsl], [socket], 
+		[LIBS="$LIBS -lsocket -lnsl"], [])
 	])
 
 # Check for inet_aton (libmilter uses it). On solaris, -lresolv is required
@@ -74,7 +71,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <syslog.h>
 	],[
 		#ifndef LOG_PERROR
-		# error LOG_PERROR undefined
+		error: LOG_PERROR undefined
 		#endif
 	])], [logperror=yes], 
 	[AC_DEFINE([HAVE_MISSING_LOG_PERROR], 
@@ -92,7 +89,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#endif
 	],[
 		#ifndef timeradd
-		# error timeradd undefined
+		error timeradd undefined
 		#endif
 	])], [timeradd=yes], 
 	[AC_DEFINE([HAVE_MISSING_TIMERADD], 
@@ -102,7 +99,7 @@ AC_MSG_RESULT([$timeradd])
 # Check if -D__EXTENSIONS__ is needed for snprintf, getopt, seteuid...
 SAVEDCFLAGS=$CFLAGS
 CFLAGS=$CFLAGS" -ansi -Wall -Werror"
-AC_MSG_CHECKING([if -D__EXTENSIONS__ is neede to use snprintf])
+AC_MSG_CHECKING([if -D__EXTENSIONS__ is needed to use snprintf])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <stdio.h>
 	],[[
@@ -181,7 +178,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <sys/queue.h>
 	],[
 		#ifndef TAILQ_FIRST
-		# error Your <sys/queue.h> is outdated
+		error Your <sys/queue.h> is outdated
 		#endif
 	])], [oldqueue=no], 
 	[AC_DEFINE([HAVE_OLD_QUEUE_H], [], [old <sys/queue.h>]) oldqueue=yes])
