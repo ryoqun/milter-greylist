@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.5 2004/02/22 09:46:13 manu Exp $
+# $Id: Makefile.in,v 1.6 2004/02/29 15:13:30 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -41,13 +41,19 @@ USER=		@USER@
 
 MKDEP=		@MKDEP@
 RM=		@RM@
+SED=		@SED@
 INSTALL=	@INSTALL@
+LEX=		@LEX@
+YACC=		@YACC@
 
-OBJ= 		milter-greylist.o pending.o syncer.o except.o
-SRC= 		milter-greylist.c pending.c syncer.c except.c
+OBJ= 		milter-greylist.o pending.o syncer.o except.o except_yacc.o
+SRC= 		milter-greylist.c pending.c syncer.c except.c 
+GENSRC=		except_yacc.c except_lex.c
 
 milter-greylist:	${OBJ}
 	${CC} -o milter-greylist ${OBJ} ${LDFLAGS} ${LIBS}
+
+except_yacc.o:	except_yacc.c except_lex.c
 
 all:	depend milter-greylist
 
@@ -61,11 +67,18 @@ depend:
 	${MKDEP} ${CFLAGS} ${SRC}
 
 clean:
-	${RM} -f milter-greylist ${OBJ}
+	${RM} -f milter-greylist ${OBJ} ${GENSRC}
 
 realclean:	clean
 	${RM} -Rf Makefile config.h config.log config.status configure \
 		 autom4te.cache configure.lineno
+
+.SUFFIXES:	.o .c .h .y .l
+.l.c:
+	lex -o${.TARGET} ${.IMPSRC}
+.y.c:
+	yacc -p`echo ${.TARGET}|${SED} 's/^\([^_]\{1,\}_\).*$$/\1/'` \
+	    -o${.TARGET} ${.IMPSRC}
 
 start:	milter-greylist
 	{RM} -f /home/manu/milter-greylist.sock

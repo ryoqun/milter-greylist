@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.4 2004/02/22 09:46:13 manu Exp $
+# $Id: configure.ac,v 1.5 2004/02/29 15:13:30 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -9,9 +9,12 @@ AC_CONFIG_HEADER([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_LEX
+AC_PROG_YACC
 AC_PROG_INSTALL
 AC_CHECK_PROGS(MKDEP, mkdep)
 AC_CHECK_PROGS(RM, rm)
+AC_CHECK_PROGS(SED, sed)
 
 # Path to required packages
 AC_ARG_WITH(libmiter, 

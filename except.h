@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.4 2004/02/22 00:58:42 manu Exp $ */
+/* $Id: except.h,v 1.5 2004/02/29 15:13:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -59,6 +59,11 @@ extern char *exceptfile;
 
 int except_init(void);
 void except_load(void);
-int except_check(struct in_addr *);
+void except_add(struct in_addr *, int);
+int except_checkaddr(struct in_addr *);
+
+extern FILE *except_in;
+extern int except_line;
+int except_parse(void);
 
 #endif /* _EXCEPT_H_ */

@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.1 2004/02/21 00:01:17 manu Exp $ */
+/* $Id: except.c,v 1.2 2004/02/29 15:13:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -56,15 +56,6 @@ void
 except_load(void)
 {
 	FILE *stream;
-	char *format = "%15[0-9.]/%d\n";
-	char addr[IPADDRLEN + 1];
-	int cidr;
-	struct in_addr in;
-	struct in_addr mask;
-	int readen;
-	int line = 0;
-	struct except *except;
-	int error;
 
 	if ((stream = fopen(exceptfile, "r")) == NULL) {
 		fprintf(stderr, "cannot open exception file %s: %s\n", 
@@ -73,70 +64,55 @@ except_load(void)
 		return;
 	}
 
-	while(feof(stream) == 0) {
-		line++;
-		readen = fscanf(stream, format, &addr, &cidr);
-		switch (readen) {
-		case 0: 
-			goto end;
-			break;
-
-		case 1:
-			mask = inet_makeaddr(~0UL, 0L);
-			break;
-
-		case 2:
-			if ((cidr > 32) || (cidr < 0)) {
-				fprintf(stderr, "bad mask in exception list "
-				    "line %d\n", line);
-				exit(EX_DATAERR);
-			}
-
-			if (cidr == 0)
-				bzero(&mask, sizeof(mask));
-			else
-				cidr = 32 - cidr;
-				mask = inet_makeaddr(~((1UL << cidr) - 1), 0L);
-			break;
-
-		default:
-			fprintf(stderr, "syntax error in exception list "
-			    "line %d\n", line);
-			exit(EX_DATAERR);
-			break;
-		}
-
-		if ((error = inet_aton(addr, &in)) != 1) {
-			fprintf(stderr, "bad address in exception list "
-			    "line %d: %s\n", line, strerror(errno));
-			exit(EX_DATAERR);
-		}
-		in.s_addr &= mask.s_addr;
-
-		if ((except = malloc(sizeof(*except))) == NULL) {
-			perror("cannot allocate memory");
-			exit(EX_OSERR);
-		}
-		
-		memcpy(&except->e_addr, &in, sizeof(in));
-		memcpy(&except->e_mask, &mask, sizeof(mask));
-		LIST_INSERT_HEAD(&except_head, except, e_list);
-
-		if (debug) {
-			printf("load exception %s", inet_ntoa(except->e_addr));
-			printf("/%s\n", inet_ntoa(except->e_mask));
-		}
-
-	}
-
-end:
+	except_in = stream;
+	except_parse();
 	fclose(stream);
 
 	return;
 }
 
+void
+except_add(in, cidr)
+	struct in_addr *in;
+	int cidr;
+{
+	struct in_addr mask;
+	struct except *except;
+
+	if ((cidr > 32) || (cidr < 0)) {
+		fprintf(stderr, "bad mask in exception list line %d\n", 
+		    except_line);
+		exit(EX_DATAERR);
+	}
+
+	if (cidr == 0)
+		bzero(&mask, sizeof(mask));
+	else
+		cidr = 32 - cidr;
+	mask = inet_makeaddr(~((1UL << cidr) - 1), 0L);
+
+	in->s_addr &= mask.s_addr;
+
+	if ((except = malloc(sizeof(*except))) == NULL) {
+		perror("cannot allocate memory");
+		exit(EX_OSERR);
+	}
+		
+	memcpy(&except->e_addr, in, sizeof(*in));
+	memcpy(&except->e_mask, &mask, sizeof(mask));
+	LIST_INSERT_HEAD(&except_head, except, e_list);
+
+	if (debug) {
+		printf("load exception %s", inet_ntoa(except->e_addr));
+		printf("/%s\n", inet_ntoa(except->e_mask));
+	}
+
+	return;
+}
+
+
 int 
-except_check(in)
+except_checkaddr(in)
 	struct in_addr *in;
 {
 	struct except *ex;
