@@ -3,9 +3,10 @@
 %{
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.2 2004/03/11 22:22:31 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.3 2004/03/17 12:32:46 manu Exp $");
 #endif
 
+#include <stdlib.h>
 #include "except.h"
 #include "sync.h"
 

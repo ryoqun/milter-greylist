@@ -3,9 +3,10 @@
 %{
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.4 2004/03/11 22:22:31 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.5 2004/03/17 12:32:46 manu Exp $");
 #endif
 
+#include <stdlib.h>
 #include "pending.h"
 
 int dump_lex(void);
