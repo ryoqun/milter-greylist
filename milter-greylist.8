@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.15 2004/03/21 08:04:23 manu Exp $
+.\" $Id: milter-greylist.8,v 1.16 2004/03/21 08:07:03 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -174,7 +174,8 @@ rejected (and don't ever add localhost as a peer for MX sync, as you will
 cause each entry in the greylist to be added twice).
 .Pp
 If an MX is down, changes to the greylist will be queued until it gets
-back up again.
+back up again. The queue length is limited (default is 1024 entries), and
+if it overflows, newer entries will be discarded.
 .Sh AUTHOR
 .An Emmanuel Dreyfus Aq manu@netbsd.org
 .Pp
