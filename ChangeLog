@@ -1,4 +1,7 @@
 1.3.1:
+	Documentation about MX sync and firewalls
+	Case insensitive autowhitelist e-mail addresses checks
+	Introduce a lazyaw option to match only IP addreses in autowhitelist
 	Remove fake error message on dump reload  (make the LOG_DEBUG)
 	List build dependenvies in README
 1.1.16:
