@@ -3,6 +3,7 @@
 	Typo in delayedreject 
 	Check for initgroups existence
 	Add more E-bay addresses in greylist.conf
+	Drop \ for multi-line ACL as it break builds with some version of yacc
 2.0b1:
 	Shut down warnings in tolower()
 	Use initgroups() on startup to kill suplementary groups
