@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.5 2004/03/05 14:21:27 manu Exp $ */
+/* $Id: pending.c,v 1.6 2004/03/05 14:28:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -119,7 +119,7 @@ pending_get(addr, in, from, rcpt, date)  /* pending_lock must be write-locked */
 	(void)gettimeofday(&tv, NULL);
 	syslog(LOG_INFO, "created: %s from %s to %s, delayed for %ld s\n",
 	    pending->p_addr, pending->p_from, pending->p_rcpt, 
-	    tv.tv_sec - pending->p_tv.tv_sec);
+	    pending->p_tv.tv_sec - tv.tv_sec);
 
 out:
 	return pending;
