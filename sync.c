@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.29 2004/03/22 07:00:26 manu Exp $ */
+/* $Id: sync.c,v 1.30 2004/03/22 07:01:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -276,7 +276,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	else
 		service = se->s_port;
 
-	bzero(&laddr, sizeof(laddr));
+	bzero((void *)&laddr, sizeof(laddr));
 #ifdef HAVE_SA_LEN
 	laddr.sin_len = sizeof(laddr);
 #endif
@@ -292,7 +292,7 @@ peer_connect(peer)	/* peer list is read-locked */
 		return -1;
 	}
 
-	bzero(&raddr, sizeof(raddr));
+	bzero((void *)&raddr, sizeof(raddr));
 #ifdef HAVE_SA_LEN
 	raddr.sin_len = sizeof(raddr);
 #endif
@@ -425,7 +425,7 @@ sync_master(dontcare)
 		    strerror(errno));
 	}
 
-	bzero(&laddr, sizeof(laddr));
+	bzero((void *)&laddr, sizeof(laddr));
 #ifdef HAVE_SA_LEN
 	laddr.sin_len = sizeof(laddr);
 #endif
@@ -458,7 +458,7 @@ sync_master(dontcare)
 		struct peer *peer;
 		char peerstr[IPADDRLEN + 1];
 
-		bzero(&raddr, sizeof(raddr));
+		bzero((void *)&raddr, sizeof(raddr));
 		socklen = sizeof(raddr);
 		if ((fd = accept(s, (struct sockaddr *)&raddr, 
 		    &socklen)) == -1) {

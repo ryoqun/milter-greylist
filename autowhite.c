@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.13 2004/03/21 23:57:34 manu Exp $ */
+/* $Id: autowhite.c,v 1.14 2004/03/22 07:01:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.13 2004/03/21 23:57:34 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.14 2004/03/22 07:01:53 manu Exp $");
 #endif
 
 #include "config.h"
@@ -298,7 +298,7 @@ autowhite_get(in, from, rcpt, date) /* autowhite list must be locked */
 		exit(EX_OSERR);
 	}
 
-	bzero(aw, sizeof(*aw));
+	bzero((void *)aw, sizeof(*aw));
 
 	aw->a_in.s_addr = in->s_addr;
 	strncpy(aw->a_from, from, ADDRLEN);

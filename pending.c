@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.40 2004/03/21 23:54:55 manu Exp $ */
+/* $Id: pending.c,v 1.41 2004/03/22 07:01:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.40 2004/03/21 23:54:55 manu Exp $");
+__RCSID("$Id: pending.c,v 1.41 2004/03/22 07:01:53 manu Exp $");
 #endif
 
 #include "config.h"
@@ -95,7 +95,7 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 	if ((pending = malloc(sizeof(*pending))) == NULL)
 		goto out;
 
-	bzero(pending, sizeof(pending));
+	bzero((void *)pending, sizeof(pending));
 
 	if (date == 0) {
 		gettimeofday(&pending->p_tv, NULL);

@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.24 2004/03/20 07:19:03 manu Exp $ */
+/* $Id: except.c,v 1.25 2004/03/22 07:01:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.24 2004/03/20 07:19:03 manu Exp $");
+__RCSID("$Id: except.c,v 1.25 2004/03/22 07:01:53 manu Exp $");
 #endif
 
 #include "config.h"
@@ -94,7 +94,7 @@ except_add_netblock(in, cidr)	/* exceptlist must be write-locked */
 	}
 
 	if (cidr == 0)
-		bzero(&mask, sizeof(mask));
+		bzero((void *)&mask, sizeof(mask));
 	else
 		cidr = 32 - cidr;
 	mask = inet_makeaddr(~((1UL << cidr) - 1), 0L);
