@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.14 2004/10/15 19:17:39 manu Exp $ */
+/* $Id: sync.h,v 1.15 2004/11/12 14:22:56 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -35,7 +35,9 @@
 #include "pending.h"
 #include "milter-greylist.h"
 
+#ifndef SYNC_MAXQLEN
 #define SYNC_MAXQLEN	1024
+#endif
 
 #define CMDLEN 10
 #define LINELEN 512
