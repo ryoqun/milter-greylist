@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.28 2004/03/21 23:21:13 manu Exp $ */
+/* $Id: sync.c,v 1.29 2004/03/22 07:00:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -830,6 +830,12 @@ sync_sender(dontcare)
 
 	if (pthread_mutex_init(&mutex, NULL) != 0) {
 		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n", 
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if (pthread_mutex_lock(&mutex) != 0) {
+		syslog(LOG_ERR, "pthread_mutex_lock failed: %s\n", 
 		    strerror(errno));
 		exit(EX_OSERR);
 	}
