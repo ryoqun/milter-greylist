@@ -3,7 +3,7 @@
 %{
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.7 2004/03/17 22:28:57 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.8 2004/03/17 22:31:05 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -31,7 +31,7 @@ lines	:	lines greyentry '\n'
 	|
 	;
 greyentry :	IPADDR EMAIL EMAIL TIME	{ pending_get(&$1, $2, $3, $4); }
-autoentry :	AUTO IPADDR EMAIL EMAIL TIME { autowhite_add(&$2, $3, $4, &$5);}
+autoentry :	IPADDR EMAIL EMAIL TIME AUTO { autowhite_add(&$1, $2, $3, &$4);}
 	;
 %%
 #include "dump_lex.c"

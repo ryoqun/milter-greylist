@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.2 2004/03/17 22:21:36 manu Exp $ */
+/* $Id: dump.c,v 1.3 2004/03/17 22:31:05 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.2 2004/03/17 22:21:36 manu Exp $");
+__RCSID("$Id: dump.c,v 1.3 2004/03/17 22:31:05 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -227,7 +227,7 @@ dump_header(stream)
 	    "dumped by milter-greylist-%s on %s.\n",
 	    PACKAGE_VERSION, textdate);
 	fprintf(stream, "# DO NOT EDIT while milter-greylist is running, "
-	    "changes will be overwritten.\n#\n\n");
+	    "changes will be overwritten.\n#\n");
 
 	return;
 }
