@@ -1,4 +1,4 @@
-%token ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR PORT STAR
 
 %{
 #include "config.h"
@@ -6,19 +6,27 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.25 2004/08/01 09:27:03 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.26 2004/08/08 21:24:20 manu Exp $");
 #endif
 #endif
 
 #include <stdlib.h>
+#include <string.h>
 #include <sysexits.h>
 #include "conf.h"
 #include "except.h"
 #include "sync.h"
 #include "milter-greylist.h"
 
+#define LEN4 sizeof(struct sockaddr_in)
+#define IP4TOSTRING(ip4, str) iptostring(SA(&(ip4)), LEN4, (str), IPADDRSTRLEN)
+
+#define LEN6 sizeof(struct sockaddr_in6)
+#define IP6TOSTRING(ip6, str) iptostring(SA(&(ip6)), LEN6, (str), IPADDRSTRLEN)
+
 int conf_lex(void);
 void conf_error(char *);
+
 %}
 
 %union	{
@@ -41,6 +49,7 @@ void conf_error(char *);
 %type <email> EMAIL;
 %type <domainname> DOMAINNAME;
 %type <delay> TDELAY;
+%type <delay> TNUMBER;
 %type <path> PATH;
 %type <regex> REGEX;
 
@@ -71,6 +80,7 @@ lines	:	lines netblock '\n'
 	|	lines report '\n'
 	|	lines dumpfreq '\n'
 	|	lines timeout '\n'
+	|       lines syncaddr '\n'
 	|	lines '\n'
 	|
 	;
@@ -114,10 +124,9 @@ domainaddr:	DOMAIN DOMAINNAME { except_add_domain($2); }
 domainregex:	DOMAIN REGEX	 { except_add_domain_regex($2); }
 	;
 peeraddr:	PEER IPADDR	{
-			char addr[IPADDRLEN];
+			char addr[IPADDRLEN + 1];
 
-			if (!iptostring(SA(&$2), sizeof(struct sockaddr_in),
-			    addr, sizeof(addr))) {
+			if (IP4TOSTRING($2, addr) != 0) {
 				printf("invalid IPv4 address line %d\n",
 				    conf_line);
 				exit(EX_DATAERR);
@@ -126,10 +135,9 @@ peeraddr:	PEER IPADDR	{
 		}
 	|	PEER IP6ADDR	{
 #ifdef AF_INET6
-			char addr[IPADDRSTRLEN];
+			char addr[IPADDRSTRLEN + 1];
 
-			if (!iptostring(SA(&$2), sizeof(struct sockaddr_in6),
-			    addr, sizeof(addr))) {
+			if (IP6TOSTRING($2, addr) != 0) {
 				printf("invalid IPv6 address line %d\n",
 				    conf_line);
 				exit(EX_DATAERR);
@@ -144,9 +152,8 @@ peeraddr:	PEER IPADDR	{
 #ifdef HAVE_GETADDRINFO
 			peer_add($2);
 #else
-			printf(
-			    "FQDN in peer is not supported, ignore line %d\n",
-			    conf_line);
+			printf("FQDN in peer is not supported, "
+			    "ignore line %d\n", conf_line);
 #endif
 		}
 	;
@@ -154,8 +161,16 @@ autowhite:	AUTOWHITE TDELAY{ if (C_NOTFORCED(C_AUTOWHITE))
 					conf.c_autowhite_validity =
 					    (time_t)humanized_atoi($2);
 				}
+	|	AUTOWHITE TNUMBER{ if (C_NOTFORCED(C_AUTOWHITE))
+					conf.c_autowhite_validity =
+					    (time_t)humanized_atoi($2);
+				}
 	;
 greylist:	GREYLIST TDELAY	{ if (C_NOTFORCED(C_DELAY))
+					conf.c_delay =
+					    (time_t)humanized_atoi($2);
+				}
+	|	GREYLIST TNUMBER{ if (C_NOTFORCED(C_DELAY))
 					conf.c_delay =
 					    (time_t)humanized_atoi($2);
 				}
@@ -210,10 +225,78 @@ report:		REPORT NONE	{ conf.c_report = C_NONE; }
 dumpfreq:	GLDUMPFREQ TDELAY { conf.c_dumpfreq =
 				    (time_t)humanized_atoi($2);
 				}
+	|	GLDUMPFREQ TNUMBER { conf.c_dumpfreq =
+				    (time_t)humanized_atoi($2);
+				}
 	;
 timeout:	GLTIMEOUT TDELAY { conf.c_timeout =
 				    (time_t)humanized_atoi($2);
 				}
+	|	GLTIMEOUT TNUMBER { conf.c_timeout =
+				    (time_t)humanized_atoi($2);
+				}
 	;
+syncaddr:	SYNCADDR STAR	{
+				   conf.c_syncaddr = NULL;
+				   conf.c_syncport = NULL;
+				}
+	|	SYNCADDR IPADDR	{
+				if (IP4TOSTRING($2, c_syncaddr) != 0) {
+					printf("invalid IPv4 address "
+					    "line %d\n", conf_line);
+					exit(EX_DATAERR);
+				}
+				conf.c_syncaddr = c_syncaddr;
+				conf.c_syncport = NULL;
+	                        }
+	|	SYNCADDR IP6ADDR {
+#ifdef AF_INET6
+				if (IP6TOSTRING($2, c_syncaddr) != 0) {
+					printf("invalid IPv6 address "
+					    "line %d\n", conf_line);
+					exit(EX_DATAERR);
+				}
+				conf.c_syncaddr = c_syncaddr;
+				conf.c_syncport = NULL;
+#else /* AF_INET6 */
+				printf("IPv6 is not supported, "
+				    "ignore line %d\n", conf_line);
+#endif /* AF_INET6 */
+				}
+	|	SYNCADDR STAR PORT TNUMBER {
+				conf.c_syncaddr = NULL;
+				conf.c_syncport = c_syncport;
+				strncpy(conf.c_syncport, $4, NUMLEN);
+				conf.c_syncport[NUMLEN] = '\0';
+				}
+	|	SYNCADDR IPADDR PORT TNUMBER {
+				if (IP4TOSTRING($2, c_syncaddr) != 0) {
+					printf("invalid IPv4 address "
+					    "line %d\n", conf_line);
+					exit(EX_DATAERR);
+				}
+				conf.c_syncaddr = c_syncaddr;
+				conf.c_syncport = c_syncport;
+				strncpy(conf.c_syncport, $4, NUMLEN);
+				conf.c_syncport[NUMLEN] = '\0';
+				}
+	|	SYNCADDR IP6ADDR PORT TNUMBER {
+#ifdef AF_INET6
+				if (IP6TOSTRING($2, c_syncaddr) != 0) {
+					printf("invalid IPv6 address "
+					    "line %d\n", conf_line);
+					exit(EX_DATAERR);
+				}
+				conf.c_syncaddr = c_syncaddr;
+				conf.c_syncport = c_syncport;
+				strncpy(conf.c_syncport, $4, NUMLEN);
+				conf.c_syncport[NUMLEN] = '\0';
+#else /* AF_INET6 */
+				printf("IPv6 is not supported, "
+				    "ignore line %d\n", conf_line);
+#endif /* AF_INET6 */
+				}
+	;
+
 %%
 #include "conf_lex.c"

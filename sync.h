@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.12 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: sync.h,v 1.13 2004/08/08 21:24:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -41,7 +41,7 @@
 #define LINELEN 512
 
 #define MXGLSYNC_NAME "mxglsync"
-#define MXGLSYNC_PORT 5252
+#define MXGLSYNC_PORT "5252"
 
 #define MXGLSYNC_BACKLOG 5 /* Maximum connexions */
 

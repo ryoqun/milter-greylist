@@ -1,3 +1,5 @@
+1.5.6:
+	Configurable MX sync bind port and address (Cyril Guibourg)
 1.5.5:
 	Disable getnameinfo as in causes an ABI clash in Linux
 	Fix bad substitutions in rc scripts

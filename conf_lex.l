@@ -3,17 +3,17 @@
 %option noyywrap
 %option prefix="conf_"
 
-byte		[0-9]{1,3}
-ipaddr		{byte}"."{byte}"."{byte}"."{byte}
+number		[0-9]+
+ipaddr		[0-9]{1,3}"."[0-9]{1,3}"."[0-9]{1,3}"."[0-9]{1,3}
 ip6addr		([0-9a-fA-F]*:)+[0-9a-fA-F]*(%[0-9a-zA-Z]+)?
-cidr		"/"{byte}
+cidr		"/"[0-9]{1,3}
 atext		[A-Za-z0-9!#$%&'*+/=?$^_`}{|~.-]{1,}
 qtext		"\""[!-~]{1,}"\""
 mailbox		{atext}|{qtext}
-domainname	[A-Za-z0-9._-]{1,}
+domainname	[A-Za-z0-9._-]+
 email		{mailbox}"\@"{domainname}
 comment		#.*$
-blank		[ \t]{1,}
+blank		[ \t]+
 addr		[Aa][Dd][Dd][Rr]:?
 from		[Ff][Rr][Oo][Mm]:?
 rcpt		[Rr][Cc][Pp][Tt]:?
@@ -38,12 +38,16 @@ delays		[Dd][Ee][Ll][Aa][Yy][Ss]
 nodelays	[Nn][Oo][Dd][Ee][Ll][Aa][Yy][Ss]
 lazyaw		[Ll][Aa][Zz][Yy][Aa][Ww]
 all		[Aa][Ll][Ll]
-delay		-?[0-9]{1,}[smhdw]?
-path		"\""[^"\n]{1,}"\""
-regex		"/"[^/\n]{1,}"/"
+delay		-?[0-9]+[smhdw]?
+path		"\""[^"\n]+"\""
+regex		"/"[^/\n]+"/"
 dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
 timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
 domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
+syncaddr	[Ss][Yy][Nn][Cc][Aa][Dd][Dd][Rr]:?
+port		[Pp][Oo][Rr][Tt]
+star		"*"
+
 
 %{
 	#include "config.h"
@@ -52,7 +56,7 @@ domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.26 2004/08/01 09:27:03 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.27 2004/08/08 21:24:20 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -96,10 +100,18 @@ domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 {dumpfreq}	{ return GLDUMPFREQ; }
 {timeout}	{ return GLTIMEOUT; }
 {domain}	{ return DOMAIN; }
+{syncaddr}	{ return SYNCADDR; }
+{port}		{ return PORT; }
+{star}		{ return STAR; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);
 			yylval.path[PATHLEN] = '\0';
 			return PATH;
+		}
+{number}	{
+			strncpy(yylval.delay, yytext, NUMLEN);
+			yylval.delay[NUMLEN] = '\0';
+			return TNUMBER;
 		}
 {delay}		{
 			strncpy(yylval.delay, yytext, NUMLEN);

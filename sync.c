@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.47 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: sync.c,v 1.48 2004/08/08 21:24:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.47 2004/08/01 09:27:03 manu Exp $");
+__RCSID("$Id: sync.c,v 1.48 2004/08/08 21:24:20 manu Exp $");
 #endif
 #endif
 
@@ -71,7 +71,7 @@ pthread_rwlock_t peer_lock; /* For the peer list */
 pthread_rwlock_t sync_lock; /* For all peer's sync queue */
 pthread_cond_t sync_sleepflag;
 
-static void sync_listen(char *, struct sync_master_sock *);
+static void sync_listen(char *, char *, struct sync_master_sock *);
 
 void
 peer_init(void) {
@@ -294,10 +294,14 @@ peer_connect(peer)	/* peer list is read-locked */
 	if (peer->p_stream != NULL)
 		syslog(LOG_ERR, "peer_connect called and peer->p_stream != 0");
 
-	if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
-		service = htons(MXGLSYNC_PORT);
-	else
-		service = se->s_port;
+	if (conf.c_syncport != NULL) {
+		service = htons(atoi(conf.c_syncport));
+	} else {
+		if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
+		    service = htons(atoi(MXGLSYNC_PORT));
+		else
+		    service = se->s_port;
+	}
 
 #ifdef HAVE_GETADDRINFO
 	bzero(&hints, sizeof(hints));
@@ -480,10 +484,22 @@ sync_master_restart(void) {
 	if (empty || sync_master4.runs || sync_master6.runs)
 		return;
 
+	if (conf.c_syncaddr != NULL) {
+		if (strchr(conf.c_syncaddr, ':'))
+		    sync_listen(conf.c_syncaddr, conf.c_syncport,
+				&sync_master6);
+		else
+		    sync_listen(conf.c_syncaddr, conf.c_syncport,
+				&sync_master4);
+	} else {
+
 #ifdef AF_INET6
-	sync_listen("::", &sync_master6);
+		sync_listen("::", conf.c_syncport, &sync_master6);
 #endif
-	sync_listen("0.0.0.0", &sync_master4);
+		sync_listen("0.0.0.0", conf.c_syncport, &sync_master4);
+	}
+
+
 	if (!sync_master4.runs && !sync_master6.runs) {
 		syslog(LOG_ERR, "cannot start MX sync, socket failed: %s",
 		    strerror(errno));
@@ -633,8 +649,8 @@ sync_master(arg)
 }
 
 static void
-sync_listen(addr, sms)
-	char *addr;
+sync_listen(addr, port, sms)
+        char *addr, *port;
 	struct sync_master_sock *sms;
 {
 	struct protoent *pe;
@@ -658,10 +674,15 @@ sync_listen(addr, sms)
 	else
 		proto = pe->p_proto;
 
-	if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
-		service = htons(MXGLSYNC_PORT);
-	else
-		service = se->s_port;
+	if (port != NULL)
+		service = htons(atoi(port));
+	else {
+		if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
+		    service = htons(atoi(MXGLSYNC_PORT));
+		else
+		    service = se->s_port;
+	}
+
 	switch (SA(&laddr)->sa_family) {
 	case AF_INET:
 		SA4(&laddr)->sin_port = service;

@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.26 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: conf.c,v 1.27 2004/08/08 21:24:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.26 2004/08/01 09:27:03 manu Exp $");
+__RCSID("$Id: conf.c,v 1.27 2004/08/08 21:24:20 manu Exp $");
 #endif
 #endif
 
@@ -75,6 +75,8 @@ char c_pidfile[PATHLEN + 1];
 char c_dumpfile[PATHLEN + 1];
 char c_socket[PATHLEN + 1];
 char c_user[PATHLEN + 1];
+char c_syncaddr[IPADDRSTRLEN + 1];
+char c_syncport[NUMLEN + 1];
 
 char *conffile = CONFFILE;
 struct timeval conffile_modified;
@@ -254,6 +256,8 @@ conf_defaults(c)
 #ifdef AF_INET6
 	prefix2mask6(128, &c->c_match_mask6);
 #endif
+	c->c_syncaddr = NULL;
+	c->c_syncport = NULL;
 	c->c_socket = NULL;
 	c->c_user = NULL;
 	c->c_nodetach = 0;

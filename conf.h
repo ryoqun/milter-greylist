@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.25 2004/08/01 09:27:03 manu Exp $ */
+/* $Id: conf.h,v 1.26 2004/08/08 21:24:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -74,6 +74,8 @@ struct conf {
 #endif
 	char *c_socket;
 	char *c_user;
+	char *c_syncaddr;
+	char *c_syncport;
 	int c_nodetach;
 	int c_report;
 	int c_lazyaw;
@@ -113,6 +115,9 @@ extern char c_pidfile[PATHLEN + 1];
 extern char c_dumpfile[PATHLEN + 1];
 extern char c_socket[PATHLEN + 1];
 extern char c_user[PATHLEN + 1];
+extern char c_syncaddr[IPADDRSTRLEN + 1];
+extern char c_syncport[NUMLEN + 1];
+
 extern pthread_rwlock_t conf_lock;
 
 void conf_init(void);

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.10 2004/08/01 09:27:03 manu Exp $
+.\" $Id: greylist.conf.5,v 1.11 2004/08/08 21:24:20 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -115,10 +115,25 @@ an example:
 .Pp
 Do not ever list localhost as a peer, as it will cause each entry to 
 be added twice to the greylist.
+.Pp
+By default, milter-greylist will listen on all interfaces using TCP port
+5252 or portnumber given by service named mxglsync if defined in /etc/services
+or other directory service. This behaviour can be changed by using
+.Ar syncaddr
+keyword. Here are a few examples:
+.Dl syncaddr *
+.Dl syncaddr * port 7689
+.Dl syncaddr 192.0.2.2 port 9785
+.Dl syncaddr 2001:db8::1:c3b5:123
+.Dl syncaddr 2001:db8::1:c3b5:123 port 1234
+.Pp
+Using '*' as the address means to bind to all local interfaces' addresses.
+Note that if you are not using the default port, all MX must use the same 
+port number. 
 .Sh TEXT DUMP
 .Xr milter-greylist 8
-uses a text dump of its database to resume operation after a crash. The dump is 
-performed at regular time interval, but as it is a heavy operation,
+uses a text dump of its database to resume operation after a crash. The dump
+is performed at regular time interval, but as it is a heavy operation,
 you might want to configure a particular time interval, using the
 .Ar dumpfreq
 option. 
