@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.75 2004/04/08 11:32:53 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.76 2004/04/08 15:06:07 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.75 2004/04/08 11:32:53 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.76 2004/04/08 15:06:07 manu Exp $");
 #endif
 #endif
 
@@ -85,7 +85,7 @@ struct smfiDesc smfilter =
 	SMFI_VERSION,	/* version code */
 	SMFIF_ADDHDRS,	/* flags */
 	mlfi_connect,	/* connection info filter */
-	mlfi_helo,	/* SMTP HELO command filter */
+	MLFI_HELO,	/* SMTP HELO command filter */
 	mlfi_envfrom,	/* envelope sender filter */
 	mlfi_envrcpt,	/* envelope recipient filter */
 	NULL,		/* header filter */

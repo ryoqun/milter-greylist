@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.29 2004/04/08 11:32:53 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.30 2004/04/08 15:06:07 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -66,6 +66,13 @@ int humanized_atoi(char *);
 struct in_addr *cidr2mask(int, struct in_addr *);
 void cleanup_sock(char *);
 int main(int, char **);
+
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT))
+#define MLFI_HELO mlfi_helo
+#else
+#define MLFI_HELO NULL
+#endif
+
 
 /*
  * Locking management
