@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.14 2004/03/06 20:28:44 manu Exp $ */
+/* $Id: except.c,v 1.15 2004/03/09 00:12:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.14 2004/03/06 20:28:44 manu Exp $");
+__RCSID("$Id: except.c,v 1.15 2004/03/09 00:12:29 manu Exp $");
 #endif
 
 #include <errno.h>
@@ -309,6 +309,7 @@ void
 except_update(void) {
 	struct stat st;
 	struct timeval tv1, tv2;
+	struct except *except;
 	
 	if (stat(exceptfile, &st) != 0) {
 		syslog(LOG_DEBUG, "exception file \"%s\" unavailable", 
@@ -327,8 +328,11 @@ except_update(void) {
 		(void)gettimeofday(&tv1, NULL);
 
 	EXCEPT_WRLOCK;
-	while(!LIST_EMPTY(&except_head))
-		LIST_REMOVE(LIST_FIRST(&except_head), e_list);
+	while(!LIST_EMPTY(&except_head)) {
+		except = LIST_FIRST(&except_head);
+		LIST_REMOVE(except, e_list);
+		free(except);
+	}
 
 	except_load();
 	EXCEPT_UNLOCK;
