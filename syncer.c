@@ -38,6 +38,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <sysexits.h>
+#include <sys/param.h>
 
 #include "pending.h"
 #include "syncer.h"
