@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.27 2004/03/22 21:56:35 manu Exp $ */
+/* $Id: except.c,v 1.28 2004/03/22 23:50:01 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.27 2004/03/22 21:56:35 manu Exp $");
+__RCSID("$Id: except.c,v 1.28 2004/03/22 23:50:01 manu Exp $");
 #endif
 #endif
 
@@ -116,8 +116,10 @@ except_add_netblock(in, cidr)	/* exceptlist must be write-locked */
 
 	if (debug)
 		printf("load exception net %s/%s\n", 
-		inet_ntop(AF_INET, &except->e_addr, addrstr, IPADDRLEN),
-		inet_ntop(AF_INET, &except->e_mask, maskstr, IPADDRLEN));
+		    (char *)inet_ntop(AF_INET, 
+		    &except->e_addr, addrstr, IPADDRLEN),
+		    (char *)inet_ntop(AF_INET, 
+		    &except->e_mask, maskstr, IPADDRLEN));
 
 	return;
 }
