@@ -1,4 +1,5 @@
 1.1.6:
+	Bugfix: libspf_alt use was not thread safe.
 	Reorder tests to minimize DNS lookups with SPF
 	Buygfix: when using a delay in config file, we overwrote some memory
 	Fix build problems on Linux

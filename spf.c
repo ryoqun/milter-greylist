@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.4 2004/03/30 16:07:21 manu Exp $ */
+/* $Id: spf.c,v 1.5 2004/04/01 13:39:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.4 2004/03/30 16:07:21 manu Exp $");
+__RCSID("$Id: spf.c,v 1.5 2004/04/01 13:39:45 manu Exp $");
 #endif
 #endif
 
@@ -66,9 +66,6 @@ spf_check(in, from)
 #include <spf_alt/spf.h>
 #include <spf_alt/spf_dns_resolv.h>
 
-SPF_config_t spfconf = NULL;
-SPF_dns_config_t dnsconf = NULL;
-
 /* SMTP needs at least 64 chars for local part and 255 for doamin... */
 #define NS_MAXDNAME 1025 
 int
@@ -76,20 +73,22 @@ spf_alt_check(in, fromp)
 	struct in_addr *in;
 	char *fromp;
 {
+	SPF_config_t spfconf;
+	SPF_dns_config_t dnsconf;
 	char addr[IPADDRLEN + 1];
 	char from[NS_MAXDNAME + 1];
 	SPF_output_t out;
 	int result = EXF_NONE;
 	size_t len;
 
-	if (spfconf == NULL)
-		spfconf = SPF_create_config();
-	if (dnsconf == NULL)
-		dnsconf = SPF_dns_create_config_resolv(NULL, 0);
+	if ((spfconf = SPF_create_config()) == NULL) {
+		syslog(LOG_ERR, "SPF_create_config failed");
+		goto out1;
+	}
 
-	if ((spfconf == NULL) || (dnsconf == NULL)) {
-		syslog(LOG_ERR, "spf_alt_check init failed");
-		return EXF_NONE;
+	if ((dnsconf = SPF_dns_create_config_resolv(NULL, 0)) == NULL) {
+		syslog(LOG_ERR, "SPF_dns_create_config_resolv faile");
+		goto out2;
 	}
 
 	/* 
@@ -98,8 +97,7 @@ spf_alt_check(in, fromp)
 	inet_ntop(AF_INET, in, addr, IPADDRLEN);
 	if (SPF_set_ip_str(spfconf, addr) != 0) {
 		syslog(LOG_ERR, "SPF_set_ip_str failed");
-		SPF_reset_config(spfconf);
-		return EXF_NONE;
+		goto out3;
 	}
 
 	/* 
@@ -113,8 +111,7 @@ spf_alt_check(in, fromp)
 
 	if (SPF_set_env_from(spfconf, from) != 0) {
 		syslog(LOG_ERR, "SPF_set_env_from failed");
-		SPF_reset_config(spfconf);
-		return EXF_NONE;
+		goto out3;
 	}
 
 	/*
@@ -127,9 +124,12 @@ spf_alt_check(in, fromp)
 	if (out.result == SPF_RESULT_PASS) 
 		result = EXF_SPF;
 
-	SPF_reset_config(spfconf);
 	SPF_free_output(&out);
-
+out3:
+	SPF_dns_destroy_config_resolv(dnsconf);
+out2:
+	SPF_destroy_config(spfconf);
+out1:
 	return result;
 }
 
