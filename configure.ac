@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.68 2004/03/22 22:13:03 manu Exp $
+# $Id: configure.ac,v 1.69 2004/03/23 08:00:56 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -58,8 +58,11 @@ AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
 
 # Check for socket functions linking. On Solaris, -lsocket -lnsl is required
 AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], 
-	[AC_CHECK_LIB([socket -lnsl], [socket], 
-		[LIBS="$LIBS -lsocket -lnsl"], [])
+	[AC_CHECK_LIB([nsl], [socket], 
+		[LIBS="$LIBS -lnsl"], 
+		[AC_CHECK_LIB([socket -lnsl], [socket], 
+			[LIBS="$LIBS -lsocket -lnsl"], [])
+		])
 	])
 
 # Check for inet_aton (libmilter uses it). On solaris, -lresolv is required
@@ -148,6 +151,28 @@ AC_CHECK_LIB(milter, smfi_register,
                 exit 1;])
         ])
 ])
+
+# Check if -lpthreads is needed after -lmilter
+AC_MSG_CHECKING([if -lpthread is needed after -lmilter])
+SAVEDLIBS=$LIBS
+AC_LINK_IFELSE([AC_LANG_PROGRAM([
+		#include <pthread.h>
+		#include <libmilter/mfapi.h>
+	],[
+		pthread_self();
+		smfi_main();
+	])], [pthend=no], [LIBS=$LIBS" -lpthread"; 
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([
+			#include <pthread.h>
+			#include <libmilter/mfapi.h>
+		],[
+			pthread_self();
+			smfi_main();
+		])], [pthend=yes; SAVEDLIBS=$LIBS], [pthend=no])
+	])
+
+LIBS=$SAVEDLIBS
+AC_MSG_RESULT([$pthend])
 
 # Some Linux flavors have an outdated <sys/queue.h>
 AC_MSG_CHECKING([if <sys/queue.h> is outdated])
