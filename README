@@ -1,9 +1,9 @@
-# $Id: README,v 1.17 2004/04/12 12:40:21 manu Exp $
+# $Id: README,v 1.18 2004/04/16 20:14:21 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/04/12 12:40:21 $
+		       $Date: 2004/04/16 20:14:21 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -17,7 +17,17 @@ Run this command to produce a table of contents:
  1 Building and installing milter-greylist 
  =========================================
 
-Just do the usual ./configure && make && make install
+Build dependencies: 
+- lex or flex
+- yacc or bison
+- libmilter (comes with Sendmail)
+- Any POSIX threads library (Provided by libc on some systems)
+
+Optionnal dependencies: 
+- libspf_alt or libspf.
+
+To build milter-greylist, just do the usual 
+./configure && make && make install
 
 If libpthread and libmilter are not automatically located, use
 --with-libpthread and --with-libmilter flags to the configure
