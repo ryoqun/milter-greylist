@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.48.2.1 2004/05/06 13:54:01 manu Exp $ */
+/* $Id: pending.c,v 1.48.2.2 2004/05/06 13:57:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.48.2.1 2004/05/06 13:54:01 manu Exp $");
+__RCSID("$Id: pending.c,v 1.48.2.2 2004/05/06 13:57:54 manu Exp $");
 #endif
 #endif
 
@@ -210,23 +210,30 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 	char addr[IPADDRLEN + 1];
 	struct pending *pending;
 	struct pending *prev_pending = NULL;
-	struct timeval tv;
+	time_t now;
 	time_t rest = -1;
+	time_t accepted = -1;
 	int dirty = 0;
 	int delay = conf.c_delay;
 
-	gettimeofday(&tv, NULL);
+	now = time(NULL);
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
 	PENDING_WRLOCK;	/* XXX take a read lock and upgrade */
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
+
+		/*
+		 * The time the entry shall be accepted
+		 */
+		accepted = pending->p_tv.tv_sec;
+
 		/*
 		 * Look for our entry.
 		 */
 		if ((IP_MATCH(&pending->p_in, in)) &&
 		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
-			rest = (time_t)(pending->p_tv.tv_sec - tv.tv_sec);
+			rest = accepted - now; 
 
 			if (rest < 0) {
 				peer_delete(pending);
@@ -242,7 +249,7 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 		/*
 		 * Check for expired entries 
 		 */
-		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
+		if (now - accepted > TIMEOUT) {
 			if (conf.c_debug) {
 				syslog(LOG_DEBUG, 
 				    "check: %s from %s to %s timed out", 
@@ -278,7 +285,7 @@ out:
 		*remaining = rest; 
 
 	if (elapsed != NULL)
-		*elapsed = (time_t)(tv.tv_sec - (pending->p_tv.tv_sec - delay));
+		*elapsed = now - (accepted - delay);
 
 	if (dirty)
 		dump_flush();
