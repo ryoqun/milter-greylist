@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.13 2004/03/31 17:02:08 manu Exp $ */
+/* $Id: dump.c,v 1.13.2.1 2004/05/06 13:54:01 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.13 2004/03/31 17:02:08 manu Exp $");
+__RCSID("$Id: dump.c,v 1.13.2.1 2004/05/06 13:54:01 manu Exp $");
 #endif
 #endif
 
@@ -73,14 +73,12 @@ pthread_cond_t dump_sleepflag;
 int dump_parse(void);
 int dump_dirty = 0;
 
-int
+void
 dump_init(void) {
-	int error;
 
-	if ((error = pthread_cond_init(&dump_sleepflag, NULL)) == 0)
-		return error;
+	pthread_cond_init(&dump_sleepflag, NULL);
 
-	return 0;
+	return;
 }
 
 void

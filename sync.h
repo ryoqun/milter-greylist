@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.9 2004/03/30 11:40:44 manu Exp $ */
+/* $Id: sync.h,v 1.9.2.1 2004/05/06 13:54:01 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -79,7 +79,7 @@ struct sync {
 	TAILQ_ENTRY(sync) s_list;
 };
 
-int peer_init(void);
+void peer_init(void);
 void peer_clear(void);
 void peer_add(struct in_addr *);
 int peer_connect(struct peer *);

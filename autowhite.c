@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.19 2004/03/31 10:07:17 manu Exp $ */
+/* $Id: autowhite.c,v 1.19.2.1 2004/05/06 13:54:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.19 2004/03/31 10:07:17 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.19.2.1 2004/05/06 13:54:00 manu Exp $");
 #endif
 #endif
 
@@ -66,16 +66,13 @@ __RCSID("$Id: autowhite.c,v 1.19 2004/03/31 10:07:17 manu Exp $");
 struct autowhitelist autowhite_head;
 pthread_rwlock_t autowhite_lock;
 
-int
+void
 autowhite_init(void) {
-	int error;
 
 	TAILQ_INIT(&autowhite_head);
+	pthread_rwlock_init(&autowhite_lock, NULL);
 
-	if ((error = pthread_rwlock_init(&autowhite_lock, NULL)) == 0)
-		return error;
-
-	return 0;
+	return;
 }
 
 void

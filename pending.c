@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.48 2004/04/01 14:03:52 manu Exp $ */
+/* $Id: pending.c,v 1.48.2.1 2004/05/06 13:54:01 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.48 2004/04/01 14:03:52 manu Exp $");
+__RCSID("$Id: pending.c,v 1.48.2.1 2004/05/06 13:54:01 manu Exp $");
 #endif
 #endif
 
@@ -72,16 +72,13 @@ __RCSID("$Id: pending.c,v 1.48 2004/04/01 14:03:52 manu Exp $");
 struct pendinglist pending_head;
 pthread_rwlock_t pending_lock; 	/* protects pending_head and dump_dirty */
 
-int
+void
 pending_init(void) {
-	int error;
 
 	TAILQ_INIT(&pending_head);
+	pthread_rwlock_init(&pending_lock, NULL);
 
-	if ((error = pthread_rwlock_init(&pending_lock, NULL)) == 0)
-		return error;
-
-	return 0;
+	return;
 }
 
 

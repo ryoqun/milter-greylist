@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.36 2004/04/01 14:03:52 manu Exp $ */
+/* $Id: sync.c,v 1.36.2.1 2004/05/06 13:54:01 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.36 2004/04/01 14:03:52 manu Exp $");
+__RCSID("$Id: sync.c,v 1.36.2.1 2004/05/06 13:54:01 manu Exp $");
 #endif
 #endif
 
@@ -66,21 +66,15 @@ pthread_rwlock_t peer_lock; /* For the peer list */
 pthread_rwlock_t sync_lock; /* For all peer's sync queue */
 pthread_cond_t sync_sleepflag;
 
-int 
+void
 peer_init(void) {
-	int error;
 
 	LIST_INIT(&peer_head);
-	if ((error = pthread_rwlock_init(&peer_lock, NULL)) == 0)
-		return error;
+	pthread_rwlock_init(&peer_lock, NULL);
+	pthread_rwlock_init(&sync_lock, NULL);
+	pthread_cond_init(&sync_sleepflag, NULL);
 
-	if ((error = pthread_rwlock_init(&sync_lock, NULL)) == 0)
-		return error;
-
-	if ((error = pthread_cond_init(&sync_sleepflag, NULL)) == 0)
-		return error;
-
-	return 0;
+	return;
 }
 
 void 

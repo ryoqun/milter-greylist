@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.78 2004/04/12 12:28:56 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.78.2.1 2004/05/06 13:54:01 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.78 2004/04/12 12:28:56 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.78.2.1 2004/05/06 13:54:01 manu Exp $");
 #endif
 #endif
 
@@ -635,14 +635,11 @@ main(argc, argv)
 	/*
 	 * Various init
 	 */
-	if ((except_init() != 0) ||
-	    (pending_init() != 0) ||
-	    (peer_init() != 0) ||
-	    (autowhite_init() != 0) ||
-	    (dump_init() != 0)) {
-		fprintf(stderr, "%s: list init failed\n", argv[0]);
-		exit(EX_SOFTWARE);
-	}
+	except_init();
+	pending_init();
+	peer_init();
+	autowhite_init();
+	dump_init();
 
 	/*
 	 * Load config file
