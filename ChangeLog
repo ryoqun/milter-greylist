@@ -4,6 +4,7 @@
 	Update doc: flex is required
 	Prefix all install paths by ${DESTDIR} to help sandbox builds for RPM
 	Pull config from /etc/sysconfig/milter-greylist in rc-rdehat.sh
+	Whitelist when sendmail sets ${greylist} to WHITE (Ivan F. Martinez)
 1.7.2:
 	Support libspf2 (Eugene Crosser)
 	New ACL framework for whitelist and greylist (Remy Card)

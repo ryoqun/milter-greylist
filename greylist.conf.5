@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.16 2004/12/09 00:04:01 manu Exp $
+.\" $Id: greylist.conf.5,v 1.17 2004/12/16 23:08:13 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -259,6 +259,13 @@ Do not fork and go into the background. This is equivalent to
 .It Ar noauth
 Greylist clients regardless if they succeeded SMTP AUTH. Equivalent to
 .Fl A .
+.It Ar noaccessdb
+Normally 
+.Xr milter-greylist 8 
+will whitelist a message if 
+.Xr sendmail 8
+defines a ${greylist} macro set to WHITE. This enable complex whitelisting
+rules based on the Sendmail access DB. This option inhibit this behavior.
 .It Ar nospf
 Greylist clients regardless if they are SPF-compliant. Equivalent to
 .Fl S .

@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.1 2004/12/08 22:23:43 manu Exp $ */
+/* $Id: acl.h,v 1.2 2004/12/16 23:08:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -119,4 +119,5 @@ void acl_dump(void);
 #define	EXF_SPF		(1 << 10)
 #define	EXF_NONIPV4	(1 << 11)
 #define	EXF_STARTTLS	(1 << 12)
+#define EXF_ACCESSDB	(1 << 13)
 #endif /* _ACL_H_ */

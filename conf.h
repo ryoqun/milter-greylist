@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.28 2004/12/08 22:23:09 manu Exp $ */
+/* $Id: conf.h,v 1.29 2004/12/16 23:08:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -63,6 +63,7 @@ struct conf {
 	int c_acldebug;
 	int c_quiet;
 	int c_noauth;
+	int c_noaccessdb;
 	int c_nospf;
 	int c_testmode;
 	int c_delay;
@@ -85,23 +86,23 @@ struct conf {
 };
 
 /* c_forced flags */
-#define C_GLNONE		0x0000
-#define C_DEBUG		0x0001
-#define C_QUIET		0x0002
-#define C_NOAUTH	0x0004
-#define C_NOSPF		0x0008 
-#define C_TESTMODE	0x0010
-#define C_DELAY		0x0020
-#define C_AUTOWHITE	0x0040
-#define C_PIDFILE	0x0080
-#define C_DUMPFILE	0x0100
-#define C_MATCHMASK	0x0200
-#define C_SOCKET	0x0400
-#define C_USER		0x0800
-#define C_NODETACH	0x1000
-#define C_LAZYAW	0x2000
-#define C_MATCHMASK6	0x4000
-#define C_ACLDEBUG	0x8000
+#define C_GLNONE	0x00000
+#define C_DEBUG		0x00001
+#define C_QUIET		0x00002
+#define C_NOAUTH	0x00004
+#define C_NOSPF		0x00008 
+#define C_TESTMODE	0x00010
+#define C_DELAY		0x00020
+#define C_AUTOWHITE	0x00040
+#define C_PIDFILE	0x00080
+#define C_DUMPFILE	0x00100
+#define C_MATCHMASK	0x00200
+#define C_SOCKET	0x00400
+#define C_USER		0x00800
+#define C_NODETACH	0x01000
+#define C_LAZYAW	0x02000
+#define C_MATCHMASK6	0x04000
+#define C_ACLDEBUG	0x08000
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
 /* c_report */

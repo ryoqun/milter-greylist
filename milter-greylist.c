@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.102 2004/12/16 19:45:04 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.103 2004/12/16 23:08:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.102 2004/12/16 19:45:04 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.103 2004/12/16 23:08:13 manu Exp $");
 #endif
 #endif
 
@@ -277,6 +277,7 @@ mlfi_envrcpt(ctx, envrcpt)
 {
 	struct mlfi_priv *priv;
 	time_t remaining;
+	char *greylist;
 	char hdr[HDRLEN + 1];
 	char addrstr[IPADDRSTRLEN];
 	char rcpt[ADDRLEN + 1];
@@ -291,6 +292,21 @@ mlfi_envrcpt(ctx, envrcpt)
 	if (conf.c_debug)
 		syslog(LOG_DEBUG, "%s: addr = %s, from = %s, rcpt = %s", 
 		    priv->priv_queueid, addrstr, priv->priv_from, *envrcpt);
+
+	 /*
+	  * If sendmail rules have defined a ${greylist} macro
+	  * with value WHITE, then it is whitelisted
+	  */
+	if ((conf.c_noaccessdb == 0) &&
+	    ((greylist = smfi_getsymval(ctx, "{greylist}")) != NULL) &&
+	    (strcmp(greylist, "WHITE") == 0)) {
+		syslog(LOG_DEBUG, 
+		    "whitelisted by {greylist}");
+		priv->priv_elapsed = 0;
+		priv->priv_whitelist = EXF_ACCESSDB;
+ 
+		return SMFIS_CONTINUE;
+	}
 
 	/*
 	 * For multiple-recipients messages, if the sender IP or the
@@ -466,15 +482,22 @@ mlfi_eom(ctx)
 			priv->priv_whitelist &= ~EXF_FROM;
 		}
 		if (priv->priv_whitelist & EXF_AUTH) {
-			ADD_REASON(whystr, "Sender succeded SMTP AUTH authentication");
+			ADD_REASON(whystr, 
+			    "Sender succeded SMTP AUTH authentication");
 			priv->priv_whitelist &= ~EXF_AUTH;
+		}
+		if (priv->priv_whitelist & EXF_ACCESSDB) {
+			ADD_REASON(whystr, 
+			    "Message whitelisted by Sendmail access database");
+			priv->priv_whitelist &= ~EXF_ACCESSDB;
 		}
 		if (priv->priv_whitelist & EXF_SPF) {
 			ADD_REASON(whystr, "Sender is SPF-compliant");
 			priv->priv_whitelist &= ~EXF_SPF;
 		}
 		if (priv->priv_whitelist & EXF_NONIPV4) {
-			ADD_REASON(whystr, "Message not sent from an IPv4 address");
+			ADD_REASON(whystr, 
+			    "Message not sent from an IPv4 address");
 			priv->priv_whitelist &= ~EXF_NONIPV4;
 		}
 		if (priv->priv_whitelist & EXF_STARTTLS) {

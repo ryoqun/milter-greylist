@@ -21,6 +21,7 @@ peer		[Pp][Ee][Ee][Rr]:?
 verbose		[Vv][Ee][Rr][Bb][Oo][Ss][Ee]
 quiet		[Qq][Uu][Ii][Ee][Tt]
 noauth		[Nn][Oo][Aa][Uu][Tt][Hh]
+noaccessdb	[Nn][Oo][Aa][Cc][Cc][Ee][Ss][Ss][Dd][Bb]
 nospf		[Nn][Oo][Ss][Pp][Ff]
 testmode	[Tt][Ee][Ss][Tt][Mm][Oo][Dd][Ee]
 greylist	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt]:?		
@@ -61,7 +62,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.30 2004/12/08 22:23:09 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.31 2004/12/16 23:08:13 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -86,6 +87,7 @@ star		"*"
 {lazyaw}	{ return LAZYAW; }
 {greylist}	{ return GREYLIST; }
 {noauth}	{ return NOAUTH; }
+{noaccessdb}	{ return NOACCESSDB; }
 {nospf}		{ return NOSPF; }
 {quiet}		{ return QUIET; }
 {testmode}	{ return TESTMODE; }

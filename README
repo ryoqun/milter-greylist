@@ -1,9 +1,9 @@
-# $Id: README,v 1.29 2004/12/09 22:33:33 manu Exp $
+# $Id: README,v 1.30 2004/12/16 23:08:13 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/12/09 22:33:33 $
+		       $Date: 2004/12/16 23:08:13 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -69,6 +69,11 @@ a client certificate, you also need {verify} and {cert_subject}
 in Milter.macros.helo: 
 O Milter.macros.helo={verify},{cert_subject}
 
+If you want to use Sendmail access DB as a whitelisting source, you
+will need {greylist} too. milter-greylist will whitelist a message
+when the {greylist} macro is defined and set as WHITE.
+O Milter.macros.envrcpt={greylist}
+
 Alternatively, you can use the following m4 macros definitions 
 if you bouild sendmail.cf with m4 (contributed by Hubert Ulliac):
 
@@ -77,6 +82,7 @@ INPUT_MAIL_FILTER(`greylist',
 define(`confMILTER_MACROS_CONNECT', `j, {if_addr}')
 define(`confMILTER_MACROS_HELO', `{verify}, {cert_subject}')
 define(`confMILTER_MACROS_ENVFROM', `i, {auth_authen}')
+define(`confMILTER_MACROS_ENVRCPT', `{greylist}')
 
 
  3 Configuring milter-greylist 

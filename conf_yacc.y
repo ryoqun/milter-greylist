@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR PORT ACL WHITELIST DEFAULT STAR
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR PORT ACL WHITELIST DEFAULT STAR
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.30 2004/12/08 22:23:09 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.31 2004/12/16 23:08:13 manu Exp $");
 #endif
 #endif
 
@@ -65,6 +65,7 @@ lines	:	lines netblock '\n'
 	|	lines verbose '\n' 
 	|	lines quiet '\n' 
 	|	lines noauth '\n' 
+	|	lines noaccessdb '\n' 
 	|	lines nospf '\n' 
 	|	lines testmode '\n' 
 	|	lines autowhite '\n'
@@ -210,6 +211,8 @@ verbose:	VERBOSE	{ if (C_NOTFORCED(C_DEBUG)) conf.c_debug = 1; }
 quiet:		QUIET	{ if (C_NOTFORCED(C_QUIET)) conf.c_quiet = 1; }
 	;
 noauth:		NOAUTH	{ if (C_NOTFORCED(C_NOAUTH)) conf.c_noauth = 1; }
+	;
+noaccessdb:	NOACCESSDB	{ conf.c_noaccessdb = 1; }
 	;
 nospf:		NOSPF	{ if (C_NOTFORCED(C_NOSPF)) conf.c_nospf = 1; }
 	;

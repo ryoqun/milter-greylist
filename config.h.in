@@ -1,5 +1,4 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
-/* $Id: config.h.in,v 1.28 2004/12/08 22:48:52 manu Exp $ */
 
 /* Build environnement */
 #undef BUILD_ENV
