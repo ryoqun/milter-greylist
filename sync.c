@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.39 2004/05/24 21:22:03 manu Exp $ */
+/* $Id: sync.c,v 1.40 2004/05/31 11:19:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.39 2004/05/24 21:22:03 manu Exp $");
+__RCSID("$Id: sync.c,v 1.40 2004/05/31 11:19:57 manu Exp $");
 #endif
 #endif
 
@@ -831,13 +831,13 @@ sync_sender(dontcare)
 	struct timeval tv1, tv2, tv3;
 
 	if (pthread_mutex_init(&mutex, NULL) != 0) {
-		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n", 
+		syslog(LOG_ERR, "pthread_mutex_init failed: %s", 
 		    strerror(errno));
 		exit(EX_OSERR);
 	}
 
 	if (pthread_mutex_lock(&mutex) != 0) {
-		syslog(LOG_ERR, "pthread_mutex_lock failed: %s\n", 
+		syslog(LOG_ERR, "pthread_mutex_lock failed: %s", 
 		    strerror(errno));
 		exit(EX_OSERR);
 	}
