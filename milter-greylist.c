@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.51 2004/03/25 23:35:02 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.52 2004/03/28 14:05:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.51 2004/03/25 23:35:02 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.52 2004/03/28 14:05:42 manu Exp $");
 #endif
 #endif
 
@@ -113,6 +113,7 @@ mlfi_connect(ctx, hostname, addr)
 	priv->priv_whitelist = EXF_UNSET;
 
 	addr_in = (struct sockaddr_in *)addr;
+
 	if ((addr_in != NULL) && (addr_in->sin_family == AF_INET))
 		priv->priv_addr.s_addr = addr_in->sin_addr.s_addr;
 
@@ -370,7 +371,7 @@ main(argc, argv)
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "a:vDd:qw:f:hp:Tu:r")) != -1) {
+	while ((ch = getopt(argc, argv, "a:vDd:qw:f:hp:Tu:rL:")) != -1) {
 		switch (ch) {
 		case 'a':
 			if (optarg == NULL) {
@@ -454,6 +455,38 @@ main(argc, argv)
 			(void)smfi_setconn(optarg);
 			gotsocket = 1;
 			break;
+
+		case 'L': {
+			int cidr;
+			char maskstr[IPADDRLEN + 1];
+
+		  	if (optarg == NULL) {
+				fprintf(stderr, 
+				    "%s: -L requires a CIDR mask\n", argv[0]);
+				usage(argv[0]);
+			}
+
+			cidr = atoi(optarg);
+			if ((cidr > 32) || (cidr < 0)) {
+				fprintf(stderr, 
+				    "%s: -L requires a CIDR mask\n", argv[0]);
+				usage(argv[0]);
+			}
+
+			if (cidr == 0) {
+				bzero((void *)&match_mask, sizeof(match_mask));
+			} else {
+				cidr = 32 - cidr;
+				match_mask = 
+				    inet_makeaddr(~((1UL << cidr) - 1), 0L);
+			}
+
+			if (debug)
+				printf("match mask: %s\n", inet_ntop(AF_INET, 
+				    &match_mask, maskstr, IPADDRLEN));
+
+			break;
+		}
 
 		case 'T':
 			testmode = 1;	
@@ -586,7 +619,8 @@ usage(progname)
 {
 	fprintf(stderr, 
 	    "usage: %s [-DvqT] [-a autowhite] [-d dumpfile] [-f configfile]\n"
-	    "       [-w delay] [-u username] -p socket\n", progname);
+	    "       [-w delay] [-u username] [-L cidrmask] -p socket\n", 
+	    progname);
 	exit(EX_USAGE);
 }
 

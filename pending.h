@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.19 2004/03/21 23:54:55 manu Exp $ */
+/* $Id: pending.h,v 1.20 2004/03/28 14:05:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -72,6 +72,10 @@ struct pending {
 
 extern int delay;
 extern pthread_rwlock_t pending_lock;
+
+extern struct in_addr match_mask;
+#define IP_MATCH(a, b) \
+	(((a)->s_addr & match_mask.s_addr) == ((b)->s_addr & match_mask.s_addr))
 
 int pending_init(void);
 struct pending *pending_get(struct in_addr *, char *, char *, time_t);

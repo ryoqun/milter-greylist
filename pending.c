@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.43 2004/03/22 21:56:35 manu Exp $ */
+/* $Id: pending.c,v 1.44 2004/03/28 14:05:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.43 2004/03/22 21:56:35 manu Exp $");
+__RCSID("$Id: pending.c,v 1.44 2004/03/28 14:05:42 manu Exp $");
 #endif
 #endif
 
@@ -72,6 +72,8 @@ pthread_rwlock_t pending_lock; 	/* protects pending_head and dump_dirty */
 
 int delay = GLDELAY;
 
+struct in_addr match_mask = { 0xffffffff }; /* Default is 255.255.255.255 */
+
 int
 pending_init(void) {
 	int error;
@@ -107,6 +109,7 @@ pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 		pending->p_tv.tv_sec = date;
 	}
 
+	pending->p_in.s_addr = in->s_addr;
 	inet_ntop(AF_INET, in, pending->p_addr, IPADDRLEN);
 	strncpy(pending->p_from, from, ADDRLEN);
 	pending->p_from[ADDRLEN] = '\0';
@@ -213,7 +216,7 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 		/*
 		 * Look for our entry.
 		 */
-		if ((strncmp(addr, pending->p_addr, IPADDRLEN) == 0) &&
+		if ((IP_MATCH(&pending->p_in, in)) &&
 		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
 		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
 			rest = (time_t)(pending->p_tv.tv_sec - tv.tv_sec);

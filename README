@@ -1,9 +1,9 @@
-# $Id: README,v 1.8 2004/03/25 11:00:24 manu Exp $
+# $Id: README,v 1.9 2004/03/28 14:05:42 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/03/25 11:00:24 $
+		       $Date: 2004/03/28 14:05:42 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -102,11 +102,15 @@ where several different machines are able to resend an e-mail. The
 message is likely to be resent from different IP addresses, and this
 is likely to break with milter-greylist.
 
-An upcoming version will have a subnet matching feature to solve
-this problem. In the meantime, the workaround is simply to whitelist
-the netblocks allocated to mail farms. As any machine in theses 
-IP address ranges are real SMTP servers that will always resend their 
-messages, there is no point into greylisting them.
+The -L option is an ad-hoc hack for this problem. It provides
+milter-greylist a CIDR mask to use when comparing IPv4 addresses. 
+With -L24, the match mask is 255.255.255.0, and any address in a 
+class C network is considered the same.
+
+Another workaround is simply to whitelist the netblocks allocated to 
+mail farms. As any machine in theses IP address ranges are real SMTP 
+servers that will always resend their messages, there is no point into 
+greylisting them.
 
 
  7 Working with multiple MX

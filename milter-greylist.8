@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.18 2004/03/21 20:17:48 manu Exp $
+.\" $Id: milter-greylist.8,v 1.19 2004/03/28 14:05:42 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -47,6 +47,7 @@
 .Op Fl u Ar username
 .Op Fl v
 .Op Fl w Ar delay
+.Op Fl L cidrmask
 .Fl p Ar socket
 .Sh DESCRIPTION
 .Nm 
@@ -117,6 +118,15 @@ Location of the dump file. Default is
 .It Fl f Ar configfile
 Location of the config file. Default is
 .Pa /etc/mail/greylist.conf .
+.It Fl L Ar cidrmask
+Use 
+.Ar cidrmask
+as a matching mask when checking IPv4 addresses entries in the greylist. This
+is aimed as a workaround to mail farms that re-emit messages from different
+IP addresses. With -L 24,
+the matching mask is 255.255.255.0, and all addresses within the same class C
+network are considered the same. Default is -L 32, 
+which corresponds to all addresses considered different.
 .It Fl p Ar socket
 Use 
 .Ar socket
