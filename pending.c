@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.9 2004/03/06 18:10:50 manu Exp $ */
+/* $Id: pending.c,v 1.10 2004/03/06 18:46:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -281,7 +281,7 @@ pending_textdump(stream)
 	fprintf(stream, "#\n# Greylist database, "
 	    "dumped by milter-greylist-%s on %s.\n",
 	    PACKAGE_VERSION, textdate);
-	fprintf(stream, "# DO NOT EDIT while milter-greylist runs, "
+	fprintf(stream, "# DO NOT EDIT while milter-greylist is running, "
 	    "changes will be overwritten.\n#\n\n");
 	fprintf(stream, "# Sender IP	%32s	%32s	Time accepted\n", 
 	    "Sender e-mail", "Recipient e-mail");
