@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.3 2004/02/29 23:01:27 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.4 2004/03/02 16:26:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,6 +32,8 @@
 #ifndef _MILTER_GREYLIST_H_
 #define _MILTER_GREYLIST_H_
 
+#include <libmilter/mfapi.h>
+
 struct mlfi_priv {
 	struct in_addr priv_addr;
 	char priv_from[ADDRLEN + 1];
@@ -44,4 +46,21 @@ sfsistat mlfi_close(SMFICTX *);
 void usage(char *);
 void cleanup_sock(char *);
 
+/* 
+ * Theses definitions are missing from Linux's <sys/queue.h>
+ */
+#ifndef TAILQ_FOREACH
+#define TAILQ_FOREACH(var, head, field)			\
+	for ((var) = ((head)->tqh_first);		\
+		(var);					\
+		(var) = ((var)->field.tqe_next))
+#endif
+
+#ifndef LIST_FOREACH
+#define LIST_FOREACH(var, head, field)			\
+	for ((var) = ((head)->lh_first);		\
+		(var);					\
+		(var) = ((var)->field.le_next))
+#endif
+		
 #endif /* _MILTER_GREYLIST_H_ */

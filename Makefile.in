@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.8 2004/03/02 07:45:11 manu Exp $
+# $Id: Makefile.in,v 1.9 2004/03/02 16:26:39 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,7 +29,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-CFLAGS= 	@CFLAGS@ -Wall -Werror -ansi
+CFLAGS= 	@CFLAGS@ -Wall -ansi
 LDFLAGS=	@LDFLAGS@
 LIBS= 		@LIBS@
 prefix=		@prefix@
@@ -78,10 +78,9 @@ realclean:	clean
 
 .SUFFIXES:	.o .c .h .y .l
 .l.c:
-	lex -o${.TARGET} ${.IMPSRC}
+	lex -o$@ $<
 .y.c:
-	yacc -p`echo ${.TARGET}|${SED} 's/^\([^_]\{1,\}_\).*$$/\1/'` \
-	    -o${.TARGET} ${.IMPSRC}
+	yacc -p`echo $@|${SED} 's/^\([^_]\{1,\}_\).*$$/\1/'` -o$@ $<
 
 start:	milter-greylist
 	${RM} -f /home/manu/milter-greylist.sock

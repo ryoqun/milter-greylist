@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.8 2004/02/29 23:01:27 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.9 2004/03/02 16:26:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,15 +29,19 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define _BSD_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <syslog.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
 #include <sysexits.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>

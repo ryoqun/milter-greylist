@@ -15,6 +15,7 @@ rcpt		[Rr][Cc][Pp][Tt]:?
 
 %{
 	#include <string.h>
+	#include <errno.h>
 	#include <sysexits.h>
 
 	int except_line = 1;
@@ -36,8 +37,8 @@ rcpt		[Rr][Cc][Pp][Tt]:?
 			return EMAIL;
 		}
 {ipaddr}	{ 
-			strncpy(ipaddr, yytext, IPADDRLEN); 
-			if (inet_aton(ipaddr, &yylval.ipaddr) != 1) {
+			strncpy(ipaddr, yytext, IPADDRLEN);
+			if (inet_pton(AF_INET, ipaddr, &yylval.ipaddr) != 1) {
 				printf("invalid IP address line %d\n", 
 				    except_line);
 				exit(EX_DATAERR);

@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.1 2004/02/21 00:01:17 manu Exp $ */
+/* $Id: pending.c,v 1.2 2004/03/02 16:26:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -28,13 +28,19 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#define _XOPEN_SOURCE 500
+#define _BSD_SOURCE
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <strings.h>
 #include <pthread.h>
 #include <sysexits.h>
 #include <syslog.h>
 
+#include <sys/types.h>
 #include <sys/queue.h>
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -43,6 +49,7 @@
 #include <arpa/inet.h>
 
 #include "pending.h"
+#include "milter-greylist.h"
 
 extern int debug;
 
@@ -71,7 +78,7 @@ pending_init(void) {
 	int error;
 
 	TAILQ_INIT(&pending_head);
-	if ((error = pthread_rwlock_init(&pending_lock, NULL)) == NULL)
+	if ((error = pthread_rwlock_init(&pending_lock, NULL)) == 0)
 		return error;
 
 	return 0;
@@ -174,7 +181,7 @@ pending_check(in, from, rcpt)
 	long remain = -1;
 
 	gettimeofday(&tv, NULL);
-	strncpy(addr, inet_ntoa(*in), IPADDRLEN);
+	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
 	PENDING_WRLOCK;
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
@@ -261,7 +268,7 @@ pending_import(stream)
 			syslog(LOG_DEBUG, "import: readen %d\n", readen);
 		if (readen != 4)
 			break;
-		if (inet_aton(addr, &in) != 1) {
+		if (inet_pton(AF_INET, addr, &in) != 1) {
 			syslog(LOG_ERR, "import: skip bad address %s\n", addr);
 			break;
 		}

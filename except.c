@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.8 2004/03/02 10:34:37 manu Exp $ */
+/* $Id: except.c,v 1.9 2004/03/02 16:26:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,6 +34,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 #include <syslog.h>
 #include <sysexits.h>
 #include <sys/queue.h>
@@ -42,6 +43,7 @@
 #include <arpa/inet.h>
 
 #include "except.h"
+#include "milter-greylist.h"
 
 extern int debug;
 int testmode = 0;
