@@ -1,3 +1,5 @@
+1.1.9:
+	Build problems on some Linux systems
 1.1.8:
 	Build again on Tru64 Unix and Darwin
 	Use regex for from and rcpt config lines
