@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.69 2004/04/01 09:31:34 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.70 2004/04/01 14:42:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.69 2004/04/01 09:31:34 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.70 2004/04/01 14:42:26 manu Exp $");
 #endif
 #endif
 
@@ -130,6 +130,11 @@ mlfi_envfrom(ctx, envfrom)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
+	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
+		syslog(LOG_DEBUG, "smfi_getsymval failed for {i}");
+		priv->priv_queueid = "(unkown id)";
+	}
+	
 	/*
 	 * Strip spaces from the source address
 	 */
@@ -201,11 +206,6 @@ mlfi_envrcpt(ctx, envrcpt)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
-	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval failed for {i}");
-		priv->priv_queueid = "(unkown id)";
-	}
-	
 	if (conf.c_debug)
 		syslog(LOG_DEBUG, "%s: addr = %s, from = %s, rcpt = %s", 
 		    priv->priv_queueid, inet_ntoa(priv->priv_addr), 

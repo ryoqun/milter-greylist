@@ -1,3 +1,5 @@
+1.1.7:	
+	Read the queue Id at envfrom stage, else we miss it there.
 1.1.6:
 	Only log debug messages when verbose mode is enabled
 	Bugfix: libspf_alt use was not thread safe.
