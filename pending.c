@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.3 2004/03/03 16:30:12 manu Exp $ */
+/* $Id: pending.c,v 1.4 2004/03/05 14:15:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -94,6 +94,7 @@ pending_get(addr, in, from, rcpt, date)  /* pending_lock must be write-locked */
 	long date;
 {
 	struct pending *pending;
+	struct timeval tv;
 
 	if ((pending = malloc(sizeof(*pending))) == NULL)
 		goto out;
@@ -108,12 +109,17 @@ pending_get(addr, in, from, rcpt, date)  /* pending_lock must be write-locked */
 	}
 
 	strncpy(pending->p_addr, addr, IPADDRLEN);
+	pending->p_addr[IPADDRLEN] = '\0';
 	strncpy(pending->p_from, from, ADDRLEN);
+	pending->p_from[ADDRLEN] = '\0';
 	strncpy(pending->p_rcpt, rcpt, ADDRLEN);
+	pending->p_rcpt[ADDRLEN] = '\0';
 	TAILQ_INSERT_TAIL(&pending_head, pending, p_list); 
 
+	(void)(gettimeofday(&tv, NULL);
 	syslog(LOG_INFO, "created: %s from %s to %s, delayed for %ld s\n",
-	    pending->p_addr, pending->p_from, pending->p_rcpt, (long)delay);
+	    pending->p_addr, pending->p_from, pending->p_rcpt, 
+	    tv.tv_sec - pending->p_tv.tv_sec);
 
 out:
 	return pending;

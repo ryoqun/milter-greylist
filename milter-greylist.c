@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.14 2004/03/04 09:40:12 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.15 2004/03/05 14:15:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -112,6 +112,7 @@ mlfi_envfrom(ctx, envfrom)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 	strncpy(priv->priv_from, *envfrom, ADDRLEN);
+	priv->priv_from[ADDRLEN] = '\0';
 
 	return SMFIS_CONTINUE;
 }
