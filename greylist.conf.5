@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.18 2004/12/28 21:46:05 manu Exp $
+.\" $Id: greylist.conf.5,v 1.19 2005/01/06 20:14:49 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -39,8 +39,8 @@
 .Nm 
 configures 
 .Xr milter-greylist 8
-operation. The format is simple: each line contains a keyword and an 
-optionnal argument. Any line starting with a # is considered as a comment
+operation. The format is simple: each line contains a keyword and 
+optionnal arguments. Any line starting with a # is considered as a comment
 and is ignored. Blank lines are ignored as well. Comments at the end of
 are accepted in some situations, but do not take them as granted.
 .Sh WHITELIST
@@ -73,7 +73,7 @@ addresses. The syntax is an IP address followed by a slash and a CIDR
 netmask. Here is an example:
 .Dl acl whitelist addr 127.0.0.0/8
 .Dl acl whitelist addr 192.168.3.0/24
-.Dl awl whitelist addr ::1
+.Dl acl whitelist addr ::1
 If the netmask is ommitted, /32 is assumed for an IPv4 address and
 /128 is assumed for an IPv6 address.
 .Pp
@@ -104,7 +104,7 @@ This is used to select recipient addresses. Example:
 .Ar from
 and
 .Ar rcpt
-may be used with regulax expressions. The regular expressions must be
+may be used with regular expressions. The regular expressions must be
 enclosed by slashes (/). No escaping is available to provide a slash
 inside a regular expression, so just do not use it. Regular expressions
 follow the format described in 
