@@ -32,8 +32,11 @@
 #include <stdio.h>
 #include <syslog.h>
 #include <pthread.h>
+#include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <sysexits.h>
 
 #include "pending.h"
@@ -49,8 +52,8 @@ syncer_thread(dontcare)
 	void *dontcare;
 {
 	FILE *dump;
-	int error;
 	struct timeval tv1, tv2;
+	char newdumpfile[MAXPATHLEN + 1];
 
 	syslog(LOG_DEBUG, "syncer_thread started\n");
 
@@ -66,10 +69,6 @@ syncer_thread(dontcare)
 	}
 
 	sleep(dumpfreq);
-	if ((dump = fopen(DUMPFILE, "w")) == NULL) {
-		syslog(LOG_ERR, "cannot write dumpfile \"%s\"\n", dumpfile);
-		exit(EX_OSERR);
-	}
 
 	while (1) {
 		if (debug) {
@@ -77,11 +76,30 @@ syncer_thread(dontcare)
 			syslog(LOG_DEBUG, "dumping\n");
 		}
 
-		rewind(dump);
+		/* 
+		 * Dump the database in a temporary file and 
+		 * then replace the old one by the new one.
+		 * On decent systems, rename(2) garantees that 
+		 * even if the machine crashes, we will not 
+		 * loose both files.
+		 */
+		snprintf(newdumpfile, MAXPATHLEN, "%s-XXXXXXXX", dumpfile);
+
+		if (mkstemp(newdumpfile) == -1) {
+			syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s\n", 
+			    newdumpfile, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		if ((dump = fopen(newdumpfile, "w")) == NULL) {
+			syslog(LOG_ERR, "cannot write dumpfile \"%s\": %s\n", 
+			    newdumpfile, strerror(errno));
+			exit(EX_OSERR);
+		}
+
 		pending_textdump(dump);
-		if ((error = truncate(dumpfile, ftell(dump))) != 0)
-			syslog(LOG_ERR, "truncate \"%s\" failed\n", dumpfile);
-		fflush(dump);
+		fclose(dump);
+		rename(newdumpfile, dumpfile);
 
 		if (debug) {
 			(void)gettimeofday(&tv2, NULL);
