@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.142 2005/03/19 07:41:09 manu Exp $
+# $Id: configure.ac,v 1.143 2005/03/26 17:10:58 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -286,13 +286,13 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <time.h>
 	],[[
 
-		(void)localtime(NULL);
+		(void)localtime_r(NULL);
 	]])], [dreentrant=no],
 		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 				#define _REENTRANT
 				#include <stdio.h>
 			],[[
-				 (void)localtime(NULL);
+				 (void)localtime_r(NULL);
 			]])], 
 			[SAVEDCFLAGS=$SAVEDCFLAGS" -D_REENTRANT"; 
 			 dreentrant=yes], [dreentrant=no])

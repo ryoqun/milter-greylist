@@ -1,3 +1,5 @@
+2.0b4:
+	Fix MX sync bug on Solaris, shut up warnings at build time
 2.0b3:
 	Add extendedregex option for using extended regex (Matt Kettler)
 	Updated .spec file for running without root privs (Ivan F. Martinez)
