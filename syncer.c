@@ -28,6 +28,7 @@
  */
 
 #define _BSD_SOURCE
+#define _XOPEN_SOURCE 500
 
 #include <stdio.h>
 #include <syslog.h>
