@@ -40,7 +40,7 @@ path		"\""[^"\n]{1,}"\""
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.10 2004/03/31 12:10:16 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.11 2004/03/31 14:12:49 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -69,7 +69,7 @@ path		"\""[^"\n]{1,}"\""
 {testmode}	{ return TESTMODE; }
 {verbose}	{ return VERBOSE; }
 {pidfile}	{ return PIDFILE; }
-{dumpfile}	{ return DUMPFILE; }
+{dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }
 {socket}	{ return SOCKET; }
 {user}		{ return USER; }
