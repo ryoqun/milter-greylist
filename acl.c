@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.2 2005/02/07 22:01:51 manu Exp $ */
+/* $Id: acl.c,v 1.3 2005/03/13 16:43:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.2 2005/02/07 22:01:51 manu Exp $");
+__RCSID("$Id: acl.c,v 1.3 2005/03/13 16:43:03 manu Exp $");
 #endif
 #endif
 
@@ -578,21 +578,31 @@ emailcmp(big, little)
 {
 	int i;
 
-	while (big[0]) {
+	/* Strip leading < */
+	while (big[0] == '<')
+		big++;
+	while (little[0] == '<')
+		little++;
+
+	/* Strip trailing > */
+	i = strlen(big) - 1;
+	while ((i >= 0) && (big[i] == '>'))
+		big[i--] = '\0';
+	i = strlen(little) - 1;
+	while ((i >= 0) && (little[i] == '>'))
+		little[i--] = '\0';
+
+	while (big[0] && little[0]) {
 		if (tolower((int)big[0]) != tolower((int)little[0]))
-			big++;
-
-		for (i = 0; big[0] && little[i]; i++) {
-			if (tolower((int)big[0]) != tolower((int)little[i]))
-				break;
-			big++;
-		}
-		
-		if (little[i] == 0)
-			return 0;
+			break;
+		big++;
+		little++;
 	}
+		
+	if (big[0] || little[0])
+		return -1;
 
-	return 1;
+	return 0;
 }
 
 void

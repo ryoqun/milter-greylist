@@ -1,6 +1,7 @@
 2.0b3:
 	Fix build problem with spf
 	Fix bad DESTDIR specification for /etc/mail
+	Change e-mail matching scheme to exact match instead of substring match
 2.0b2:
 	Check if -D_REENTRANT is needed for localtime_r and friends
 	Typo in delayedreject 
