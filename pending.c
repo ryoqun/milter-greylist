@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.8 2004/03/06 15:15:05 manu Exp $ */
+/* $Id: pending.c,v 1.9 2004/03/06 18:10:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -49,6 +49,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "config.h"
 #include "pending.h"
 #include "milter-greylist.h"
 
@@ -265,17 +266,34 @@ out:
 		return 0;
 }
 
+#define DATELEN	40
 void
 pending_textdump(stream)
 	FILE *stream;
 {
 	struct pending *pending;
+	struct timeval tv;
+	char textdate[DATELEN + 1];
+
+	gettimeofday(&tv, NULL);
+	strftime(textdate, DATELEN, "%c", localtime(&tv.tv_sec));
+
+	fprintf(stream, "#\n# Greylist database, "
+	    "dumped by milter-greylist-%s on %s.\n",
+	    PACKAGE_VERSION, textdate);
+	fprintf(stream, "# DO NOT EDIT while milter-greylist runs, "
+	    "changes will be overwritten.\n#\n\n");
+	fprintf(stream, "# Sender IP	%32s	%32s	Time accepted\n", 
+	    "Sender e-mail", "Recipient e-mail");
 
 	PENDING_RDLOCK;
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
-		fprintf(stream, "%s	%s	%s	%ld\n", 
+		strftime(textdate, DATELEN, "%F %T", 
+		    localtime(&pending->p_tv.tv_sec));
+
+		fprintf(stream, "%s	%32s	%32s	%ld # %s\n", 
 		    pending->p_addr, pending->p_from, 
-		    pending->p_rcpt, pending->p_tv.tv_sec);
+		    pending->p_rcpt, pending->p_tv.tv_sec, textdate);
 	}
 	PENDING_UNLOCK;
 	return;
