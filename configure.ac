@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.124 2004/10/06 06:31:51 manu Exp $
+# $Id: configure.ac,v 1.125 2004/10/13 20:00:36 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -371,6 +371,35 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	 xstdio=yes])
 CFLAGS=$SAVEDCFLAGS
 AC_MSG_RESULT([$xstdio])
+
+
+# Tru64 Unix needs -D_OSF_SOURCE for IPV6 support
+SAVEDCFLAGS=$CFLAGS
+CFLAGS=$CFLAGS" -D_XOPEN_SOURCE=500 -D_BSD_SOURCE"
+AC_MSG_CHECKING([if -D_OSF_SOURCE is needed for IPV6 support])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <sys/types.h>
+		#include <sys/socket.h>
+		#include <netinet/in.h>
+	],[[
+		#ifdef AF_INET6
+		  struct in6_addr s;
+		#endif
+	]])], [dosfsource=no],
+		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+				#define _OSF_SOURCE
+				#include <sys/socket.h>
+				#include <netinet/in.h>
+			],[[
+				#ifdef AF_INET6
+				  struct in6_addr s;
+				#endif
+			]])], 
+			[SAVEDCFLAGS=$SAVEDCFLAGS" -D_OSF_SOURCE"; 
+			 dosfsource=yes], [dosfsource=no])
+	])
+AC_MSG_RESULT([$dosfsource])
+CFLAGS=$SAVEDCFLAGS
 
 # Linux does not have a sa_len field in sockaddr
 AC_CHECK_MEMBER([struct sockaddr.sa_len],

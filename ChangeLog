@@ -2,7 +2,7 @@
 	Give credits to the various contributors in the man pages
 	Do not match bogus IPv6 addresses in the dump file (Hajimu Umemoto)
 	Quick statistics at the end of the dump file (Remy Card)
-	Fix build on Tru64 Unix (Attila Bruncsak)
+	Fix build on Tru64 Unix, including for IPv6 (Attila Bruncsak)
 	Fix a SPF log problem (Alexandre Cherif)
 1.5.8:
 	Fix a bug in configure.ac (Hajimu Umemoto)
