@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.12 2004/03/14 11:36:22 manu Exp $ */
+/* $Id: pending.h,v 1.13 2004/03/14 15:48:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -85,6 +85,7 @@ void pending_put(struct pending *);
 int pending_textdump(FILE *);
 void pending_import(FILE *);
 void pending_dumper(void *);
+void pending_dumper_start(void);
 void pending_flush(void);
 void pending_reload(void);
 

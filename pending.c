@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.26 2004/03/14 15:43:33 manu Exp $ */
+/* $Id: pending.c,v 1.27 2004/03/14 15:48:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.26 2004/03/14 15:43:33 manu Exp $");
+__RCSID("$Id: pending.c,v 1.27 2004/03/14 15:48:39 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -69,7 +69,6 @@ int dump_parse(void);
 int
 pending_init(void) {
 	int error;
-	pthread_t tid;
 
 	TAILQ_INIT(&pending_head);
 
@@ -79,9 +78,6 @@ pending_init(void) {
 	if ((error = pthread_cond_init(&dump_sleepflag, NULL)) == 0)
 		return error;
 
-	if (pthread_create(&tid, NULL, (void *)pending_dumper, NULL) != 0) 
-		return error;
-	
 	return 0;
 }
 
@@ -297,6 +293,18 @@ pending_textdump(stream)
 	return done;
 }
 
+void
+pending_dumper_start(void) {
+	pthread_t tid;
+
+	if (pthread_create(&tid, NULL, (void *)pending_dumper, NULL) != 0) {
+		syslog(LOG_ERR, 
+		    "cannot start dumper thread: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	return;
+}
+	
 void
 pending_dumper(dontcare) 
 	void *dontcare;
