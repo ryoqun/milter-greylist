@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.22 2004/03/16 23:16:52 manu Exp $ */
+/* $Id: sync.c,v 1.23 2004/03/17 13:22:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -278,7 +278,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	laddr.sin_addr.s_addr = INADDR_ANY;
 
 	if (bind(s, (struct sockaddr *)&laddr, sizeof(laddr)) != 0) { 
-		syslog(LOG_ERR, "cannot syncwith peer %s, bind failed: %s", 
+		syslog(LOG_ERR, "cannot sync with peer %s, bind failed: %s", 
 		    peername, strerror(errno));
 		close(s);
 		return -1;
@@ -293,7 +293,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	raddr.sin_addr = peer->p_addr;
 
 	if (connect(s, (struct sockaddr *)&raddr, sizeof(raddr)) != 0) {
-		syslog(LOG_ERR, "cannot syncwith peer %s, connect failed: %s", 
+		syslog(LOG_ERR, "cannot sync with peer %s, connect failed: %s", 
 		    peername, strerror(errno));
 		close(s);
 		return -1;
