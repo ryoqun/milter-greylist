@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.51 2004/05/15 08:41:54 manu Exp $ */
+/* $Id: pending.c,v 1.52 2004/05/21 10:22:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.51 2004/05/15 08:41:54 manu Exp $");
+__RCSID("$Id: pending.c,v 1.52 2004/05/21 10:22:08 manu Exp $");
 #endif
 #endif
 
@@ -337,8 +337,8 @@ pending_makekey(data, len, in, from, rcpt)
 }
 
 int
-pending_update(update_keys, stream)
-	int update_keys;
+pending_update(new_db, stream) /* pending_db must be write-locked */
+	DB *new_db;
 	FILE *stream;
 {
 	int finished = 0;
@@ -360,7 +360,7 @@ pending_update(update_keys, stream)
 	gettimeofday(&begin, NULL);
 	now = (time_t)begin.tv_sec;
 
-	if (update_keys)
+	if (new_db)
 		syslog(LOG_INFO, "Rebuilding pending database keys");
 
 	if (stream != NULL) {
@@ -369,7 +369,6 @@ pending_update(update_keys, stream)
 		    "Time accepted\n", "Sender e-mail", "Recipient e-mail");
 	}
 
-	PENDING_WRLOCK;
 	while (!finished) {
 		res = pending_db->seq(pending_db, &key, &rec, flag);
 		flag = R_NEXT;
@@ -416,13 +415,13 @@ pending_update(update_keys, stream)
 			/*
 			 * Update the keys by overwriting the current record
 			 */
-			if (update_keys) {
+			if (new_db) {
 				key.data = pending_makekey(keystr, KEYLEN, 
 				    &pending->p_addr,
 				    pending->p_from, pending->p_rcpt);
 				key.size = strlen(keystr) + 1;
 
-				if (pending_db->put(pending_db, 
+				if (new_db->put(new_db, 
 				    &key, &rec, R_CURSOR) != 0) {
 					syslog(LOG_ERR, "db->put failed: %s",
 					    strerror(errno));
@@ -463,8 +462,6 @@ pending_update(update_keys, stream)
 	if (dump_dirty != dirty)
 		pending_db->sync(pending_db, 0);	
 
-	PENDING_UNLOCK;
-
 	if (conf.c_debug) {
 		struct timeval end;
 		struct timeval duration;
@@ -487,6 +484,8 @@ pending_db_options(void) {
 	struct db_options *dbo;
 	struct db_options dborec;
 	int found;
+	DB *new_db;
+	char new_db_name[MAXPATHLEN + 1];
 
 	key.data = DB_OPTIONS;
 	key.size = strlen(DB_OPTIONS) + 1;
@@ -502,7 +501,54 @@ pending_db_options(void) {
 		    (dbo->dbo_lazyaw == conf.c_lazyaw))
 			break;
 
-		pending_update(1, NULL);
+		/* 
+		 * We need to update the database keys.
+		 *
+		 * It seems Berkeley DB API limitation makes impossible
+		 * to walk the database updating the keys. We therefore
+		 * create a new database, copy the records with updated 
+		 * keys in it, and replace the older database.
+		 */
+		snprintf(new_db_name, MAXPATHLEN, 
+		    "%s.%s", conf.c_greylistdb, "new");
+
+		if ((new_db = dbopen(new_db_name, 
+		    O_TRUNC|O_RDWR|O_EXLOCK|O_CREAT, 
+		    0644, DB_BTREE, NULL)) == NULL) {
+			syslog(LOG_ERR, "dbopen \"%s\" failed: %s",
+			    new_db_name, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		/*
+		 * Remove outdated records, and save everything
+		 * else to the new database, with updated keys.
+		 * The database remain locked until we replace
+		 * the old one.
+		 */
+		PENDING_WRLOCK;
+		pending_update(new_db, NULL);
+
+		/*
+		 * At that stage we don't need the older database
+		 * anymore, close it.
+		 */
+		pending_db->close(pending_db);
+
+		/* 
+		 * Replace the older database
+		 */
+		if (rename(new_db_name, conf.c_greylistdb) != 0) {
+			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s",
+			    conf.c_greylistdb, new_db_name, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		/*
+		 * The newer database can now be used 
+		 */
+		pending_db = new_db;	
+		PENDING_UNLOCK;
 		/* FALLTRHOUGH */
 
 	/*

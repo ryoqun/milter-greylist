@@ -1,6 +1,5 @@
-1.3.4:
-	Berkeley DB backend for better scalability
 1.3.3:
+	Berkeley DB backend for better scalability
 	Work with NetBSD 2.0 native libpthread
 1.3.2:
 	Support STARTTLS (Contribution from Matthieu Herrb)

@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.16 2004/05/15 08:41:54 manu Exp $ */
+/* $Id: dump.c,v 1.17 2004/05/21 10:22:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.16 2004/05/15 08:41:54 manu Exp $");
+__RCSID("$Id: dump.c,v 1.17 2004/05/21 10:22:08 manu Exp $");
 #endif
 #endif
 
@@ -167,8 +167,14 @@ dumper(dontcare)
 
 		dump_header(dump);
 		done = 0;
-		done += pending_update(0, dump);
-		done += autowhite_update(0, dump);
+
+		PENDING_WRLOCK;
+		done += pending_update(NULL, dump);
+		PENDING_UNLOCK;
+
+		AUTOWHITE_WRLOCK;
+		done += autowhite_update(NULL, dump);
+		AUTOWHITE_UNLOCK;
 
 		fclose(dump);
 

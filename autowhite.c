@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.23 2004/05/15 08:41:54 manu Exp $ */
+/* $Id: autowhite.c,v 1.24 2004/05/21 10:22:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.23 2004/05/15 08:41:54 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.24 2004/05/21 10:22:08 manu Exp $");
 #endif
 #endif
 
@@ -52,6 +52,7 @@ __RCSID("$Id: autowhite.c,v 1.23 2004/05/15 08:41:54 manu Exp $");
 #include <string.h>
 #include <time.h>
 #include <strings.h>
+#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
@@ -369,8 +370,8 @@ autowhite_makekey(data, len, in, from, rcpt)
 }
 
 int
-autowhite_update(update_keys, stream)
-	int update_keys;
+autowhite_update(new_db, stream) /* aw_db must be write-locked */
+	DB *new_db;
 	FILE *stream;
 {
 	int finished = 0;
@@ -392,7 +393,7 @@ autowhite_update(update_keys, stream)
 	gettimeofday(&begin, NULL);
 	now = (time_t)begin.tv_sec;
 
-	if (update_keys)
+	if (new_db)
 		syslog(LOG_INFO, "Rebuilding autowhite database keys");
 
 	if (stream != NULL) {
@@ -401,7 +402,6 @@ autowhite_update(update_keys, stream)
 		    "Sender e-mail", "Recipient e-mail");
 	}
 
-	AUTOWHITE_WRLOCK;
 	while (!finished) {
 		res = aw_db->seq(aw_db, &key, &rec, flag);
 		flag = R_NEXT;
@@ -415,7 +415,6 @@ autowhite_update(update_keys, stream)
 
 			count++;
 			aw = (struct autowhite *)rec.data;
-			printf("rec.aw_in (1) = %s\n", inet_ntoa(*(struct in_addr *)rec.data));
 
 			/* 
 			 * Handle timeouts 
@@ -448,13 +447,12 @@ autowhite_update(update_keys, stream)
 			/*
 			 * Update the key by overwriting the current record. 
 			 */
-			if (update_keys) {
-				printf("rec.aw_in = %s\n", inet_ntoa(*(struct in_addr *)rec.data));
+			if (new_db) {
 				key.data = autowhite_makekey(keystr, 
 				    KEYLEN, &aw->a_in, aw->a_from, aw->a_rcpt);
 				key.size = strlen(keystr) + 1;
 
-				if (aw_db->put(aw_db, &key, 
+				if (new_db->put(new_db, &key, 
 				    &rec, R_CURSOR) != 0)
 					syslog(LOG_ERR, "db->put failed: %s",
 					    strerror(errno));
@@ -495,8 +493,6 @@ autowhite_update(update_keys, stream)
 	if (dump_dirty != dirty)
 		aw_db->sync(aw_db, 0);
 
-	AUTOWHITE_UNLOCK;
-
 	if (conf.c_debug) {
 		struct timeval end;
 		struct timeval duration;
@@ -519,6 +515,8 @@ autowhite_db_options(void) {
 	struct db_options *dbo;
 	struct db_options dborec;
 	int found;
+	DB *new_db;
+	char new_db_name[MAXPATHLEN + 1];
 
 	key.data = DB_OPTIONS;
 	key.size = strlen(DB_OPTIONS) + 1;
@@ -534,7 +532,54 @@ autowhite_db_options(void) {
 		    (dbo->dbo_lazyaw == conf.c_lazyaw))
 			break;
 
-		autowhite_update(1, NULL);
+		/*
+		 * We need to update the database keys.
+		 *
+		 * It seems Berkeley DB API limitation makes impossible
+		 * to walk the database updating the keys. We therefore
+		 * create a new database, copy the records with updated
+		 * keys in it, and replace the older database.
+		 */
+		snprintf(new_db_name, MAXPATHLEN,
+		    "%s.%s", conf.c_autowhitedb, "new");
+
+		if ((new_db = dbopen(new_db_name,
+		    O_TRUNC|O_RDWR|O_EXLOCK|O_CREAT,
+		    0644, DB_BTREE, NULL)) == NULL) {
+			syslog(LOG_ERR, "dbopen \"%s\" failed: %s",
+			    new_db_name, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		/*
+		 * Remove outdated records, and save everything
+		 * else to the new database, with updated keys.
+		 * The database remain locked until we replaced
+		 * the old one.
+		 */
+		AUTOWHITE_WRLOCK;
+		autowhite_update(new_db, NULL);
+
+		/*
+		 * At that stage we don't need the older database
+		 * anymore, close it.
+		 */
+		aw_db->close(aw_db);
+
+		/*
+		 * Replace the older database
+		 */
+		if (rename(new_db_name, conf.c_autowhitedb) != 0) {
+			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s",
+			    conf.c_autowhitedb, new_db_name, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		/*
+		 * The newer database can now be used
+		 */
+		aw_db = new_db;
+		AUTOWHITE_UNLOCK;
 		/* FALLTRHOUGH */
 
 	/*

@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.11 2004/05/15 08:41:54 manu Exp $ */
+/* $Id: autowhite.h,v 1.12 2004/05/21 10:22:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -74,7 +74,7 @@ void autowhite_put(char *);
 void autowhite_add(struct in_addr *, char *, char *, time_t *, char *);
 int autowhite_check(struct in_addr *, char *, char *, char *);
 char *autowhite_makekey(char *, size_t, struct in_addr *, char *, char *);
-int autowhite_update(int, FILE *);
+int autowhite_update(DB *, FILE *);
 void autowhite_db_options(void);
 
 #endif /* _AUTOWHITE_H_ */
