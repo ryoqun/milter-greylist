@@ -1,0 +1,121 @@
+.\"
+.\" $Id: milter-greylist.1,v 1.1 2004/02/21 17:46:22 manu Exp $
+.\"
+.\" Copyright (c) 2004 Emmanuel Dreyfus
+.\" All rights reserved.
+.\"
+.\" Redistribution and use in source and binary forms, with or without
+.\" modification, are permitted provided that the following conditions
+.\" are met:
+.\" 1. Redistributions of source code must retain the above copyright
+.\"    notice, this list of conditions and the following disclaimer.
+.\" 2. Redistributions in binary form must reproduce the above copyright
+.\"    notice, this list of conditions and the following disclaimer in the
+.\"    documentation and/or other materials provided with the distribution.
+.\" 3. All advertising materials mentioning features or use of this software
+.\"    must display the following acknowledgement:
+.\"        This product includes software developed by Emmanuel Dreyfus
+.\"
+.\" THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+.\" WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+.\" OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+.\" DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+.\" INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+.\" (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+.\" SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+.\" HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+.\" STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+.\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+.\" OF THE POSSIBILITY OF SUCH DAMAGE.
+.\"
+
+.Dd Feb 21, 2004
+.Dt milter-greylist 8
+.Os
+.Sh NAME
+.Nm milter-greylist
+.Nd grey listing filter for sendmail
+.Sh SYNOPSIS
+.Nm
+.Op Fl v
+.Op Fl d Ar dumpfile
+.Op Fl f Ar exceptfile
+.Op Fl w Ar delay
+.Fl p Ar socket
+.Sh DESCRIPTION
+.Nm 
+is a mail filter for sendmail that implements grey listing,
+a spam filtering technique proposed by Evan Harris.
+.Pp
+Grey listing works by assuming that contrarily to legitimate MTA, spam engines
+will not retry sending their junk mail on a temporary error. The filter
+will always temporarilly reject mail on a first attempt, and to 
+accept it after some time has elapsed.
+.Pp
+If spammers ever try to resend rejected messages, we can assume they will 
+not stay idle between the two sends. Odds are good that the spammer will 
+send a mail to an honey pot address and get blacklisted in a distributed 
+black list before the second attempt.
+.Pp
+Of course, the filter can be configured to not apply grey listing to some
+hosts or networks. You can white list friendly SMTP servers, and you should
+whitelist your own network, else your SMTP clients will have real trouble to 
+send e-mail. Whitelisting localhost is also a must.
+.Pp
+.Nm
+works with two files. 
+.Pa except.conf
+holds the white list of machines that will not suffer grey list filtering.
+It is readen upon 
+.Nm
+startup and is left alone once started. The syntax of this file is simple:
+it just consist of one pair of network address and CIDR netmask per line, 
+separated by a / (slash). Here is an example:
+.Dl 127.0.0.0/8
+.Dl 192.168.3.0/24
+.Pp
+The second file is
+.Pa greylist.db .
+.Nm
+will regularly dump its grey list database into this file, which is used
+on startup to restore the previous grey list state. If the file does not
+exists or is unreadable, 
+.Nm
+will start with an empty grey list. 
+.Pp
+The following options are available:
+.Bl -tag -width flag
+.It Fl d Ar dumpfile
+Location of the dump file. Default is 
+.Pa /etc/mail/except.conf .
+.It Fl f Ar exceptfile
+Location of the white list file. Default is
+.Pa /var/milter-greylist/greylist.db .
+.It Fl p Ar socket
+Use 
+.Ar socket
+as the socket used by 
+.Xr sendmail 8
+to talk with
+.Nm .
+This option is mandatory.
+.It Fl v
+Enable debug output. 
+.Nm 
+will send messages (and debug output if it is given the
+.Fl v
+flag) to 
+.Xr syslogd 8
+with facility LOG_MAIL.
+.It Fl w Ar delay
+sets the minimum delay (in seconds) between the first attempt and the time
+the message can be accepted. Default is 1800 seconds (30 minutes).
+.El
+.Sh AUTHOR
+.An Emmanuel Dreyfus Aq manu@netbsd.org
+.Sh SEE ALSO
+.Xr sendmail 8 , 
+.Xr syslogd 8 .
+.Pp
+Evan Harris's paper
+.Pa http://projects.puremagic.com/greylisting
