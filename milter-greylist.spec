@@ -1,8 +1,8 @@
-# $Id: milter-greylist.spec,v 1.5 2005/02/06 10:45:55 manu Exp $
+# $Id: milter-greylist.spec,v 1.6 2005/02/07 22:03:01 manu Exp $
 # Contributed by Ivan F. Martinez
-%define ver 1.7.5
+%define ver 2.0b1
 %define rel 1
-%define user smmsp
+%define user root
 
 Summary: GreyList milter for sendmail
 Name: milter-greylist
