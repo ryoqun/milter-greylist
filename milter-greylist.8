@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.1,v 1.1 2004/02/21 17:46:22 manu Exp $
+.\" $Id: milter-greylist.8,v 1.1 2004/02/21 18:02:52 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -40,6 +40,7 @@
 .Op Fl v
 .Op Fl d Ar dumpfile
 .Op Fl f Ar exceptfile
+.Op Fl u Ar username
 .Op Fl w Ar delay
 .Fl p Ar socket
 .Sh DESCRIPTION
@@ -99,6 +100,10 @@ as the socket used by
 to talk with
 .Nm .
 This option is mandatory.
+.It Fl u Ar username
+Drop root privileges and switch to 
+.Ar username
+credentials'.
 .It Fl v
 Enable debug output. 
 .Nm 
