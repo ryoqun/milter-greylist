@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.17 2004/12/16 23:08:13 manu Exp $
+.\" $Id: greylist.conf.5,v 1.18 2004/12/28 21:46:05 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -199,9 +199,9 @@ you might want to configure a particular time interval, using the
 .Ar dumpfreq
 option. 
 .Pp
-If 
+If the
 .Ar dumpfreq
-value is too small, it will kill performances. If it is too high, 
+value is too small, it will kill performance. If it is too high, 
 you will loose a bigger part of the database on a crash. 
 .Pp
 Set 
@@ -237,7 +237,7 @@ Always add a header. This is the default.
 .Sh COMMAND-LINE FLAG EQUIVALENTS
 Most 
 .Xr milter-greylist 8
-command-line options have equivalent that can be used in the 
+command-line options have equivalent options that can be set in the 
 configuration file. Note that if a command line option is supplied,
 it will always override the configuration file.
 .Pp
@@ -274,7 +274,7 @@ Enable test mode. Equivalent to
 .Fl T .
 This option is deprecated.
 .It Ar greylist
-The argument sets how many time 
+The argument sets how much time 
 .Xr milter-greylist 8
 will want the client to wait between the first attempt and the time
 the message is accepted. The time is given in seconds, except if a 
@@ -286,7 +286,7 @@ keyword is equivalent to the
 option. Here is an example that sets the delay to 45 minutes:
 .Dl greylist 45m
 .It Ar autowhite
-This sets the auto-whitelisting duration, like the
+This sets the auto-whitelisting duration, equivalent to the
 .Fl a
 command-line option. As for the 
 .Ar greylist keywords , 
@@ -324,7 +324,7 @@ matching:
 .It Ar socket
 Like the 
 .Fl p
-command line option, this keywords is used to specify the socket used
+command line option, this keyword is used to specify the socket used
 to communicate with
 .Xr sendmail 8 .
 It must be enclosed with quotes:
@@ -334,7 +334,7 @@ This keyword should be followed by a quoted user login. Like the
 .Fl u
 option, this is used to run
 .Xr milter-greylist 8 
-as a non root user. here is an example:
+as a non root user.  Here is an example:
 .Dl user Qq smmsp
 .El
 .Sh MISCELANEOUS
@@ -346,8 +346,8 @@ Value is in seconds, except if a suffix is given (m for minutes, h for hours,
 d for days). Default is 5 days.
 .El
 .Pp
-The configuration file is reloaded automatically once it is modified and
-a new e-mail gets in. Most configuration keywords will take effect
+The configuration file is reloaded automatically once it is modified when
+a new e-mail arrives. Most configuration keywords will take effect
 immediatly, except the following, which will only take effect after 
 a restart of 
 .Xr milter-greylist 8 : 
@@ -359,7 +359,7 @@ and
 .Pp
 The 
 .Ar dumpfreq
-option can be dynamically changed, but change will only take effect 
+option can be dynamically changed, but the change will only take effect 
 after the next dump.
 .Sh AUTHORS
 .An Emmanuel Dreyfus Aq manu@netbsd.org
