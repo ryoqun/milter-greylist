@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.63 2004/08/02 20:17:38 manu Exp $ */
+/* $Id: pending.c,v 1.64 2004/08/03 21:56:07 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.63 2004/08/02 20:17:38 manu Exp $");
+__RCSID("$Id: pending.c,v 1.64 2004/08/03 21:56:07 manu Exp $");
 #endif
 #endif
 
@@ -463,7 +463,22 @@ iptostring(sa, salen, buf, buflen)
 	char *buf;
 	size_t buflen;
 {
-#ifdef HAVE_GETNAMEINFO
+/*
+ * This was ifdef HAVE_GETNAMEINFO, but we hit an ABI clash on some systems.
+ * From <netdb.h> of libbind:
+ *	#define NI_NOFQDN       0x00000001
+ *	#define NI_NUMERICHOST  0x0000000
+ * From <netdb.h> of glibc:
+ *	# define NI_NUMERICHOST 1
+ *	# define NI_NUMERICSERV 2
+ * The result is that on Linux, when linking with libspf_alt (which is
+ * linked with libbind), we get NI_NOFQDN where we expect NI_NUMERICHOST.
+ * Symptom: the dump file gets hostnames instead of IP addresses.
+ * 
+ * Disabling the use of getnameinfo() breaks IPv6 Scope-Id, which is
+ * not handled by Sendmail anyway.
+ */
+#if 0
 	if (getnameinfo(sa, salen, buf, buflen, NULL, 0, NI_NUMERICHOST) == 0)
 		return buf;
 #else
