@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.33 2005/01/29 18:42:53 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.34 2005/02/13 23:33:26 manu Exp $");
 #endif
 #endif
 
@@ -350,7 +350,6 @@ acl_entry:	DEFAULT
 
 acl_clauses:	acl_clause
 	|	acl_clauses acl_clause
-	|	acl_clauses "\\\n" acl_clauses
 	;
 
 acl_clause:	fromaddr_clause
