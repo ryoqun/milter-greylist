@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.17 2004/03/08 21:58:21 manu Exp $ */
+/* $Id: pending.c,v 1.18 2004/03/10 14:17:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.17 2004/03/08 21:58:21 manu Exp $");
+__RCSID("$Id: pending.c,v 1.18 2004/03/10 14:17:13 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -56,6 +56,7 @@ __RCSID("$Id: pending.c,v 1.17 2004/03/08 21:58:21 manu Exp $");
 #include <arpa/inet.h>
 
 #include "config.h"
+#include "sync.h"
 #include "pending.h"
 #include "milter-greylist.h"
 
@@ -196,6 +197,7 @@ pending_purge(void) {
 		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
 			syslog(LOG_INFO, "purge: %s from %s to %s timed out", 
 			    pending->p_addr, pending->p_from, pending->p_rcpt);
+			peer_delete(pending);
 			pending_put(pending);
 		}
 	}
@@ -204,6 +206,47 @@ pending_purge(void) {
 	return;
 }
 
+
+void
+pending_del(in, from, rcpt, time)
+	struct in_addr *in;
+	char *from;
+	char *rcpt;
+	time_t time;
+{
+	char addr[IPADDRLEN + 1];
+	struct pending *pending;
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
+
+	PENDING_WRLOCK;
+	TAILQ_FOREACH(pending, &pending_head, p_list) {
+		/*
+		 * Look for our entry.
+		 */
+		if ((strncmp(addr, pending->p_addr, IPADDRLEN) == 0) &&
+		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
+		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0) &&
+		    (pending->p_tv.tv_sec == time)) {
+			peer_delete(pending);
+			pending_put(pending);
+			goto out;
+		}
+
+		/*
+		 * Check for expired entries 
+		 */
+		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
+			syslog(LOG_INFO, "check: %s from %s to %s timed out", 
+			    pending->p_addr, pending->p_from, pending->p_rcpt);
+			pending_put(pending);
+		}
+	}
+out:
+	return;
+}
 
 int
 pending_check(in, from, rcpt, remaining, elapsed)
@@ -233,6 +276,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 
 			syslog(LOG_DEBUG, "got the entry");
 			if (rest < 0) {
+				peer_delete(pending);
 				pending_put(pending);
 				rest = 0;
 			}
@@ -251,10 +295,11 @@ pending_check(in, from, rcpt, remaining, elapsed)
 	}
 
 	/* 
-	 * It was not found. Create it.
+	 * It was not found. Create it and propagagte it to peers.
 	 * Error handling is useless here, we will tempfail anyway
 	 */
 	pending = pending_get(in, from, rcpt, 0);
+	peer_create(pending);
 	rest = delay;
 
 out:

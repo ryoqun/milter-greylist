@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.8 2004/03/10 14:17:14 manu Exp $ */
+/* $Id: sync.h,v 1.1 2004/03/10 14:17:14 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -28,57 +28,44 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _PENDING_H_
-#define _PENDING_H_
 
-#include <stdio.h>
-#include <pthread.h>
-#include <sys/time.h>
-#include <sys/queue.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
+#ifndef _MXGLSYNC_H_
+#define _MXGLSYNC_H_
 
-#ifndef DELAY
-#define DELAY	1800	/* 1800 seconds = 30 minutes */
-#endif
+#include "pending.h"
 
-#ifndef TIMEOUT
-#define TIMEOUT (3600 * 24 * 5) /* 432000 seconds = 5 days */
-#endif
+#define CMDLEN 10
+#define LINELEN 512
 
-#ifndef DUMPFILE
-#define DUMPFILE "/var/milter-greylist/greylist.db"
-#endif
+#define MXGLSYNC_NAME "mxglsync"
+#define MXGLSYNC_PORT 5252
 
-#define ADDRLEN	31
-#define IPADDRLEN sizeof("255.255.255.255")
+#define MXGLSYNC_BACKLOG 5 /* Maximum connexions */
 
-TAILQ_HEAD(pendinglist, pending);
+LIST_HEAD(peerlist, peer);
 
-struct pending {
-	char p_addr[IPADDRLEN + 1];
-	struct in_addr p_in;
-	char p_from[ADDRLEN + 1];
-	char p_rcpt[ADDRLEN + 1];
-	struct timeval p_tv;
-	TAILQ_ENTRY(pending) p_list;
+struct peer {
+	char p_name[ADDRLEN + 1];
+	struct in_addr p_addr;
+	FILE *p_stream;
+	int p_socket;
+	LIST_ENTRY(peer) p_list;
 };
 
-extern FILE *dump_in;
-extern int dump_line;
-extern int delay;
-extern char *dumpfile;
+typedef enum { PS_CREATE, PS_DELETE } peer_sync_t;
 
-int pending_init(void);
-struct pending *pending_get(struct in_addr *, char *, char *, time_t);
-int pending_check(struct in_addr *, char *, char *, time_t *, time_t *);
-void pending_del(struct in_addr *, char *, char *, time_t);
-void pending_put(struct pending *);
-void pending_log(struct pending *);
-void pending_textdump(FILE *);
-void pending_import(FILE *);
-void pending_flush(void);
-void pending_reload(void);
+int peer_init(void);
+void peer_clear(void);
+void peer_add(struct in_addr *);
+int peer_connect(struct peer *);
+void peer_send(struct peer *, peer_sync_t,  struct pending *);
+void peer_create(struct pending *);
+void peer_delete(struct pending *);
 
-#endif /* _PENDING_H_ */
+void sync_master_restart(void);
+void sync_master(void *);
+void sync_server(void *);
+void sync_help(FILE *);
+
+
+#endif /* _MXGLSYNC_H_ */

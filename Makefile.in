@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.15 2004/03/06 15:15:05 manu Exp $
+# $Id: Makefile.in,v 1.16 2004/03/10 14:17:13 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -49,13 +49,15 @@ LEX=		@LEX@
 YACC=		@YACC@
 TRUE=		@TRUE@
 
-OBJ= 		milter-greylist.o pending.o except.o except_yacc.o dump_yacc.o
-SRC= 		milter-greylist.c pending.c except.c 
+OBJ= 		milter-greylist.o pending.o except.o sync.o \
+		except_yacc.o dump_yacc.o
+SRC= 		milter-greylist.c pending.c except.c sync.c
 GENSRC=		except_yacc.c except_lex.c dump_yacc.c dump_lex.c
 
 milter-greylist:	${OBJ}
 	${CC} -o milter-greylist ${OBJ} ${LDFLAGS} ${LIBS}
 
+sync_yacc.o:	sync_yacc.c sync_lex.c
 except_yacc.o:	except_yacc.c except_lex.c
 dump_yacc.o:	dump_yacc.c dump_lex.c
 

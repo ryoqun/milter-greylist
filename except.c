@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.15 2004/03/09 00:12:29 manu Exp $ */
+/* $Id: except.c,v 1.16 2004/03/10 14:17:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.15 2004/03/09 00:12:29 manu Exp $");
+__RCSID("$Id: except.c,v 1.16 2004/03/10 14:17:13 manu Exp $");
 #endif
 
 #include <errno.h>
@@ -334,6 +334,8 @@ except_update(void) {
 		free(except);
 	}
 
+	/* Nothing to do here... */
+	peer_clear();
 	except_load();
 	EXCEPT_UNLOCK;
 

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.22 2004/03/08 22:14:12 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.23 2004/03/10 14:17:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.22 2004/03/08 22:14:12 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.23 2004/03/10 14:17:13 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -56,6 +56,7 @@ __RCSID("$Id: milter-greylist.c,v 1.22 2004/03/08 22:14:12 manu Exp $");
 #include "config.h"
 #include "except.h"
 #include "pending.h"
+#include "sync.h"
 #include "milter-greylist.h"
 
 int debug = 0;
@@ -137,6 +138,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * Reload the exception file if it has been touched
 	 */
 	except_update();
+	sync_master_restart();
 
 	if ((priv->priv_whitelist = except_filter(&priv->priv_addr, 
 	    priv->priv_from, *envrcpt)) != EXF_NONE) {
@@ -386,6 +388,12 @@ main(argc, argv)
 		exit(EX_SOFTWARE);
 	}
 
+	if (peer_init() != 0) {
+		fprintf(stderr, "%s: list init failed\n", argv[0]);
+		exit(EX_SOFTWARE);
+	}
+
+
 	if (dont_fork != 0)
 		openlog("milter-greylist", LOG_PERROR, LOG_MAIL);
 	else
@@ -439,6 +447,11 @@ main(argc, argv)
 			break;
 		}
 	}
+
+	/*
+	 * Run the peer MX greylist sync thread
+	 */
+	sync_master_restart();
 
 	/*
 	 * Here we go!

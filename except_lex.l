@@ -12,11 +12,12 @@ blank		[ \t]{1,}
 addr		[Aa][Dd][Dd][Rr]:?
 from		[Ff][Rr][Oo][Mm]:?
 rcpt		[Rr][Cc][Pp][Tt]:?
+peer		[Pp][Ee][Ee][Rr]:?
 
 %{
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: except_lex.l,v 1.7 2004/03/06 19:06:14 manu Exp $");
+	__RCSID("$Id: except_lex.l,v 1.8 2004/03/10 14:17:13 manu Exp $");
 	#endif
 
 	#include <string.h>
@@ -33,6 +34,7 @@ rcpt		[Rr][Cc][Pp][Tt]:?
 {addr}		{ return ADDR; }
 {from}		{ return FROM; }
 {rcpt}		{ return RCPT; }
+{peer}		{ return PEER; }
 {email}		{
 			strncpy(yylval.email, yytext, ADDRLEN);
 			yylval.email[ADDRLEN] = '\0';
