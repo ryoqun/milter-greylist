@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.5 2004/03/10 21:11:45 manu Exp $ */
+/* $Id: sync.h,v 1.6 2004/03/12 10:03:11 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -46,6 +46,10 @@
 #define PEER_WRLOCK WRLOCK(peer_lock);
 #define PEER_RDLOCK RDLOCK(peer_lock);
 #define PEER_UNLOCK UNLOCK(peer_lock);
+
+#define SYNC_WRLOCK WRLOCK(sync_lock);
+#define SYNC_RDLOCK RDLOCK(sync_lock);
+#define SYNC_UNLOCK UNLOCK(sync_lock);
 
 LIST_HEAD(peerlist, peer);
 TAILQ_HEAD(synclist, sync);

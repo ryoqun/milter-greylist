@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.13 2004/03/12 07:52:06 manu Exp $ */
+/* $Id: sync.c,v 1.14 2004/03/12 10:03:11 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -56,7 +56,8 @@ __RCSID("$Id");
 
 int sync_master_runs = 0;
 struct peerlist peer_head;
-pthread_rwlock_t peer_lock;
+pthread_rwlock_t peer_lock; /* For the peer list */
+pthread_rwlock_t sync_lock; /* For all peer's sync queue */
 pthread_cond_t sync_sleepflag;
 
 int 
@@ -65,6 +66,9 @@ peer_init(void) {
 
 	LIST_INIT(&peer_head);
 	if ((error = pthread_rwlock_init(&peer_lock, NULL)) == 0)
+		return error;
+
+	if ((error = pthread_rwlock_init(&sync_lock, NULL)) == 0)
 		return error;
 
 	if ((error = pthread_cond_init(&sync_sleepflag, NULL)) == 0)
@@ -79,6 +83,7 @@ peer_clear(void) {
 	struct sync *sync;
 
 	PEER_WRLOCK;
+	SYNC_WRLOCK;
 
 	while(!LIST_EMPTY(&peer_head)) {
 		peer = LIST_FIRST(&peer_head);
@@ -95,6 +100,7 @@ peer_clear(void) {
 		free(peer);
 	}
 
+	SYNC_UNLOCK;
 	PEER_UNLOCK;
 
 	return;	
@@ -133,7 +139,7 @@ peer_create(pending)
 {
 	struct peer *peer;
 
-	PEER_WRLOCK;
+	PEER_RDLOCK;
 	if (LIST_EMPTY(&peer_head))
 		goto out;
 
@@ -152,7 +158,7 @@ peer_delete(pending)
 {
 	struct peer *peer;
 
-	PEER_WRLOCK;
+	PEER_RDLOCK;
 	if (LIST_EMPTY(&peer_head))
 		goto out;
 
@@ -166,7 +172,7 @@ out:
 }
 
 int
-sync_send(peer, type, pending)	/* peer list is write-locked */
+sync_send(peer, type, pending)	/* peer list is read-locked */
 	struct peer *peer;
 	peer_sync_t type;
 	struct pending *pending;
@@ -223,7 +229,7 @@ sync_send(peer, type, pending)	/* peer list is write-locked */
 }
 
 int
-peer_connect(peer)	/* peer list is write-locked */
+peer_connect(peer)	/* peer list is read-locked */
 	struct peer *peer;
 {
 	struct protoent *pe;
@@ -719,7 +725,7 @@ sync_waitdata(fd)
 
 
 void
-sync_queue(peer, type, pending)	/* peer list must be write-locked */
+sync_queue(peer, type, pending)	/* peer list must be read-locked */
 	struct peer *peer;
 	peer_sync_t type;
 	struct pending *pending;
@@ -742,7 +748,9 @@ sync_queue(peer, type, pending)	/* peer list must be write-locked */
 	 */
 	memcpy(&sync->s_pending, pending, sizeof(*pending)); 
 
+	SYNC_WRLOCK;
 	TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
+	SYNC_UNLOCK;
 
 	pthread_cond_signal(&sync_sleepflag);
 	return;
@@ -788,19 +796,32 @@ sync_sender(dontcare)
 		}
 		done = 0;
 
-		PEER_WRLOCK;
+		PEER_RDLOCK;
 		if (LIST_EMPTY(&peer_head))
 			goto out;
 			
 		LIST_FOREACH(peer, &peer_head, p_list) {
 			while (TAILQ_EMPTY(&peer->p_deferred) == 0) {
+				SYNC_WRLOCK;
 				sync = TAILQ_FIRST(&peer->p_deferred);
-
-				if (sync_send(sync->s_peer, sync->s_type, 
-				    &sync->s_pending) != 0)
-					break;
-
 				TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
+				SYNC_UNLOCK;
+
+				/* 
+				 * We cannot keep the lock in sync_send
+				 * as the send might timeout. Hence we
+				 * remove the item, and put it back if 
+				 * the send operation fails.
+				 */
+				if (sync_send(sync->s_peer, sync->s_type, 
+				    &sync->s_pending) != 0) {
+					SYNC_WRLOCK;
+					TAILQ_INSERT_HEAD(&peer->p_deferred, 
+					    sync, s_list);
+					SYNC_UNLOCK;
+					break;
+				}
+
 				free(sync);
 
 				done++;
