@@ -20,14 +20,13 @@ peer		[Pp][Ee][Ee][Rr]:?
 
 %{
 
-/* mailbox		[A-Za-z0-9!#$%&'"*+/=?$^_`}{|~\-]+ */
 	#include "config.h"
 
 	#ifdef HAVE_SYS_CDEFS_H
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.5.2.1 2004/03/28 19:55:19 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.5.2.2 2004/03/29 15:23:42 manu Exp $");
 	#endif
 	#endif
 	#endif
