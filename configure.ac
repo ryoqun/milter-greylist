@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.29 2004/03/11 17:03:20 manu Exp $
+# $Id: configure.ac,v 1.30 2004/03/11 22:30:17 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -14,6 +14,7 @@ AC_PROG_YACC
 AC_PROG_INSTALL
 AC_CHECK_PROGS(MKDEP, mkdep)
 AC_CHECK_PROGS(RM, rm)
+AC_CHECK_PROGS(MV, mv)
 AC_CHECK_PROGS(TEST, test)
 AC_CHECK_PROGS(SED, sed)
 AC_CHECK_PROGS(TRUE, true)
