@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.42 2004/03/22 07:12:38 manu Exp $ */
+/* $Id: pending.c,v 1.43 2004/03/22 21:56:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,14 +29,15 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "config.h"
+
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.42 2004/03/22 07:12:38 manu Exp $");
+__RCSID("$Id: pending.c,v 1.43 2004/03/22 21:56:35 manu Exp $");
 #endif
 #endif
 
-#include "config.h"
 #ifdef HAVE_OLD_QUEUE_H 
 #include "queue.h"
 #else

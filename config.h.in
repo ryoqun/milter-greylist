@@ -1,5 +1,8 @@
-/* $Id: config.h.in,v 1.14 2004/03/22 21:19:09 manu Exp $ */
+/* $Id: config.h.in,v 1.15 2004/03/22 21:56:35 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
+
+#ifndef _CONFIG_H_
+#define _CONFIG_H_
 
 /* Build environnement */
 #undef BUILD_ENV
@@ -185,3 +188,5 @@
 
 /* Define as `fork' if `vfork' does not work. */
 #undef vfork
+
+#endif /* _CONFIG_H_ */

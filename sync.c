@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.31 2004/03/22 07:12:38 manu Exp $ */
+/* $Id: sync.c,v 1.32 2004/03/22 21:56:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -28,6 +28,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#include "config.h"
 
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
