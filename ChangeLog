@@ -1,3 +1,5 @@
+2.0b3:
+	Fix build problem with spf
 2.0b2:
 	Check if -D_REENTRANT is needed for localtime_r and friends
 	Typo in delayedreject 
