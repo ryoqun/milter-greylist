@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.139 2005/02/13 23:34:53 manu Exp $
+# $Id: configure.ac,v 1.140 2005/02/13 23:42:01 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 2.0b2, manu@netbsd.org)
+AC_INIT(milter-greylist, 2.0b1, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -67,7 +67,7 @@ AC_FUNC_MEMCMP
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
-AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket initgroups])
+AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
 
 # Try to configure for libspf2
 SAVEDLDFLAGS=$LDFLAGS
@@ -278,27 +278,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 AC_MSG_RESULT([$dextensions])
 CFLAGS=$SAVEDCFLAGS
 
-# Check if -D_REENTRANT is needed for localtime_r, gmtime_r
-SAVEDCFLAGS=$CFLAGS
-CFLAGS=$CFLAGS" -ansi -Wall -Werror"
-AC_MSG_CHECKING([if -D_REENTRANT is needed to use localtime_r])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
-		#include <time.h>
-	],[[
-
-		(void)localtime(NULL);
-	]])], [dreentrant=no],
-		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
-				#define _REENTRANT
-				#include <stdio.h>
-			],[[
-				 (void)localtime(NULL);
-			]])], 
-			[SAVEDCFLAGS=$SAVEDCFLAGS" -D_REENTRANT"; 
-			 dreentrant=yes], [dreentrant=no])
-	])
-AC_MSG_RESULT([$dreentrant])
-CFLAGS=$SAVEDCFLAGS
 
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use
