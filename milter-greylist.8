@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.9 2004/03/04 09:40:12 manu Exp $
+.\" $Id: milter-greylist.8,v 1.10 2004/03/10 21:35:45 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -39,7 +39,7 @@
 .Nm
 .Op Fl D
 .Op Fl d Ar dumpfile
-.Op Fl f Ar exceptfile
+.Op Fl f Ar configfile
 .Op Fl q
 .Op Fl T
 .Op Fl u Ar username
@@ -68,9 +68,9 @@ send e-mail. Whitelisting localhost is also a must.
 .Pp
 .Nm
 works with two files. 
-.Pa greylist.except
-holds the white list of addresses that will not suffer grey list filtering.
-It is readen once upon 
+.Pa greylist.conf
+is the configuration file. It holds the white list of addresses that will 
+not suffer grey list filtering.  It is readen once upon 
 .Nm
 startup, then it will be automatically reloaded when a new message
 gets in and if it had been modified. You should not send
@@ -104,9 +104,9 @@ will become a daemon.
 .It Fl d Ar dumpfile
 Location of the dump file. Default is 
 .Pa /var/milter-greylist/greylist.db
-.It Fl f Ar exceptfile
-Location of the white list file. Default is
-.Pa /etc/mail/greylist.except .
+.It Fl f Ar configfile
+Location of the config file. Default is
+.Pa /etc/mail/greylist.conf .
 .It Fl p Ar socket
 Use 
 .Ar socket
@@ -122,7 +122,7 @@ will not tell SMTP client how many time they have to wait before the
 message is accepted.
 .It Fl T
 Enable test mode. This alters the meaning of recipient lines in 
-.Pa greylist.except ,
+.Pa greylist.conf ,
 so that only messages sent to recipient adresses listed there are 
 selected for grey listing.
 .It Fl u Ar username
@@ -142,6 +142,31 @@ with facility LOG_MAIL.
 sets the minimum delay (in seconds) between the first attempt and the time
 the message can be accepted. Default is 1800 seconds (30 minutes).
 .El
+.Sh GREYLIST MX SYNC
+.Nm
+is now able to sync the greylist between multiple MX. In order to enable
+this feature, you need to list the peer MX's in 
+.Pa greylist.conf ,
+just like this:
+.Dl peer 192.0.2.17
+.Dl peer 192.0.2.18
+.Pp
+When peers are configured, 
+.Nm
+will listen on port defined for the mxglsync service in
+.Pa /etc/services 
+(defaults to 5252), and it will connect to peers at this port. Each time 
+an entry will be added or deleted on one MX, it will be propagated on 
+the others. 
+.Pp
+The protocol is quite simple, just
+telnet to your MX at port 5252, and type help to see how it works. Note that
+connexions will only be accepted from peer MX's, even localhost will be
+rejected (and don't ever add localhost as a peer for MX sync, you will 
+cause each entry in the greylist to be added twice).
+.Pp
+If a MX is down, changes to the greylist will be queued until it gets
+back up again.
 .Sh AUTHOR
 .An Emmanuel Dreyfus Aq manu@netbsd.org
 .Sh SEE ALSO

@@ -1,9 +1,9 @@
-# $Id: README,v 1.1 2004/03/03 20:00:49 manu Exp $
+# $Id: README,v 1.2 2004/03/10 21:35:45 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/03/03 20:00:49 $
+		       $Date: 2004/03/10 21:35:45 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -25,7 +25,7 @@ script.  If you intend to run milter-greylist under an unprivileged
 UID, use the --with-user flag.
 
 On the make install step, the Makefile will install a default config
-file in /etc/mail/greylist.except, except if there is already such
+file in /etc/mail/greylist.conf, except if there is already such
 a file. In that case the original file is preserved.
 
 
@@ -42,10 +42,11 @@ Milter.macros.connect=j, {if_addr}
  3 Configuring milter-greylist 
  =============================
 
-Edit /etc/mail/greylist.except, and add addr lines for at least
+Edit /etc/mail/greylist.conf, and add addr lines for at least
 all you local network addresses. Here is an example:
 
-addr 192.0.2.0/24 addr 10.0.0.0/8
+addr 192.0.2.0/24 
+addr 10.0.0.0/8
 
 Then consider adding addresses of all the friendly network you get
 mail from. By friendly network, we mean network with no spammers:
@@ -57,11 +58,12 @@ friendly at all.
  4 Trying it out for a few users 
  ===============================
 
-Add some rcpt lines to /etc/mail/greylist.except for the users that
+Add some rcpt lines to /etc/mail/greylist.conf for the users that
 want to try milter-greylist filtering. Here is an example:
 
-rcpt John.Doe@example.net rcpt webmaster@example.net rcpt
-postmaster@example.net
+rcpt John.Doe@example.net 
+rcpt webmaster@example.net 
+rcpt postmaster@example.net
 
 Then start milter-greylist with the -T option, which will make
 greylisting effective only for the users listed in the rcpt lines.
@@ -76,18 +78,45 @@ If you want to check that things work, try 10 seconds with -w10.
  5 Running it for the whole site 
  ===============================
 
-Remove the rcpt lines from /etc/mail/greylist.except, and run
+Remove the rcpt lines from /etc/mail/greylist.conf, and run
 milter-greylist without the -T option:
 
 milter-greylist -u smmsp -p /var/milter-greylist/milter-greylist.sock
 
 If some of your users don't want greylisting, add a rcpt line for
-them in /etc/mail/greylist.except. Without the -T option, rcpt
+them in /etc/mail/greylist.conf. Without the -T option, rcpt
 lines will prevent greylisting for the corresponding users: every
 message will get to them without any delay, including spam.
 
 
- 6 Things to look at if things get wrong
+ 6 Working with multiple MX
+ ===========================
+
+When running several MX, the client should try each server after
+its message gets refused, thus causing greylist entries creation 
+on each MX. Things should work, but with two minors problems:
+
+* Some stupid clients don't try all the available MX. In that 
+  situation, it could take some time before the message gets in,
+  as the client might try a different MX each time and wait for 
+  several hours between the retries.
+
+* After a messages goes in, its entry is removed for one MX, 
+  but not the others. Stale entries remain until being flushed
+  because of a timeout. If a message with the same {IP, from, rcpt}
+  gets in on a MX with a stale entry, it will be accepted 
+  immediately, and the X-Greylist header will report it had been
+  delayed for some time.
+
+In order to address those issues, milter-greylist is now able to
+sync the greylist among different MX. This can be configured in
+the greylist.conf file, by adding one line per peer MX, just 
+like this:
+peer 192.0.2.17
+peer 192.0.2.18
+
+
+ 7 Things to look at if things get wrong
  =======================================
 
 First, read the milter-greylist(8) man page! :-)
