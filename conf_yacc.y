@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.31 2004/12/16 23:08:13 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.32 2004/12/19 19:55:05 manu Exp $");
 #endif
 #endif
 
@@ -357,6 +357,7 @@ acl_clause:	fromaddr_clause
 	|	domainaddr_clause
 	|	domainregex_clause
 	|	netblock_clause
+	;
 
 fromaddr_clause:	FROM EMAIL { acl_add_from ($2); }
 	;
