@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.1 2004/12/08 22:23:43 manu Exp $ */
+/* $Id: acl.c,v 1.2 2005/02/07 22:01:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.1 2004/12/08 22:23:43 manu Exp $");
+__RCSID("$Id: acl.c,v 1.2 2005/02/07 22:01:51 manu Exp $");
 #endif
 #endif
 
@@ -579,11 +579,11 @@ emailcmp(big, little)
 	int i;
 
 	while (big[0]) {
-		if (tolower(big[0]) != tolower(little[0]))
+		if (tolower((int)big[0]) != tolower((int)little[0]))
 			big++;
 
 		for (i = 0; big[0] && little[i]; i++) {
-			if (tolower(big[0]) != tolower(little[i]))
+			if (tolower((int)big[0]) != tolower((int)little[i]))
 				break;
 			big++;
 		}

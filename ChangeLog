@@ -1,4 +1,5 @@
 2.0b1:
+	Shut down warnings in tolower()
 	Use initgroups() on startup to kill suplementary groups
 	Fix build problem on IPv6 disabled systems.
 	Fix build problem with libpsf
