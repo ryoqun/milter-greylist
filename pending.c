@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.56 2004/05/25 08:37:08 manu Exp $ */
+/* $Id: pending.c,v 1.57 2004/05/26 09:14:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.56 2004/05/25 08:37:08 manu Exp $");
+__RCSID("$Id: pending.c,v 1.57 2004/05/26 09:14:29 manu Exp $");
 #endif
 #endif
 
@@ -174,7 +174,7 @@ pending_del(in, from, rcpt, time)
 		/*
 		 * Check for expired entries 
 		 */
-		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
+		if (tv.tv_sec - pending->p_tv.tv_sec > conf.c_timeout) {
 			if (conf.c_debug) {
 				syslog(LOG_DEBUG, 
 				    "del: %s from %s to %s timed out", 

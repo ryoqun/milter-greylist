@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.30 2004/05/25 08:58:48 manu Exp $ */
+/* $Id: autowhite.c,v 1.31 2004/05/26 09:14:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.30 2004/05/25 08:58:48 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.31 2004/05/26 09:14:29 manu Exp $");
 #endif
 #endif
 
@@ -225,8 +225,9 @@ autowhite_check(in, from, rcpt, queueid)
 			 * Look for our record
 			 */
 			if ((IP_MATCH(in, &aw->a_in)) &&
-			    (strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
-			    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)) {
+			    ((conf.c_lazyaw == 1) ||
+			    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
+			    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
 				timeradd(&now, &delay, &aw->a_tv);
 
 				dirty++;

@@ -1,4 +1,4 @@
-%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW DUMPFREQ
+%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW DUMPFREQ TIMEOUT
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.19 2004/05/24 21:57:36 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.20 2004/05/26 09:14:29 manu Exp $");
 #endif
 #endif
 
@@ -58,6 +58,7 @@ lines	:	lines netblock '\n'
 	|	lines lazyaw '\n'
 	|	lines report '\n'
 	|	lines dumpfreq '\n'
+	|	lines timeout '\n'
 	|	lines '\n'
 	|
 	;
@@ -128,6 +129,9 @@ report:		REPORT NONE	{ conf.c_report = C_NONE; }
 	|	REPORT ALL	{ conf.c_report = C_ALL; }
 	;
 dumpfreq:	DUMPFREQ TDELAY { conf.c_dumpfreq =
+				    (time_t)humanized_atoi($2);
+				}
+timeout:	TIMEOUT TDELAY { conf.c_timeout =
 				    (time_t)humanized_atoi($2);
 				}
 %%

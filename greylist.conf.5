@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.6 2004/05/24 21:57:36 manu Exp $
+.\" $Id: greylist.conf.5,v 1.7 2004/05/26 09:14:29 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -234,6 +234,14 @@ option, this is used to run
 as a non root user. here is an example:
 .Dl user Qq smmsp
 .El
+.Sh MISCELANEOUS
+This option has no command line equivalent:
+.Bl -tag -width flag
+.It Ar timeout
+is used to control how long greylist tuples are retained in the database. 
+Value is in seconds, except if a suffix is given (m for minutes, h for hours,
+d for days). Default is 5 days.
+.El
 .Pp
 The configuration file is reloaded automatically once it is modified and
 a new e-mail gets in. Most configuration keywords will take effect
@@ -245,6 +253,11 @@ a restart of
 .Ar socket ,
 and 
 .Ar user .
+.Pp
+The 
+.Ar dumpfreq
+option can be dynamically changed, but change will only take effect 
+after the next dump.
 .Sh AUTHOR
 .An Emmanuel Dreyfus Aq manu@netbsd.org
 .Pp
@@ -260,3 +273,6 @@ for their feebacks on this software.
 .Pp
 Evan Harris's paper
 .Pa http://projects.puremagic.com/greylisting
+.Pp
+milter-greylist's web site:
+.Pa http://hcpnet.free.fr/milter-greylist
