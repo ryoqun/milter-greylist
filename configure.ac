@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.53 2004/03/21 21:42:25 manu Exp $
+# $Id: configure.ac,v 1.54 2004/03/21 22:51:41 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -29,6 +29,29 @@ AC_ARG_WITH(libpthread,
 	[CFLAGS=$CFLAGS" -I$withval/include" 
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,--rpath=$withval/lib"])
 
+# Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h sys/param.h netdb.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_TYPE_PID_T
+AC_TYPE_SIZE_T
+AC_HEADER_TIME
+
+# Checks for library functions.
+AC_FUNC_FORK
+AC_FUNC_STRFTIME
+AC_FUNC_MALLOC
+AC_FUNC_MEMCMP
+AC_FUNC_SELECT_ARGTYPES
+AC_FUNC_SETVBUF_REVERSED
+AC_FUNC_STAT
+AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
+
+# Check for socket functions linking. On Solaris, -lsocket -lnsl is required
+AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], [])
+AC_CHECK_LIB([socket -lnsl], [socket], [LIBS="$LIBS -lsocket -lnsl"], [])
+
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 AC_CHECK_LIB(pthread, pthread_create, 
 	[LIBS="$LIBS -lpthread"],
@@ -51,25 +74,6 @@ AC_CHECK_LIB(milter, smfi_register,
                 exit 1;])
         ])
 ])
-
-# Checks for header files.
-AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h sys/param.h netdb.h])
-
-# Checks for typedefs, structures, and compiler characteristics.
-AC_TYPE_PID_T
-AC_TYPE_SIZE_T
-AC_HEADER_TIME
-
-# Checks for library functions.
-AC_FUNC_FORK
-AC_FUNC_STRFTIME
-AC_FUNC_MALLOC
-AC_FUNC_MEMCMP
-AC_FUNC_SELECT_ARGTYPES
-AC_FUNC_SETVBUF_REVERSED
-AC_FUNC_STAT
-AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
 
 # Some Linux flavors have an outdated <sys/queue.h>
 AC_MSG_CHECKING([if your <sys/queue.h> is outdated])
