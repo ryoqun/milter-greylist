@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.22 2004/04/30 21:52:25 manu Exp $ */
+/* $Id: except.h,v 1.23 2004/05/06 13:50:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -82,7 +82,7 @@ struct except {
 extern int testmode;
 extern pthread_rwlock_t except_lock;
 
-int except_init(void);
+void except_init(void);
 void except_clear(void);
 void except_add_netblock(struct in_addr *, int);
 void except_add_from(char *);
