@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.35 2004/03/19 22:45:23 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.36 2004/03/20 06:35:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.35 2004/03/19 22:45:23 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.36 2004/03/20 06:35:35 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -134,6 +134,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	char hdr[HDRLEN + 1];
 	char addrstr[IPADDRLEN + 1];
 	char rcpt[ADDRLEN + 1];
+	char *queue_id;
 	int h, mn, s;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
@@ -178,8 +179,14 @@ mlfi_envrcpt(ctx, envrcpt)
 	remaining = remaining % 60;
 	s = remaining;
 
-	syslog(LOG_INFO, "addr %s from %s to %s delayed for %02d:%02d:%02d",
-	    inet_ntop(AF_INET, &priv->priv_addr, addrstr, IPADDRLEN),
+	if ((queue_id = smfi_getsymval(ctx, "{i}") == NULL) {
+		syslog(LOG_ERR, "Option \"O Milter.macros.connect="
+		    "i,j,{if_addr}\" missing in sendmail.cf");
+		queue_id = "(unknown)";
+	}
+	   
+	syslog(LOG_INFO, "%s: addr %s from %s to %s delayed for %02d:%02d:%02d",
+	    queue_id, inet_ntop(AF_INET, &priv->priv_addr, addrstr, IPADDRLEN),
 	    priv->priv_from, *envrcpt, h, mn, s);
 
 	if (quiet) {
@@ -213,7 +220,7 @@ mlfi_eom(ctx)
 	if (((fqdn = smfi_getsymval(ctx, "{j}")) == NULL) ||
 	    ((ip = smfi_getsymval(ctx, "{if_addr}")) == NULL))
 		syslog(LOG_ERR, "Option \"O Milter.macros.connect="
-		    "j,{if_addr}\" missing in sendmail.cf");
+		    "i,j,{if_addr}\" missing in sendmail.cf");
 
 	(void)gettimeofday(&tv, NULL);
 	strftime(timestr, HDRLEN, 
