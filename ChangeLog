@@ -3,6 +3,7 @@
 	Builds again with SPF enabled
 	Update doc: flex is required
 	Prefix all install paths by ${DESTDIR} to help sandbox builds for RPM
+	Pull config from /etc/sysconfig/milter-greylist in rc-rdehat.sh
 1.7.2:
 	Support libspf2 (Eugene Crosser)
 	New ACL framework for whitelist and greylist (Remy Card)

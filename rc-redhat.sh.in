@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: rc-redhat.sh.in,v 1.1 2004/11/28 00:33:29 manu Exp $
+# $Id: rc-redhat.sh.in,v 1.2 2004/12/12 23:02:24 manu Exp $
 #  init file for milter-greylist
 #
 # chkconfig: - 50 50
@@ -16,6 +16,10 @@ pidfile="/var/run/milter-greylist.pid"
 socket="/var/milter-greylist/milter-greylist.sock"
 user="@USER@"
 OPTIONS="-P $pidfile -u $user -p $socket"
+if [ -f /etc/sysconfig/milter-greylist ]
+then
+    . /etc/sysconfig/milter-greylist
+fi
 RETVAL=0
 prog="Milter-Greylist"
 
