@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.9 2004/03/11 16:57:49 manu Exp $ */
+/* $Id: sync.c,v 1.10 2004/03/11 17:02:11 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -88,6 +88,9 @@ peer_clear(void) {
 			free(sync);
 		}
 			
+		if (peer->p_stream != NULL)
+			fclose(stream);
+
 		LIST_REMOVE(peer, p_list);
 		free(peer);
 	}
@@ -163,7 +166,7 @@ out:
 }
 
 int
-sync_send(peer, type, pending)
+sync_send(peer, type, pending)	/* peer list is write-locked */
 	struct peer *peer;
 	peer_sync_t type;
 	struct pending *pending;
@@ -220,7 +223,7 @@ sync_send(peer, type, pending)
 }
 
 int
-peer_connect(peer)
+peer_connect(peer)	/* peer list is write-locked */
 	struct peer *peer;
 {
 	struct protoent *pe;
