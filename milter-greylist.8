@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.5 2004/02/29 22:35:09 manu Exp $
+.\" $Id: milter-greylist.8,v 1.6 2004/02/29 23:01:27 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -38,6 +38,7 @@
 .Sh SYNOPSIS
 .Nm
 .Op Fl v
+.Op Fl D
 .Op Fl d Ar dumpfile
 .Op Fl f Ar exceptfile
 .Op Fl T
@@ -89,6 +90,10 @@ will start with an empty grey list.
 .Pp
 The following options are available:
 .Bl -tag -width flag
+.It Fl D
+Do not fork and run in the foreground. Without this flag, 
+.Nm
+will become a daemon.
 .It Fl d Ar dumpfile
 Location of the dump file. Default is 
 .Pa /etc/mail/greylist.except

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.2 2004/02/21 09:42:07 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.3 2004/02/29 23:01:27 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -42,5 +42,6 @@ sfsistat mlfi_envfrom(SMFICTX *, char **);
 sfsistat mlfi_envrcpt(SMFICTX *, char **);
 sfsistat mlfi_close(SMFICTX *);
 void usage(char *);
+void cleanup_sock(char *);
 
 #endif /* _MILTER_GREYLIST_H_ */

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.7 2004/02/29 22:35:09 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.8 2004/02/29 23:01:27 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,11 +34,13 @@
 #include <string.h>
 #include <syslog.h>
 #include <errno.h>
+#include <fcntl.h>
 #include <pwd.h>
 #include <sysexits.h>
 #include <unistd.h>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 
 #include <libmilter/mfapi.h>
 
@@ -48,6 +50,8 @@
 #include "milter-greylist.h"
 
 int debug = 0;
+int dont_fork = 0;
+
 struct smfiDesc smfilter =
 {
 	"greylist",	/* filter name */
@@ -157,8 +161,12 @@ main(argc, argv)
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "vd:w:f:hp:Tu:")) != -1) {
+	while ((ch = getopt(argc, argv, "vDd:w:f:hp:Tu:")) != -1) {
 		switch (ch) {
+		case 'D':
+			dont_fork = 1;
+			break;
+
 		case 'u': {
 			if (geteuid() != 0) {
 				fprintf(stderr, "%s: only root can use -u\n", 
@@ -212,7 +220,8 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			(void) smfi_setconn(optarg);
+			cleanup_sock(optarg);
+			(void)smfi_setconn(optarg);
 			gotsocket = 1;
 			break;
 
@@ -266,7 +275,10 @@ main(argc, argv)
 		exit(EX_SOFTWARE);
 	}
 
-	openlog("milter-greylist", 0, LOG_MAIL);
+	if (dont_fork != 0)
+		openlog("milter-greylist", LOG_PERROR, LOG_MAIL);
+	else
+		openlog("milter-greylist", 0, LOG_MAIL);
 
 	/*
 	 * Load exception list
@@ -283,6 +295,42 @@ main(argc, argv)
 	}
 
 	/*
+	 * Turn into a daemon
+	 */
+	if (dont_fork == 0) {
+		pid_t pid;
+
+		(void)close(0);
+		(void)open("/dev/null", O_RDONLY, 0);
+		(void)close(1);
+		(void)open("/dev/null", O_RDONLY, 0);
+		(void)close(2);
+		(void)open("/dev/null", O_RDONLY, 0);
+
+		if (chdir("/") != 0) {
+			fprintf(stderr, "%s: cannot chdir to root: %s\n",
+			    argv[0], strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		switch (pid = fork()) {
+		case -1:
+			fprintf(stderr, "%s: cannot fork: %s\n",
+			    argv[0], strerror(errno));
+			exit(EX_OSERR);
+			break;
+
+		case 0:
+			break;
+
+		default:
+			exit(EX_OK);	
+			break;
+		}
+	}
+		
+
+	/*
 	 * Here we go!
 	 */
 	return smfi_main();
@@ -293,7 +341,26 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, 
-	    "usage: %s [-v] [-T] [-d dumpfile] [-f exceptionfile]\n"
+	    "usage: %s [-D] [-v] [-T] [-d dumpfile] [-f exceptionfile]\n"
 	    "       [-w delay] [-u username] -p socket\n", progname);
 	exit(EX_USAGE);
+}
+
+void
+cleanup_sock(path)
+	char *path;
+{
+	struct stat st;
+
+	/* Does it exists? Get information on it if it does */
+	if (stat(path, &st) != 0)
+		return;
+
+	/* Is it a socket? */
+	if ((st.st_mode & S_IFSOCK) == 0)
+		return;
+
+	/* Remove the beast */
+	(void)unlink(path);
+	return;
 }
