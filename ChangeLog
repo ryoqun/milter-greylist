@@ -1,3 +1,5 @@
+1.3.8:
+	Shut up  a warning at build time
 1.3.7:
 	Bug fix: on some platforms, reloading the config caused SIGSEGV
 1.3.6:

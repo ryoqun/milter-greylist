@@ -50,7 +50,7 @@ domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.24 2004/05/28 23:35:14 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.25 2004/06/01 16:15:49 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -90,8 +90,8 @@ domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 {delays}	{ return DELAYS; }
 {nodelays}	{ return NODELAYS; }
 {all}		{ return ALL; }
-{dumpfreq}	{ return DUMPFREQ; }
-{timeout}	{ return TIMEOUT; }
+{dumpfreq}	{ return GLDUMPFREQ; }
+{timeout}	{ return GLTIMEOUT; }
 {domain}	{ return DOMAIN; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);
