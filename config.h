@@ -11,7 +11,7 @@
 /* #undef HAVE_BROKEN_RCSID */
 
 /* broken rwlock in libpthread */
-/* #undef HAVE_BROKEN_RWLOCK */
+#define HAVE_BROKEN_RWLOCK
 
 /* Define to 1 if you have the `bzero' function. */
 #define HAVE_BZERO 1
