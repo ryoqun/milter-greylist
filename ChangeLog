@@ -2,6 +2,7 @@
 	Check if -D_REENTRANT is needed for localtime_r and friends
 	Typo in delayedreject 
 	Check for initgroups existence
+	Add more E-bay addresses in greylist.conf
 2.0b1:
 	Shut down warnings in tolower()
 	Use initgroups() on startup to kill suplementary groups
