@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.24 2004/03/17 17:33:40 manu Exp $ */
+/* $Id: sync.c,v 1.25 2004/03/17 22:28:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -686,7 +686,7 @@ sync_server(arg)
 		}
 		if (action == PS_DELETE) {
 			pending_del(&addr, from, rcpt, date);
-			autowhite_add(&addr, from, rcpt);
+			autowhite_add(&addr, from, rcpt, NULL);
 		}
 
 		/* Flush modifications to disk */

@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.33 2004/03/17 22:21:36 manu Exp $ */
+/* $Id: pending.c,v 1.34 2004/03/17 22:28:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.33 2004/03/17 22:21:36 manu Exp $");
+__RCSID("$Id: pending.c,v 1.34 2004/03/17 22:28:57 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -213,7 +213,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 			if (rest < 0) {
 				peer_delete(pending);
 				pending_put(pending);
-				autowhite_add(in, from, rcpt);
+				autowhite_add(in, from, rcpt, NULL);
 				rest = 0;
 				dirty = 1;
 			}

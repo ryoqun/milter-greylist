@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.4 2004/03/17 22:21:36 manu Exp $ */
+/* $Id: autowhite.c,v 1.5 2004/03/17 22:28:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.4 2004/03/17 22:21:36 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.5 2004/03/17 22:28:57 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -69,10 +69,11 @@ autowhite_init(void) {
 }
 
 void
-autowhite_add(in, from, rcpt)
+autowhite_add(in, from, rcpt, date)
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
+	time_t *date;
 {
 	struct autowhite *aw = NULL;
 	struct autowhite *prev_aw = NULL;
@@ -154,7 +155,12 @@ autowhite_add(in, from, rcpt)
 		aw->a_from[ADDRLEN] = '\0';
 		strncpy(aw->a_rcpt, rcpt, ADDRLEN);
 		aw->a_rcpt[ADDRLEN] = '\0';
-		timeradd(&now, &delay, &aw->a_tv);
+
+		if (date == NULL)
+			timeradd(&now, &delay, &aw->a_tv);
+		else
+			aw->a_tv.tv_sec = *date;
+
 		TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
 
 		dirty++;
