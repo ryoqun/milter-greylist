@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.11 2004/08/08 21:24:20 manu Exp $
+.\" $Id: greylist.conf.5,v 1.12 2004/08/10 10:15:06 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -117,8 +117,8 @@ Do not ever list localhost as a peer, as it will cause each entry to
 be added twice to the greylist.
 .Pp
 By default, milter-greylist will listen on all interfaces using TCP port
-5252 or portnumber given by service named mxglsync if defined in /etc/services
-or other directory service. This behaviour can be changed by using
+5252 or port number given by service named mxglsync if defined in /etc/services
+or other directory service. This behaviour can be changed by using the
 .Ar syncaddr
 keyword. Here are a few examples:
 .Dl syncaddr *
