@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.70 2004/03/23 08:10:58 manu Exp $
+# $Id: configure.ac,v 1.71 2004/03/23 08:25:47 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -223,6 +223,22 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		pthread_rwlock_t lock;
 	])], [xopen=no], [CFLAGS="$CFLAGS -D_XOPEN_SOURCE=500"; xopen=yes])
 AC_MSG_RESULT([$xopen])
+
+# IRIX requires -D_XOPEN_SOURCE=500 to use <stdio.h> and -ansi
+AC_MSG_CHECKING([whether you need -D_XOPEN_SOURCE to use <stdio.h> with -ansi])
+SAVEDCLFAGS=$CFLAGS
+CFLAGS=$CFLAGS" -ansi"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <stdio.h>
+	],[
+		FILE *f;
+
+		f = fdopen(0, "w+");
+	])], [xstdio=no], 
+	[SAVEDCFLAGS=$SAVEDCFLAGS" -D_XOPEN_SOURCE=500"; 
+	 xstdio=yes])
+CFLAGS=$SAVEDCFLAGS
+AC_MSG_RESULT([$xstdio])
 
 # Linux does not have a sa_len field in sockaddr
 AC_CHECK_MEMBER([struct sockaddr.sa_len],
