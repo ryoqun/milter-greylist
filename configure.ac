@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.34 2004/03/12 14:49:51 manu Exp $
+# $Id: configure.ac,v 1.35 2004/03/13 13:54:30 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -63,6 +63,7 @@ AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket])
 
+# Linux requires -D_XOPEN_SOURCE=500 to build with libpthread and -Wall
 AC_MSG_CHECKING([whether you need -D_XOPEN_SOURCE to use libpthread])
 xopen=no
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
@@ -73,6 +74,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	])], [xopen=no], [CFLAGS="$CFLAGS -D_XOPEN_SOURCE=500"; xopen=yes])
 AC_MSG_RESULT([$xopen])
 
+# Linux does not have a sa_len field in sockaddr
 AC_DEFINE([HAVE_SA_LEN], [], [sa_len field in struct sockaddr])
 AC_CHECK_MEMBER([struct sockaddr.sa_len], , 
 	[AC_DEFINE(HAVE_SA_LEN)], [
@@ -80,11 +82,74 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len], ,
 		#include <sys/socket.h>
 	])
 
+# GNU pth-2.0.0 has a bug with rwlock. 
+AC_MSG_CHECKING([for broken rwlock in libpthread])
+brokenpth=yes
+AC_RUN_IFELSE([AC_LANG_PROGRAM([
+		#if STDC_HEADERS
+		# include <stdlib.h>
+		#else
+		# ifdef __cplusplus
+		extern "C" void exit (int);
+		# else
+		void exit (int);
+		# endif
+		#endif
+
+		#if HAVE_UNISTD_H
+		# include <unistd.h>
+		#else
+		# ifdef __cplusplus
+		extern "C" unsigned int exit (unsigned int);
+		# else
+		unsigned int exit (unsigned int);
+		# endif
+		#endif
+
+		#include <pthread.h>
+		pthread_rwlock_t lock;
+  
+		#ifdef __cplusplus
+		extern "C" void testfunc (void *);
+		#else
+		void testfunc ();
+		#endif
+
+		#ifdef __cplusplus
+		void testfunc (void *dontcare)
+		#else
+		void testfunc (dontcare) void *dontcare;
+		#endif
+		{
+			if (pthread_rwlock_rdlock(&lock) != 0)
+				exit(EXIT_FAILURE);
+			sleep(1);
+			if (pthread_rwlock_unlock(&lock) != 0)
+				exit(EXIT_FAILURE);
+			return;
+		}
+	],[
+		pthread_t tid;
+
+		if (pthread_rwlock_init(&lock, NULL) != 0)
+			exit(EXIT_FAILURE);
+		if (pthread_create(&tid, NULL, (void *)testfunc, NULL) != 0)
+			exit(EXIT_FAILURE);
+		if (pthread_rwlock_rdlock(&lock) != 0)
+			exit(EXIT_FAILURE);
+		sleep(1);
+		if (pthread_rwlock_unlock(&lock) != 0)
+			exit(EXIT_FAILURE);
+		if (pthread_join(tid, NULL) != 0)
+			exit(EXIT_FAILURE);
+		return 0;
+	])], [brokenpth=no], AC_DEFINE([HAVE_BROKEN_RWLOCK]))
+AC_MSG_RESULT([$brokenpth])
+
 # Options
 AC_ARG_WITH(user,
 	[  --with-user=USERNAME   The user that will run milter-greylist ],
 	[AC_SUBST(USER, $withval)], [AC_SUBST(USER, root)])
-
 AC_ARG_WITH(conffile,  
 	[  --with-conffile=PATH Location of config file],
 	[CFLAGS=$CFLAGS" -DCONFFILE=\\\"$withval\\\""])

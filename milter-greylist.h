@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.15 2004/03/12 11:00:10 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.16 2004/03/13 13:54:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,6 +33,7 @@
 #define _MILTER_GREYLIST_H_
 
 #include <libmilter/mfapi.h>
+#include "config.h"
 
 #define HDRLEN 160
 #define HEADERNAME "X-Greylist"
@@ -68,11 +69,27 @@ int main(int, char **);
 		    __FILE__, __LINE__, strerror(errno));		  \
 		exit(EX_SOFTWARE);					  \
 	}
+
+/*
+ * There is a bug in GNU pth-2.0.0 that will cause a spurious EPERM
+ * error when a thread releases a read lock that has been shared by
+ * two threads and already released by the other one. As a workaround
+ * for that problem, we just avoid quitting on this error.
+ */
+#ifndef HAVE_BROKEN_RWLOCK
 #define UNLOCK(lock) if (pthread_rwlock_unlock(&(lock)) != 0) {		  \
 		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed: %s", \
 		    __FILE__, __LINE__, strerror(errno));		  \
 		exit(EX_SOFTWARE);					  \
 	}
+#else
+#define UNLOCK(lock) if (pthread_rwlock_unlock(&(lock)) != 0) {		  \
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed: %s", \
+		    __FILE__, __LINE__, strerror(errno));		  \
+		if (errno != EPERM)					  \
+			exit(EX_SOFTWARE);				  \
+	}
+#endif
 
 /* 
  * Theses definitions are missing from Linux's <sys/queue.h>
