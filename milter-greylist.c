@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.50.2.2 2004/03/27 08:46:51 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.50.2.3 2004/03/27 08:48:14 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.50.2.2 2004/03/27 08:46:51 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.50.2.3 2004/03/27 08:48:14 manu Exp $");
 #endif
 #endif
 
@@ -152,9 +152,9 @@ mlfi_envrcpt(ctx, envrcpt)
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval failed for {i}: %s",
+		syslog(LOG_DEBUG, "smfi_getsymval faild for {i}: %s",
 		    strerror(errno));
-		priv->priv_queueid = "(unknown id)";
+		priv->priv_queueid = "(unkown id)";
 	}
 	
 	if (debug)
@@ -280,14 +280,14 @@ mlfi_eom(ctx)
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 	if ((fqdn = smfi_getsymval(ctx, "{j}")) == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval failed for {j}: %s",
+		syslog(LOG_DEBUG, "smfi_getsymval faild for {j}: %s",
 		    strerror(errno));
 		gethostname(host, ADDRLEN);
 		fqdn = host;
 	}
 
 	if ((ip = smfi_getsymval(ctx, "{if_addr}")) == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval failed for {if_addr}: %s",
+		syslog(LOG_DEBUG, "smfi_getsymval faild for {if_addr}: %s",
 		    strerror(errno));
 		ip = "0.0.0.0";
 	}
@@ -624,14 +624,12 @@ strncpy_rmsp(dst, src, len)
 	return dst;
 }
 
-#define TMPSTRLEN 20
 static int
 humanized_atoi(str)	/* *str is modified */
 	char *str;
 {
 	unsigned int unit;
 	size_t len;
-	char tmpstr[TMPSTRLEN + 1];
 
 	if ((len = strlen(str)) == 0)
 		return 0;
@@ -662,8 +660,7 @@ humanized_atoi(str)	/* *str is modified */
 		break;
 	}
 
-	strncpy(tmpstr, str, TMPSTRLEN);
-	tmpstr[len - 1] = '\0';
+	str[len - 1] = '\0';
 
-	return (atoi(tmpstr) * unit);
+	return (atoi(str) * unit);
 }
