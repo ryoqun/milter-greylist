@@ -1,3 +1,5 @@
+1.1.13:
+	Handle non IPv4 addresses correctly.
 1.1.12:
 	Bug fix: Using regex in rcpt line caused the program to halt
 1.1.11:

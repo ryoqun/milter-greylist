@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.77 2004/04/08 15:19:02 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.78 2004/04/12 12:28:56 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.77 2004/04/08 15:19:02 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.78 2004/04/12 12:28:56 manu Exp $");
 #endif
 #endif
 
@@ -114,8 +114,12 @@ mlfi_connect(ctx, hostname, addr)
 
 	addr_in = (struct sockaddr_in *)addr;
 
-	if ((addr_in != NULL) && (addr_in->sin_family == AF_INET))
+	if ((addr_in != NULL) && (addr_in->sin_family == AF_INET)) {
 		priv->priv_addr.s_addr = addr_in->sin_addr.s_addr;
+	} else {
+		priv->priv_elapsed = 0;
+		priv->priv_whitelist = EXF_NONIPV4;
+	}
 
 	return SMFIS_CONTINUE;
 }
@@ -161,6 +165,12 @@ mlfi_envfrom(ctx, envfrom)
 	 * Reload the config file if it has been touched
 	 */
 	conf_update();
+
+	/*
+	 * Is the sender non-IPv4?
+	 */
+	if (priv->priv_whitelist == EXF_NONIPV4)
+		return SMFIS_CONTINUE;
 
 	/*
 	 * Is the user authenticated?
@@ -244,7 +254,8 @@ mlfi_envrcpt(ctx, envrcpt)
 	if ((priv->priv_whitelist == EXF_ADDR) ||
 	    (priv->priv_whitelist == EXF_FROM) ||
 	    (priv->priv_whitelist == EXF_AUTH) ||
-	    (priv->priv_whitelist == EXF_SPF))
+	    (priv->priv_whitelist == EXF_SPF) ||
+	    (priv->priv_whitelist == EXF_NONIPV4))
 		return SMFIS_CONTINUE;
 
 	/* 
@@ -384,6 +395,10 @@ mlfi_eom(ctx)
 
 		case EXF_SPF:
 			whystr = "Sender is SPF-compliant";
+			break;
+
+		case EXF_NONIPV4:
+			whystr = "Message not sent from an IPv4 address";
 			break;
 
 		case EXF_RCPT:
