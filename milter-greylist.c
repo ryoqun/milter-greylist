@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.41 2004/03/21 09:37:38 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.42 2004/03/21 10:08:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.41 2004/03/21 09:37:38 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.42 2004/03/21 10:08:43 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -627,7 +627,7 @@ humanized_atoi(str)	/* *str is modified */
 		break;
 
 	default:
-		return 0;
+		return atoi(str);
 		break;
 	}
 
