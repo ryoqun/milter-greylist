@@ -1,4 +1,4 @@
-/* $Id: dump.h,v 1.1 2004/03/17 17:34:05 manu Exp $ */
+/* $Id: dump.h,v 1.2 2004/03/17 22:21:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -43,6 +43,7 @@
 #define DUMPFILE "/var/milter-greylist/greylist.db"
 #endif
 
+#define DATELEN 40
 #define ADDRLEN	31
 #define IPADDRLEN sizeof("255.255.255.255")
 
@@ -59,5 +60,6 @@ void dumper(void *);
 void dumper_start(void);
 void dump_flush(void);
 void dump_reload(void);
+void dump_header(FILE *);
 
 #endif /* _DUMP_H_ */

@@ -10,11 +10,12 @@ email		"<"?[A-Za-z0-9\.\-_+]+"\@"?[A-Za-z0-9\.\-_+]*">"?
 void_email	"<>"
 comment		#.*$
 blank		[ \t]{1,}
+auto		[Aa][Uu][Tt][Oo]
 
 %{
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.5 2004/03/11 14:12:48 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.6 2004/03/17 22:21:36 manu Exp $");
 	#endif
 
 	#include <string.h>
@@ -27,6 +28,7 @@ blank		[ \t]{1,}
 %}
 
 %%
+{auto}		{ return AUTO; }
 {blank}
 {comment}
 {ipaddr}	{ 

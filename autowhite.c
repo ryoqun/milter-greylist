@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.3 2004/03/17 17:33:40 manu Exp $ */
+/* $Id: autowhite.c,v 1.4 2004/03/17 22:21:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.3 2004/03/17 17:33:40 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.4 2004/03/17 22:21:36 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -255,4 +255,33 @@ autowhite_check(in, from, rcpt)
 	return EXF_NONE;
 }
 
+int
+autowhite_textdump(stream)
+	FILE *stream;
+{
+	struct autowhite *aw;
+	int done = 0;
+	char textdate[DATELEN + 1];
+	char textaddr[IPADDRLEN + 1];
+
+	fprintf(stream, "\n\n#\n# Auto-whitelisted tuples\n#\n");
+	fprintf(stream, "# Sender IP    %32s    %32s    Expire\n",
+	    "Sender e-mail", "Recipient e-mail");
+
+	AUTOWHITE_RDLOCK;
+	TAILQ_FOREACH(aw, &autowhite_head, a_list) {
+		strftime(textdate, DATELEN, "%Y-%m-%d %T",
+		    localtime((time_t *)&aw->a_tv.tv_sec));
+
+		inet_ntop(AF_INET, &aw->a_in, textaddr, IPADDRLEN);
+
+		fprintf(stream, 
+		    "AUTO %s     %32s    %32s    %ld # %s\n",
+		    textaddr, aw->a_from, aw->a_rcpt, 
+		    aw->a_tv.tv_sec, textdate);
+	}
+	AUTOWHITE_UNLOCK;
+
+	return done;
+}
 

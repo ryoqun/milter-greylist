@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.32 2004/03/17 17:33:40 manu Exp $ */
+/* $Id: pending.c,v 1.33 2004/03/17 22:21:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.32 2004/03/17 17:33:40 manu Exp $");
+__RCSID("$Id: pending.c,v 1.33 2004/03/17 22:21:36 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -266,25 +266,15 @@ out:
 		return 0;
 }
 
-#define DATELEN	40
 int
 pending_textdump(stream)
 	FILE *stream;
 {
 	struct pending *pending;
-	struct timeval tv;
-	char textdate[DATELEN + 1];
 	int done = 0;
+	char textdate[DATELEN + 1];
 
-	gettimeofday(&tv, NULL);
-	strftime(textdate, DATELEN, "%Y-%m-%d %T",
-	    localtime((time_t *)&tv.tv_sec));
-
-	fprintf(stream, "#\n# Greylist database, "
-	    "dumped by milter-greylist-%s on %s.\n",
-	    PACKAGE_VERSION, textdate);
-	fprintf(stream, "# DO NOT EDIT while milter-greylist is running, "
-	    "changes will be overwritten.\n#\n\n");
+	fprintf(stream, "\n\n#\n# greylisted tuples\n#\n");
 	fprintf(stream, "# Sender IP	%32s	%32s	Time accepted\n", 
 	    "Sender e-mail", "Recipient e-mail");
 

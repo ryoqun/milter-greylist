@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.1 2004/03/17 17:34:05 manu Exp $ */
+/* $Id: dump.c,v 1.2 2004/03/17 22:21:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.1 2004/03/17 17:34:05 manu Exp $");
+__RCSID("$Id: dump.c,v 1.2 2004/03/17 22:21:36 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -143,8 +143,13 @@ dumper(dontcare)
 			exit(EX_OSERR);
 		}
 
-		done = pending_textdump(dump);
+		dump_header(dump);
+		done = 0;
+		done += pending_textdump(dump);
+		done += autowhite_textdump(dump);
+
 		fclose(dump);
+
 		if (rename(newdumpfile, dumpfile) != 0) {
 			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
 			    dumpfile, newdumpfile, strerror(errno));
@@ -203,6 +208,26 @@ dump_flush(void) {
 		syslog(LOG_ERR, "cannot wakeup dumper: %s", strerror(errno));
 		exit(EX_SOFTWARE);
 	}
+
+	return;
+}
+
+void
+dump_header(stream)
+	FILE *stream;
+{
+	struct timeval tv;
+	char textdate[DATELEN + 1];
+
+	gettimeofday(&tv, NULL);
+	strftime(textdate, DATELEN, "%Y-%m-%d %T",
+	    localtime((time_t *)&tv.tv_sec));
+
+	fprintf(stream, "#\n# milter-greylist databases, "
+	    "dumped by milter-greylist-%s on %s.\n",
+	    PACKAGE_VERSION, textdate);
+	fprintf(stream, "# DO NOT EDIT while milter-greylist is running, "
+	    "changes will be overwritten.\n#\n\n");
 
 	return;
 }

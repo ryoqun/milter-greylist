@@ -1,13 +1,14 @@
-%token IPADDR EMAIL TIME
+%token IPADDR EMAIL TIME AUTO
 
 %{
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.5 2004/03/17 12:32:46 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.6 2004/03/17 22:21:36 manu Exp $");
 #endif
 
 #include <stdlib.h>
 #include "pending.h"
+#include "autowhite.h"
 
 int dump_lex(void);
 void dump_error(char *);
@@ -23,12 +24,14 @@ void dump_error(char *);
 %type <time> TIME;
 
 %%
-lines	:	lines entry '\n' 
+lines	:	lines greyentry '\n' 
+	|	lines autoentry '\n'
 	|	lines '\n'
 	|	error '\n'		{ yyerrok; }
 	|
 	;
-entry	:	IPADDR EMAIL EMAIL TIME	{ pending_get(&$1, $2, $3, $4); }
+greyentry :	IPADDR EMAIL EMAIL TIME	{ pending_get(&$1, $2, $3, $4); }
+autoentry :	AUTO IPADDR EMAIL EMAIL TIME { autowhite_add(&$2, $3, $4); }
 	;
 %%
 #include "dump_lex.c"
