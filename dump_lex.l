@@ -6,7 +6,11 @@
 num		[0-9]{1,}
 byte		[0-9]{1,3}
 ipaddr		{byte}"."{byte}"."{byte}"."{byte}
-email		"<"?[A-Za-z0-9\.\-_+]+"\@"?[A-Za-z0-9\.\-_+]*">"?
+atext		[A-Za-z0-9!#$%&'*+/=?$^_`}{|~.-]{1,}
+qtext		"\""[!-~]{1,}"\""
+mailbox		{atext}|{qtext}
+domain		[A-Za-z0-9._-]{1,}
+email		"<"?{mailbox}"\@"?{domain}?">"?
 void_email	"<>"
 comment		#.*$
 blank		[ \t]{1,}
@@ -19,7 +23,7 @@ auto		[Aa][Uu][Tt][Oo]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.9 2004/03/22 22:12:39 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.10 2004/03/28 19:54:18 manu Exp $");
 	#endif
 	#endif
 	#endif
