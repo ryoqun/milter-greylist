@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.45 2004/12/19 08:11:21 manu Exp $
+# $Id: Makefile.in,v 1.46 2005/03/07 21:57:56 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -90,7 +90,7 @@ install:	milter-greylist
 	${INSTALL} -d -m 755 ${DESTDIR}${BINDIR}
 	${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/man8
 	${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/man5
-	${INSTALL} -d -m 755 ${DESTDIR}etc/mail
+	${INSTALL} -d -m 755 ${DESTDIR}/etc/mail
 	${INSTALL} -m 755 milter-greylist ${DESTDIR}${BINDIR}
 	${INSTALL} -m 644 milter-greylist.8 ${DESTDIR}${MANDIR}/man8
 	${INSTALL} -m 644 greylist.conf.5 ${DESTDIR}${MANDIR}/man5
