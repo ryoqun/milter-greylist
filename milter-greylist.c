@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.47 2004/03/22 21:56:35 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.48 2004/03/22 23:37:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.47 2004/03/22 21:56:35 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.48 2004/03/22 23:37:42 manu Exp $");
 #endif
 #endif
 
@@ -145,8 +145,11 @@ mlfi_envrcpt(ctx, envrcpt)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
-	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL)
+	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
+		syslog(LOG_DEBUG, "smfi_getsymval faild for {i}: %s",
+		    strerror(errno));
 		priv->priv_queueid = "(unkown id)";
+	}
 	
 	if (debug)
 		syslog(LOG_DEBUG, "%s: addr = %s, from = %s, rcpt = %s", 
@@ -266,13 +269,22 @@ mlfi_eom(ctx)
 	char timestr[HDRLEN + 1];
 	struct timeval tv;
 	char *whystr = NULL;
+	char host[ADDRLEN + 1];
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
-	if (((fqdn = smfi_getsymval(ctx, "{j}")) == NULL) ||
-	    ((ip = smfi_getsymval(ctx, "{if_addr}")) == NULL))
-		syslog(LOG_ERR, "Option \"O Milter.macros.connect="
-		    "j,{if_addr}\" missing in sendmail.cf");
+	if ((fqdn = smfi_getsymval(ctx, "{j}")) == NULL) {
+		syslog(LOG_DEBUG, "smfi_getsymval faild for {j}: %s",
+		    strerror(errno));
+		gethostname(host, ADDRLEN);
+		fqdn = host;
+	}
+
+	if ((ip = smfi_getsymval(ctx, "{if_addr}")) == NULL) {
+		syslog(LOG_DEBUG, "smfi_getsymval faild for {if_addr}: %s",
+		    strerror(errno));
+		ip = "0.0.0.0";
+	}
 
 	(void)gettimeofday(&tv, NULL);
 	strftime(timestr, HDRLEN, 
