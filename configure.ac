@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.3 2004/02/21 23:15:49 manu Exp $
+# $Id: configure.ac,v 1.4 2004/02/22 09:46:13 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -44,6 +44,10 @@ AC_HEADER_TIME
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror])
 
 # Options
+AC_ARG_WITH(user,
+	[  --with-user=USERNAME   The user that will run milter-greylist ],
+	[AC_SUBST(USER, $withval)], [AC_SUBST(USER, root)])
+
 AC_ARG_WITH(exceptfile,  
 	[  --with-exceptfile=PATH Location of whitelist],
 	[CFLAGS=$CFLAGS" -DEXCEPTFILE=\\\"$withval\\\""])
