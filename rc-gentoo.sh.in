@@ -1,5 +1,5 @@
 #!/sbin/runscript
-# $Header: /milter-greylist/milter-greylist/rc-gentoo.sh.in,v 1.1 2004/11/28 17:40:13 manu Exp $Id 
+# $Header: /milter-greylist/milter-greylist/rc-gentoo.sh.in,v 1.1.2.1 2004/11/28 17:40:43 manu Exp $Id 
 
 # NB: Gentoo Config is in /etc/conf.d/milter-greylist
 

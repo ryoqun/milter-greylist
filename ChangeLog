@@ -1,4 +1,4 @@
-1.6:
+1.6rc1:
 	New stable branch
 	Missing flags in milter-greylist usage display
 	Gentoo startup sript (Stephane Lentz)
