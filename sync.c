@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.32 2004/03/22 21:56:35 manu Exp $ */
+/* $Id: sync.c,v 1.33 2004/03/22 23:29:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -378,7 +378,8 @@ sync_master_restart(void) {
 		return;
 
 	sync_master_runs = 1;
-	if (pthread_create(&tid, NULL, (void *)sync_master, NULL) != 0) {
+	if (pthread_create(&tid, NULL, 
+	    (void *(*)(void *))sync_master, NULL) != 0) {
 		syslog(LOG_ERR, "Cannot run MX sync thread: %s\n",
 		    strerror(errno));
 		exit(EX_OSERR);
@@ -522,7 +523,7 @@ sync_master(dontcare)
 			continue;
 		}
 
-		if (pthread_create(&tid, NULL, (void *)sync_server, 
+		if (pthread_create(&tid, NULL, (void *(*)(void *))sync_server, 
 		    (void *)stream) != 0) {
 			syslog(LOG_ERR, "incoming connexion from %s failed, "
 			    "pthread_create failed: %s", 
@@ -814,7 +815,8 @@ void
 sync_sender_start(void) {
 	pthread_t tid;
 
-	if (pthread_create(&tid, NULL, (void *)sync_sender, NULL) != 0) {
+	if (pthread_create(&tid, NULL, 
+	    (void *(*)(void *))sync_sender, NULL) != 0) {
 		syslog(LOG_ERR, "pthread_create failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}

@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.8 2004/03/22 21:56:35 manu Exp $ */
+/* $Id: dump.c,v 1.9 2004/03/22 23:29:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.8 2004/03/22 21:56:35 manu Exp $");
+__RCSID("$Id: dump.c,v 1.9 2004/03/22 23:29:59 manu Exp $");
 #endif
 #endif
 
@@ -86,7 +86,7 @@ void
 dumper_start(void) {
 	pthread_t tid;
 
-	if (pthread_create(&tid, NULL, (void *)dumper, NULL) != 0) {
+	if (pthread_create(&tid, NULL, (void *(*)(void *))dumper, NULL) != 0) {
 		syslog(LOG_ERR, 
 		    "cannot start dumper thread: %s", strerror(errno));
 		exit(EX_OSERR);
