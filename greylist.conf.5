@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.2 2004/03/31 12:10:16 manu Exp $
+.\" $Id: greylist.conf.5,v 1.3 2004/04/01 21:23:08 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -72,13 +72,27 @@ incoming e-mail whitelisted. When running in testmode (The
 .Fl T 
 command-line option), addresses listed with the rcpt keyword will have
 their incoming e-mail greylisted. Without testmode, addresses listed
-with the rcpt keyword will not have their incoming e-mail greylisted.
+with the 
+.Ar rcpt 
+keyword will not have their incoming e-mail greylisted.
 Example:
 .Dl rcpt John.Doe@example.net
 .El
-
+.Pp
+Both 
+.Ar from
+and
+.Ar rcpt
+may be used with regulax expressions. The regular expressions must be
+enclosed by slashes (/). No scaping is available to provide a slash
+inside a regular expression, so just do not use it. Regular expressions
+follow the format desribed in 
+.Xr re_format 7 .
+Here is an example:
+.Dl rcpt /.*@example\.net/
 .Sh MX SYNC
-Synchronization of the greylist among multiple MX is configured using the peer 
+Synchronization of the greylist among multiple MX is configured using the 
+.Ar peer 
 keyword. List each other MX IP addresses using the 
 .Ar peer 
 keyword. Here is
