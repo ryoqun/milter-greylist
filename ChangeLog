@@ -1,4 +1,5 @@
 1.3.3:
+	Case insensitive check for autowhitelist everywhere (was inconsistent)
 	Better scallability by adjusting the dump delay
 	Work with NetBSD 2.0 native libpthread
 1.3.2:
