@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.19 2004/03/06 20:28:44 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.20 2004/03/06 20:33:07 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.19 2004/03/06 20:28:44 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.20 2004/03/06 20:33:07 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -98,11 +98,6 @@ mlfi_connect(ctx, hostname, addr)
 	sin = (struct sockaddr_in *)addr;
 	if ((sin != NULL) && (sin->sin_family == AF_INET))
 		priv->priv_addr.s_addr = sin->sin_addr.s_addr;
-
-	if (debug)
-		syslog(LOG_DEBUG, "addr = %s", 
-		    inet_ntop(AF_INET, &priv->priv_addr, 
-		    addrstr, IPADDRLEN));
 
 	return SMFIS_CONTINUE;
 }
