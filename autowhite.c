@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.10 2004/03/20 07:19:03 manu Exp $ */
+/* $Id: autowhite.c,v 1.11 2004/03/20 17:22:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.10 2004/03/20 07:19:03 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.11 2004/03/20 17:22:42 manu Exp $");
 #endif
 
 #include "config.h"
@@ -109,8 +109,7 @@ autowhite_add(in, from, rcpt, date, queueid)
 			 * Expiration
 			 */
 			if (aw->a_tv.tv_sec < now.tv_sec) {
-				TAILQ_REMOVE(&autowhite_head, aw, a_list);
-				free(aw);
+				autowhite_put(aw);
 				aw = NULL;
 
 				dirty++;
@@ -149,25 +148,7 @@ autowhite_add(in, from, rcpt, date, queueid)
 	 * Entry not found, create it 
 	 */
 	if (aw == NULL) {
-		if ((aw = malloc(sizeof(*aw))) == NULL) {
-			syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		bzero(aw, sizeof(*aw));
-
-		aw->a_in.s_addr = in->s_addr;
-		strncpy(aw->a_from, from, ADDRLEN);
-		aw->a_from[ADDRLEN] = '\0';
-		strncpy(aw->a_rcpt, rcpt, ADDRLEN);
-		aw->a_rcpt[ADDRLEN] = '\0';
-
-		if (date == NULL)
-			timeradd(&now, &delay, &aw->a_tv);
-		else
-			aw->a_tv.tv_sec = *date;
-
-		TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
+		aw = autowhite_get(in, from, rcpt, date);
 
 		dirty++;
 
@@ -220,8 +201,7 @@ autowhite_check(in, from, rcpt, queueid)
 			 * an outdated record to match
 			 */
 			if (aw->a_tv.tv_sec < now.tv_sec) {
-				TAILQ_REMOVE(&autowhite_head, aw, a_list);
-				free(aw);
+				autowhite_put(aw);
 				aw = NULL;
 
 				dirty++;
@@ -298,3 +278,49 @@ autowhite_textdump(stream)
 	return done;
 }
 
+struct autowhite *
+autowhite_get(in, from, rcpt, date) /* autowhite list must be locked */
+	struct in_addr *in;
+	char *from;
+	char *rcpt;
+	time_t *date;
+{
+	struct autowhite *aw;
+	struct timeval now, delay;
+
+	gettimeofday(&now, NULL);
+	delay.tv_sec = autowhite_validity;
+	delay.tv_usec = 0;
+
+	if ((aw = malloc(sizeof(*aw))) == NULL) {
+		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	bzero(aw, sizeof(*aw));
+
+	aw->a_in.s_addr = in->s_addr;
+	strncpy(aw->a_from, from, ADDRLEN);
+	aw->a_from[ADDRLEN] = '\0';
+	strncpy(aw->a_rcpt, rcpt, ADDRLEN);
+	aw->a_rcpt[ADDRLEN] = '\0';
+
+	if (date == NULL)
+		timeradd(&now, &delay, &aw->a_tv);
+	else
+		aw->a_tv.tv_sec = *date;
+
+	TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
+
+	return aw;
+}
+
+void
+autowhite_put(aw)	/* autowhite list must be write-locked */
+	struct autowhite *aw;
+{
+	TAILQ_REMOVE(&autowhite_head, aw, a_list);	
+	free(aw);
+
+	return;
+}
