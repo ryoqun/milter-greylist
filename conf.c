@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.27 2004/08/08 21:24:20 manu Exp $ */
+/* $Id: conf.c,v 1.28 2004/10/11 20:57:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.27 2004/08/08 21:24:20 manu Exp $");
+__RCSID("$Id: conf.c,v 1.28 2004/10/11 20:57:42 manu Exp $");
 #endif
 #endif
 
@@ -242,7 +242,7 @@ conf_defaults(c)
 	struct conf *c;
 {
 	c->c_cold = 1;
-	c->c_forced = C_NONE;
+	c->c_forced = C_GLNONE;
 	c->c_debug = 0;
 	c->c_quiet = 0;
 	c->c_noauth = 0;

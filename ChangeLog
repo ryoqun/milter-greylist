@@ -1,4 +1,5 @@
 1.5.9:
+	Fix build on Tru64 Unix (Attila Bruncsak)
 	Fix a SPF log problem (Alexandre Cherif)
 1.5.8:
 	Fix a bug in configure.ac (Hajimu Umemoto)

@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.27 2004/08/09 21:44:19 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.28 2004/10/11 20:57:42 manu Exp $");
 #endif
 #endif
 
@@ -217,7 +217,7 @@ user:		USER PATH	{ if (C_NOTFORCED(C_USER))
 					    quotepath(c_user, $2, PATHLEN);
 				}
 	;	
-report:		REPORT NONE	{ conf.c_report = C_NONE; }
+report:		REPORT NONE	{ conf.c_report = C_GLNONE; }
 	|	REPORT DELAYS	{ conf.c_report = C_DELAYS; }
 	|	REPORT NODELAYS	{ conf.c_report = C_NODELAYS; }
 	|	REPORT ALL	{ conf.c_report = C_ALL; }

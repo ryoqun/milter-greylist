@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.26 2004/08/08 21:24:20 manu Exp $ */
+/* $Id: conf.h,v 1.27 2004/10/11 20:57:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -84,7 +84,7 @@ struct conf {
 };
 
 /* c_forced flags */
-#define C_NONE		0x0000
+#define C_GLNONE		0x0000
 #define C_DEBUG		0x0001
 #define C_QUIET		0x0002
 #define C_NOAUTH	0x0004

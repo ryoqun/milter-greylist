@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.27 2004/09/13 18:41:55 manu Exp $ */
+/* $Id: except.h,v 1.28 2004/10/11 20:57:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -55,7 +55,7 @@
 #define EXCEPT_RDLOCK RDLOCK(except_lock) 
 #define EXCEPT_UNLOCK UNLOCK(except_lock)
 
-LIST_HEAD(exceptlist, except);
+LIST_HEAD(exceptlist, glexcept);
 
 typedef enum { 
 	E_NETBLOCK, 
@@ -77,7 +77,7 @@ typedef enum {
 #define e_domain e_data.d_domain
 #define e_domain_re e_data.d_domain_re
 
-struct except {
+struct glexcept {
 	except_type_t e_type;
 	union {
 		struct {
@@ -92,7 +92,7 @@ struct except {
 		regex_t d_rcpt_re;
 		regex_t d_domain_re;
 	} e_data;
-	LIST_ENTRY(except) e_list;
+	LIST_ENTRY(glexcept) e_list;
 };
 
 extern int testmode;

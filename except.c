@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.49 2004/09/13 18:41:55 manu Exp $ */
+/* $Id: except.c,v 1.50 2004/10/11 20:57:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.49 2004/09/13 18:41:55 manu Exp $");
+__RCSID("$Id: except.c,v 1.50 2004/10/11 20:57:42 manu Exp $");
 #endif
 #endif
 
@@ -91,7 +91,7 @@ except_add_netblock(sa, salen, cidr)	/* exceptlist must be write-locked */
 	int cidr;
 {
 	ipaddr mask;
-	struct except *except;
+	struct glexcept *glexcept;
 	char addrstr[IPADDRSTRLEN];
 	char maskstr[IPADDRSTRLEN];
 	int maxcidr, masklen;
@@ -137,23 +137,23 @@ except_add_netblock(sa, salen, cidr)	/* exceptlist must be write-locked */
 #endif
 	}
 
-	if ((except = malloc(sizeof(*except))) == NULL ||
-	    (except->e_addr = malloc(salen)) == NULL ||
-	    (except->e_mask = malloc(masklen)) == NULL) {
+	if ((glexcept = malloc(sizeof(*glexcept))) == NULL ||
+	    (glexcept->e_addr = malloc(salen)) == NULL ||
+	    (glexcept->e_mask = malloc(masklen)) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
-	except->e_type = E_NETBLOCK;
-	except->e_addrlen = salen;
-	memcpy(except->e_addr, sa, salen);
-	memcpy(except->e_mask, &mask, masklen);
-	LIST_INSERT_HEAD(&except_head, except, e_list);
+	glexcept->e_type = E_NETBLOCK;
+	glexcept->e_addrlen = salen;
+	memcpy(glexcept->e_addr, sa, salen);
+	memcpy(glexcept->e_mask, &mask, masklen);
+	LIST_INSERT_HEAD(&except_head, glexcept, e_list);
 
 	if (conf.c_debug) {
-		iptostring(except->e_addr, except->e_addrlen, addrstr,
+		iptostring(glexcept->e_addr, glexcept->e_addrlen, addrstr,
 		    sizeof(addrstr));
-		inet_ntop(except->e_addr->sa_family, except->e_mask, maskstr,
+		inet_ntop(glexcept->e_addr->sa_family, glexcept->e_mask, maskstr,
 		    sizeof(maskstr));
 		printf("load exception net %s/%s\n", addrstr, maskstr);
 	}
@@ -165,16 +165,16 @@ void
 except_add_from(email)	/* exceptlist must be write-locked */
 	char *email;
 {
-	struct except *except;
+	struct glexcept *glexcept;
 
-	if ((except = malloc(sizeof(*except))) == NULL ||
-	    (except->e_from = strdup(email)) == NULL) {
+	if ((glexcept = malloc(sizeof(*glexcept))) == NULL ||
+	    (glexcept->e_from = strdup(email)) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
-	except->e_type = E_FROM;
-	LIST_INSERT_HEAD(&except_head, except, e_list);
+	glexcept->e_type = E_FROM;
+	LIST_INSERT_HEAD(&except_head, glexcept, e_list);
 
 	if (conf.c_debug)
 		printf("load exception from %s\n", email);
@@ -186,16 +186,16 @@ void
 except_add_rcpt(email)	/* exceptlist must be write-locked */
 	char *email;
 {
-	struct except *except;
+	struct glexcept *glexcept;
 
-	if ((except = malloc(sizeof(*except))) == NULL ||
-	    (except->e_rcpt = strdup(email)) == NULL) {
+	if ((glexcept = malloc(sizeof(*glexcept))) == NULL ||
+	    (glexcept->e_rcpt = strdup(email)) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
-	except->e_type = E_RCPT;
-	LIST_INSERT_HEAD(&except_head, except, e_list);
+	glexcept->e_type = E_RCPT;
+	LIST_INSERT_HEAD(&except_head, glexcept, e_list);
 
 	if (conf.c_debug)
 		printf("load exception rcpt %s\n", email);
@@ -207,16 +207,16 @@ void
 except_add_domain(domain)	/* exceptlist must be write-locked */
 	char *domain;
 {
-	struct except *except;
+	struct glexcept *glexcept;
 
-	if ((except = malloc(sizeof(*except))) == NULL ||
-	    (except->e_domain = strdup(domain)) == NULL) {
+	if ((glexcept = malloc(sizeof(*glexcept))) == NULL ||
+	    (glexcept->e_domain = strdup(domain)) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
-	except->e_type = E_DOMAIN;
-	LIST_INSERT_HEAD(&except_head, except, e_list);
+	glexcept->e_type = E_DOMAIN;
+	LIST_INSERT_HEAD(&except_head, glexcept, e_list);
 
 	if (conf.c_debug)
 		printf("load exception domain %s\n", domain);
@@ -229,7 +229,7 @@ void
 except_add_from_regex(regexstr)	/* exceptlist must be write-locked */
 	char *regexstr;
 {
-	struct except *except;
+	struct glexcept *glexcept;
 	size_t len;
 	int error;
 	char errstr[ERRLEN + 1];
@@ -242,21 +242,21 @@ except_add_from_regex(regexstr)	/* exceptlist must be write-locked */
 		regexstr[len - 1] = '\0';
 	regexstr++;
 
-	if ((except = malloc(sizeof(*except))) == NULL) {
+	if ((glexcept = malloc(sizeof(*glexcept))) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
-	if ((error = regcomp(&except->e_from_re, regexstr, REG_ICASE)) != 0) {
-		regerror(error, &except->e_from_re, errstr, ERRLEN);
+	if ((error = regcomp(&glexcept->e_from_re, regexstr, REG_ICASE)) != 0) {
+		regerror(error, &glexcept->e_from_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);
-		free(except);
+		free(glexcept);
 		exit(EX_OSERR);
 	}
 
-	except->e_type = E_FROM_RE;
-	LIST_INSERT_HEAD(&except_head, except, e_list);
+	glexcept->e_type = E_FROM_RE;
+	LIST_INSERT_HEAD(&except_head, glexcept, e_list);
 
 	if (conf.c_debug)
 		printf("load exception from regex %s\n", regexstr);
@@ -268,7 +268,7 @@ void
 except_add_rcpt_regex(regexstr)	/* exceptlist must be write-locked */
 	char *regexstr;
 {
-	struct except *except;
+	struct glexcept *glexcept;
 	size_t len;
 	int error;
 	char errstr[ERRLEN + 1];
@@ -281,21 +281,21 @@ except_add_rcpt_regex(regexstr)	/* exceptlist must be write-locked */
 		regexstr[len - 1] = '\0';
 	regexstr++;
 
-	if ((except = malloc(sizeof(*except))) == NULL) {
+	if ((glexcept = malloc(sizeof(*glexcept))) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
-	if ((error = regcomp(&except->e_rcpt_re, regexstr, REG_ICASE)) != 0) {
-		regerror(error, &except->e_rcpt_re, errstr, ERRLEN);
+	if ((error = regcomp(&glexcept->e_rcpt_re, regexstr, REG_ICASE)) != 0) {
+		regerror(error, &glexcept->e_rcpt_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);
-		free(except);
+		free(glexcept);
 		exit(EX_OSERR);
 	}
 
-	except->e_type = E_RCPT_RE;
-	LIST_INSERT_HEAD(&except_head, except, e_list);
+	glexcept->e_type = E_RCPT_RE;
+	LIST_INSERT_HEAD(&except_head, glexcept, e_list);
 
 	if (conf.c_debug)
 		printf("load exception rcpt regex %s\n", regexstr);
@@ -307,7 +307,7 @@ void
 except_add_domain_regex(regexstr)	/* exceptlist must be write-locked */
 	char *regexstr;
 {
-	struct except *except;
+	struct glexcept *glexcept;
 	size_t len;
 	int error;
 	char errstr[ERRLEN + 1];
@@ -320,21 +320,21 @@ except_add_domain_regex(regexstr)	/* exceptlist must be write-locked */
 		regexstr[len - 1] = '\0';
 	regexstr++;
 
-	if ((except = malloc(sizeof(*except))) == NULL) {
+	if ((glexcept = malloc(sizeof(*glexcept))) == NULL) {
 		syslog(LOG_ERR, "except malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
-	if ((error = regcomp(&except->e_domain_re, regexstr, REG_ICASE)) != 0) {
-		regerror(error, &except->e_domain_re, errstr, ERRLEN);
+	if ((error = regcomp(&glexcept->e_domain_re, regexstr, REG_ICASE)) != 0) {
+		regerror(error, &glexcept->e_domain_re, errstr, ERRLEN);
 		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
 		    regexstr, errstr);
-		free(except);
+		free(glexcept);
 		exit(EX_OSERR);
 	}
 
-	except->e_type = E_DOMAIN_RE;
-	LIST_INSERT_HEAD(&except_head, except, e_list);
+	glexcept->e_type = E_DOMAIN_RE;
+	LIST_INSERT_HEAD(&except_head, glexcept, e_list);
 
 	if (conf.c_debug)
 		printf("load exception domain regex %s\n", regexstr);
@@ -348,7 +348,7 @@ except_rcpt_filter(rcpt, queueid)
 	char *rcpt;
 	char *queueid;
 {
-	struct except *ex;
+	struct glexcept *ex;
 	int testmode = conf.c_testmode;
 	int retval;
 
@@ -407,7 +407,7 @@ except_sender_filter(sa, salen, hostname, from, queueid)
 	char *from;
 	char *queueid;
 {
-	struct except *ex;
+	struct glexcept *ex;
 	char addrstr[IPADDRSTRLEN];
 	int retval;
 
@@ -510,37 +510,37 @@ emailcmp(big, little)
 
 void
 except_clear(void) {	/* exceptlist must be write locked */
-	struct except *except;
+	struct glexcept *glexcept;
 
 	while(!LIST_EMPTY(&except_head)) {
-		except = LIST_FIRST(&except_head);
-		LIST_REMOVE(except, e_list);
+		glexcept = LIST_FIRST(&except_head);
+		LIST_REMOVE(glexcept, e_list);
 
-		switch (except->e_type) {
+		switch (glexcept->e_type) {
 		case E_NETBLOCK:
-			free(except->e_addr);
-			free(except->e_mask);
+			free(glexcept->e_addr);
+			free(glexcept->e_mask);
 			break;
 		case E_FROM:
-			free(except->e_from);
+			free(glexcept->e_from);
 			break;
 		case E_RCPT:
-			free(except->e_rcpt);
+			free(glexcept->e_rcpt);
 			break;
 		case E_DOMAIN:
-			free(except->e_domain);
+			free(glexcept->e_domain);
 			break;
 		case E_FROM_RE:
-			regfree(&except->e_from_re);
+			regfree(&glexcept->e_from_re);
 			break;
 		case E_RCPT_RE:
-			regfree(&except->e_rcpt_re);
+			regfree(&glexcept->e_rcpt_re);
 			break;
 		case E_DOMAIN_RE:
-			regfree(&except->e_domain_re);
+			regfree(&glexcept->e_domain_re);
 			break;
 		}
-		free(except);
+		free(glexcept);
 	}
 
 	return;
