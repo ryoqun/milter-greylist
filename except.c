@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.29 2004/03/28 13:59:03 manu Exp $ */
+/* $Id: except.c,v 1.30 2004/03/30 15:53:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.29 2004/03/28 13:59:03 manu Exp $");
+__RCSID("$Id: except.c,v 1.30 2004/03/30 15:53:53 manu Exp $");
 #endif
 #endif
 
@@ -138,6 +138,7 @@ except_add_from(email)	/* exceptlist must be write-locked */
 		
 	except->e_type = E_FROM;
 	strncpy(except->e_from, email, ADDRLEN);
+	except->e_from[ADDRLEN] = '\0';
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
 	if (debug)
@@ -159,6 +160,7 @@ except_add_rcpt(email)	/* exceptlist must be write-locked */
 		
 	except->e_type = E_RCPT;
 	strncpy(except->e_rcpt, email, ADDRLEN);
+	except->e_rcpt[ADDRLEN] = '\0';
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
 	if (debug)
