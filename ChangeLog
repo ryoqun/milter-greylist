@@ -1,5 +1,6 @@
 1.5.12:
 	More broken servers in the default config file
+	Fix wrong sync queue counter computations (Attila Bruncsak)
 1.5.11:
 	Don't block threads while reloading config (Attila Bruncsak)
 	Allow regex with # in the configuration (Hajimu Umemoto)

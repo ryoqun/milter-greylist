@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.50 2004/10/15 19:17:39 manu Exp $ */
+/* $Id: sync.c,v 1.51 2004/11/11 08:51:02 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.50 2004/10/15 19:17:39 manu Exp $");
+__RCSID("$Id: sync.c,v 1.51 2004/11/11 08:51:02 manu Exp $");
 #endif
 #endif
 
@@ -1036,8 +1036,8 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 
 		SYNC_WRLOCK;
 		TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
-		SYNC_UNLOCK;
 		peer->p_qlen++;
+		SYNC_UNLOCK;
 	}
 
 	if ((error = pthread_cond_signal(&sync_sleepflag)) != 0) {
@@ -1117,6 +1117,7 @@ sync_sender(dontcare)
 				SYNC_WRLOCK;
 				sync = TAILQ_FIRST(&peer->p_deferred);
 				TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
+				peer->p_qlen--;
 				SYNC_UNLOCK;
 
 				/* 
@@ -1130,12 +1131,12 @@ sync_sender(dontcare)
 					SYNC_WRLOCK;
 					TAILQ_INSERT_HEAD(&peer->p_deferred, 
 					    sync, s_list);
+					peer->p_qlen++;
 					SYNC_UNLOCK;
 
 					break;
 				}
 
-				peer->p_qlen--;
 				sync_free(sync);
 
 				done++;
