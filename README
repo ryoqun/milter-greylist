@@ -1,9 +1,9 @@
-# $Id: README,v 1.15 2004/04/06 14:24:18 manu Exp $
+# $Id: README,v 1.16 2004/04/07 17:24:23 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/04/06 14:24:18 $
+		       $Date: 2004/04/07 17:24:23 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -190,6 +190,11 @@ a thread-safe DNS resolver. For instance, NetBSD-1.6.2 libc-supplied
 resolver is from BIND 4, and it is not thread safe. In order to get
 a stable milter-greylist, you need to link with a BIND 8.2 or higher
 resolver.
+
+When building with libspf_alt-0.4, you might encounter problems if
+libbind is only available as a static library. It seems to be the
+default with BIND 8, which causes troubles. BIND 9 is fine.
+
 
 
  9 Things to look at if things get wrong
