@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.5 2004/04/01 13:39:45 manu Exp $ */
+/* $Id: spf.c,v 1.6 2004/04/01 13:57:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.5 2004/04/01 13:39:45 manu Exp $");
+__RCSID("$Id: spf.c,v 1.6 2004/04/01 13:57:50 manu Exp $");
 #endif
 #endif
 
@@ -47,6 +47,7 @@ __RCSID("$Id: spf.c,v 1.5 2004/04/01 13:39:45 manu Exp $");
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+#include "conf.h"
 #include "spf.h"
 #include "except.h"
 
@@ -79,7 +80,11 @@ spf_alt_check(in, fromp)
 	char from[NS_MAXDNAME + 1];
 	SPF_output_t out;
 	int result = EXF_NONE;
+	struct timeval tv1, tv2, tv3;
 	size_t len;
+
+	if (conf.c_debug)
+		gettimeofday(&tv1, NULL);
 
 	if ((spfconf = SPF_create_config()) == NULL) {
 		syslog(LOG_ERR, "SPF_create_config failed");
@@ -130,6 +135,13 @@ out3:
 out2:
 	SPF_destroy_config(spfconf);
 out1:
+	if (conf.c_debug) {
+		gettimeofday(&tv2, NULL);
+		timersub(&tv2, &tv1, &tv3);
+		syslog(LOG_DEBUG, "SPF lookup performed in %ld.%06lds",  
+		    tv3.tv_sec, tv3.tv_usec);
+	}
+
 	return result;
 }
 
