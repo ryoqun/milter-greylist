@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.22 2004/05/26 09:14:29 manu Exp $ */
+/* $Id: conf.h,v 1.23 2004/06/08 12:04:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -53,6 +53,7 @@
 #endif
 
 struct conf {
+	int c_cold;
 	int c_forced;
 	int c_debug;
 	int c_quiet;

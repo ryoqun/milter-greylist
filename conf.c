@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.21 2004/05/31 15:15:12 manu Exp $ */
+/* $Id: conf.c,v 1.22 2004/06/08 12:04:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.21 2004/05/31 15:15:12 manu Exp $");
+__RCSID("$Id: conf.c,v 1.22 2004/06/08 12:04:21 manu Exp $");
 #endif
 #endif
 
@@ -102,6 +102,8 @@ conf_load(void) 	/* exceptlist must be write-locked */
 		return;
 	}
 
+	conf_in = stream;
+
 	/*
 	 * On some platforms, the thread stack limit is too low and
 	 * conf_parse will get a SIGSEGV because it overflows the
@@ -110,40 +112,47 @@ conf_load(void) 	/* exceptlist must be write-locked */
 	 * In order to fix this, we spawn a new thread just for 
 	 * parsing the config file, and we request a stack big 
 	 * enough to hold the parser data. 2 MB seems okay.
+	 *
+	 * We do not do that during the initial config load because
+	 * it is useless and it will trigger a bug on some systems
+	 * (launching a thread before a fork seems to be a problem)
 	 */
-	conf_in = stream;
+	if (conf.c_cold) {
+		conf_parse();
+		conf.c_cold = 0;
+		defconf.c_cold = 0;
+	} else {
+		if (pthread_attr_init(&attr) != 0) {
+			syslog(LOG_ERR, "pthread_attr_init failed: %s", 
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
 
-	if (pthread_attr_init(&attr) != 0) {
-		syslog(LOG_ERR, "pthread_attr_init failed: %s", 
-		    strerror(errno));
-		exit(EX_OSERR);
-	}
+		if (pthread_attr_setstacksize(&attr, 2 * 1024 * 1024) != 0) {
+			syslog(LOG_ERR, "pthread_attr_setstacksize failed: %s", 
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
 
-	if (pthread_attr_setstacksize(&attr, 2 * 1024 * 1024) != 0) {
-		syslog(LOG_ERR, "pthread_attr_setstacksize failed: %s", 
-		    strerror(errno));
-		exit(EX_OSERR);
-	}
+		if (pthread_create(&tid, &attr, 
+		    (void *(*)(void *))conf_parse, NULL) != 0) {
+			syslog(LOG_ERR, "pthread_create failed: %s", 
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
 
-	if (pthread_create(&tid, &attr, 
-	    (void *(*)(void *))conf_parse, NULL) != 0) {
-		syslog(LOG_ERR, "pthread_create failed: %s", 
-		    strerror(errno));
-		exit(EX_OSERR);
-	}
+		if (pthread_join(tid, NULL) != 0) {
+			syslog(LOG_ERR, "pthread_join failed: %s",
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
 
-	if (pthread_join(tid, NULL) != 0) {
-		syslog(LOG_ERR, "pthread_join failed: %s",
-		    strerror(errno));
-		exit(EX_OSERR);
+		if (pthread_attr_destroy(&attr) != 0) {
+			syslog(LOG_ERR, "pthread_attr_destroy failed: %s",
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
 	}
-
-	if (pthread_attr_destroy(&attr) != 0) {
-		syslog(LOG_ERR, "pthread_attr_destroy failed: %s",
-		    strerror(errno));
-		exit(EX_OSERR);
-	}
-		
 
 	fclose(stream);
 
@@ -213,6 +222,7 @@ void
 conf_defaults(c)
 	struct conf *c;
 {
+	c->c_cold = 1;
 	c->c_forced = C_NONE;
 	c->c_debug = 0;
 	c->c_quiet = 0;
