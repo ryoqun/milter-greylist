@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.14 2004/03/06 20:32:53 manu Exp $ */
+/* $Id: pending.c,v 1.15 2004/03/08 09:31:24 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.14 2004/03/06 20:32:53 manu Exp $");
+__RCSID("$Id: pending.c,v 1.15 2004/03/08 09:31:24 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -47,6 +47,7 @@ __RCSID("$Id: pending.c,v 1.14 2004/03/06 20:32:53 manu Exp $");
 #include <syslog.h>
 
 #include <sys/types.h>
+#include <sys/param.h>
 #include <sys/queue.h>
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -344,7 +345,10 @@ pending_flush(void) {
 
 		pending_textdump(dump);
 		fclose(dump);
-		rename(newdumpfile, dumpfile);
+		if (rename(newdumpfile, dumpfile) != 0) {
+			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
+			    dumpfile, newdumpfile, strerror(errno));
+		}
 
 		if (debug) {
 			(void)gettimeofday(&tv2, NULL);
