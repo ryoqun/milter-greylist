@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.8 2004/04/04 14:14:00 manu Exp $ */
+/* $Id: spf.c,v 1.9 2004/04/07 09:09:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.8 2004/04/04 14:14:00 manu Exp $");
+__RCSID("$Id: spf.c,v 1.9 2004/04/07 09:09:09 manu Exp $");
 #endif
 #endif
 
@@ -102,6 +102,7 @@ out1:
 #ifdef HAVE_SPF_ALT
 #include <spf_alt/spf.h>
 #include <spf_alt/spf_dns_resolv.h>
+#include <spf_alt/spf_lib_version.h>
 
 /* SMTP needs at least 64 chars for local part and 255 for doamin... */
 #define NS_MAXDNAME 1025 
@@ -159,7 +160,11 @@ spf_alt_check(in, fromp)
 	 * Get the SPF result
 	 */
 	SPF_init_output(&out);
+#if ((SPF_LIB_VERSION_MAJOR == 0) && (SPF_LIB_VERSION_MINOR <= 3))
 	out = SPF_result(spfconf, dnsconf, NULL);
+#else
+	out = SPF_result(spfconf, dnsconf);
+#endif
 	if (out.result == SPF_RESULT_PASS) 
 		result = EXF_SPF;
 
