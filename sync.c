@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.26 2004/03/20 07:19:03 manu Exp $ */
+/* $Id: sync.c,v 1.27 2004/03/20 11:20:05 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -91,6 +91,7 @@ peer_clear(void) {
 		while(!TAILQ_EMPTY(&peer->p_deferred)) {
 			sync = TAILQ_FIRST(&peer->p_deferred);
 			TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
+			peer->p_qlen--;
 			free(sync);
 		}
 			
@@ -118,6 +119,7 @@ peer_add(addr)
 		exit(EX_OSERR);
 	}
 
+	peer->p_qlen = 0;
 	peer->p_stream = NULL;
 	memcpy(&peer->p_addr, addr, sizeof(peer->p_addr));
 	inet_ntop(AF_INET, &peer->p_addr, peer->p_name, IPADDRLEN);
@@ -201,7 +203,9 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 	 */
 	sync_waitdata(peer->p_socket);
 	if (fgets(line, LINELEN, peer->p_stream) == NULL) {
-		syslog(LOG_ERR, "lost connexion with peer %s", peer->p_name);
+		syslog(LOG_ERR, "lost connexion with peer %s: "
+		    "%s (%d entries queued)", 
+		    peer->p_name, strerror(errno), peer->p_qlen);
 		fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return -1;
@@ -209,7 +213,8 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 
 	if ((replystr = strtok(line, sep)) == NULL) {
 		syslog(LOG_ERR, "Unexpected reply \"%s\" from %s, "
-		    "closing connexion", line, peer->p_name);
+		    "closing connexion (%d entries queued)", 
+		    line, peer->p_name, peer->p_qlen);
 		fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return -1;
@@ -218,7 +223,8 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 	replycode = atoi(replystr);
 	if (replycode != 201) {
 		syslog(LOG_ERR, "Unexpected reply \"%s\" from %s, "
-		    "closing connexion", line, peer->p_name);
+		    "closing connexion (%d entries queued)", 
+		    line, peer->p_name, peer->p_qlen);
 		fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return -1;
@@ -259,8 +265,9 @@ peer_connect(peer)	/* peer list is read-locked */
 	inet_ntop(AF_INET, &peer->p_addr, peername, IPADDRLEN);
 
 	if ((s = socket(AF_INET, SOCK_STREAM, proto)) == -1) {
-		syslog(LOG_ERR, "cannot sync with peer %s, socket failed: %s", 
-		    peername, strerror(errno));
+		syslog(LOG_ERR, "cannot sync with peer %s, "
+		    "socket failed: %s (%d entries queued)", 
+		    peername, strerror(errno), peer->p_qlen);
 		return -1;
 	}
 
@@ -278,8 +285,9 @@ peer_connect(peer)	/* peer list is read-locked */
 	laddr.sin_addr.s_addr = INADDR_ANY;
 
 	if (bind(s, (struct sockaddr *)&laddr, sizeof(laddr)) != 0) { 
-		syslog(LOG_ERR, "cannot sync with peer %s, bind failed: %s", 
-		    peername, strerror(errno));
+		syslog(LOG_ERR, "cannot sync with peer %s, "
+		    "bind failed: %s (%d entries queued)",
+		    peername, strerror(errno), peer->p_qlen);
 		close(s);
 		return -1;
 	}
@@ -293,50 +301,55 @@ peer_connect(peer)	/* peer list is read-locked */
 	raddr.sin_addr = peer->p_addr;
 
 	if (connect(s, (struct sockaddr *)&raddr, sizeof(raddr)) != 0) {
-		syslog(LOG_ERR, "cannot sync with peer %s, connect failed: %s", 
-		    peername, strerror(errno));
+		syslog(LOG_ERR, "cannot sync with peer %s, "
+		    "connect failed: %s (%d entries queued)", 
+		    peername, strerror(errno), peer->p_qlen);
 		close(s);
 		return -1;
 	}
 
 	param = O_NONBLOCK;
 	if (fcntl(s, F_SETFL, &param) != 0) {
-		syslog(LOG_ERR, "cannot set non blockinf I/O with %s: %s\n",
+		syslog(LOG_ERR, "cannot set non blocking I/O with %s: %s",
 		    peername, strerror(errno));
 	}
 
 	if ((stream = fdopen(s, "w+")) == NULL) {
-		syslog(LOG_ERR, "cannot sync with peer %s, fdopen failed: %s", 
-		    peername, strerror(errno));
+		syslog(LOG_ERR, "cannot sync with peer %s, "
+		    "fdopen failed: %s (%d entries queued)", 
+		    peername, strerror(errno), peer->p_qlen);
 		close(s);
 		return -1;
 	}
 
 	if (setvbuf(stream, NULL, _IOLBF, 0) != 0)
-		syslog(LOG_ERR, "cannot set line buffering with peer %s: %s\n", 
+		syslog(LOG_ERR, "cannot set line buffering with peer %s: %s", 
 		    peername, strerror(errno));	
 
 	sync_waitdata(s);	
 	if (fgets(line, LINELEN, stream) == NULL) {
-		syslog(LOG_ERR, "Lost connexion with peer %s: %s\n", 
-		    peername, strerror(errno));
+		syslog(LOG_ERR, "Lost connexion with peer %s: "
+		    "%s (%d entries queued)", 
+		    peername, strerror(errno), peer->p_qlen);
 		goto bad;
 	}
 
 	if ((replystr = strtok(line, sep)) == NULL) {
 		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
-		    "closing connexion", line, peername);
+		    "closing connexion (%d entries queued)", 
+		    line, peername, peer->p_qlen);
 		goto bad;
 	}
 
 	replycode = atoi(replystr);
 	if (replycode != 200) {
 		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
-		    "closing connexion", line, peername);
+		    "closing connexion (%d entries queued)", 
+		    line, peername, peer->p_qlen);
 		goto bad;
 	}
 
-	syslog(LOG_INFO, "Connection to %s established\n", peername);
+	syslog(LOG_INFO, "Connection to %s established", peername);
 	peer->p_stream = stream;
 	peer->p_socket = s;
 	return 0;
@@ -752,25 +765,38 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 {
 	struct sync *sync;
 
-	if ((sync = malloc(sizeof(*sync))) == NULL) {
-		syslog(LOG_ERR, "cannot allocate memory: %s", strerror(errno)); 
-		exit(EX_OSERR);
-	}
-
-	sync->s_peer = peer;
-	sync->s_type = type;
-	/* 
-	 * Copy it instead of referencing it, since it could
-	 * disapear before been treated. We don't have this
-	 * problem with the peer, since the sync lists get
-	 * purged at the same time the peer list get purged.
-	 * One day, do that better, with refcounts.
+	/*
+	 * If the queue has overflown, try to wakeup sync_sender to
+	 * void it, but do not accept new entries anymore.
 	 */
-	memcpy(&sync->s_pending, pending, sizeof(*pending)); 
+	if (peer->p_qlen >= SYNC_MAXQLEN) {
+		syslog(LOG_ERR, "peer %s queue overflow (%d entries), "
+		    "discarding new entry", peer->p_name, peer->p_qlen);
 
-	SYNC_WRLOCK;
-	TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
-	SYNC_UNLOCK;
+	} else {
+
+		if ((sync = malloc(sizeof(*sync))) == NULL) {
+			syslog(LOG_ERR, "cannot allocate memory: %s", 
+			    strerror(errno)); 
+			exit(EX_OSERR);
+		}
+
+		sync->s_peer = peer;
+		sync->s_type = type;
+		/* 
+		 * Copy it instead of referencing it, since it could
+		 * disapear before been treated. We don't have this
+		 * problem with the peer, since the sync lists get
+		 * purged at the same time the peer list get purged.
+		 * One day, do that better, with refcounts.
+		 */
+		memcpy(&sync->s_pending, pending, sizeof(*pending)); 
+
+		SYNC_WRLOCK;
+		TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
+		SYNC_UNLOCK;
+		peer->p_qlen++;
+	}
 
 	if (pthread_cond_signal(&sync_sleepflag) != 0) {
 		syslog(LOG_ERR, 
@@ -842,9 +868,11 @@ sync_sender(dontcare)
 					TAILQ_INSERT_HEAD(&peer->p_deferred, 
 					    sync, s_list);
 					SYNC_UNLOCK;
+
 					break;
 				}
 
+				peer->p_qlen--;
 				free(sync);
 
 				done++;

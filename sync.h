@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.6 2004/03/12 10:03:11 manu Exp $ */
+/* $Id: sync.h,v 1.7 2004/03/20 11:20:05 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -35,6 +35,8 @@
 #include "pending.h"
 #include "milter-greylist.h"
 
+#define SYNC_MAXQLEN	1024
+
 #define CMDLEN 10
 #define LINELEN 512
 
@@ -61,6 +63,7 @@ struct peer {
 	int p_socket;
 	struct synclist p_deferred;
 	LIST_ENTRY(peer) p_list;
+	size_t p_qlen;
 };
 
 typedef enum { PS_CREATE, PS_DELETE } peer_sync_t;
