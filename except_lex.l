@@ -19,9 +19,6 @@ rcpt		[Rr][Cc][Pp][Tt]:?
 	#include <sysexits.h>
 
 	int except_line = 1;
-	char ipaddr[IPADDRLEN + 1];
-	char cidr[IPADDRLEN + 1];
-	char email[ADDRLEN + 1];
 %}
 
 %%
@@ -32,13 +29,11 @@ rcpt		[Rr][Cc][Pp][Tt]:?
 {from}		{ return FROM; }
 {rcpt}		{ return RCPT; }
 {email}		{
-			strncpy(email, yytext, ADDRLEN);
-			yylval.email = email;
+			yylval.email = yytext;
 			return EMAIL;
 		}
 {ipaddr}	{ 
-			strncpy(ipaddr, yytext, IPADDRLEN);
-			if (inet_pton(AF_INET, ipaddr, &yylval.ipaddr) != 1) {
+			if (inet_pton(AF_INET, yytext, &yylval.ipaddr) != 1) {
 				printf("invalid IP address line %d\n", 
 				    except_line);
 				exit(EX_DATAERR);
@@ -46,8 +41,7 @@ rcpt		[Rr][Cc][Pp][Tt]:?
 			return IPADDR; 
 		}
 {cidr}		{ 
-			strncpy(cidr, yytext, IPADDRLEN); 
-			yylval.cidr = atoi(cidr);
+			yylval.cidr = atoi(yytext);
 			return CIDR; 
 		}
 \n		{ 

@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.5 2004/03/06 12:56:33 manu Exp $ */
+/* $Id: pending.h,v 1.6 2004/03/06 15:15:05 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -65,11 +65,13 @@ struct pending {
 	TAILQ_ENTRY(pending) p_list;
 };
 
+extern FILE *dump_in;
+extern int dump_line;
 extern int delay;
 extern char *dumpfile;
 
 int pending_init(void);
-struct pending *pending_get(char *, struct in_addr *, char *, char *, long);
+struct pending *pending_get(struct in_addr *, char *, char *, time_t);
 int pending_check(struct in_addr *, char *, char *, long *, long *);
 void pending_put(struct pending *);
 void pending_log(struct pending *);

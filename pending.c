@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.7 2004/03/06 12:56:32 manu Exp $ */
+/* $Id: pending.c,v 1.8 2004/03/06 15:15:05 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -61,6 +61,7 @@ pthread_rwlock_t dump_lock;	/* protects against simulataneous dumps */
 
 int delay = DELAY;
 char *dumpfile = DUMPFILE;
+int dump_parse(void);
 
 #define PENDING_WRLOCK if (pthread_rwlock_wrlock(&pending_lock) != 0) {	\
 		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed\n",	\
@@ -107,8 +108,7 @@ pending_init(void) {
 
 
 struct pending *
-pending_get(addr, in, from, rcpt, date)  /* pending_lock must be write-locked */
-	char *addr;
+pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
@@ -129,8 +129,7 @@ pending_get(addr, in, from, rcpt, date)  /* pending_lock must be write-locked */
 		pending->p_tv.tv_sec = date;
 	}
 
-	strncpy(pending->p_addr, addr, IPADDRLEN);
-	pending->p_addr[IPADDRLEN] = '\0';
+	inet_ntop(AF_INET, in, pending->p_addr, IPADDRLEN);
 	strncpy(pending->p_from, from, ADDRLEN);
 	pending->p_from[ADDRLEN] = '\0';
 	strncpy(pending->p_rcpt, rcpt, ADDRLEN);
@@ -248,7 +247,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 	 * It was not found. Create it.
 	 * Error handling is useless here, we will tempfail anyway
 	 */
-	pending = pending_get(addr, in, from, rcpt, 0);
+	pending = pending_get(in, from, rcpt, 0);
 	rest = delay;
 
 out:
@@ -279,47 +278,6 @@ pending_textdump(stream)
 		    pending->p_rcpt, pending->p_tv.tv_sec);
 	}
 	PENDING_UNLOCK;
-	return;
-}
-
-void
-pending_import(stream)
-	FILE *stream;
-{
-	char addr[IPADDRLEN + 1];
-	char from[ADDRLEN + 1];
-	char rcpt[ADDRLEN + 1];
-	char format[ADDRLEN + 1];
-	struct in_addr in;
-	long date;
-	int readen;
-
-	snprintf(format, ADDRLEN, "%%%d[^\t]\t%%%d[^\t]\t%%%d[^\t]\t%%ld\n", 
-	    IPADDRLEN, ADDRLEN, ADDRLEN);
-
-	if (debug)
-		syslog(LOG_DEBUG, "format=\"%s\"\n", format);
-
-	PENDING_WRLOCK;
-	while (feof(stream) == 0) {
-		readen = fscanf(stream, format, &addr, &from, &rcpt, &date);
-		if (debug)
-			syslog(LOG_DEBUG, "import: readen %d\n", readen);
-		if (readen != 4)
-			break;
-		if (inet_pton(AF_INET, addr, &in) != 1) {
-			syslog(LOG_ERR, "import: skip bad address %s\n", addr);
-			break;
-		}
-
-		if (debug)
-			syslog(LOG_DEBUG, "import: \"%s\" \"%s\" \"%s\", %ld\n",
-			    addr, from, rcpt, date);
-
-		pending_get(addr, &in, from, rcpt, date);
-	}
-	PENDING_UNLOCK;
-
 	return;
 }
 
@@ -386,14 +344,15 @@ pending_reload(void) {
 
 	/* 
 	 * Re-import a saved greylist
-	 * This is intented for startup, not for 
-	 * concurent runtime: nothing is locked properly.
 	 */
 	if ((dump = fopen(dumpfile, "r")) == NULL) {
 		syslog(LOG_ERR, "cannot read dumpfile \"%s\"\n", dumpfile);
 		syslog(LOG_ERR, "starting with an empty greylist\n");
 	} else {
-		pending_import(dump);
+		dump_in = dump;
+		PENDING_WRLOCK;
+		dump_parse();
+		PENDING_UNLOCK;
 		fclose(dump);
 	}
 

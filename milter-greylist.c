@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.16 2004/03/06 12:56:32 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.17 2004/03/06 15:15:05 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -265,7 +265,6 @@ main(argc, argv)
 {
 	int ch;
 	int gotsocket = 0;
-	pthread_t tid;
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
