@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.8 2004/03/31 12:10:16 manu Exp $ */
+/* $Id: conf.h,v 1.9 2004/03/31 15:31:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -63,7 +63,7 @@ struct conf {
 	int c_autowhite_validity;
 	char *c_pidfile;
 	char *c_dumpfile;
-	struct in_addr c_match_mask;
+	in_addr_t c_match_mask;
 	char *c_socket;
 	char *c_user;
 	int c_nodetach;

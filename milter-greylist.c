@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.66 2004/03/31 15:13:50 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.67 2004/03/31 15:31:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.66 2004/03/31 15:13:50 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.67 2004/03/31 15:31:59 manu Exp $");
 #endif
 #endif
 
@@ -840,16 +840,18 @@ writepid(pidfile)
 }
 
 
-struct in_addr *
+in_addr_t *
 cidr2mask(cidr, mask)
 	int cidr;
-	struct in_addr *mask;
+	in_addr_t *mask;
 {
+	struct in_addr *inmask = (struct in_addr *)mask;
+
 	if ((cidr == 0) || (cidr > 32)) {
 		bzero((void *)mask, sizeof(*mask));
 	} else {
 		cidr = 32 - cidr;
-		*mask = inet_makeaddr(~((1UL << cidr) - 1), 0L);
+		*inmask = inet_makeaddr(~((1UL << cidr) - 1), 0L);
 	}
 	
 	return mask;

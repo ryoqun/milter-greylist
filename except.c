@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.32 2004/03/31 10:07:17 manu Exp $ */
+/* $Id: except.c,v 1.33 2004/03/31 15:31:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.32 2004/03/31 10:07:17 manu Exp $");
+__RCSID("$Id: except.c,v 1.33 2004/03/31 15:31:59 manu Exp $");
 #endif
 #endif
 
@@ -84,7 +84,7 @@ except_add_netblock(in, cidr)	/* exceptlist must be write-locked */
 	struct in_addr *in;
 	int cidr;
 {
-	struct in_addr mask;
+	in_addr_t mask;
 	struct except *except;
 	char addrstr[IPADDRLEN + 1];
 	char maskstr[IPADDRLEN + 1];
@@ -96,7 +96,7 @@ except_add_netblock(in, cidr)	/* exceptlist must be write-locked */
 	}
 
 	cidr2mask(cidr, &mask);
-	in->s_addr &= mask.s_addr;
+	in->s_addr &= mask;
 
 	if ((except = malloc(sizeof(*except))) == NULL) {
 		perror("cannot allocate memory");

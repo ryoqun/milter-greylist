@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.10 2004/03/31 12:10:16 manu Exp $ */
+/* $Id: conf.c,v 1.11 2004/03/31 15:31:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.10 2004/03/31 12:10:16 manu Exp $");
+__RCSID("$Id: conf.c,v 1.11 2004/03/31 15:31:59 manu Exp $");
 #endif
 #endif
 
@@ -78,7 +78,7 @@ struct conf conf = {
 	AUTOWHITE_VALIDITY,	/* c_autowhite_validity */
 	NULL,		/* c_pidfile */
 	DUMPFILE,	/* c_dumpfile */
-	{0xffffffff},	/* c_match_mask */
+	0xffffffff,	/* c_match_mask */
 	NULL,		/* c_socket */
 	NULL,		/* c_user */
 	0,		/* c_nodetach */
