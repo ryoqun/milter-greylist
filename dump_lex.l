@@ -6,7 +6,7 @@
 num		[0-9]{1,}
 byte		[0-9]{1,3}
 ipaddr		{byte}"."{byte}"."{byte}"."{byte}
-ip6addr		([0-9a-fA-F]*:)+[0-9a-fA-F]*(%[0-9a-zA-Z]+)?
+ip6addr		([0-9a-fA-F]*:){2,}[0-9a-fA-F]*(%[0-9a-zA-Z]+)?
 atext		[A-Za-z0-9!#$%&'*+/=?$^_`}{|~.-]{1,}
 qtext		"\""[!-~]{1,}"\""
 mailbox		{atext}|{qtext}
@@ -24,7 +24,7 @@ auto		[Aa][Uu][Tt][Oo]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.12 2004/08/01 09:27:03 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.13 2004/10/13 09:56:29 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -47,11 +47,8 @@ auto		[Aa][Uu][Tt][Oo]
 			socklen_t salen = sizeof(yylval.ipaddr);
 
 			if (ipfromstring(yytext, SA(&yylval.ipaddr), &salen,
-			    AF_INET) != 1) {
-				printf("invalid IPv4 address line %d\n",
-				    dump_line);
-				exit(EX_DATAERR);
-			}
+			    AF_INET) != 1)
+				REJECT;
 			return IPADDR; 
 		}
 {ip6addr}	{
@@ -59,12 +56,8 @@ auto		[Aa][Uu][Tt][Oo]
 			socklen_t salen = sizeof(yylval.ip6addr);
 
 			if (ipfromstring(yytext, SA(&yylval.ip6addr), &salen,
-			    AF_INET6) != 1) {
-				printf("invalid IPv6 address line %d\n",
-				    dump_line);
-				printf("[%s]\n", yytext);
-				exit(EX_DATAERR);
-			}
+			    AF_INET6) != 1)
+				REJECT;
 #endif
 			return IP6ADDR;
 		}
