@@ -1,9 +1,9 @@
-# $Id: README,v 1.2 2004/03/10 21:35:45 manu Exp $
+# $Id: README,v 1.3 2004/03/14 21:36:33 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/03/10 21:35:45 $
+		       $Date: 2004/03/14 21:36:33 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -128,13 +128,16 @@ X-Greylist: Delayed for 00:53:21 by milter-greylist-0.7 (mail.example.net
 	    [192.0.2.16]); Wed, 3 Mar 2004 17:01:06 -0000
 
 The file /var/milter-greylist/greylist.db is a dump of the greylist.
-It is done every 5 minutes and is used to restore state after
+It is done on each change and is used to restore state after
 milter-greylist has been restarted. The file contains an entry per
 line, with four columns:  IP address, sender e-mail address,
 recipient e-mail address, and time when the message will be accepted
 (in seconds since 00:00:00 01-01-1970).  Here is an example:
 
 10.0.23.1  <evilspammer@example.com>  <pooruser@example.net>  1078344409
+
+Additionally, you can find a human-readable time in the comment at the
+end of each line.
 
 
  7 License
