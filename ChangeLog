@@ -1,4 +1,5 @@
 1.5.2:
+	Add a template Makefile to manually tweak if configure fails
 	Feed strtkok_r with a NULL initialized pointer
 	More mixed I/O fix: another fflush after a fgets() 
 1.5.1:

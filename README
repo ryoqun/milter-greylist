@@ -1,9 +1,9 @@
-# $Id: README,v 1.21 2004/05/24 22:01:21 manu Exp $
+# $Id: README,v 1.22 2004/06/17 20:03:25 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/05/24 22:01:21 $
+		       $Date: 2004/06/17 20:03:25 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -33,6 +33,12 @@ If libpthread and libmilter are not automatically located, use
 --with-libpthread and --with-libmilter flags to the configure
 script.  If you intend to run milter-greylist under an unprivileged
 UID, use the --with-user flag.
+
+A Makefile is supplied in the distribution in case you run into real 
+trouble with configure and are unable to get it generating a Makefile
+suited to your system. Of course this Makefile is not likely to work 
+on your system (it is configured for NetBSD-1.6.x) and it will probably
+need manual tweaks.
 
 On the make install step, the Makefile will install a default config
 file in /etc/mail/greylist.conf, except if there is already such
