@@ -1,6 +1,7 @@
+1.0.2:
+	Fix the mising units in ps output for -a and -w
 1.0.1:
 	Accept any e-mail address as specified in RFC 2821 from config and dump
-	Fix the mising units in ps output for -a and -w
 	Fix typos
 
 1.0: First stable release
