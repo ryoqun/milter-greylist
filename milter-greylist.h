@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.1 2004/02/21 00:01:17 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.2 2004/02/21 09:42:07 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,12 +31,6 @@
 
 #ifndef _MILTER_GREYLIST_H_
 #define _MILTER_GREYLIST_H_
-
-#ifndef true
-typedef int bool;
-# define false	0
-# define true	1
-#endif /* ! true */
 
 struct mlfi_priv {
 	struct in_addr priv_addr;
