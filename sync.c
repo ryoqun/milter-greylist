@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.5 2004/03/10 20:36:29 manu Exp $ */
+/* $Id: sync.c,v 1.6 2004/03/10 21:11:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -53,16 +53,10 @@ __RCSID("$Id");
 #include "sync.h"
 #include "milter-greylist.h"
 
-extern int debug;
-
 int sync_master_runs = 0;
 struct peerlist peer_head;
 pthread_rwlock_t peer_lock;
 pthread_cond_t sync_sleepflag;
-
-#define PEER_WRLOCK WRLOCK(peer_lock);
-#define PEER_RDLOCK RDLOCK(peer_lock);
-#define PEER_UNLOCK UNLOCK(peer_lock);
 
 int 
 peer_init(void) {

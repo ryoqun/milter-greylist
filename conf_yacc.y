@@ -3,7 +3,7 @@
 %{
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: except_yacc.y,v 1.5 2004/03/10 14:17:13 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.1 2004/03/10 21:11:45 manu Exp $");
 #endif
 
 #include "except.h"
@@ -36,4 +36,4 @@ rcptaddr:	RCPT EMAIL	{ except_add_rcpt($2); }
 peeraddr:	PEER IPADDR	{ peer_add(&$2); }
 	;
 %%
-#include "except_lex.c"
+#include "conf_lex.c"

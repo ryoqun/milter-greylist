@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.24 2004/03/08 21:41:53 manu Exp $
+# $Id: configure.ac,v 1.25 2004/03/10 21:11:45 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -62,9 +62,9 @@ AC_ARG_WITH(user,
 	[  --with-user=USERNAME   The user that will run milter-greylist ],
 	[AC_SUBST(USER, $withval)], [AC_SUBST(USER, root)])
 
-AC_ARG_WITH(exceptfile,  
-	[  --with-exceptfile=PATH Location of whitelist],
-	[CFLAGS=$CFLAGS" -DEXCEPTFILE=\\\"$withval\\\""])
+AC_ARG_WITH(conffile,  
+	[  --with-conffile=PATH Location of config file],
+	[CFLAGS=$CFLAGS" -DCONFFILE=\\\"$withval\\\""])
 AC_ARG_WITH(dumpfile,
 	[  --with-dumpfile=PATH   Location of dump file],
 	[CFLAGS=$CFLAGS" -DDUMPFILE=\\\"$withval\\\""])

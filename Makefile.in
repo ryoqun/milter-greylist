@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.16 2004/03/10 14:17:13 manu Exp $
+# $Id: Makefile.in,v 1.17 2004/03/10 21:11:45 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -50,15 +50,15 @@ YACC=		@YACC@
 TRUE=		@TRUE@
 
 OBJ= 		milter-greylist.o pending.o except.o sync.o \
-		except_yacc.o dump_yacc.o
-SRC= 		milter-greylist.c pending.c except.c sync.c
-GENSRC=		except_yacc.c except_lex.c dump_yacc.c dump_lex.c
+		conf_yacc.o dump_yacc.o conf.o
+SRC= 		milter-greylist.c pending.c except.c sync.c conf.c
+GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c
 
 milter-greylist:	${OBJ}
 	${CC} -o milter-greylist ${OBJ} ${LDFLAGS} ${LIBS}
 
 sync_yacc.o:	sync_yacc.c sync_lex.c
-except_yacc.o:	except_yacc.c except_lex.c
+conf_yacc.o:	conf_yacc.c conf_lex.c
 dump_yacc.o:	dump_yacc.c dump_lex.c
 
 all:	depend milter-greylist
@@ -66,14 +66,21 @@ all:	depend milter-greylist
 install:	milter-greylist
 	${INSTALL} -m 755 milter-greylist ${BINDIR}
 	${INSTALL} -m 644 milter-greylist.8 ${MANDIR}/man8
-	${TEST} -f /etc/mail/greylist.except || \
-	     ${INSTALL} -m 644 greylist.except /etc/mail
+	${TEST} -f /etc/mail/greylist.conf -o -f /etc/mail/greylist.except || \
+	     ${INSTALL} -m 644 greylist.conf /etc/mail
 	${INSTALL} -d -m 755 -o ${USER} /var/milter-greylist
 	@${TEST} -f /var/db/greylist.db && (			 	   \
 		echo "	================================================"; \
 		echo "	  WARNING: the dump file location has changed,  "; \
 		echo "	  Please move /var/db/greylist.db, the default  "; \
 		echo "	  location is now in /var/milter-greylist/      "; \
+		echo "	================================================"; \
+	) || ${TRUE}
+	@${TEST} -f /etc/mail/greylist.except && (		 	   \
+		echo "	================================================"; \
+		echo "	 WARNING: the config file name has changed,     "; \
+		echo "	 Please rename /etc/mail/greylist.except, the   "; \
+		echo "	 default name is now in /etc/mail/greylist.conf "; \
 		echo "	================================================"; \
 	) || ${TRUE}
 

@@ -1,7 +1,7 @@
 %option nodefault
 %option nomain
 %option noyywrap
-%option prefix="except_"
+%option prefix="conf_"
 
 byte		[0-9]{1,3}
 ipaddr		{byte}"."{byte}"."{byte}"."{byte}
@@ -17,14 +17,14 @@ peer		[Pp][Ee][Ee][Rr]:?
 %{
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: except_lex.l,v 1.8 2004/03/10 14:17:13 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.1 2004/03/10 21:11:45 manu Exp $");
 	#endif
 
 	#include <string.h>
 	#include <errno.h>
 	#include <sysexits.h>
 
-	int except_line = 1;
+	int conf_line = 1;
 %}
 
 %%
@@ -43,7 +43,7 @@ peer		[Pp][Ee][Ee][Rr]:?
 {ipaddr}	{ 
 			if (inet_pton(AF_INET, yytext, &yylval.ipaddr) != 1) {
 				printf("invalid IP address line %d\n", 
-				    except_line);
+				    conf_line);
 				exit(EX_DATAERR);
 			}
 			return IPADDR; 
@@ -53,12 +53,12 @@ peer		[Pp][Ee][Ee][Rr]:?
 			return CIDR; 
 		}
 \n		{ 
-			except_line++; 
+			conf_line++; 
 			return yytext[0]; 
 		}
 <*>.|\n		{ 
 			printf("unknown token \"%s\" line %d\n", 
-			    yytext, except_line); 
+			    yytext, conf_line); 
 			exit(EX_DATAERR);
 		}
 %%
@@ -67,6 +67,6 @@ void
 yyerror(err)
 	char *err;
 {
-	fprintf(stderr, "error at line %d: %s\n", except_line, err);
+	fprintf(stderr, "error at line %d: %s\n", conf_line, err);
 	return;
 }

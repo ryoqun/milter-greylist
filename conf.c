@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.10 2004/03/10 21:11:45 manu Exp $ */
+/* $Id: conf.c,v 1.1 2004/03/10 21:11:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -28,66 +28,91 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef _PENDING_H_
-#define _PENDING_H_
 
+#define _XOPEN_SOURCE 500
+
+#include <sys/cdefs.h>
+#ifdef __RCSID
+__RCSID("$Id: conf.c,v 1.1 2004/03/10 21:11:45 manu Exp $");
+#endif
+
+#include <errno.h>
 #include <stdio.h>
+#include <ctype.h>
+#include <stdlib.h>
+#include <string.h>
+#include <strings.h>
+#include <syslog.h>
 #include <pthread.h>
-#include <sys/time.h>
+#include <sysexits.h>
 #include <sys/queue.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#ifndef DELAY
-#define DELAY	1800	/* 1800 seconds = 30 minutes */
-#endif
-
-#ifndef TIMEOUT
-#define TIMEOUT (3600 * 24 * 5) /* 432000 seconds = 5 days */
-#endif
-
-#ifndef DUMPFILE
-#define DUMPFILE "/var/milter-greylist/greylist.db"
-#endif
-
-#define ADDRLEN	31
-#define IPADDRLEN sizeof("255.255.255.255")
-
+#include "conf.h"
+#include "except.h"
+#include "sync.h"
 #include "milter-greylist.h"
 
-#define PENDING_WRLOCK WRLOCK(pending_lock)
-#define PENDING_RDLOCK RDLOCK(pending_lock)
-#define PENDING_UNLOCK UNLOCK(pending_lock)
+char *conffile = CONFFILE;
+struct timeval conffile_modified;
 
-#define DUMP_WRLOCK WRLOCK(dump_lock)
-#define DUMP_RDLOCK RDLOCK(dump_lock)
-#define DUMP_UNLOCK UNLOCK(dump_lock)
+void
+conf_load(void) 	/* exceptlist must be write-locked */
+{
+	FILE *stream;
 
-TAILQ_HEAD(pendinglist, pending);
+	if ((stream = fopen(conffile, "r")) == NULL) {
+		fprintf(stderr, "cannot open config file %s: %s\n", 
+		    conffile, strerror(errno));
+		fprintf(stderr, "continuing with no exception list\n");
+		return;
+	}
 
-struct pending {
-	char p_addr[IPADDRLEN + 1];
-	struct in_addr p_in;
-	char p_from[ADDRLEN + 1];
-	char p_rcpt[ADDRLEN + 1];
-	struct timeval p_tv;
-	TAILQ_ENTRY(pending) p_list;
-};
+	conf_in = stream;
+	conf_parse();
+	fclose(stream);
 
-extern FILE *dump_in;
-extern int dump_line;
-extern int delay;
-extern char *dumpfile;
+	(void)gettimeofday(&conffile_modified, NULL);
 
-int pending_init(void);
-struct pending *pending_get(struct in_addr *, char *, char *, time_t);
-int pending_check(struct in_addr *, char *, char *, time_t *, time_t *);
-void pending_del(struct in_addr *, char *, char *, time_t);
-void pending_put(struct pending *);
-void pending_textdump(FILE *);
-void pending_import(FILE *);
-void pending_flush(void);
-void pending_reload(void);
+	return;
+}
 
-#endif /* _PENDING_H_ */
+void
+conf_update(void) {
+	struct stat st;
+	struct timeval tv1, tv2, tv3;
+	
+	if (stat(conffile, &st) != 0) {
+		syslog(LOG_DEBUG, "config file \"%s\" unavailable", 
+		    conffile);
+		return;
+	}
+
+	/* 
+	 * conffile_modified is updated in conf_load()
+	 */
+	if (st.st_mtime < conffile_modified.tv_sec) 
+		return;
+
+	syslog(LOG_INFO, "reloading \"%s\"", conffile);
+	if (debug)
+		(void)gettimeofday(&tv1, NULL);
+
+	peer_clear();
+	EXCEPT_WRLOCK;
+	except_clear();
+	conf_load();
+	EXCEPT_UNLOCK;
+
+	if (debug) {
+		(void)gettimeofday(&tv2, NULL);
+		timersub(&tv2, &tv1, &tv3);
+		syslog(LOG_DEBUG, "reloaded config file in %ld.%06lds", 
+		    tv3.tv_sec, tv3.tv_usec);
+	}
+
+	return;
+}

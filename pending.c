@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.20 2004/03/10 20:36:29 manu Exp $ */
+/* $Id: pending.c,v 1.21 2004/03/10 21:11:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.20 2004/03/10 20:36:29 manu Exp $");
+__RCSID("$Id: pending.c,v 1.21 2004/03/10 21:11:45 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -60,8 +60,6 @@ __RCSID("$Id: pending.c,v 1.20 2004/03/10 20:36:29 manu Exp $");
 #include "pending.h"
 #include "milter-greylist.h"
 
-extern int debug;
-
 struct pendinglist pending_head;
 int pending_dirty;
 pthread_rwlock_t pending_lock; 	/* protects pending_head and pending_dirty */
@@ -70,14 +68,6 @@ pthread_rwlock_t dump_lock;	/* protects against simulataneous dumps */
 int delay = DELAY;
 char *dumpfile = DUMPFILE;
 int dump_parse(void);
-
-#define PENDING_WRLOCK WRLOCK(pending_lock)
-#define PENDING_RDLOCK RDLOCK(pending_lock)
-#define PENDING_UNLOCK UNLOCK(pending_lock)
-
-#define DUMP_WRLOCK WRLOCK(dump_lock)
-#define DUMP_RDLOCK RDLOCK(dump_lock)
-#define DUMP_UNLOCK UNLOCK(dump_lock)
 
 int
 pending_init(void) {

@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.18 2004/03/10 20:36:29 manu Exp $ */
+/* $Id: except.c,v 1.19 2004/03/10 21:11:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.18 2004/03/10 20:36:29 manu Exp $");
+__RCSID("$Id: except.c,v 1.19 2004/03/10 21:11:45 manu Exp $");
 #endif
 
 #include <errno.h>
@@ -52,22 +52,15 @@ __RCSID("$Id: except.c,v 1.18 2004/03/10 20:36:29 manu Exp $");
 #include <arpa/inet.h>
 
 #include "except.h"
+#include "conf.h"
 #include "sync.h"
 #include "milter-greylist.h"
 
-extern int debug;
 int testmode = 0;
-char *exceptfile = EXCEPTFILE;
 struct exceptlist except_head;
 pthread_rwlock_t except_lock;
-struct timeval exceptfile_modified;
 
 static int emailcmp(char *, char *);
-
-#define EXCEPT_WRLOCK WRLOCK(except_lock)
-#define EXCEPT_RDLOCK RDLOCK(except_lock)
-#define EXCEPT_UNLOCK UNLOCK(except_lock)
-
 
 int
 except_init(void) {
@@ -78,27 +71,6 @@ except_init(void) {
 		return error;
 
 	return 0;
-}
-
-void
-except_load(void) 	/* exceptlist must be write-locked */
-{
-	FILE *stream;
-
-	if ((stream = fopen(exceptfile, "r")) == NULL) {
-		fprintf(stderr, "cannot open exception file %s: %s\n", 
-		    exceptfile, strerror(errno));
-		fprintf(stderr, "continuing with no exception list\n");
-		return;
-	}
-
-	except_in = stream;
-	except_parse();
-	fclose(stream);
-
-	(void)gettimeofday(&exceptfile_modified, NULL);
-
-	return;
 }
 
 void
@@ -113,7 +85,7 @@ except_add_netblock(in, cidr)	/* exceptlist must be write-locked */
 
 	if ((cidr > 32) || (cidr < 0)) {
 		fprintf(stderr, "bad mask in exception list line %d\n", 
-		    except_line);
+		    conf_line);
 		exit(EX_DATAERR);
 	}
 
@@ -295,44 +267,13 @@ emailcmp(big, little)
 }
 
 void
-except_update(void) {
-	struct stat st;
-	struct timeval tv1, tv2, tv3;
+except_clear(void) {	/* exceptlist must be write locked */
 	struct except *except;
-	
-	if (stat(exceptfile, &st) != 0) {
-		syslog(LOG_DEBUG, "exception file \"%s\" unavailable", 
-		    exceptfile);
-		return;
-	}
 
-	/* 
-	 * exceptfile_modified is updated in except_load()
-	 */
-	if (st.st_mtime < exceptfile_modified.tv_sec) 
-		return;
-
-	syslog(LOG_INFO, "reloading \"%s\"", exceptfile);
-	if (debug)
-		(void)gettimeofday(&tv1, NULL);
-
-	EXCEPT_WRLOCK;
 	while(!LIST_EMPTY(&except_head)) {
 		except = LIST_FIRST(&except_head);
 		LIST_REMOVE(except, e_list);
 		free(except);
-	}
-
-	/* Nothing to do here... */
-	peer_clear();
-	except_load();
-	EXCEPT_UNLOCK;
-
-	if (debug) {
-		(void)gettimeofday(&tv2, NULL);
-		timersub(&tv2, &tv1, &tv3);
-		syslog(LOG_DEBUG, "reloaded exception file in %ld.%06lds", 
-		    tv3.tv_sec, tv3.tv_usec);
 	}
 
 	return;

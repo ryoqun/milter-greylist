@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.5 2004/03/10 21:11:45 manu Exp $ */
+/* $Id: conf.h,v 1.1 2004/03/10 21:11:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,62 +29,31 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _MXGLSYNC_H_
-#define _MXGLSYNC_H_
+#ifndef _CONF_H_
+#define _CONF_H_
+
+#include <stdio.h>
+#include <pthread.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/queue.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "pending.h"
-#include "milter-greylist.h"
+#include "config.h"
 
-#define CMDLEN 10
-#define LINELEN 512
+#ifndef CONFFILE
+#define CONFFILE "/etc/mail/greylist.conf"
+#endif
 
-#define MXGLSYNC_NAME "mxglsync"
-#define MXGLSYNC_PORT 5252
+extern char *conffile;
 
-#define MXGLSYNC_BACKLOG 5 /* Maximum connexions */
+void conf_load(void);
+void conf_update(void);
 
-#define PEER_WRLOCK WRLOCK(peer_lock);
-#define PEER_RDLOCK RDLOCK(peer_lock);
-#define PEER_UNLOCK UNLOCK(peer_lock);
+extern FILE *conf_in;
+extern int conf_line;
+int conf_parse(void);
 
-LIST_HEAD(peerlist, peer);
-TAILQ_HEAD(synclist, sync);
-
-struct peer {
-	char p_name[IPADDRLEN + 1];
-	struct in_addr p_addr;
-	FILE *p_stream;
-	int p_socket;
-	struct synclist p_deferred;
-	LIST_ENTRY(peer) p_list;
-};
-
-typedef enum { PS_CREATE, PS_DELETE } peer_sync_t;
-
-struct sync {
-	struct peer *s_peer;
-	struct pending s_pending;
-	peer_sync_t s_type;
-	TAILQ_ENTRY(sync) s_list;
-};
-
-int peer_init(void);
-void peer_clear(void);
-void peer_add(struct in_addr *);
-int peer_connect(struct peer *);
-void peer_create(struct pending *);
-void peer_delete(struct pending *);
-
-int sync_send(struct peer *, peer_sync_t,  struct pending *);
-void sync_sender_start(void);
-void sync_queue(struct peer *, peer_sync_t, struct pending *);
-
-void sync_sender(void *);
-void sync_master_restart(void);
-void sync_master(void *);
-void sync_server(void *);
-void sync_help(FILE *);
-int sync_waitdata(int);
-
-
-#endif /* _MXGLSYNC_H_ */
+#endif /* _CONF_H_ */

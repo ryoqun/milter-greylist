@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.24 2004/03/10 20:36:29 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.25 2004/03/10 21:11:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.24 2004/03/10 20:36:29 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.25 2004/03/10 21:11:45 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -55,6 +55,7 @@ __RCSID("$Id: milter-greylist.c,v 1.24 2004/03/10 20:36:29 manu Exp $");
 
 #include "config.h"
 #include "except.h"
+#include "conf.h"
 #include "pending.h"
 #include "sync.h"
 #include "milter-greylist.h"
@@ -135,9 +136,9 @@ mlfi_envrcpt(ctx, envrcpt)
 		    priv->priv_from, *envrcpt);
 
 	/* 
-	 * Reload the exception file if it has been touched
+	 * Reload the config file if it has been touched
 	 */
-	except_update();
+	conf_update();
 	sync_master_restart();
 
 	if ((priv->priv_whitelist = except_filter(&priv->priv_addr, 
@@ -315,7 +316,7 @@ main(argc, argv)
 				    argv[0]);
 				usage(argv[0]);
 			}
-			exceptfile = optarg;
+			conffile = optarg;
 			break;
 
 		case 'd':
@@ -400,12 +401,12 @@ main(argc, argv)
 		openlog("milter-greylist", 0, LOG_MAIL);
 
 	/*
-	 * Load exception list
+	 * Load config file
 	 * We can do this without locking exceptlist, as
 	 * normal operation has not started: no other thread
 	 * can access the list yet.
 	 */
-	except_load();
+	conf_load();
 	
 	/*
 	 * Reload a saved greylist
@@ -465,7 +466,7 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, 
-	    "usage: %s [-DvqT] [-d dumpfile] [-f exceptionfile]\n"
+	    "usage: %s [-DvqT] [-d dumpfile] [-f configfile]\n"
 	    "       [-w delay] [-u username] -p socket\n", progname);
 	exit(EX_USAGE);
 }
