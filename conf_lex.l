@@ -6,7 +6,11 @@
 byte		[0-9]{1,3}
 ipaddr		{byte}"."{byte}"."{byte}"."{byte}
 cidr		{byte}
-email		[A-Za-z0-9\.\-_+]+"\@"[A-Za-z0-9\.\-_+]+
+atext		[A-Za-z0-9!#$%&'*+/=?$^_`}{|~.-]{1,}
+qtext		"\""[!-~]{1,}"\""
+mailbox		{atext}|{qtext}
+domain		[A-Za-z0-9._-]{1,}
+email		{mailbox}"\@"{domain}
 comment		#.*$
 blank		[ \t]{1,}
 addr		[Aa][Dd][Dd][Rr]:?
@@ -15,13 +19,15 @@ rcpt		[Rr][Cc][Pp][Tt]:?
 peer		[Pp][Ee][Ee][Rr]:?
 
 %{
+
+/* mailbox		[A-Za-z0-9!#$%&'"*+/=?$^_`}{|~\-]+ */
 	#include "config.h"
 
 	#ifdef HAVE_SYS_CDEFS_H
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.5 2004/03/22 22:12:39 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.5.2.1 2004/03/28 19:55:19 manu Exp $");
 	#endif
 	#endif
 	#endif
