@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.8 2004/03/11 16:33:44 manu Exp $ */
+/* $Id: sync.c,v 1.9 2004/03/11 16:57:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -332,7 +332,6 @@ peer_connect(peer)
 
 bad:
 	fclose(stream);
-	close(s);
 	peer->p_stream = NULL;
 
 	return -1;
