@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.21 2004/03/08 09:45:12 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.22 2004/03/08 22:14:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -33,7 +33,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.21 2004/03/08 09:45:12 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.22 2004/03/08 22:14:12 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -86,7 +86,7 @@ mlfi_connect(ctx, hostname, addr)
 	_SOCK_ADDR *addr;
 {
 	struct mlfi_priv *priv;
-	struct sockaddr_in *sin;
+	struct sockaddr_in *addr_in;
 
 	if ((priv = malloc(sizeof(*priv))) == NULL)
 		return SMFIS_TEMPFAIL;	
@@ -94,9 +94,9 @@ mlfi_connect(ctx, hostname, addr)
 	smfi_setpriv(ctx, priv);
 	bzero(priv, sizeof(*priv));
 
-	sin = (struct sockaddr_in *)addr;
-	if ((sin != NULL) && (sin->sin_family == AF_INET))
-		priv->priv_addr.s_addr = sin->sin_addr.s_addr;
+	addr_in = (struct sockaddr_in *)addr;
+	if ((addr_in != NULL) && (addr_in->sin_family == AF_INET))
+		priv->priv_addr.s_addr = addr_in->sin_addr.s_addr;
 
 	return SMFIS_CONTINUE;
 }
@@ -180,7 +180,7 @@ mlfi_eom(ctx)
 	int h, mn, s;
 	char *fqdn = NULL;
 	char *ip = NULL;
-	char time[HDRLEN + 1];
+	char timestr[HDRLEN + 1];
 	struct timeval tv;
 	char *whystr = NULL;
 
@@ -192,7 +192,8 @@ mlfi_eom(ctx)
 		    "j,{if_addr}\" missing in sendmail.cf");
 
 	(void)gettimeofday(&tv, NULL);
-	strftime(time, HDRLEN, "%a, %d %b %Y %T %z", localtime(&tv.tv_sec));
+	strftime(timestr, HDRLEN, 
+	    "%a, %d %b %Y %T %z", localtime((time_t *)&tv.tv_sec));
 
 	if (priv->priv_elapsed == 0) {
 		switch (priv->priv_whitelist) {
@@ -217,7 +218,7 @@ mlfi_eom(ctx)
 
 		snprintf(hdr, HDRLEN, "%s, not delayed by "
 		    "milter-greylist-%s (%s [%s]); %s",
-		    whystr, PACKAGE_VERSION, fqdn, ip, time);
+		    whystr, PACKAGE_VERSION, fqdn, ip, timestr);
 
 		smfi_addheader(ctx, HEADERNAME, hdr);
 
@@ -232,7 +233,7 @@ mlfi_eom(ctx)
 
 	snprintf(hdr, HDRLEN,
 	    "Delayed for %02d:%02d:%02d by milter-greylist-%s (%s [%s]); %s", 
-	    h, mn, s, PACKAGE_VERSION, fqdn, ip, time);
+	    h, mn, s, PACKAGE_VERSION, fqdn, ip, timestr);
 	smfi_addheader(ctx, HEADERNAME, hdr);
 
 	return SMFIS_CONTINUE;

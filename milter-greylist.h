@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.9 2004/03/04 09:40:12 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.10 2004/03/08 22:14:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -51,6 +51,7 @@ sfsistat mlfi_eom(SMFICTX *);
 sfsistat mlfi_close(SMFICTX *);
 void usage(char *);
 void cleanup_sock(char *);
+int main(int, char **);
 
 /* 
  * Theses definitions are missing from Linux's <sys/queue.h>
