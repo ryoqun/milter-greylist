@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.18 2004/05/24 21:22:02 manu Exp $ */
+/* $Id: dump.c,v 1.19 2004/05/24 21:57:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.18 2004/05/24 21:22:02 manu Exp $");
+__RCSID("$Id: dump.c,v 1.19 2004/05/24 21:57:36 manu Exp $");
 #endif
 #endif
 
@@ -106,6 +106,10 @@ dumper(dontcare)
 	char newdumpfile[MAXPATHLEN + 1];
 	int done;
 
+	/* XXX Not dynamically adjustable */
+	if (conf.c_dumpfreq == -1)
+		return;
+
 	if (pthread_mutex_init(&mutex, NULL) != 0) {
 		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n",
 		    strerror(errno));
@@ -119,6 +123,10 @@ dumper(dontcare)
 	}
 
 	while (1) {
+		/* XXX Not dynamically adjustable */
+		if (conf.c_dumpfreq != 0)
+			sleep(conf.c_dumpfreq);
+
 		if (pthread_cond_wait(&dump_sleepflag, &mutex) != 0)
 		    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
 			strerror(errno));

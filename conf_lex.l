@@ -39,6 +39,7 @@ all		[Aa][Ll][Ll]
 delay		[0-9]{1,}[smhdw]?
 path		"\""[^"\n]{1,}"\""
 regex		"/"[^/\n]{1,}"/"
+dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
 
 %{
 	#include "config.h"
@@ -47,7 +48,7 @@ regex		"/"[^/\n]{1,}"/"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.19 2004/05/24 21:22:02 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.20 2004/05/24 21:57:36 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -87,6 +88,7 @@ regex		"/"[^/\n]{1,}"/"
 {delays}	{ return DELAYS; }
 {nodelays}	{ return NODELAYS; }
 {all}		{ return ALL; }
+{dumpfreq}	{ return DUMPFREQ; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);
 			yylval.path[PATHLEN] = '\0';

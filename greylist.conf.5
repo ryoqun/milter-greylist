@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.5 2004/04/12 17:26:03 manu Exp $
+.\" $Id: greylist.conf.5,v 1.6 2004/05/24 21:57:36 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -103,6 +103,26 @@ an example:
 .Pp
 Do not ever list localhost as a peer, as it will cause each entry to 
 be added twice to the greylist.
+.Sh TEXT DUMP
+.Xr milter-greylist 8
+uses a text dump of its database to resume operation after a crash. The dump is 
+performed at regular time interval, but as it is a heavy operation,
+you might want to configure a particular time interval, using the
+.Ar dumpfreq
+option. 
+.Pp
+If 
+.Ar dumpfreq
+value is too small, it will kill performances. If it is too high, 
+you will loose a bigger part of the database on a crash. 
+.Pp
+Set 
+.Ar dumpfreq
+to 0 to get a dump on each change (kills performance),
+Set it to -1 to never dump to a file (unsafe as you loose the whole 
+greylist on each crash), or give a time value for the delay between dumps.
+The time is given in seconds, except if a unit is given: m for minutes, 
+h pour hours, and d for day.
 .Sh REPORTING
 By default, 
 .Xr milter-greylist 8 
