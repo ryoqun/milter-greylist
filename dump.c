@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.13 2004/03/31 17:02:08 manu Exp $ */
+/* $Id: dump.c,v 1.14 2004/05/05 07:07:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.13 2004/03/31 17:02:08 manu Exp $");
+__RCSID("$Id: dump.c,v 1.14 2004/05/05 07:07:30 manu Exp $");
 #endif
 #endif
 
@@ -46,6 +46,7 @@ __RCSID("$Id: dump.c,v 1.13 2004/03/31 17:02:08 manu Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <strings.h>
 #include <pthread.h>
