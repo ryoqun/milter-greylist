@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.42 2004/12/09 22:21:32 manu Exp $
+# $Id: Makefile.in,v 1.43 2004/12/09 22:22:59 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -58,7 +58,7 @@ SRC= 		milter-greylist.c pending.c sync.c conf.c \
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c 
 
 all:		milter-greylist rc-bsd.sh rc-redhat.sh \
-		rc-solaris.sh rc-debian.sh rc-gentoo.sh rc.suse.sh
+		rc-solaris.sh rc-debian.sh rc-gentoo.sh rc-suse.sh
 
 milter-greylist:	${OBJ}
 	${CC} -o milter-greylist ${OBJ} ${LDFLAGS} ${LIBS}
@@ -82,7 +82,7 @@ rc-debian.sh:    rc-debian.sh.in
 rc-gentoo.sh:    rc-gentoo.sh.in
 	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
 	    rc-gentoo.sh.in > rc-gentoo.sh
-rc-suse.sh:	rc-suse.sh.in
+rc-suse.sh:	 rc-suse.sh.in
 	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
 	    rc-suse.sh.in > rc-suse.sh
 

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.18 2004/12/09 22:19:40 manu Exp $
+# $Id: Makefile,v 1.19 2004/12/09 22:21:32 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -82,6 +82,9 @@ rc-debian.sh:    rc-debian.sh.in
 rc-gentoo.sh:    rc-gentoo.sh.in
 	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
 	    rc-gentoo.sh.in > rc-gentoo.sh
+rc-suse.sh:    rc-suse.sh.in
+	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
+	    rc-suse.sh.in > rc-suse.sh
 
 install:	milter-greylist
 	${INSTALL} -d -m 755 ${BINDIR}
@@ -113,7 +116,8 @@ depend:
 
 clean:
 	${RM} -f milter-greylist ${OBJ} ${GENSRC} \
-	rc-redhat.sh rc-bsd.sh rc-solaris.sh rc-debian.sh rc-gentoo.sh
+	rc-redhat.sh rc-bsd.sh rc-solaris.sh rc-debian.sh rc-gentoo.sh \
+	rc-suse.sh
 
 realclean:	clean
 	${RM} -Rf Makefile config.h config.log config.status \

@@ -1,4 +1,5 @@
 1.7.3:
+	SUSe startup script, by Stephane Lentz
 	Builds again with SPF enabled
 1.7.2:
 	Support libspf2 (Eugene Crosser)

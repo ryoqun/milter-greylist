@@ -1,0 +1,57 @@
+#! /bin/sh
+#
+# Author: Stephane Lentz
+#
+### BEGIN INIT INFO
+# Provides:       milter-greylist
+# Required-Start: $remote_fs
+# Required-Stop:
+# Default-Start:  3 5
+# Default-Stop:
+# Description:    Start the milter-greylist filter
+### END INIT INFO
+
+
+pidfile="/var/run/milter-greylist.pid"
+socket="/var/milter-greylist/milter-greylist.sock"
+user=@USER@
+binary=@BINDIR@/milter-greylist
+OPTIONS="-T -L 24 -w 14m -P $pidfile -u $user -p $socket"
+
+
+
+. /etc/rc.status
+rc_reset
+
+case "$1" in
+    start)
+	echo -n "Starting milter-greylist"
+	startproc    -p $pidfile  $binary $OPTIONS
+	rc_status -v
+	;;
+    stop)
+	echo -n "Shutting down milter-greylist"
+	killproc -p $pidfile $binary
+	rc_status -v
+	;;
+    try-restart)
+	$0 stop && $0 start
+	rc_status
+	;;
+    restart)
+	$0 stop
+	$0 start
+	rc_status
+	;;
+    status)
+	echo -n "Checking for service milter-greylist: "
+	checkproc -p $pidfile $binary
+	rc_status -v
+	;;
+    *)
+	echo "Usage: $0 {start|stop|status|try-restart|restart}"
+	exit 1
+esac
+rc_exit
+
+
