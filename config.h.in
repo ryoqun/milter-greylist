@@ -1,5 +1,5 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
-/* $Id: config.h.in,v 1.27 2004/12/06 21:49:33 manu Exp $ */
+/* $Id: config.h.in,v 1.28 2004/12/08 22:48:52 manu Exp $ */
 
 /* Build environnement */
 #undef BUILD_ENV
@@ -75,6 +75,9 @@
 
 /* we use libspf */
 #undef HAVE_SPF
+
+/* we use libspf2 */
+#undef HAVE_SPF2
 
 /* we use libspf_alt */
 #undef HAVE_SPF_ALT

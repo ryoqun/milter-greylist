@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.39 2004/12/08 22:23:09 manu Exp $
+# $Id: Makefile.in,v 1.40 2004/12/08 22:48:52 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -121,7 +121,7 @@ realclean:	clean
 
 .SUFFIXES:	.o .c .h .y .l
 .l.c:
-	${LEX} -o $@ $<
+	${LEX} -o$@ $<
 .y.c:
 	${YACC} -p`echo $@|${SED} 's/^\([^_]\{1,\}_\).*$$/\1/'` $<
 	${MV} y.tab.c $@
