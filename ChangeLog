@@ -1,5 +1,7 @@
 1.5.4:
 	Avoid race conditions when reloading the config (Attila Bruncsak)
+	Full blown IPv6 support, from Hajimu Umemoto
+	rc-debian.sh script, from Joel Bertrand
 1.5.3:
 	Fix unproper MX sync port on little endian machines
 1.5.2:

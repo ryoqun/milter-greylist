@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.24 2004/05/01 15:45:53 manu Exp $
+.\" $Id: milter-greylist.8,v 1.25 2004/08/01 09:27:03 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -50,6 +50,7 @@
 .Op Fl v
 .Op Fl w Ar delay
 .Op Fl L Ar cidrmask
+.Op Fl M Ar prefixlen
 .Op Fl P Ar pidfile
 .Fl p Ar socket
 .Sh DESCRIPTION
@@ -132,6 +133,15 @@ IP addresses. With -L 24,
 the matching mask is 255.255.255.0, and all addresses within the same class C
 network are considered the same. Default is -L 32, 
 which corresponds to all addresses considered different.
+.It Fl L Ar prefixlen
+Use 
+.Ar prefixlen
+as a matching mask when checking IPv6 addresses entries in the greylist. This
+is aimed as a workaround to mail farms that re-emit messages from different
+IP addresses. With -M 64,
+the matching mask is ffff:ffff:ffff:ffff::, and all addresses within the same
+subnet are considered the same. Default is -M 128,
+which corresponds to all IPv6 addresses considered different.
 .It Fl P Ar pidfile
 write the daemon's PID to 
 .Ar pidfile .

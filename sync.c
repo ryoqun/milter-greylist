@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.46 2004/06/17 21:13:37 manu Exp $ */
+/* $Id: sync.c,v 1.47 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.46 2004/06/17 21:13:37 manu Exp $");
+__RCSID("$Id: sync.c,v 1.47 2004/08/01 09:27:03 manu Exp $");
 #endif
 #endif
 
@@ -45,7 +45,6 @@ __RCSID("$Id: sync.c,v 1.46 2004/06/17 21:13:37 manu Exp $");
 #include <errno.h>
 #include <string.h>
 #include <strings.h>
-#include <netdb.h>
 #include <pthread.h>
 #include <syslog.h>
 #include <sysexits.h>
@@ -60,11 +59,19 @@ __RCSID("$Id: sync.c,v 1.46 2004/06/17 21:13:37 manu Exp $");
 #include "autowhite.h"
 #include "milter-greylist.h"
 
-int sync_master_runs = 0;
+struct sync_master_sock {
+	int runs;
+	int sock;
+};
+
+struct sync_master_sock sync_master4 = { 0, -1 };
+struct sync_master_sock sync_master6 = { 0, -1 };
 struct peerlist peer_head;
 pthread_rwlock_t peer_lock; /* For the peer list */
 pthread_rwlock_t sync_lock; /* For all peer's sync queue */
 pthread_cond_t sync_sleepflag;
+
+static void sync_listen(char *, struct sync_master_sock *);
 
 void
 peer_init(void) {
@@ -106,13 +113,14 @@ peer_clear(void) {
 			sync = TAILQ_FIRST(&peer->p_deferred);
 			TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
 			peer->p_qlen--;
-			free(sync);
+			sync_free(sync);
 		}
 			
 		if (peer->p_stream != NULL)
 			fclose(peer->p_stream);
 
 		LIST_REMOVE(peer, p_list);
+		free(peer->p_name);
 		free(peer);
 	}
 
@@ -123,20 +131,19 @@ peer_clear(void) {
 }
 
 void 
-peer_add(addr)
-	struct in_addr *addr;
+peer_add(peername)
+	char *peername;
 {
 	struct peer *peer;
 
-	if ((peer = malloc(sizeof(*peer))) == NULL) {
+	if ((peer = malloc(sizeof(*peer))) == NULL ||
+	    (peer->p_name = strdup(peername)) == NULL) {
 		perror("cannot allocate memory");
 		exit(EX_OSERR);
 	}
 
 	peer->p_qlen = 0;
 	peer->p_stream = NULL;
-	memcpy(&peer->p_addr, addr, sizeof(peer->p_addr));
-	inet_ntop(AF_INET, &peer->p_addr, peer->p_name, IPADDRLEN);
 	TAILQ_INIT(&peer->p_deferred);
 
 	PEER_WRLOCK;
@@ -145,7 +152,6 @@ peer_add(addr)
 
 	if (conf.c_debug)
 		printf("load peer %s\n", peer->p_name);
-		    
 
 	return;
 }
@@ -262,18 +268,25 @@ int
 peer_connect(peer)	/* peer list is read-locked */
 	struct peer *peer;
 {
-	struct protoent *pe;
 	struct servent *se;
+#ifdef HAVE_GETADDRINFO
+	struct addrinfo hints, *res0, *res;
+	int err;
+#else
+	struct protoent *pe;
 	int proto;
-	struct sockaddr_in laddr;
-	struct sockaddr_in raddr;
+	sockaddr_t raddr;
+	socklen_t raddrlen;
+#endif
+	sockaddr_t laddr;
+	socklen_t laddrlen;
+	char *laddrstr;
 	int service;
-	int s;
+	int s = -1;
 	char *replystr;
 	int replycode;
 	FILE *stream;
 	char sep[] = " \n\t\r";
-	char peername[IPADDRLEN + 1];
 	char line[LINELEN + 1];
 	int param;
 	char *cookie = NULL;
@@ -281,80 +294,142 @@ peer_connect(peer)	/* peer list is read-locked */
 	if (peer->p_stream != NULL)
 		syslog(LOG_ERR, "peer_connect called and peer->p_stream != 0");
 
-	if ((pe = getprotobyname("tcp")) == NULL)
-		proto = 6;
-	else
-		proto = pe->p_proto;
-
-	inet_ntop(AF_INET, &peer->p_addr, peername, IPADDRLEN);
-
-	if ((s = socket(AF_INET, SOCK_STREAM, proto)) == -1) {
-		syslog(LOG_ERR, "cannot sync with peer %s, "
-		    "socket failed: %s (%d entries queued)", 
-		    peername, strerror(errno), peer->p_qlen);
-		return -1;
-	}
-
 	if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
 		service = htons(MXGLSYNC_PORT);
 	else
 		service = se->s_port;
 
-	bzero((void *)&laddr, sizeof(laddr));
-#ifdef HAVE_SA_LEN
-	laddr.sin_len = sizeof(laddr);
-#endif
-	laddr.sin_family = AF_INET;
-	laddr.sin_port = 0;
-	laddr.sin_addr.s_addr = INADDR_ANY;
+#ifdef HAVE_GETADDRINFO
+	bzero(&hints, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	if ((err = getaddrinfo(peer->p_name, "0", &hints, &res0)) != 0) {
+		syslog(LOG_ERR, "cannot sync with peer %s, "
+		    "getaddrinfo failed: %s (%d entries queued)",
+		    peer->p_name, gai_strerror(err), peer->p_qlen);
+		return -1;
+	}
+	for (res = res0; res; res = res->ai_next) {
+		s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (s == -1)
+			continue;
 
-	if (bind(s, (struct sockaddr *)&laddr, sizeof(laddr)) != 0) { 
+		switch (res->ai_family) {
+		case AF_INET:
+			SA4(res->ai_addr)->sin_port = service;
+			laddrstr = "0.0.0.0";
+			break;
+#ifdef AF_INET6
+		case AF_INET6:
+			SA6(res->ai_addr)->sin6_port = service;
+			laddrstr = "::";
+			break;
+#endif
+		default:
+			syslog(LOG_ERR, "cannot sync, unknown address family");
+			close(s);
+			s = -1;
+			continue;
+		}
+		laddrlen = sizeof(laddr);
+		if (ipfromstring(laddrstr, SA(&laddr), &laddrlen,
+		    res->ai_family) == 1 &&
+		    bind(s, SA(&laddr), laddrlen) == 0 &&
+		    connect(s, res->ai_addr, res->ai_addrlen) == 0)
+			break;
+		close(s);
+		s = -1;
+	}
+	freeaddrinfo(res0);
+	if (s < 0) {
+		syslog(LOG_ERR,
+		    "cannot sync with peer %s: %s (%d entries queued)",
+		    peer->p_name, strerror(errno), peer->p_qlen);
+		return -1;
+	}
+#else
+	raddrlen = sizeof(raddr);
+	if (ipfromstring(peer->p_name, SA(&raddr), &raddrlen,
+	    AF_UNSPEC) != 1) {
+		syslog(LOG_ERR, "cannot sync, invalid address");
+		return -1;
+	}
+	switch (SA(&raddr)->sa_family) {
+	case AF_INET:
+		SA4(&raddr)->sin_port = service;
+		laddrstr = "0.0.0.0";
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		SA6(&raddr)->sin6_port = service;
+		laddrstr = "::";
+		break;
+#endif
+	default:
+		syslog(LOG_ERR, "cannot sync, unknown address family");
+		return -1;
+	}
+
+	if ((pe = getprotobyname("tcp")) == NULL)
+		proto = 6;
+	else
+		proto = pe->p_proto;
+
+	if ((s = socket(SA(&raddr)->sa_family, SOCK_STREAM, proto)) == -1) {
+		syslog(LOG_ERR, "cannot sync with peer %s, "
+		    "socket failed: %s (%d entries queued)", 
+		    peer->p_name, strerror(errno), peer->p_qlen);
+		return -1;
+	}
+
+	laddrlen = sizeof(laddr);
+	if (ipfromstring(laddrstr, SA(&laddr), &laddrlen,
+	    SA(&raddr)->sa_family) != 1) {
+		syslog(LOG_ERR, "cannot sync, invalid address");
+		close(s);
+		return -1;
+	}
+
+	if (bind(s, SA(&laddr), laddrlen) != 0) {
 		syslog(LOG_ERR, "cannot sync with peer %s, "
 		    "bind failed: %s (%d entries queued)",
-		    peername, strerror(errno), peer->p_qlen);
+		    peer->p_name, strerror(errno), peer->p_qlen);
 		close(s);
 		return -1;
 	}
 
-	bzero((void *)&raddr, sizeof(raddr));
-#ifdef HAVE_SA_LEN
-	raddr.sin_len = sizeof(raddr);
-#endif
-	raddr.sin_family = AF_INET;
-	raddr.sin_port = service;
-	raddr.sin_addr = peer->p_addr;
-
-	if (connect(s, (struct sockaddr *)&raddr, sizeof(raddr)) != 0) {
+	if (connect(s, SA(&raddr), raddrlen) != 0) {
 		syslog(LOG_ERR, "cannot sync with peer %s, "
 		    "connect failed: %s (%d entries queued)", 
-		    peername, strerror(errno), peer->p_qlen);
+		    peer->p_name, strerror(errno), peer->p_qlen);
 		close(s);
 		return -1;
 	}
+#endif
 
 	param = O_NONBLOCK;
 	if (fcntl(s, F_SETFL, &param) != 0) {
 		syslog(LOG_ERR, "cannot set non blocking I/O with %s: %s",
-		    peername, strerror(errno));
+		    peer->p_name, strerror(errno));
 	}
 
 	if ((stream = fdopen(s, "w+")) == NULL) {
 		syslog(LOG_ERR, "cannot sync with peer %s, "
 		    "fdopen failed: %s (%d entries queued)", 
-		    peername, strerror(errno), peer->p_qlen);
+		    peer->p_name, strerror(errno), peer->p_qlen);
 		close(s);
 		return -1;
 	}
 
 	if (setvbuf(stream, NULL, _IOLBF, 0) != 0)
 		syslog(LOG_ERR, "cannot set line buffering with peer %s: %s", 
-		    peername, strerror(errno));	
+		    peer->p_name, strerror(errno));
 
 	sync_waitdata(s);	
 	if (fgets(line, LINELEN, stream) == NULL) {
 		syslog(LOG_ERR, "Lost connexion with peer %s: "
 		    "%s (%d entries queued)", 
-		    peername, strerror(errno), peer->p_qlen);
+		    peer->p_name, strerror(errno), peer->p_qlen);
 		goto bad;
 	}
 
@@ -368,7 +443,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
 		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
 		    "closing connexion (%d entries queued)", 
-		    line, peername, peer->p_qlen);
+		    line, peer->p_name, peer->p_qlen);
 		goto bad;
 	}
 
@@ -376,11 +451,11 @@ peer_connect(peer)	/* peer list is read-locked */
 	if (replycode != 200) {
 		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
 		    "closing connexion (%d entries queued)", 
-		    line, peername, peer->p_qlen);
+		    line, peer->p_name, peer->p_qlen);
 		goto bad;
 	}
 
-	syslog(LOG_INFO, "Connection to %s established", peername);
+	syslog(LOG_INFO, "Connection to %s established", peer->p_name);
 	peer->p_stream = stream;
 	peer->p_socket = s;
 	return 0;
@@ -402,99 +477,53 @@ sync_master_restart(void) {
 	empty = LIST_EMPTY(&peer_head);
 	PEER_UNLOCK;
 
-	if (empty || sync_master_runs)
+	if (empty || sync_master4.runs || sync_master6.runs)
 		return;
 
-	sync_master_runs = 1;
-	if ((error = pthread_create(&tid, NULL, sync_master, NULL)) != 0) {
-		syslog(LOG_ERR, "Cannot run MX sync thread: %s\n",
+#ifdef AF_INET6
+	sync_listen("::", &sync_master6);
+#endif
+	sync_listen("0.0.0.0", &sync_master4);
+	if (!sync_master4.runs && !sync_master6.runs) {
+		syslog(LOG_ERR, "cannot start MX sync, socket failed: %s",
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
+	if (sync_master6.runs &&
+	    (error = pthread_create(&tid, NULL, sync_master,
+	    (void *)&sync_master6)) != 0) {
+		syslog(LOG_ERR, "Cannot run MX sync thread for IPv6: %s\n",
+		    strerror(error));
+		exit(EX_OSERR);
+	}
+	if (sync_master4.runs &&
+	    (error = pthread_create(&tid, NULL, sync_master,
+	    (void *)&sync_master4)) != 0) {
+		syslog(LOG_ERR, "Cannot run MX sync thread for IPv4: %s\n",
 		    strerror(error));
 		exit(EX_OSERR);
 	}
 }
 
-/* ARGSUSED0 */
 void *
-sync_master(dontcare)
-	void *dontcare;
+sync_master(arg)
+	void *arg;
 {
-	struct protoent *pe;
-	struct servent *se;
-	int proto;
-	struct sockaddr_in laddr;
-	int service;
-	int optval;
-	int s;
-
-	if ((pe = getprotobyname("tcp")) == NULL)
-		proto = 6;
-	else
-		proto = pe->p_proto;
-
-	if ((s = socket(AF_INET, SOCK_STREAM, proto)) == -1) {
-		syslog(LOG_ERR, "cannot start MX sync, socket failed: %s", 
-		    strerror(errno));
-		sync_master_runs = 0;
-		return NULL;
-	}
-
-	if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
-		service = htons(MXGLSYNC_PORT);
-	else
-		service = se->s_port;
-
-	optval = 1;
-	if ((setsockopt(s, SOL_SOCKET, SO_REUSEADDR, 
-	    &optval, sizeof(optval))) != 0) {
-		syslog(LOG_ERR, "cannot set SO_REUSEADDR: %s", 
-		    strerror(errno));
-	}
-
-	optval = 1;
-	if ((setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
-	    &optval, sizeof(optval))) != 0) {
-		syslog(LOG_ERR, "cannot set SO_KEEPALIVE: %s", 
-		    strerror(errno));
-	}
-
-	bzero((void *)&laddr, sizeof(laddr));
-#ifdef HAVE_SA_LEN
-	laddr.sin_len = sizeof(laddr);
-#endif
-	laddr.sin_family = AF_INET;
-	laddr.sin_port = service;
-	laddr.sin_addr.s_addr = INADDR_ANY;
-
-	if (bind(s, (struct sockaddr *)&laddr, sizeof(laddr)) != 0) {
-		syslog(LOG_ERR, "cannot start MX sync, bind failed: %s", 
-		    strerror(errno));
-		sync_master_runs = 0;
-		close(s);
-		return NULL;
-	}
-
-	if (listen(s, MXGLSYNC_BACKLOG) != 0) {
-		syslog(LOG_ERR, "cannot start MX sync, listen failed: %s", 
-		    strerror(errno));
-		sync_master_runs = 0;
-		close(s);
-		return NULL;
-	}
+	struct sync_master_sock *sms = arg;
 
 	for (;;) {
-		struct sockaddr_in raddr;
-		socklen_t socklen;
+		sockaddr_t raddr;
+		socklen_t raddrlen;
 		int fd;
 		FILE *stream;
 		pthread_t tid;
 		struct peer *peer;
-		char peerstr[IPADDRLEN + 1];
+		char peerstr[IPADDRSTRLEN];
 		int error;
 
 		bzero((void *)&raddr, sizeof(raddr));
-		socklen = sizeof(raddr);
-		if ((fd = accept(s, (struct sockaddr *)&raddr, 
-		    &socklen)) == -1) {
+		raddrlen = sizeof(raddr);
+		if ((fd = accept(sms->sock, SA(&raddr), &raddrlen)) == -1) {
 			syslog(LOG_ERR, "incoming connexion "
 			    "failed: %s\n", strerror(errno));
 
@@ -502,8 +531,9 @@ sync_master(dontcare)
 				exit(EX_OSERR);
 			continue;
 		}
+		unmappedaddr(SA(&raddr), &raddrlen);
 
-		inet_ntop(AF_INET, &raddr.sin_addr, peerstr, IPADDRLEN);
+		iptostring(SA(&raddr), raddrlen, peerstr, sizeof(peerstr));
 		syslog(LOG_INFO, "Incoming MX sync connexion from %s", 
 		    peerstr);
 
@@ -528,16 +558,52 @@ sync_master(dontcare)
 			fprintf(stream, "105 No more peers, shutting down!\n");
 
 			PEER_UNLOCK;
-			sync_master_runs = 0;
 			fclose(stream);
-			close(s);
+			close(sms->sock);
+			sms->sock = -1;
+			sms->runs = 0;
 			return NULL;
 		}
 			
 		LIST_FOREACH(peer, &peer_head, p_list) {
-			if (memcmp(&peer->p_addr, &raddr.sin_addr, 
-			    sizeof(peer->p_addr)) == 0)
+#ifdef HAVE_GETADDRINFO
+			struct addrinfo hints, *res0, *res;
+			int err;
+			int match = 0;
+
+			bzero(&hints, sizeof(hints));
+			hints.ai_flags = AI_PASSIVE;
+			hints.ai_family = AF_UNSPEC;
+			hints.ai_socktype = SOCK_STREAM;
+			err = getaddrinfo(peer->p_name, "0", &hints, &res0);
+			if (err != 0) {
+				syslog(LOG_ERR, "cannot resolve %s: %s",
+				    peer->p_name, gai_strerror(err));
+				continue;
+			}
+			for (res = res0; res; res = res->ai_next) {
+				if (ip_equal(SA(&raddr), res->ai_addr)) {
+					match = 1;
+					break;
+				}
+			}
+			freeaddrinfo(res0);
+			if (match)
 				break;
+#else
+			sockaddr_t addr;
+			socklen_t addrlen;
+
+			addrlen = sizeof(addr);
+			if (ipfromstring(peer->p_name, SA(&addr), &addrlen,
+			     AF_UNSPEC) != 1) {
+				syslog(LOG_ERR, "cannot resolve %s",
+				    peer->p_name);
+				continue;
+			}
+			if (ip_equal(SA(&raddr), SA(&addr)))
+				break;
+#endif
 		}
 
 		PEER_UNLOCK;
@@ -566,6 +632,100 @@ sync_master(dontcare)
 	return NULL;
 }
 
+static void
+sync_listen(addr, sms)
+	char *addr;
+	struct sync_master_sock *sms;
+{
+	struct protoent *pe;
+	struct servent *se;
+	int proto;
+	sockaddr_t laddr;
+	socklen_t laddrlen;
+	int service;
+	int optval;
+	int s;
+
+	sms->runs = 1;
+	laddrlen = sizeof(laddr);
+	if (ipfromstring(addr, SA(&laddr), &laddrlen, AF_UNSPEC) != 1) {
+		sms->runs = 0;
+		return;
+	}
+
+	if ((pe = getprotobyname("tcp")) == NULL)
+		proto = 6;
+	else
+		proto = pe->p_proto;
+
+	if ((se = getservbyname(MXGLSYNC_NAME, "tcp")) == NULL)
+		service = htons(MXGLSYNC_PORT);
+	else
+		service = se->s_port;
+	switch (SA(&laddr)->sa_family) {
+	case AF_INET:
+		SA4(&laddr)->sin_port = service;
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		SA6(&laddr)->sin6_port = service;
+		break;
+#endif
+	default:
+		sms->runs = 0;
+		return;
+	}
+
+	if ((s = socket(SA(&laddr)->sa_family, SOCK_STREAM, proto)) == -1) {
+		sms->runs = 0;
+		return;
+	}
+
+	optval = 1;
+	if ((setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
+	    &optval, sizeof(optval))) != 0) {
+		syslog(LOG_ERR, "cannot set SO_REUSEADDR: %s",
+		    strerror(errno));
+	}
+
+	optval = 1;
+	if ((setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
+	    &optval, sizeof(optval))) != 0) {
+		syslog(LOG_ERR, "cannot set SO_KEEPALIVE: %s",
+		    strerror(errno));
+	}
+
+#ifdef IPV6_V6ONLY
+	if (SA(&laddr)->sa_family == AF_INET6) {
+		optval = 1;
+		if ((setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY,
+		    &optval, sizeof(optval))) != 0) {
+			syslog(LOG_ERR, "cannot set IPV6_V6ONLY: %s",
+			    strerror(errno));
+		}
+	}
+#endif
+
+	if (bind(s, SA(&laddr), laddrlen) != 0) {
+		syslog(LOG_ERR, "cannot start MX sync, bind failed: %s",
+		    strerror(errno));
+		sms->runs = 0;
+		close(s);
+		return;
+	}
+
+	if (listen(s, MXGLSYNC_BACKLOG) != 0) {
+		syslog(LOG_ERR, "cannot start MX sync, listen failed: %s",
+		    strerror(errno));
+		sms->runs = 0;
+		close(s);
+		return;
+	}
+
+	sms->sock = s;
+	return;
+}
+
 void
 sync_server(arg) 
 	void *arg;
@@ -581,7 +741,8 @@ sync_server(arg)
 	char *cookie;
 	char line[LINELEN + 1];
 	peer_sync_t action;
-	struct in_addr addr;
+	sockaddr_t addr;
+	socklen_t addrlen;
 	time_t date;
 
 	fprintf(stream, "200 Yeah, what do you want?\n");
@@ -645,7 +806,9 @@ sync_server(arg)
 			continue;
 		}
 			
-		if (inet_pton(AF_INET, addrstr, (void *)&addr) != 1) {
+		addrlen = sizeof(addr);
+		if (ipfromstring(addrstr, SA(&addr), &addrlen,
+		    AF_UNSPEC) != 1) {
 			fprintf(stream, "107 Invalid IP address\n");
 			fflush(stream);
 			continue;
@@ -734,12 +897,13 @@ sync_server(arg)
 
 		if (action == PS_CREATE) {
 			PENDING_WRLOCK;
-			pending_get(&addr, from, rcpt, date);
+			pending_get(SA(&addr), addrlen, from, rcpt, date);
 			PENDING_UNLOCK;
 		}
 		if (action == PS_DELETE) {
-			pending_del(&addr, from, rcpt, date);
-			autowhite_add(&addr, from, rcpt, NULL, "(mxsync)");
+			pending_del(SA(&addr), addrlen, from, rcpt, date);
+			autowhite_add(SA(&addr), addrlen, from, rcpt, NULL,
+			    "(mxsync)");
 		}
 
 		/* Flush modifications to disk */
@@ -824,14 +988,7 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 
 		sync->s_peer = peer;
 		sync->s_type = type;
-		/* 
-		 * Copy it instead of referencing it, since it could
-		 * disapear before been treated. We don't have this
-		 * problem with the peer, since the sync lists get
-		 * purged at the same time the peer list get purged.
-		 * One day, do that better, with refcounts.
-		 */
-		memcpy(&sync->s_pending, pending, sizeof(*pending)); 
+		sync->s_pending = pending_ref(pending);
 
 		SYNC_WRLOCK;
 		TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
@@ -845,6 +1002,14 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 		exit(EX_SOFTWARE);
 	}
 	return;
+}
+
+void
+sync_free(sync)
+	struct sync *sync;
+{
+	pending_free(sync->s_pending);
+	free(sync);
 }
 
 void
@@ -913,7 +1078,7 @@ sync_sender(dontcare)
 				 * the send operation fails.
 				 */
 				if (sync_send(sync->s_peer, sync->s_type, 
-				    &sync->s_pending) != 0) {
+				    sync->s_pending) != 0) {
 					SYNC_WRLOCK;
 					TAILQ_INSERT_HEAD(&peer->p_deferred, 
 					    sync, s_list);
@@ -923,7 +1088,7 @@ sync_sender(dontcare)
 				}
 
 				peer->p_qlen--;
-				free(sync);
+				sync_free(sync);
 
 				done++;
 			}

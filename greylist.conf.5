@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.9 2004/06/16 20:38:56 manu Exp $
+.\" $Id: greylist.conf.5,v 1.10 2004/08/01 09:27:03 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -56,7 +56,9 @@ addresses. The syntax is an IP address followed by a slash and a CIDR
 netmask. Here is an example:
 .Dl addr 127.0.0.0/8
 .Dl addr 192.168.3.0/24
-If the netmask is ommitted, /32 is assumed.
+.Dl addr ::1
+If the netmask is ommitted, /32 is assumed for an IPv4 address and
+/128 is assumed for an IPv6 address.
 .Pp
 You should at least whitelist localhost (127.0.0.1/8), and if you have
 some user clients connecting to the machine, you should whitelist the
@@ -228,6 +230,13 @@ command line option. It takes a slash followed by a CIDR mask as argument,
 and it commands the subnet matching feature. Example, for a class C wide
 matching:
 .Dl subnetmatch /24
+.It Ar subnetmatch6
+This is equivalent to the
+.Fl M
+command line option. It takes a slash followed by a prefixlen as argument,
+and it commands the subnet matching feature. Example, for a subnet wide
+matching:
+.Dl subnetmatch6 /64
 .It Ar socket
 Like the 
 .Fl p

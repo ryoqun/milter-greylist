@@ -1,4 +1,4 @@
-%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME
+%token ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME
 
 %{
 #include "config.h"
@@ -6,11 +6,12 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.24 2004/06/01 16:15:49 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.25 2004/08/01 09:27:03 manu Exp $");
 #endif
 #endif
 
 #include <stdlib.h>
+#include <sysexits.h>
 #include "conf.h"
 #include "except.h"
 #include "sync.h"
@@ -21,7 +22,12 @@ void conf_error(char *);
 %}
 
 %union	{
-	struct in_addr ipaddr;
+	struct sockaddr_in ipaddr;
+#ifdef AF_INET6
+	struct sockaddr_in6 ip6addr;
+#else
+	struct sockaddr_in ip6addr;	/* XXX: for dummy */
+#endif
 	int cidr;
 	char email[ADDRLEN + 1];
 	char domainname[ADDRLEN + 1];
@@ -30,6 +36,7 @@ void conf_error(char *);
 	char regex[REGEXLEN + 1];
 	}
 %type <ipaddr> IPADDR;
+%type <ip6addr> IP6ADDR;
 %type <cidr> CIDR;
 %type <email> EMAIL;
 %type <domainname> DOMAINNAME;
@@ -56,6 +63,7 @@ lines	:	lines netblock '\n'
 	|	lines pidfile '\n'
 	|	lines dumpfile '\n'
 	|	lines subnetmatch '\n'
+	|	lines subnetmatch6 '\n'
 	|	lines socket '\n'
 	|	lines user '\n'
 	|	lines nodetach '\n'
@@ -66,8 +74,32 @@ lines	:	lines netblock '\n'
 	|	lines '\n'
 	|
 	;
-netblock:	ADDR IPADDR CIDR{ except_add_netblock(&$2, $3); }
-	|	ADDR IPADDR	{ except_add_netblock(&$2, 32); }
+netblock:	ADDR IPADDR CIDR{
+			except_add_netblock(SA(&$2),
+			    sizeof(struct sockaddr_in), $3);
+		}
+	|	ADDR IPADDR	{
+			except_add_netblock(SA(&$2),
+			    sizeof(struct sockaddr_in), 32);
+		}
+	|	ADDR IP6ADDR CIDR{
+#ifdef AF_INET6
+			except_add_netblock(SA(&$2),
+			    sizeof(struct sockaddr_in6), $3);
+#else
+			printf("IPv6 is not supported, ignore line %d\n",
+			    conf_line);
+#endif
+		}
+	|	ADDR IP6ADDR	{
+#ifdef AF_INET6
+			except_add_netblock(SA(&$2),
+			    sizeof(struct sockaddr_in6), 128);
+#else
+			printf("IPv6 is not supported, ignore line %d\n",
+			    conf_line);
+#endif
+		}
 	;
 fromaddr:	FROM EMAIL	{ except_add_from($2); }
 	;
@@ -81,7 +113,42 @@ domainaddr:	DOMAIN DOMAINNAME { except_add_domain($2); }
 	;
 domainregex:	DOMAIN REGEX	 { except_add_domain_regex($2); }
 	;
-peeraddr:	PEER IPADDR	{ peer_add(&$2); }
+peeraddr:	PEER IPADDR	{
+			char addr[IPADDRLEN];
+
+			if (!iptostring(SA(&$2), sizeof(struct sockaddr_in),
+			    addr, sizeof(addr))) {
+				printf("invalid IPv4 address line %d\n",
+				    conf_line);
+				exit(EX_DATAERR);
+			}
+			peer_add(addr);
+		}
+	|	PEER IP6ADDR	{
+#ifdef AF_INET6
+			char addr[IPADDRSTRLEN];
+
+			if (!iptostring(SA(&$2), sizeof(struct sockaddr_in6),
+			    addr, sizeof(addr))) {
+				printf("invalid IPv6 address line %d\n",
+				    conf_line);
+				exit(EX_DATAERR);
+			}
+			peer_add(addr);
+#else
+			printf("IPv6 is not supported, ignore line %d\n",
+			    conf_line);
+#endif
+		}
+	|	PEER DOMAINNAME	{
+#ifdef HAVE_GETADDRINFO
+			peer_add($2);
+#else
+			printf(
+			    "FQDN in peer is not supported, ignore line %d\n",
+			    conf_line);
+#endif
+		}
 	;
 autowhite:	AUTOWHITE TDELAY{ if (C_NOTFORCED(C_AUTOWHITE))
 					conf.c_autowhite_validity =
@@ -118,9 +185,13 @@ dumpfile:	GLDUMPFILE PATH	{ if (C_NOTFORCED(C_DUMPFILE))
 				}
 	;
 subnetmatch:	SUBNETMATCH CIDR{ if (C_NOTFORCED(C_MATCHMASK))
-					cidr2mask($2, &conf.c_match_mask);
+					prefix2mask4($2, &conf.c_match_mask);
 				}
 	;	
+subnetmatch6:	SUBNETMATCH6 CIDR{ if (C_NOTFORCED(C_MATCHMASK6))
+					prefix2mask6($2, &conf.c_match_mask6);
+				}
+	;
 socket:		SOCKET PATH	{ if (C_NOTFORCED(C_SOCKET)) 
 					conf.c_socket = 
 					    quotepath(c_socket, $2, PATHLEN);

@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.24 2004/06/25 22:28:08 manu Exp $ */
+/* $Id: conf.h,v 1.25 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -69,6 +69,9 @@ struct conf {
 	char *c_pidfile;
 	char *c_dumpfile;
 	struct in_addr c_match_mask;
+#ifdef AF_INET6
+	struct in6_addr c_match_mask6;
+#endif
 	char *c_socket;
 	char *c_user;
 	int c_nodetach;
@@ -94,6 +97,7 @@ struct conf {
 #define C_USER		0x0800
 #define C_NODETACH	0x1000
 #define C_LAZYAW	0x2000
+#define C_MATCHMASK6	0x4000
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
 /* c_report */

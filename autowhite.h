@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.14 2004/05/24 21:22:02 manu Exp $ */
+/* $Id: autowhite.h,v 1.15 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -45,7 +45,8 @@
 TAILQ_HEAD(autowhitelist, autowhite);
 
 struct autowhite {
-	struct in_addr a_in;
+	struct sockaddr *a_sa;
+	socklen_t a_salen;
 	char a_from[ADDRLEN + 1];
 	char a_rcpt[ADDRLEN + 1];
 	struct timeval a_tv;
@@ -55,10 +56,12 @@ struct autowhite {
 extern pthread_rwlock_t autowhite_lock;
 
 void autowhite_init(void);
-struct autowhite *autowhite_get(struct in_addr *, char *, char *, time_t *);
+struct autowhite *autowhite_get(struct sockaddr *, socklen_t, char *, char *,
+    time_t *);
 void autowhite_put(struct autowhite *);
-void autowhite_add(struct in_addr *, char *, char *, time_t *, char *);
-int autowhite_check(struct in_addr *, char *, char *, char *);
+void autowhite_add(struct sockaddr *, socklen_t, char *, char *, time_t *,
+    char *);
+int autowhite_check(struct sockaddr *, socklen_t, char *, char *, char *);
 int autowhite_textdump(FILE *);
 
 #endif /* _AUTOWHITE_H_ */

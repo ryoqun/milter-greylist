@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.13 2004/05/04 20:50:33 manu Exp $ */
+/* $Id: spf.c,v 1.14 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.13 2004/05/04 20:50:33 manu Exp $");
+__RCSID("$Id: spf.c,v 1.14 2004/08/01 09:27:03 manu Exp $");
 #endif
 #endif
 
@@ -56,20 +56,24 @@ __RCSID("$Id: spf.c,v 1.13 2004/05/04 20:50:33 manu Exp $");
 #ifdef HAVE_SPF
 #include <spf.h>
 int
-spf_check(in, helo, from)
-	struct in_addr *in;
+spf_check(sa, salen, helo, from)
+	struct sockaddr *sa;
+	socklen_t salen;
 	char *helo;
 	char *from;
 {
 	peer_info_t *p = NULL;
-	char addr[IPADDRLEN + 1];
+	char addr[IPADDRSTRLEN];
 	int result = EXF_NONE;
 	struct timeval tv1, tv2, tv3;
 
 	if (conf.c_debug)
 		gettimeofday(&tv1, NULL);
 
-	inet_ntop(AF_INET, in, addr, IPADDRLEN);
+	if (sa->sa_family != AF_INET)	/* libspf doesn't support IPv6 */
+		return result;
+	if (!iptostring(sa, salen, addr, sizeof(addr)))
+		return result;
 
 	if ((p = SPF_init("milter-greylist", addr, 
 	    NULL, NULL, NULL, FALSE, FALSE)) == NULL) {
@@ -109,14 +113,15 @@ out1:
 /* SMTP needs at least 64 chars for local part and 255 for doamin... */
 #define NS_MAXDNAME 1025 
 int
-spf_alt_check(in, helo, fromp)
-	struct in_addr *in;
+spf_alt_check(sa, salen, helo, fromp)
+	struct sockaddr *sa;
+	socklen_t salen;
 	char *helo;
 	char *fromp;
 {
 	SPF_config_t spfconf;
 	SPF_dns_config_t dnsconf;
-	char addr[IPADDRLEN + 1];
+	char addr[IPADDRSTRLEN];
 	char from[NS_MAXDNAME + 1];
 	SPF_output_t out;
 	int result = EXF_NONE;
@@ -139,7 +144,10 @@ spf_alt_check(in, helo, fromp)
 	/* 
 	 * Get the IP address
 	 */
-	inet_ntop(AF_INET, in, addr, IPADDRLEN);
+	if (!iptostring(sa, salen, addr, sizeof(addr))) {
+		syslog(LOG_ERR, "SPF_set_ip_str failed");
+		goto out3;
+	}
 	if (SPF_set_ip_str(spfconf, addr) != 0) {
 		syslog(LOG_ERR, "SPF_set_ip_str failed");
 		goto out3;

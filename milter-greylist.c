@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.92 2004/06/25 22:28:08 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.93 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.92 2004/06/25 22:28:08 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.93 2004/08/01 09:27:03 manu Exp $");
 #endif
 #endif
 
@@ -103,7 +103,6 @@ mlfi_connect(ctx, hostname, addr)
 	_SOCK_ADDR *addr;
 {
 	struct mlfi_priv *priv;
-	struct sockaddr_in *addr_in;
 
 	if ((priv = malloc(sizeof(*priv))) == NULL)
 		return SMFIS_TEMPFAIL;	
@@ -115,10 +114,33 @@ mlfi_connect(ctx, hostname, addr)
 	strncpy(priv->priv_hostname, hostname, ADDRLEN);
 	priv->priv_hostname[ADDRLEN] = '\0';
 
-	addr_in = (struct sockaddr_in *)addr;
-
-	if ((addr_in != NULL) && (addr_in->sin_family == AF_INET)) {
-		priv->priv_addr.s_addr = addr_in->sin_addr.s_addr;
+	if (addr != NULL) {
+		switch (addr->sa_family) {
+		case AF_INET:
+			priv->priv_addrlen = sizeof(struct sockaddr_in);
+			memcpy(&priv->priv_addr, addr, priv->priv_addrlen);
+#ifdef HAVE_SA_LEN
+			/* XXX: sendmail doesn't set sa_len */
+			SA4(&priv->priv_addr)->sin_len = priv->priv_addrlen;
+#endif
+			break;
+#ifdef AF_INET6
+		case AF_INET6:
+			priv->priv_addrlen = sizeof(struct sockaddr_in6);
+			memcpy(&priv->priv_addr, addr, priv->priv_addrlen);
+#ifdef SIN6_LEN
+			/* XXX: sendmail doesn't set sa_len */
+			SA6(&priv->priv_addr)->sin6_len = priv->priv_addrlen;
+#endif
+			unmappedaddr(SA(&priv->priv_addr),
+			    &priv->priv_addrlen);
+			break;
+#endif
+		default:
+			priv->priv_elapsed = 0;
+			priv->priv_whitelist = EXF_NONIPV4;
+			break;
+		}
 	} else {
 		priv->priv_elapsed = 0;
 		priv->priv_whitelist = EXF_NONIPV4;
@@ -232,8 +254,8 @@ mlfi_envfrom(ctx, envfrom)
 	 * a lookup in the whitelist is less expensive
 	 * than a DNS lookup.
 	 */
-	if ((priv->priv_whitelist = except_sender_filter(&priv->priv_addr, 
-	    priv->priv_hostname, priv->priv_from, 
+	if ((priv->priv_whitelist = except_sender_filter(SA(&priv->priv_addr),
+	    priv->priv_addrlen, priv->priv_hostname, priv->priv_from, 
 	    priv->priv_queueid)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 
@@ -244,7 +266,7 @@ mlfi_envfrom(ctx, envfrom)
 	 * Is the sender address SPF-compliant?
 	 */
 	if ((conf.c_nospf == 0) && 
-	    (SPF_CHECK(&priv->priv_addr, 
+	    (SPF_CHECK(SA(&priv->priv_addr), priv->priv_addrlen,
 	    priv->priv_helo, *envfrom) != EXF_NONE)) {
 		char ipstr[IPADDRLEN + 1];
 
@@ -269,16 +291,19 @@ mlfi_envrcpt(ctx, envrcpt)
 	struct mlfi_priv *priv;
 	time_t remaining;
 	char hdr[HDRLEN + 1];
-	char addrstr[IPADDRLEN + 1];
+	char addrstr[IPADDRSTRLEN];
 	char rcpt[ADDRLEN + 1];
 	int h, mn, s;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
+	if (!iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
+	    sizeof(addrstr)))
+		return SMFIS_CONTINUE;
+
 	if (conf.c_debug)
 		syslog(LOG_DEBUG, "%s: addr = %s, from = %s, rcpt = %s", 
-		    priv->priv_queueid, inet_ntoa(priv->priv_addr), 
-		    priv->priv_from, *envrcpt);
+		    priv->priv_queueid, addrstr, priv->priv_from, *envrcpt);
 
 	/*
 	 * For multiple-recipients messages, if the sender IP or the
@@ -326,8 +351,9 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * Check if the tuple {sender IP, sender e-mail, recipient e-mail}
 	 * was autowhitelisted
 	 */
-	if ((priv->priv_whitelist = autowhite_check(&priv->priv_addr,
-	    priv->priv_from, rcpt, priv->priv_queueid)) != EXF_NONE) {
+	if ((priv->priv_whitelist = autowhite_check(SA(&priv->priv_addr),
+	    priv->priv_addrlen, priv->priv_from, rcpt, priv->priv_queueid)) !=
+	    EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -352,8 +378,9 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * is in the greylist and if it ca now be accepted. If it is not
 	 * in the greylist, it will be added.
 	 */
-	if (pending_check(&priv->priv_addr, priv->priv_from, 
-	    rcpt, &remaining, &priv->priv_elapsed, priv->priv_queueid) != 0) 
+	if (pending_check(SA(&priv->priv_addr), priv->priv_addrlen,
+	    priv->priv_from, rcpt, &remaining, &priv->priv_elapsed,
+	    priv->priv_queueid) != 0)
 		return SMFIS_CONTINUE;
 
 	/*
@@ -367,9 +394,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	s = remaining;
 
 	syslog(LOG_INFO, "%s: addr %s from %s to %s delayed for %02d:%02d:%02d",
-	    priv->priv_queueid,
-	    inet_ntop(AF_INET, &priv->priv_addr, addrstr, IPADDRLEN),
-	    priv->priv_from, *envrcpt, h, mn, s);
+	    priv->priv_queueid, addrstr, priv->priv_from, *envrcpt, h, mn, s);
 
 	if (conf.c_quiet) {
 		(void)smfi_setreply(ctx, "451", "4.7.1", 
@@ -409,7 +434,22 @@ mlfi_eom(ctx)
 		fqdn = host;
 	}
 
-	if ((ip = smfi_getsymval(ctx, "{if_addr}")) == NULL) {
+	ip = smfi_getsymval(ctx, "{if_addr}");
+#ifdef AF_INET6
+	/*
+	 * XXX: sendmail doesn't return {if_addr} when connection is
+	 * from ::1
+	 */
+	if (ip == NULL && SA(&priv->priv_addr)->sa_family == AF_INET6) {
+		char buf[IPADDRSTRLEN];
+
+		if (iptostring(SA(&priv->priv_addr), priv->priv_addrlen, buf,
+		    sizeof(buf)) != NULL &&
+		    strcmp(buf, "::1") == 0)
+			ip = "IPv6:::1";
+	}
+#endif
+	if (ip == NULL) {
 		syslog(LOG_DEBUG, "smfi_getsymval failed for {if_addr}");
 		ip = "0.0.0.0";
 	}
@@ -532,7 +572,7 @@ main(argc, argv)
 	/* 
 	 * Process command line options 
 	 */
-	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rSL:")) != -1) {
+	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rSL:M:")) != -1) {
 		switch (ch) {
 		case 'A':
 			defconf.c_noauth = 1;
@@ -660,13 +700,46 @@ main(argc, argv)
 				    "%s: -L requires a CIDR mask\n", argv[0]);
 				usage(argv[0]);
 			}
-			cidr2mask(cidr, &defconf.c_match_mask);
+			prefix2mask4(cidr, &defconf.c_match_mask);
 			defconf.c_forced |= C_MATCHMASK;
 
 			if (defconf.c_debug)
 				printf("match mask: %s\n", inet_ntop(AF_INET, 
 				    &defconf.c_match_mask, maskstr, IPADDRLEN));
 
+			break;
+		}
+
+		case 'M': {
+			int plen;
+#ifdef AF_INET6
+			char maskstr[INET6_ADDRSTRLEN + 1];
+#endif
+
+		  	if (optarg == NULL) {
+				fprintf(stderr,
+				    "%s: -M requires a prefix length\n",
+				    argv[0]);
+				usage(argv[0]);
+			}
+
+			plen = atoi(optarg);
+			if ((plen > 128) || (plen < 0)) {
+				fprintf(stderr,
+				    "%s: -M requires a prefix length\n",
+				    argv[0]);
+				usage(argv[0]);
+			}
+#ifdef AF_INET6
+			prefix2mask6(plen, &defconf.c_match_mask6);
+			defconf.c_forced |= C_MATCHMASK6;
+
+			if (defconf.c_debug)
+				printf("match mask: %s\n", inet_ntop(AF_INET6,
+				    &defconf.c_match_mask6, maskstr,
+				    INET6_ADDRSTRLEN));
+
+#endif
 			break;
 		}
 
@@ -971,7 +1044,7 @@ writepid(pidfile)
 
 
 struct in_addr *
-cidr2mask(cidr, mask)
+prefix2mask4(cidr, mask)
 	int cidr;
 	struct in_addr *mask;
 {
@@ -984,6 +1057,60 @@ cidr2mask(cidr, mask)
 	}
 	
 	return mask;
+}
+
+#ifdef AF_INET6
+struct in6_addr *
+prefix2mask6(plen, mask)
+	int plen;
+	struct in6_addr *mask;
+{
+	int i;
+	u_int32_t m;
+
+	if (plen == 0 || plen > 128)
+		bzero((void *)mask, sizeof(*mask));
+	else {
+		for (i = 0; i < 16; i += 4) {
+			if (plen < 32)
+				m = ~(0xffffffff >> plen);
+			else
+				m = 0xffffffff;
+			*(u_int32_t *)&mask->s6_addr[i] = htonl(m);
+			plen -= 32;
+			if (plen < 0)
+				plen = 0;
+		}
+	}
+
+	return mask;
+}
+#endif
+
+void
+unmappedaddr(sa, salen)
+	struct sockaddr *sa;
+	socklen_t *salen;
+{
+#ifdef AF_INET6
+	struct in_addr addr4;
+	int port;
+
+	if (SA6(sa)->sin6_family != AF_INET6 ||
+	    !IN6_IS_ADDR_V4MAPPED(SADDR6(sa)))
+		return;
+	addr4.s_addr = *(u_int32_t *)&SADDR6(sa)->s6_addr[12];
+	port = SA6(sa)->sin6_port;
+	bzero(sa, sizeof(struct sockaddr_in));
+	SADDR4(sa)->s_addr = addr4.s_addr;
+	SA4(sa)->sin_port = port;
+	SA4(sa)->sin_family = AF_INET;
+#ifdef HAVE_SA_LEN
+	SA4(sa)->sin_len = sizeof(struct sockaddr_in);
+#endif
+	*salen = sizeof(struct sockaddr_in);
+#endif
+	return;
 }
 
 void

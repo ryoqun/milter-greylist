@@ -1,4 +1,4 @@
-/* $Id: except.h,v 1.24 2004/05/26 21:50:13 manu Exp $ */
+/* $Id: except.h,v 1.25 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -68,6 +68,7 @@ typedef enum {
 } except_type_t;
 
 #define e_addr e_data.d_netblock.nb_addr
+#define e_addrlen e_data.d_netblock.nb_addrlen
 #define e_mask e_data.d_netblock.nb_mask
 #define e_from e_data.d_from
 #define e_rcpt e_data.d_rcpt
@@ -80,8 +81,9 @@ struct except {
 	except_type_t e_type;
 	union {
 		struct {
-			struct in_addr nb_addr;
-			struct in_addr nb_mask;
+			struct sockaddr *nb_addr;
+			socklen_t nb_addrlen;
+			ipaddr_t *nb_mask;
 		} d_netblock;
 		char d_from[ADDRLEN + 1];
 		char d_rcpt[ADDRLEN + 1];
@@ -98,7 +100,7 @@ extern pthread_rwlock_t except_lock;
 
 void except_init(void);
 void except_clear(void);
-void except_add_netblock(struct in_addr *, int);
+void except_add_netblock(struct sockaddr *, socklen_t, int);
 void except_add_domain(char *);
 void except_add_domain_regex(char *);
 void except_add_from(char *);
@@ -106,7 +108,7 @@ void except_add_rcpt(char *);
 void except_add_from_regex(char *);
 void except_add_rcpt_regex(char *);
 int except_rcpt_filter(char *, char *);
-int except_sender_filter(struct in_addr *, char *, char *, char *);
+int except_sender_filter(struct sockaddr *, socklen_t, char *, char *, char *);
 
 /* except_filter() return codes */
 #define EXF_UNSET	0

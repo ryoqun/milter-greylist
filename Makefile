@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.5 2004/07/29 06:53:01 manu Exp $
+# $Id: Makefile,v 1.6 2004/08/01 09:27:03 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -67,16 +67,16 @@ conf_yacc.o:	conf_yacc.c conf_lex.c
 dump_yacc.o:	dump_yacc.c dump_lex.c
 
 rc-bsd.sh:      rc-bsd.sh.in
-	${SED} "s|@BINDIR@|${BINDIR}|g; s|@USER@|${USER}|g" \
+	${SED} "s|@BINDIR@|${BINDIR}|g; s|smmsp|${USER}|g" \
 	    rc-bsd.sh.in > rc-bsd.sh
 rc-linux.sh:    rc-linux.sh.in
-	${SED} "s|@BINDIR@|${BINDIR}|g; s|@USER@|${USER}|g" \
+	${SED} "s|@BINDIR@|${BINDIR}|g; s|smmsp|${USER}|g" \
 	    rc-linux.sh.in > rc-linux.sh
 rc-solaris.sh:    rc-solaris.sh.in
-	${SED} "s|@BINDIR@|${BINDIR}|g; s|@USER@|${USER}|g" \
+	${SED} "s|@BINDIR@|${BINDIR}|g; s|smmsp|${USER}|g" \
 	    rc-solaris.sh.in > rc-solaris.sh
 rc-debian.sh:    rc-debian.sh.in
-	${SED} "s|@BINDIR@|${BINDIR}|g; s|@USER@|${USER}|g" \
+	${SED} "s|@BINDIR@|${BINDIR}|g; s|smmsp|${USER}|g" \
 	    rc-debian.sh.in > rc-debian.sh
 
 install:	milter-greylist
@@ -109,7 +109,7 @@ depend:
 
 clean:
 	${RM} -f milter-greylist ${OBJ} ${GENSRC} \
-	rc-linux.sh rc-bsd.sh rc-solaris.sh
+	rc-linux.sh rc-bsd.sh rc-solaris.sh rc-debian.sh
 
 realclean:	clean
 	${RM} -Rf Makefile config.h config.log config.status \

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.33 2004/06/08 14:47:47 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.34 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -35,6 +35,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netdb.h>
 
 #include <libmilter/mfapi.h>
 #include "config.h"
@@ -43,11 +44,44 @@
 #define NUMLEN 20
 #define PATHLEN 1024
 #define REGEXLEN 1024
-#define HDRLEN 160
+#define HDRLEN 195
 #define HEADERNAME "X-Greylist"
 
+
+#if defined(HAVE_GETNAMEINFO)
+#define IPADDRSTRLEN	NI_MAXHOST
+#elif defined(INET6_ADDRSTRLEN)
+#define IPADDRSTRLEN	INET6_ADDRSTRLEN
+#else
+#define IPADDRSTRLEN	IPADDRLEN
+#endif
+
+typedef union {
+	struct in_addr in4;
+#ifdef AF_INET6
+	struct in6_addr in6;
+#endif
+} ipaddr_t;
+
+typedef union {
+	struct sockaddr sa;
+	struct sockaddr_in sin;
+#ifdef AF_INET6
+	struct sockaddr_in6 sin6;
+#endif
+} sockaddr_t;
+
+#define SA(sa)		((struct sockaddr *)(sa))
+#define SA4(sa)		((struct sockaddr_in *)(sa))
+#define SADDR4(sa)	(&SA4(sa)->sin_addr)
+#ifdef AF_INET6
+#define SA6(sa)		((struct sockaddr_in6 *)(sa))
+#define SADDR6(sa)	(&SA6(sa)->sin6_addr)
+#endif
+
 struct mlfi_priv {
-	struct in_addr priv_addr;
+	sockaddr_t priv_addr;
+	socklen_t priv_addrlen;
 	char priv_hostname[ADDRLEN + 1];
 	char priv_helo[ADDRLEN + 1];
 	char priv_from[ADDRLEN + 1];
@@ -64,8 +98,12 @@ sfsistat mlfi_eom(SMFICTX *);
 sfsistat mlfi_close(SMFICTX *);
 void usage(char *);
 int humanized_atoi(char *);
-struct in_addr *cidr2mask(int, struct in_addr *);
+struct in_addr *prefix2mask4(int, struct in_addr *);
+#ifdef AF_INET6
+struct in6_addr *prefix2mask6(int, struct in6_addr *);
+#endif
 void cleanup_sock(char *);
+void unmappedaddr(struct sockaddr *, socklen_t *);
 void final_dump(void);
 int main(int, char **);
 

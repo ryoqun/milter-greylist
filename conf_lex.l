@@ -5,6 +5,7 @@
 
 byte		[0-9]{1,3}
 ipaddr		{byte}"."{byte}"."{byte}"."{byte}
+ip6addr		([0-9a-fA-F]*:)+[0-9a-fA-F]*(%[0-9a-zA-Z]+)?
 cidr		"/"{byte}
 atext		[A-Za-z0-9!#$%&'*+/=?$^_`}{|~.-]{1,}
 qtext		"\""[!-~]{1,}"\""
@@ -27,6 +28,7 @@ autowhite	[Aa][Uu][Tt][Oo][Ww][Hh][Ii][Tt][Ee]:?
 pidfile		[Pp][Ii][Dd][Ff][Ii][Ll][Ee]:?
 dumpfile	[Dd][Uu][Mm][Pp][Ff][Ii][Ll][Ee]:?
 subnetmatch	[Ss][Uu][Bb][Nn][Ee][Tt][Mm][Aa][Tt][Cc][Hh]:?
+subnetmatch6	[Ss][Uu][Bb][Nn][Ee][Tt][Mm][Aa][Tt][Cc][Hh]6:?
 socket		[Ss][Oo][Cc][Kk][Ee][Tt]:?
 user		[Uu][Ss][Ee][Rr]:?
 nodetach	[Nn][Oo][Dd][Ee][Tt][Aa][Cc][Hh]
@@ -50,7 +52,7 @@ domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.25 2004/06/01 16:15:49 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.26 2004/08/01 09:27:03 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -82,6 +84,7 @@ domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }
+{subnetmatch6}	{ return SUBNETMATCH6; }
 {socket}	{ return SOCKET; }
 {user}		{ return USER; }
 {nodetach}	{ return NODETACH; }
@@ -109,12 +112,28 @@ domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 			return EMAIL;
 		}
 {ipaddr}	{ 
-			if (inet_pton(AF_INET, yytext, &yylval.ipaddr) != 1) {
-				printf("invalid IP address line %d\n", 
+			socklen_t salen = sizeof(yylval.ipaddr);
+
+			if (ipfromstring(yytext, SA(&yylval.ipaddr), &salen,
+			     AF_INET) != 1) {
+				printf("invalid IPv4 address line %d\n",
 				    conf_line);
 				exit(EX_DATAERR);
 			}
 			return IPADDR; 
+		}
+{ip6addr}	{
+#ifdef AF_INET6
+			socklen_t salen = sizeof(yylval.ip6addr);
+
+			if (ipfromstring(yytext, SA(&yylval.ip6addr), &salen,
+			    AF_INET6) != 1) {
+				printf("invalid IPv6 address line %d\n",
+				    conf_line);
+				exit(EX_DATAERR);
+			}
+#endif
+			return IP6ADDR;
 		}
 {domainname}	{ 
 			strncpy(yylval.domainname, yytext, ADDRLEN);

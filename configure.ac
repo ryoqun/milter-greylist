@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.118 2004/06/23 14:28:07 manu Exp $
+# $Id: configure.ac,v 1.119 2004/08/01 09:27:03 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 1.5.3, manu@netbsd.org)
+AC_INIT(milter-greylist, 1.5.4, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -124,6 +124,74 @@ AC_CHECK_LIB([resolv], [inet_aton], [LIBS="$LIBS -lresolv"], [])
 
 # Check for inet_pton (libmilter uses it). On solaris, -lnsl is required
 AC_CHECK_LIB([nsl], [inet_pton], [LIBS="$LIBS -lnsl"], []) 
+
+# Check for getaddrinfo and getnameinfo
+AC_DEFUN([IPv6_CHECK_FUNC], [
+changequote(, )dnl
+ac_tr_lib=HAVE_`echo $1 | sed -e 's/[^a-zA-Z0-9_]/_/g' \
+  -e 'y/abcdefghijklmnopqrstuvwxyz/ABCDEFGHIJKLMNOPQRSTUVWXYZ/'`
+changequote([, ])dnl
+AC_CHECK_FUNC($1, [dnl
+  ac_cv_lib_socket_$1=no
+  ac_cv_lib_inet6_$1=no
+], [dnl
+  AC_CHECK_LIB(socket, $1, [dnl
+    LIBS="$LIBS -lsocket"
+    ac_cv_lib_inet6_$1=no
+  ], [dnl
+    AC_MSG_CHECKING([whether your system has IPv6 directory])
+    AC_CACHE_VAL(ipv6_cv_dir, [dnl
+      for ipv6_cv_dir in /usr/local/v6 /usr/inet6 no; do
+	if test $ipv6_cv_dir = no -o -d $ipv6_cv_dir; then
+	  break
+	fi
+      done])dnl
+    AC_MSG_RESULT($ipv6_cv_dir)
+    if test $ipv6_cv_dir = no; then
+      ac_cv_lib_inet6_$1=no
+    else
+      if test x$ipv6_libinet6 = x; then
+	ipv6_libinet6=no
+	SAVELDFLAGS="$LDFLAGS"
+	LDFLAGS="$LDFLAGS -L$ipv6_cv_dir/lib"
+      fi
+      AC_CHECK_LIB(inet6, $1, [dnl
+	if test $ipv6_libinet6 = no; then
+	  ipv6_libinet6=yes
+	  LIBS="$LIBS -linet6"
+	fi],)dnl
+      if test $ipv6_libinet6 = no; then
+	LDFLAGS="$SAVELDFLAGS"
+      fi
+    fi])dnl
+])dnl
+ipv6_cv_$1=no
+if test $ac_cv_func_$1 = yes -o $ac_cv_lib_socket_$1 = yes \
+     -o $ac_cv_lib_inet6_$1 = yes
+then
+  ipv6_cv_$1=yes
+fi
+if test $ipv6_cv_$1 = no; then
+  if test $1 = getaddrinfo; then
+    for ipv6_cv_pfx in o n; do
+      AC_EGREP_HEADER(${ipv6_cv_pfx}$1, netdb.h,
+		      [AC_CHECK_FUNC(${ipv6_cv_pfx}$1)])
+      if eval test X\$ac_cv_func_${ipv6_cv_pfx}$1 = Xyes; then
+        ipv6_cv_$1=yes
+        break
+      fi
+    done
+  fi
+fi
+if test $ipv6_cv_$1 = yes; then
+  AC_DEFINE_UNQUOTED($ac_tr_lib)
+  ifelse([$2], , :, [$2])
+else
+  ifelse([$3], , :, [$3])
+fi])
+
+IPv6_CHECK_FUNC(getaddrinfo)
+IPv6_CHECK_FUNC(getnameinfo)
 
 # Check if <syslog.h> defines LOG_PERROR
 AC_MSG_CHECKING([if <syslog.h> defines LOG_PERROR])

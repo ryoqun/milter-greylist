@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.29 2004/05/24 21:22:03 manu Exp $ */
+/* $Id: pending.h,v 1.30 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -62,25 +62,31 @@
 TAILQ_HEAD(pendinglist, pending);
 
 struct pending {
-	char p_addr[IPADDRLEN + 1];
-	struct in_addr p_in;
+	char *p_addr;
+	struct sockaddr *p_sa;
+	socklen_t p_salen;
 	char p_from[ADDRLEN + 1];
 	char p_rcpt[ADDRLEN + 1];
 	struct timeval p_tv;
+	int p_refcnt;
 	TAILQ_ENTRY(pending) p_list;
 };
 
 extern pthread_rwlock_t pending_lock;
 
-extern struct in_addr match_mask;
-#define IP_MATCH(a, b) (((a)->s_addr & conf.c_match_mask.s_addr) \
-		== ((b)->s_addr & conf.c_match_mask.s_addr))
-
 void pending_init(void);
-struct pending *pending_get(struct in_addr *, char *, char *, time_t);
-int pending_check(struct in_addr *, char *, char *, time_t *, time_t *, char *);
-void pending_del(struct in_addr *, char *, char *, time_t);
+struct pending *pending_get(struct sockaddr *, socklen_t, char *, char *,
+    time_t);
+int pending_check(struct sockaddr *, socklen_t, char *, char *, time_t *,
+    time_t *, char *);
+void pending_del(struct sockaddr *, socklen_t, char *, char *, time_t);
 void pending_put(struct pending *);
 int pending_textdump(FILE *);
+struct pending *pending_ref(struct pending *);
+void pending_free(struct pending *);
+int ip_match(struct sockaddr *, struct sockaddr *, ipaddr_t *);
+int ip_equal(struct sockaddr *, struct sockaddr *);
+char *iptostring(struct sockaddr *, socklen_t, char *, size_t);
+int ipfromstring(char *, struct sockaddr *, socklen_t *, sa_family_t);
 
 #endif /* _PENDING_H_ */

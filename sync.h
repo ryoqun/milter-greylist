@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.11 2004/06/08 14:47:47 manu Exp $ */
+/* $Id: sync.h,v 1.12 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -61,8 +61,7 @@ LIST_HEAD(peerlist, peer);
 TAILQ_HEAD(synclist, sync);
 
 struct peer {
-	char p_name[IPADDRLEN + 1];
-	struct in_addr p_addr;
+	char *p_name;
 	FILE *p_stream;
 	int p_socket;
 	struct synclist p_deferred;
@@ -74,14 +73,14 @@ typedef enum { PS_CREATE, PS_DELETE } peer_sync_t;
 
 struct sync {
 	struct peer *s_peer;
-	struct pending s_pending;
+	struct pending *s_pending;
 	peer_sync_t s_type;
 	TAILQ_ENTRY(sync) s_list;
 };
 
 void peer_init(void);
 void peer_clear(void);
-void peer_add(struct in_addr *);
+void peer_add(char *);
 int peer_connect(struct peer *);
 void peer_create(struct pending *);
 void peer_delete(struct pending *);
@@ -89,6 +88,7 @@ void peer_delete(struct pending *);
 int sync_send(struct peer *, peer_sync_t,  struct pending *);
 void sync_sender_start(void);
 void sync_queue(struct peer *, peer_sync_t, struct pending *);
+void sync_free(struct sync *);
 
 void sync_sender(void *);
 void sync_master_restart(void);

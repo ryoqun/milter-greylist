@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.44 2004/06/08 14:47:47 manu Exp $ */
+/* $Id: except.c,v 1.45 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: except.c,v 1.44 2004/06/08 14:47:47 manu Exp $");
+__RCSID("$Id: except.c,v 1.45 2004/08/01 09:27:03 manu Exp $");
 #endif
 #endif
 
@@ -85,40 +85,78 @@ except_init(void) {
 }
 
 void
-except_add_netblock(in, cidr)	/* exceptlist must be write-locked */
-	struct in_addr *in;
+except_add_netblock(sa, salen, cidr)	/* exceptlist must be write-locked */
+	struct sockaddr *sa;
+	socklen_t salen;
 	int cidr;
 {
-	struct in_addr mask;
+	ipaddr_t mask;
 	struct except *except;
-	char addrstr[IPADDRLEN + 1];
-	char maskstr[IPADDRLEN + 1];
+	char addrstr[IPADDRSTRLEN];
+	char maskstr[IPADDRSTRLEN];
+	int maxcidr, masklen;
+#ifdef AF_INET6
+	int i;
+#endif
 
-	if ((cidr > 32) || (cidr < 0)) {
+	switch (sa->sa_family) {
+	case AF_INET:
+		maxcidr = 32;
+		masklen = sizeof(mask.in4);
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		maxcidr = 128;
+		masklen = sizeof(mask.in6);
+		break;
+#endif
+	default:
+		fprintf(stderr,
+		    "bad address family in exception list line %d\n",
+		    conf_line);
+		exit(EX_DATAERR);
+	}
+	if (cidr > maxcidr || cidr < 0) {
 		fprintf(stderr, "bad mask in exception list line %d\n", 
 		    conf_line);
 		exit(EX_DATAERR);
 	}
 
-	cidr2mask(cidr, &mask);
-	in->s_addr &= mask.s_addr;
+	switch (sa->sa_family) {
+	case AF_INET:
+		prefix2mask4(cidr, &mask.in4);
+		SADDR4(sa)->s_addr &= mask.in4.s_addr;
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		prefix2mask6(cidr, &mask.in6);
+		for (i = 0; i < 16; i += 4)
+			*(u_int32_t *)&SADDR6(sa)->s6_addr[i] &=
+			    *(u_int32_t *)&mask.in6.s6_addr[i];
+		break;
+#endif
+	}
 
-	if ((except = malloc(sizeof(*except))) == NULL) {
+	if ((except = malloc(sizeof(*except))) == NULL ||
+	    (except->e_addr = malloc(salen)) == NULL ||
+	    (except->e_mask = malloc(masklen)) == NULL) {
 		perror("cannot allocate memory");
 		exit(EX_OSERR);
 	}
 		
 	except->e_type = E_NETBLOCK;
-	memcpy(&except->e_addr, in, sizeof(*in));
-	memcpy(&except->e_mask, &mask, sizeof(mask));
+	except->e_addrlen = salen;
+	memcpy(except->e_addr, sa, salen);
+	memcpy(except->e_mask, &mask, masklen);
 	LIST_INSERT_HEAD(&except_head, except, e_list);
 
-	if (conf.c_debug)
-		printf("load exception net %s/%s\n", 
-		    (char *)inet_ntop(AF_INET, 
-		    &except->e_addr, addrstr, IPADDRLEN),
-		    (char *)inet_ntop(AF_INET, 
-		    &except->e_mask, maskstr, IPADDRLEN));
+	if (conf.c_debug) {
+		iptostring(except->e_addr, except->e_addrlen, addrstr,
+		    sizeof(addrstr));
+		inet_ntop(except->e_addr->sa_family, except->e_mask, maskstr,
+		    sizeof(maskstr));
+		printf("load exception net %s/%s\n", addrstr, maskstr);
+	}
 
 	return;
 }
@@ -365,14 +403,15 @@ except_rcpt_filter(rcpt, queueid)
 }
 
 int 
-except_sender_filter(in, hostname, from, queueid)
-	struct in_addr *in;
+except_sender_filter(sa, salen, hostname, from, queueid)
+	struct sockaddr *sa;
+	socklen_t salen;
 	char *hostname;
 	char *from;
 	char *queueid;
 {
 	struct except *ex;
-	char addrstr[IPADDRLEN + 1];
+	char addrstr[IPADDRSTRLEN];
 	int retval;
 
 	EXCEPT_RDLOCK;
@@ -384,11 +423,11 @@ except_sender_filter(in, hostname, from, queueid)
 			break;
 
 		case E_NETBLOCK: {
-			if ((in->s_addr & ex->e_mask.s_addr) == 
-			    ex->e_addr.s_addr) {
+			if (ip_match(sa, ex->e_addr, ex->e_mask)) {
+				iptostring(sa, salen, addrstr,
+				    sizeof(addrstr));
 				syslog(LOG_INFO, "%s: address %s is in "
-				    "exception list", queueid,
-				    inet_ntop(AF_INET, in, addrstr, IPADDRLEN));
+				    "exception list", queueid, addrstr);
 				retval = EXF_ADDR;
 				goto out;
 			}
@@ -479,6 +518,11 @@ except_clear(void) {	/* exceptlist must be write locked */
 	while(!LIST_EMPTY(&except_head)) {
 		except = LIST_FIRST(&except_head);
 		LIST_REMOVE(except, e_list);
+
+		if (except->e_type == E_NETBLOCK) {
+			free(except->e_addr);
+			free(except->e_mask);
+		}
 
 		if (except->e_type == E_FROM_RE)
 			regfree(&except->e_from_re);

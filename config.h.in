@@ -1,4 +1,4 @@
-/* $Id: config.h.in,v 1.18 2004/05/01 15:53:46 manu Exp $ */
+/* $Id: config.h.in,v 1.19 2004/08/01 09:27:03 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
@@ -69,6 +69,12 @@
 
 /* Define to 1 if you have the `socket' function. */
 #undef HAVE_SOCKET
+
+/* Define to 1 if you have the `getaddrinfo' function. */
+#undef HAVE_GETADDRINFO
+
+/* Define to 1 if you have the `getnameinfo' function. */
+#undef HAVE_GETNAMEINFO
 
 /* we use libspf */
 #undef HAVE_SPF

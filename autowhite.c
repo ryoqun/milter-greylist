@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.34 2004/06/14 20:43:21 manu Exp $ */
+/* $Id: autowhite.c,v 1.35 2004/08/01 09:27:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.34 2004/06/14 20:43:21 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.35 2004/08/01 09:27:03 manu Exp $");
 #endif
 #endif
 
@@ -81,8 +81,9 @@ autowhite_init(void) {
 }
 
 void
-autowhite_add(in, from, rcpt, date, queueid)
-	struct in_addr *in;
+autowhite_add(sa, salen, from, rcpt, date, queueid)
+	struct sockaddr *sa;
+	socklen_t salen;
 	char *from;
 	char *rcpt;
 	time_t *date;
@@ -91,7 +92,7 @@ autowhite_add(in, from, rcpt, date, queueid)
 	struct autowhite *aw;
 	struct autowhite *next_aw;
 	struct timeval now, delay;
-	char addr[IPADDRLEN + 1];
+	char addr[IPADDRSTRLEN];
 	time_t autowhite_validity;
 	int h, mn, s;
 	int dirty = 0;
@@ -107,7 +108,8 @@ autowhite_add(in, from, rcpt, date, queueid)
 	mn = ((autowhite_validity % 3600) / 60);
 	s = (autowhite_validity % 3600) % 60;
 
-	inet_ntop(AF_INET, in, addr, IPADDRLEN);
+	if (!iptostring(sa, salen, addr, sizeof(addr)))
+		return;
 
 	AUTOWHITE_WRLOCK;
 	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
@@ -119,7 +121,7 @@ autowhite_add(in, from, rcpt, date, queueid)
 		if (aw->a_tv.tv_sec < now.tv_sec) {
 			char buf[IPADDRLEN + 1];
 
-			inet_ntop(AF_INET, &aw->a_in, buf, IPADDRLEN);
+			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
 			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
 			    "autowhitelisted entry expired",
 			    buf, aw->a_from, aw->a_rcpt);
@@ -134,7 +136,7 @@ autowhite_add(in, from, rcpt, date, queueid)
 		/*
 		 * Look for an already existing entry
 		 */
-		if ((in->s_addr == aw->a_in.s_addr) &&
+		if (ip_equal(sa, aw->a_sa) &&
 		    ((conf.c_lazyaw == 1) ||
 		    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
 		    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
@@ -153,7 +155,7 @@ autowhite_add(in, from, rcpt, date, queueid)
 	 * Entry not found, create it
 	 */
 	if (aw == NULL) {
-		aw = autowhite_get(in, from, rcpt, date);
+		aw = autowhite_get(sa, salen, from, rcpt, date);
 
 		dirty++;
 
@@ -170,8 +172,9 @@ autowhite_add(in, from, rcpt, date, queueid)
 }
 
 int
-autowhite_check(in, from, rcpt, queueid)
-	struct in_addr *in;
+autowhite_check(sa, salen, from, rcpt, queueid)
+	struct sockaddr *sa;
+	socklen_t salen;
 	char *from;
 	char *rcpt;
 	char *queueid;
@@ -179,10 +182,11 @@ autowhite_check(in, from, rcpt, queueid)
 	struct autowhite *aw;
 	struct autowhite *next_aw;
 	struct timeval now, delay;
-	char addr[IPADDRLEN + 1];
+	char addr[IPADDRSTRLEN];
 	time_t autowhite_validity;
 	int h, mn, s;
 	int dirty = 0;
+	ipaddr_t *mask = NULL;
 
 	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
 		return EXF_NONE;
@@ -195,7 +199,8 @@ autowhite_check(in, from, rcpt, queueid)
 	mn = ((autowhite_validity % 3600) / 60);
 	s = (autowhite_validity % 3600) % 60;
 
-	inet_ntop(AF_INET, in, addr, IPADDRLEN);
+	if (!iptostring(sa, salen, addr, sizeof(addr)))
+		return EXF_NONE;
 
 	AUTOWHITE_WRLOCK;
 	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
@@ -206,9 +211,9 @@ autowhite_check(in, from, rcpt, queueid)
 		 * an outdated record to match
 		 */
 		if (aw->a_tv.tv_sec < now.tv_sec) {
-			char buf[IPADDRLEN + 1];
+			char buf[IPADDRSTRLEN];
 
-			inet_ntop(AF_INET, &aw->a_in, buf, IPADDRLEN);
+			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
 			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
 			    "autowhitelisted entry expired",
 			    buf, aw->a_from, aw->a_rcpt);
@@ -224,7 +229,17 @@ autowhite_check(in, from, rcpt, queueid)
 		/*
 		 * Look for our record
 		 */
-		if ((IP_MATCH(in, &aw->a_in)) &&
+		switch (sa->sa_family) {
+		case AF_INET:
+			mask = (ipaddr_t *)&conf.c_match_mask;
+			break;
+#ifdef AF_INET6
+		case AF_INET6:
+			mask = (ipaddr_t *)&conf.c_match_mask6;
+			break;
+#endif
+		}
+		if (ip_match(sa, aw->a_sa, mask) &&
 		    ((conf.c_lazyaw == 1) ||
 		    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
 		    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
@@ -256,7 +271,7 @@ autowhite_textdump(stream)
 	struct autowhite *aw;
 	int done = 0;
 	char textdate[DATELEN + 1];
-	char textaddr[IPADDRLEN + 1];
+	char textaddr[IPADDRSTRLEN];
 	struct tm tm;
 
 	fprintf(stream, "\n\n#\n# Auto-whitelisted tuples\n#\n");
@@ -268,7 +283,7 @@ autowhite_textdump(stream)
 		localtime_r((time_t *)&aw->a_tv.tv_sec, &tm);
 		strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
 
-		inet_ntop(AF_INET, &aw->a_in, textaddr, IPADDRLEN);
+		iptostring(aw->a_sa, aw->a_salen, textaddr, sizeof(textaddr));
 
 		fprintf(stream, 
 		    "%s     %32s    %32s    %ld AUTO # %s\n",
@@ -283,8 +298,9 @@ autowhite_textdump(stream)
 }
 
 struct autowhite *
-autowhite_get(in, from, rcpt, date) /* autowhite list must be locked */
-	struct in_addr *in;
+autowhite_get(sa, salen, from, rcpt, date) /* autowhite list must be locked */
+	struct sockaddr *sa;
+	socklen_t salen;
 	char *from;
 	char *rcpt;
 	time_t *date;
@@ -304,7 +320,13 @@ autowhite_get(in, from, rcpt, date) /* autowhite list must be locked */
 
 	bzero((void *)aw, sizeof(*aw));
 
-	aw->a_in.s_addr = in->s_addr;
+	if ((aw->a_sa = malloc(salen)) == NULL) {
+		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	memcpy(aw->a_sa, sa, salen);
+	aw->a_salen = salen;
 	strncpy(aw->a_from, from, ADDRLEN);
 	aw->a_from[ADDRLEN] = '\0';
 	strncpy(aw->a_rcpt, rcpt, ADDRLEN);
@@ -325,6 +347,7 @@ autowhite_put(aw)	/* autowhite list must be write-locked */
 	struct autowhite *aw;
 {
 	TAILQ_REMOVE(&autowhite_head, aw, a_list);	
+	free(aw->a_sa);
 	free(aw);
 
 	return;

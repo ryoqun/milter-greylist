@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.34 2004/07/29 06:53:02 manu Exp $
+# $Id: Makefile.in,v 1.35 2004/08/01 09:27:03 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -109,7 +109,7 @@ depend:
 
 clean:
 	${RM} -f milter-greylist ${OBJ} ${GENSRC} \
-	rc-linux.sh rc-bsd.sh rc-solaris.sh
+	rc-linux.sh rc-bsd.sh rc-solaris.sh rc-debian.sh
 
 realclean:	clean
 	${RM} -Rf Makefile config.h config.log config.status \
