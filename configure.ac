@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.57 2004/03/21 23:51:47 manu Exp $
+# $Id: configure.ac,v 1.58 2004/03/21 23:54:55 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -257,7 +257,7 @@ AC_ARG_WITH(dumpfile,
 	[CFLAGS=$CFLAGS" -DDUMPFILE=\\\"$withval\\\""])
 AC_ARG_WITH(delay,  
 	[  --with-delay=VALUE     Delay before accepting mail],
-	[CFLAGS=$CFLAGS" -DDELAY=$withval"])
+	[CFLAGS=$CFLAGS" -DGLDELAY=$withval"])
 AC_ARG_WITH(timeout,  
 	[  --with-timeout=VALUE   Timeout before we forget about a send],
 	[CFLAGS=$CFLAGS" -DTIMEOUT=$withval"])

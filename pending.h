@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.18 2004/03/20 07:19:03 manu Exp $ */
+/* $Id: pending.h,v 1.19 2004/03/21 23:54:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -45,8 +45,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#ifndef DELAY
-#define DELAY	1800	/* 1800 seconds = 30 minutes */
+#ifndef GLDELAY
+#define GLDELAY	1800	/* 1800 seconds = 30 minutes */
 #endif
 
 #ifndef TIMEOUT

@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.39 2004/03/21 23:19:16 manu Exp $ */
+/* $Id: pending.c,v 1.40 2004/03/21 23:54:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.39 2004/03/21 23:19:16 manu Exp $");
+__RCSID("$Id: pending.c,v 1.40 2004/03/21 23:54:55 manu Exp $");
 #endif
 
 #include "config.h"
@@ -67,7 +67,7 @@ __RCSID("$Id: pending.c,v 1.39 2004/03/21 23:19:16 manu Exp $");
 struct pendinglist pending_head;
 pthread_rwlock_t pending_lock; 	/* protects pending_head and dump_dirty */
 
-int delay = DELAY;
+int delay = GLDELAY;
 
 int
 pending_init(void) {
