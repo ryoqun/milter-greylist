@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.15 2004/04/02 15:06:52 manu Exp $ */
+/* $Id: conf.c,v 1.16 2004/05/15 08:41:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.15 2004/04/02 15:06:52 manu Exp $");
+__RCSID("$Id: conf.c,v 1.16 2004/05/15 08:41:54 manu Exp $");
 #endif
 #endif
 
@@ -75,6 +75,9 @@ char c_pidfile[PATHLEN + 1];
 char c_dumpfile[PATHLEN + 1];
 char c_socket[PATHLEN + 1];
 char c_user[PATHLEN + 1];
+char c_greylistdb[PATHLEN + 1];
+char c_autowhitedb[PATHLEN + 1];
+char c_lockfile[PATHLEN + 1];
 
 char *conffile = CONFFILE;
 struct timeval conffile_modified;
@@ -113,7 +116,7 @@ void
 conf_update(void) {
 	struct stat st;
 	struct timeval tv1, tv2, tv3;
-	
+
 	if (stat(conffile, &st) != 0) {
 		syslog(LOG_ERR, "config file \"%s\" unavailable", 
 		    conffile);
@@ -135,6 +138,10 @@ conf_update(void) {
 	except_clear();
 	conf_load();
 	EXCEPT_UNLOCK;
+
+	/* Update databse keys and options if needed */
+	pending_db_options();
+	autowhite_db_options();
 
 	if (conf.c_debug) {
 		(void)gettimeofday(&tv2, NULL);
@@ -185,6 +192,10 @@ conf_defaults(c)
 	c->c_user = NULL;
 	c->c_nodetach = 0;
 	c->c_report = C_ALL;
+	c->c_dumpfreq = DUMPFREQ;
+	c->c_greylistdb = GREYLISTDB;
+	c->c_autowhitedb = AUTOWHITEDB;
+	c->c_lockfile = LOCKFILE;
 
 	return;
 }

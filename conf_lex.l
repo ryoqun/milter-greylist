@@ -26,6 +26,7 @@ greylist	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt]:?
 autowhite	[Aa][Uu][Tt][Oo][Ww][Hh][Ii][Tt][Ee]:?
 pidfile		[Pp][Ii][Dd][Ff][Ii][Ll][Ee]:?
 dumpfile	[Dd][Uu][Mm][Pp][Ff][Ii][Ll][Ee]:?
+dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
 subnetmatch	[Ss][Uu][Bb][Nn][Ee][Tt][Mm][Aa][Tt][Cc][Hh]:?
 socket		[Ss][Oo][Cc][Kk][Ee][Tt]:?
 user		[Uu][Ss][Ee][Rr]:?
@@ -39,6 +40,9 @@ all		[Aa][Ll][Ll]
 delay		[0-9]{1,}[smhdw]?
 path		"\""[^"\n]{1,}"\""
 regex		"/"[^/\n]{1,}"/"
+greylistdb	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt][Dd][Bb]:?
+autowhitedb	[Aa][Uu][Tt][Oo][Ww][Hh][Ii][Tt][Ee][Dd][Bb]:?
+lockfile	[Ll][Oo][Cc][Kk][Ff][Ii][Ll][Ee]:?
 
 %{
 	#include "config.h"
@@ -47,7 +51,7 @@ regex		"/"[^/\n]{1,}"/"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.16 2004/04/22 23:27:57 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.17 2004/05/15 08:41:54 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -78,6 +82,10 @@ regex		"/"[^/\n]{1,}"/"
 {verbose}	{ return VERBOSE; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
+{dumpfreq}	{ return DUMPFREQ; }
+{greylistdb}	{ return GREYLISTDB; }
+{autowhitedb}	{ return AUTOWHITEDB; }
+{lockfile}	{ return LOCKFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }
 {socket}	{ return SOCKET; }
 {user}		{ return USER; }

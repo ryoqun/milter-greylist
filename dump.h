@@ -1,4 +1,4 @@
-/* $Id: dump.h,v 1.6 2004/05/06 13:50:55 manu Exp $ */
+/* $Id: dump.h,v 1.7 2004/05/15 08:41:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -45,8 +45,8 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#ifndef DUMPFILE
-#define DUMPFILE "/var/milter-greylist/greylist.db"
+#ifndef DUMPFREQ
+#define DUMPFREQ 600
 #endif
 
 #define DATELEN 40

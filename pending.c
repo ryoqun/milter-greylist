@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.50 2004/05/06 13:50:55 manu Exp $ */
+/* $Id: pending.c,v 1.51 2004/05/15 08:41:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.50 2004/05/06 13:50:55 manu Exp $");
+__RCSID("$Id: pending.c,v 1.51 2004/05/15 08:41:54 manu Exp $");
 #endif
 #endif
 
@@ -46,9 +46,11 @@ __RCSID("$Id: pending.c,v 1.50 2004/05/06 13:50:55 manu Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <string.h>
 #include <strings.h>
 #include <pthread.h>
+#include <ctype.h>
 #include <errno.h>
 #include <time.h>
 #include <sysexits.h>
@@ -59,8 +61,18 @@ __RCSID("$Id: pending.c,v 1.50 2004/05/06 13:50:55 manu Exp $");
 #include <sys/time.h>
 #include <sys/socket.h>
 
+#ifdef HAVE_DB_185_H
+#include <db_185.h>
+#else 
+#include <db.h>
+#endif
+ 
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#ifndef O_EXLOCK
+#define O_EXLOCK 0
+#endif
 
 #include "sync.h"
 #include "dump.h"
@@ -69,132 +81,126 @@ __RCSID("$Id: pending.c,v 1.50 2004/05/06 13:50:55 manu Exp $");
 #include "autowhite.h"
 #include "milter-greylist.h"
 
-struct pendinglist pending_head;
+DB *pending_db = NULL;
 pthread_rwlock_t pending_lock; 	/* protects pending_head and dump_dirty */
 
 void
 pending_init(void) {
 
-	TAILQ_INIT(&pending_head);
 	pthread_rwlock_init(&pending_lock, NULL);
+
+	if ((pending_db = dbopen(conf.c_greylistdb,
+	    O_RDWR|O_EXLOCK|O_CREAT, 0644, DB_BTREE, NULL)) == NULL) {
+		syslog(LOG_ERR, "dbopen \"%s\" failed: %s",
+		    conf.c_greylistdb, strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	/* 
+	 * Create or update the option record
+	 */
+	pending_db_options();
 
 	return;
 }
 
 
-struct pending *
-pending_get(in, from, rcpt, date)  /* pending_lock must be write-locked */
+void
+pending_get(in, from, rcpt, date, pp)
+	struct in_addr *in;
+	char *from;
+	char *rcpt;
+	time_t date;
+	struct pending *pp;
+{
+	struct pending pending;
+	int delay = conf.c_delay;
+	time_t now;
+	DBT key;
+	DBT rec;
+	char keystr[KEYLEN + 1];
+
+	if (pp == NULL)
+		pp = &pending;
+
+	bzero(pp, sizeof(*pp));
+	now = time(NULL);
+
+	if (date == 0) {
+		pp->p_accepted = now + delay;
+	} else {
+		pp->p_accepted = date;
+	}
+
+	pp->p_addr.s_addr = in->s_addr;
+	strncpy(pp->p_from, from, ADDRLEN);
+	pp->p_from[ADDRLEN] = '\0';
+	strncpy(pp->p_rcpt, rcpt, ADDRLEN);
+	pp->p_rcpt[ADDRLEN] = '\0';
+
+	key.data = pending_makekey(keystr, KEYLEN, in, from, rcpt);	
+	key.size = strlen(keystr) + 1;
+	rec.data = pp;
+	rec.size = sizeof(*pp);
+
+	PENDING_WRLOCK;
+	if (pending_db->put(pending_db, &key, &rec, 0) != 0)
+		syslog(LOG_ERR, "db->put failed: %s", strerror(errno));
+	dump_dirty++;
+	PENDING_UNLOCK;
+
+	if (conf.c_debug) {
+		char addr[IPADDRLEN + 1];
+
+		inet_ntop(AF_INET, in, addr, IPADDRLEN);
+		syslog(LOG_DEBUG, "created: %s from %s to %s delayed for %lds",
+		    addr, pp->p_from, pp->p_rcpt, pp->p_accepted - now);
+	}
+
+	return;
+}
+
+void
+pending_put(keystr)
+	char *keystr;
+{
+	DBT key;
+
+	if (conf.c_debug) 
+		syslog(LOG_DEBUG, "removing key \"%s\" from greylist", keystr);
+
+	key.data = keystr;
+	key.size = strlen(keystr) + 1;
+
+	PENDING_WRLOCK;
+	if (pending_db->del(pending_db, &key, 0) != 0)
+	    syslog(LOG_ERR, "db->del failed: %s", strerror(errno));
+	dump_dirty++;
+	PENDING_UNLOCK;
+
+	return;
+}
+
+void
+pending_del(in, from, rcpt, date)
 	struct in_addr *in;
 	char *from;
 	char *rcpt;
 	time_t date;
 {
-	struct pending *pending;
-	struct timeval tv;
-	int delay = conf.c_delay;
-
-	if ((pending = malloc(sizeof(*pending))) == NULL)
-		goto out;
-
-	bzero((void *)pending, sizeof(pending));
-
-	if (date == 0) {
-		gettimeofday(&pending->p_tv, NULL);
-		pending->p_tv.tv_sec += delay;
-	} else {
-		pending->p_tv.tv_sec = date;
-	}
-
-	pending->p_in.s_addr = in->s_addr;
-	inet_ntop(AF_INET, in, pending->p_addr, IPADDRLEN);
-	strncpy(pending->p_from, from, ADDRLEN);
-	pending->p_from[ADDRLEN] = '\0';
-	strncpy(pending->p_rcpt, rcpt, ADDRLEN);
-	pending->p_rcpt[ADDRLEN] = '\0';
-	TAILQ_INSERT_TAIL(&pending_head, pending, p_list); 
-
-	if (conf.c_debug)
-		dump_dirty++;
-
-	(void)gettimeofday(&tv, NULL);
-
-	if (conf.c_debug) {
-		syslog(LOG_DEBUG, "created: %s from %s to %s delayed for %lds",
-		    pending->p_addr, pending->p_from, pending->p_rcpt, 
-		    pending->p_tv.tv_sec - tv.tv_sec);
-	}
-out:
-	return pending;
-}
-
-void
-pending_put(pending) /* pending list should be write-locked */
-	struct pending *pending;
-{
-	if (conf.c_debug) {
-		syslog(LOG_DEBUG, "removed: %s from %s to %s",
-		    pending->p_addr, pending->p_from, pending->p_rcpt);
-	}
-
-	TAILQ_REMOVE(&pending_head, pending, p_list);	
-	free(pending);
-
-	if (conf.c_debug)
-		dump_dirty++;
-
-	return;
-}
-
-void
-pending_del(in, from, rcpt, time)
-	struct in_addr *in;
-	char *from;
-	char *rcpt;
-	time_t time;
-{
 	char addr[IPADDRLEN + 1];
-	struct pending *pending;
-	struct pending *prev_pending = NULL;
-	struct timeval tv;
+	char keystr[KEYLEN + 1];
+	time_t now;
 
-	gettimeofday(&tv, NULL);
+	now = time(NULL);
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
+	pending_put(pending_makekey(keystr, KEYLEN, in, from, rcpt));
 
-	PENDING_WRLOCK;	/* XXX take it as read and upgrade it */
-	TAILQ_FOREACH(pending, &pending_head, p_list) {
-		/*
-		 * Look for our entry.
-		 */
-		if ((strncmp(addr, pending->p_addr, IPADDRLEN) == 0) &&
-		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
-		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0) &&
-		    (pending->p_tv.tv_sec == time)) {
-			pending_put(pending);
-			break;
-		}
-
-		/*
-		 * Check for expired entries 
-		 */
-		if (tv.tv_sec - pending->p_tv.tv_sec > TIMEOUT) {
-			if (conf.c_debug) {
-				syslog(LOG_DEBUG, 
-				    "del: %s from %s to %s timed out", 
-				    pending->p_addr, pending->p_from, 
-				    pending->p_rcpt);
-			}
-
-			pending_put(pending);
-
-			if (TAILQ_EMPTY(&pending_head))
-				break;
-			if ((pending = prev_pending) == NULL)
-				pending = TAILQ_FIRST(&pending_head);
-			continue;
-		}
-		prev_pending = pending;
-	}
+	/* Sync the database to disk */
+	PENDING_RDLOCK;
+	pending_db->sync(pending_db, 0);
 	PENDING_UNLOCK;
+
 	return;
 }
 
@@ -209,76 +215,82 @@ pending_check(in, from, rcpt, remaining, elapsed, queueid)
 {
 	char addr[IPADDRLEN + 1];
 	struct pending *pending;
-	struct pending *prev_pending = NULL;
+	struct pending pending_rec;
+	DBT key;
+	DBT rec;
+	char keystr[KEYLEN + 1];
+	int found;
 	time_t now;
 	time_t rest = -1;
 	time_t accepted = -1;
-	int dirty = 0;
 	int delay = conf.c_delay;
 
 	now = time(NULL);
 	(void)inet_ntop(AF_INET, in, addr, IPADDRLEN);
 
-	PENDING_WRLOCK;	/* XXX take a read lock and upgrade */
-	TAILQ_FOREACH(pending, &pending_head, p_list) {
+	/*
+	 * Look for our entry.
+	 */
+	key.data = pending_makekey(keystr, KEYLEN, in, from, rcpt);
+	key.size = strlen(keystr) + 1;
+
+	PENDING_RDLOCK;
+	found = pending_db->get(pending_db, &key, &rec, 0);
+	PENDING_UNLOCK;
+
+	switch(found) {
+	case 0: /* Tuple found */
+		pending = (struct pending *)rec.data;	
+		accepted = pending->p_accepted;
+		rest = accepted - now; 
 
 		/*
-		 * The time the entry shall be accepted
+		 * Is it acceptable now?
 		 */
-		accepted = pending->p_tv.tv_sec;
-
-		/*
-		 * Look for our entry.
-		 */
-		if ((IP_MATCH(&pending->p_in, in)) &&
-		    (strncmp(from, pending->p_from, ADDRLEN) == 0) &&
-		    (strncmp(rcpt, pending->p_rcpt, ADDRLEN) == 0)) {
-			rest = accepted - now; 
-
-			if (rest < 0) {
-				peer_delete(pending);
-				pending_put(pending);
-				autowhite_add(in, from, rcpt, NULL, queueid);
-				rest = 0;
-				dirty = 1;
-			}
-
-			goto out;
+		if (rest < 0) {
+			autowhite_add(in, from, rcpt, NULL, queueid);
+			peer_delete(pending);
+			pending_put(keystr);
+			rest = 0;
 		}
 
 		/*
-		 * Check for expired entries 
+		 * Is it obsolete?
 		 */
 		if (now - accepted > TIMEOUT) {
 			if (conf.c_debug) {
 				syslog(LOG_DEBUG, 
 				    "check: %s from %s to %s timed out", 
-				    pending->p_addr, pending->p_from, 
-				    pending->p_rcpt);
+				    addr, from, rcpt);
 			}
-
-			pending_put(pending);
-			dirty = 1;
-
-			if (TAILQ_EMPTY(&pending_head))
-				break;
-			if ((pending = prev_pending) == NULL)
-				pending = TAILQ_FIRST(&pending_head);
-			continue;
+			/*
+			 * No need to peer_delete() as the peers
+			 * will get a timeout too.
+			 */
+			pending_put(keystr);
 		}
-		prev_pending = pending;
+		break;
+
+	case 1: /* Not found, add it */
+		accepted = now + delay;
+		pending_get(in, from, rcpt, accepted, &pending_rec);
+		peer_create(&pending_rec);
+		rest = delay;
+
+		break;
+
+	default:
+		syslog(LOG_ERR, "db->get failed: %s", strerror(errno));
+		rest = 0;
+		accepted = now;
+		break;
 	}
 
-	/* 
-	 * It was not found. Create it and propagagte it to peers.
-	 * Error handling is useless here, we will tempfail anyway
+	/*
+	 * Sync the database to disk 
 	 */
-	pending = pending_get(in, from, rcpt, (time_t)0);
-	peer_create(pending);
-	rest = delay;
-	dirty = 1;
-
-out:
+	PENDING_RDLOCK;
+	pending_db->sync(pending_db, 0);
 	PENDING_UNLOCK;
 
 	if (remaining != NULL)
@@ -287,41 +299,242 @@ out:
 	if (elapsed != NULL)
 		*elapsed = now - (accepted - delay);
 
-	if (dirty)
-		dump_flush();
-
 	if (rest == 0)
 		return 1;
 	else
 		return 0;
 }
 
-int
-pending_textdump(stream)
-	FILE *stream;
+char *
+pending_makekey(data, len, in, from, rcpt)
+	char *data;
+	size_t len;
+	struct in_addr *in;
+	char *from;
+	char *rcpt;
 {
-	struct pending *pending;
-	int done = 0;
-	char textdate[DATELEN + 1];
-	struct tm tm;
+	char addr[IPADDRLEN + 1];
+	struct in_addr masked_addr;
+	char fromcase[ADDRLEN + 1];
+	char rcptcase[ADDRLEN + 1];
+	unsigned int i;
 
-	fprintf(stream, "\n\n#\n# greylisted tuples\n#\n");
-	fprintf(stream, "# Sender IP	%32s	%32s	Time accepted\n", 
-	    "Sender e-mail", "Recipient e-mail");
+	masked_addr.s_addr = in->s_addr & conf.c_match_mask.s_addr;
+	inet_ntop(AF_INET, &masked_addr, addr, IPADDRLEN);
 
-	PENDING_RDLOCK;
-	TAILQ_FOREACH(pending, &pending_head, p_list) {
-		localtime_r((time_t *)&pending->p_tv.tv_sec, &tm);
-		strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
+	for (i = 0; (i < ADDRLEN) && (from[i] != '\0'); i++)
+		fromcase[i] = tolower(from[i]);
+	fromcase[i] = '\0';
 
-		fprintf(stream, "%s	%32s	%32s	%ld # %s\n", 
-		    pending->p_addr, pending->p_from, 
-		    pending->p_rcpt, (long)pending->p_tv.tv_sec, textdate);
-		
-		done++;
-	}
-	PENDING_UNLOCK;
+	for (i = 0; (i < ADDRLEN) && (rcpt[i] != '\0'); i++)
+		rcptcase[i] = tolower(rcpt[i]);
+	rcptcase[i] = '\0';
 
-	return done;
+	snprintf(data, len, "%s\t%s\t%s", addr, fromcase, rcptcase);
+	data[len] = '\0';
+
+	return data;
 }
 
+int
+pending_update(update_keys, stream)
+	int update_keys;
+	FILE *stream;
+{
+	int finished = 0;
+	DBT key;
+	char keystr[KEYLEN + 1];
+	DBT rec;
+	struct pending *pending;
+	int res;
+	int flag = R_FIRST;
+	struct timeval begin;
+	time_t now;
+	int count = 0;
+	int deleted = 0;
+	int dirty = dump_dirty;
+	char textdate[DATELEN + 1];
+	char addr[IPADDRLEN + 1];
+	struct tm tm;
+
+	gettimeofday(&begin, NULL);
+	now = (time_t)begin.tv_sec;
+
+	if (update_keys)
+		syslog(LOG_INFO, "Rebuilding pending database keys");
+
+	if (stream != NULL) {
+		fprintf(stream, "\n\n#\n# greylisted tuples\n#\n");
+		fprintf(stream, "# Sender IP	%32s	%32s	"
+		    "Time accepted\n", "Sender e-mail", "Recipient e-mail");
+	}
+
+	PENDING_WRLOCK;
+	while (!finished) {
+		res = pending_db->seq(pending_db, &key, &rec, flag);
+		flag = R_NEXT;
+
+		switch (res) {
+		case 0:
+			/* Skip the DB option record */
+			if (strcmp(key.data, DB_OPTIONS) == 0) {
+				break;
+			}
+
+			count++;
+			pending = (struct pending *)rec.data;
+
+			/* 
+			 * Handle timeouts 
+			 */
+			if (now - pending->p_accepted > TIMEOUT) {
+				deleted++;
+
+				if (conf.c_debug) {
+					char addr[IPADDRLEN + 1];
+
+					inet_ntop(AF_INET, &pending->p_addr,
+					    addr, IPADDRLEN);
+					syslog(LOG_DEBUG,
+					    "del: %s from %s to %s timed out",
+					    addr, pending->p_from, 
+					    pending->p_rcpt);
+				}
+
+				if (pending_db->del(pending_db, &key, 0) != 0)
+					syslog(LOG_ERR, "db->del failed: %s",
+					    strerror(errno));
+				dump_dirty++;
+
+				/* 
+				 * Break: we don't want to update this key
+				 * as it just gone away
+				 */
+				break;
+			}
+
+			/*
+			 * Update the keys by overwriting the current record
+			 */
+			if (update_keys) {
+				key.data = pending_makekey(keystr, KEYLEN, 
+				    &pending->p_addr,
+				    pending->p_from, pending->p_rcpt);
+				key.size = strlen(keystr) + 1;
+
+				if (pending_db->put(pending_db, 
+				    &key, &rec, R_CURSOR) != 0) {
+					syslog(LOG_ERR, "db->put failed: %s",
+					    strerror(errno));
+				}
+				dump_dirty++;
+			}
+
+			/*
+			 * Output the data to a text dumpfile
+			 */
+			if (stream == NULL)
+				break;
+
+			localtime_r(&pending->p_accepted, &tm);
+			strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
+
+			inet_ntop(AF_INET, &pending->p_addr, addr, IPADDRLEN);
+
+			fprintf(stream, "%s	%32s	%32s	%ld # %s\n", 
+			    addr, pending->p_from, pending->p_rcpt, 
+			    (unsigned long)pending->p_accepted, textdate);
+
+			break;
+		case 1:
+			finished = 1;
+			break;
+
+		case -1:
+			/* FALLTHROUGH */
+		default:
+			syslog(LOG_ERR, "db->seq failed (%d): %s",
+			    res, strerror(errno));
+			finished = 1;
+			break;
+		}
+	}
+
+	if (dump_dirty != dirty)
+		pending_db->sync(pending_db, 0);	
+
+	PENDING_UNLOCK;
+
+	if (conf.c_debug) {
+		struct timeval end;
+		struct timeval duration;
+
+		gettimeofday(&end, NULL);
+		timersub(&end, &begin, &duration);
+
+		syslog(LOG_DEBUG, 
+		    "pending_update done in %ld.%06lds, deleted %d over %d",
+		    duration.tv_sec, duration.tv_usec, deleted, count);
+	}
+
+	return count;
+}
+
+void
+pending_db_options(void) {
+	DBT key;
+	DBT rec;
+	struct db_options *dbo;
+	struct db_options dborec;
+	int found;
+
+	key.data = DB_OPTIONS;
+	key.size = strlen(DB_OPTIONS) + 1;
+
+	PENDING_RDLOCK;
+	found = pending_db->get(pending_db, &key, &rec, 0);
+	PENDING_UNLOCK;
+
+	switch(found) {
+	case 0:	/* found */
+		dbo = rec.data;
+		if ((dbo->dbo_match_mask.s_addr == conf.c_match_mask.s_addr) &&
+		    (dbo->dbo_lazyaw == conf.c_lazyaw))
+			break;
+
+		pending_update(1, NULL);
+		/* FALLTRHOUGH */
+
+	/*
+	 * If the options changed (the case above), or if
+	 * the option record was not found (brand new database)
+	 * then we put a new option record.
+	 */
+	case 1: /* not found */
+		dborec.dbo_match_mask = conf.c_match_mask;
+		dborec.dbo_lazyaw = conf.c_lazyaw;
+
+		rec.data = &dborec;
+		rec.size = sizeof(dborec);
+
+		PENDING_WRLOCK;
+		if (pending_db->put(pending_db, &key, &rec, 0) != 0)
+			syslog(LOG_ERR, "option record could not be saved: "
+			    "db->put failed: %s", strerror(errno));
+		dump_dirty++;
+		PENDING_UNLOCK;
+
+		break;
+
+	default: /* error */
+		syslog(LOG_ERR, "option record could not be found: "
+		    "db->get failed: %s", strerror(errno));
+		break;
+	}
+
+	PENDING_RDLOCK;
+	pending_db->sync(pending_db, 0);
+	PENDING_UNLOCK;
+
+	return;
+}

@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.25 2004/05/06 13:50:55 manu Exp $ */
+/* $Id: pending.h,v 1.26 2004/05/15 08:41:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -45,6 +45,12 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#ifdef HAVE_DB_185_H
+#include <db_185.h>
+#else 
+#include <db.h>
+#endif
+
 #ifndef GLDELAY
 #define GLDELAY	1800	/* 1800 seconds = 30 minutes */
 #endif
@@ -59,28 +65,29 @@
 #define PENDING_RDLOCK RDLOCK(pending_lock)
 #define PENDING_UNLOCK UNLOCK(pending_lock)
 
-TAILQ_HEAD(pendinglist, pending);
+#ifndef KEYLEN
+#define KEYLEN 1024
+#endif
 
 struct pending {
-	char p_addr[IPADDRLEN + 1];
-	struct in_addr p_in;
+	struct in_addr p_addr;
 	char p_from[ADDRLEN + 1];
 	char p_rcpt[ADDRLEN + 1];
-	struct timeval p_tv;
-	TAILQ_ENTRY(pending) p_list;
+	time_t p_accepted;
 };
 
+extern DB *pending_db;
 extern pthread_rwlock_t pending_lock;
 
 extern struct in_addr match_mask;
-#define IP_MATCH(a, b) (((a)->s_addr & conf.c_match_mask.s_addr) \
-		== ((b)->s_addr & conf.c_match_mask.s_addr))
 
 void pending_init(void);
-struct pending *pending_get(struct in_addr *, char *, char *, time_t);
+void pending_get(struct in_addr *, char *, char *, time_t, struct pending *);
 int pending_check(struct in_addr *, char *, char *, time_t *, time_t *, char *);
 void pending_del(struct in_addr *, char *, char *, time_t);
-void pending_put(struct pending *);
-int pending_textdump(FILE *);
+void pending_put(char *);
+char *pending_makekey(char *, size_t, struct in_addr *, char *, char *);
+int pending_update(int, FILE *);
+void pending_db_options(void);
 
 #endif /* _PENDING_H_ */

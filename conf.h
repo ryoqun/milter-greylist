@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.17 2004/04/22 23:27:57 manu Exp $ */
+/* $Id: conf.h,v 1.18 2004/05/15 08:41:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -52,6 +52,29 @@
 #define CONFFILE "/etc/mail/greylist.conf"
 #endif
 
+#ifndef AUTOWHITEDB 
+#define AUTOWHITEDB "/var/milter-greylist/autowhite2.db"
+#endif
+
+#ifndef GREYLISTDB
+#define GREYLISTDB "/var/milter-greylist/greylist2.db"
+#endif
+
+#ifndef LOCKFILE
+#define LOCKFILE "/var/milter-greylist/milter-greylist.lock"
+#endif
+
+#ifndef DUMPFILE
+#define DUMPFILE "/var/milter-greylist/dump2.txt"
+#endif
+
+struct db_options {
+	struct in_addr dbo_match_mask;
+	int dbo_lazyaw;
+};
+
+#define DB_OPTIONS "options"
+
 struct conf {
 	int c_forced;
 	int c_debug;
@@ -69,6 +92,10 @@ struct conf {
 	int c_nodetach;
 	int c_report;
 	int c_lazyaw;
+	int c_dumpfreq;
+	char *c_greylistdb;
+	char *c_autowhitedb;
+	char *c_lockfile;
 };
 
 /* c_forced flags */
@@ -102,6 +129,9 @@ extern char c_pidfile[PATHLEN + 1];
 extern char c_dumpfile[PATHLEN + 1];
 extern char c_socket[PATHLEN + 1];
 extern char c_user[PATHLEN + 1];
+extern char c_greylistdb[PATHLEN + 1];
+extern char c_autowhitedb[PATHLEN + 1];
+extern char c_lockfile[PATHLEN + 1];
 
 void conf_load(void);
 void conf_update(void);

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.80 2004/05/06 13:50:55 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.81 2004/05/15 08:41:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.80 2004/05/06 13:50:55 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.81 2004/05/15 08:41:54 manu Exp $");
 #endif
 #endif
 
@@ -44,6 +44,7 @@ __RCSID("$Id: milter-greylist.c,v 1.80 2004/05/06 13:50:55 manu Exp $");
 #include <strings.h>
 #include <syslog.h>
 #include <ctype.h>
+#include <signal.h>
 #include <time.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -78,6 +79,8 @@ __RCSID("$Id: milter-greylist.c,v 1.80 2004/05/06 13:50:55 manu Exp $");
 static char *strncpy_rmsp(char *, char *, size_t);
 static char *gmtoffset(time_t *, char *, size_t);
 static void writepid(char *);
+static void check_lockfile(void);
+void rmlockfile(void);
 
 struct smfiDesc smfilter =
 {
@@ -658,20 +661,9 @@ main(argc, argv)
 		exit(EX_UNAVAILABLE);
 	}
 
-	/*
-	 * Various init
-	 */
-	except_init();
-	pending_init();
-	peer_init();
-	autowhite_init();
-	dump_init();
 
 	/*
 	 * Load config file
-	 * We can do this without locking exceptlist, as
-	 * normal operation has not started: no other thread
-	 * can access the list yet.
 	 */
 	conf_load();
 
@@ -680,19 +672,31 @@ main(argc, argv)
 	else
 		openlog("milter-greylist", 0, LOG_MAIL);
 
-	
+	/*
+	 * Various init
+	 * pending_init and autowhite_init are called in check_lockfile
+	 */
+	except_init();
+	peer_init();
+	dump_init();
+
+	/*
+	 * Check the lockfile. This is used to detect unproper shutdown,
+	 * which is a synonym of DB corruption. Also used to prevent
+	 * multiple launch of milter-greylist.
+	 * On improper shutdwn, we reload from the text dump.
+	 */
+	check_lockfile();
+
+	/*
+	 * Handle the socket
+	 */
 	if (conf.c_socket == NULL) {
 		fprintf(stderr, "%s: No socket provided, exitting\n", argv[0]);
 		usage(argv[0]);
 	}
 	cleanup_sock(conf.c_socket);
 	(void)smfi_setconn(conf.c_socket);
-
-	/*
-	 * Reload a saved greylist
-	 * No lock needed here either.
-	 */
-	dump_reload();
 
 	/*
 	 * Turn into a daemon
@@ -942,4 +946,117 @@ cidr2mask(cidr, mask)
 	}
 	
 	return mask;
+}
+
+static void
+check_lockfile(void)
+{
+	FILE *lockfile;
+	pid_t pid;
+
+	/* Does it exists? */
+	if (access(conf.c_lockfile, F_OK) == 0) {
+		if ((lockfile = fopen(conf.c_lockfile, "r+")) == NULL) {
+			syslog(LOG_ERR, "Cannot open lockfile \"%s\": %s", 
+			    conf.c_lockfile, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		if (fscanf(lockfile, "%d\n", &pid) != 1) {
+			syslog(LOG_ERR, "Corrupted lockfile \"%s\"", 
+			    conf.c_lockfile);
+			exit(EX_OSERR);
+		}
+
+		/* 
+		 * Is milter-greylist already running?
+		 */
+		if (kill(pid, 0) == 0) {
+			syslog(LOG_ERR, "milter-greylist already running "
+			    "(pid %d)", pid);
+			exit(EX_USAGE);
+		}
+
+		/* 
+		 * Stale lockfile, assume the database are corrupted
+		 * Remove the DB databases
+		 * Reload from the text dump.
+		 * Register atexit callback
+		 * Create a lockfile
+		 */
+
+		syslog(LOG_ERR, "Database is not clean, reloading text dump");
+
+		if ((access(conf.c_greylistdb, F_OK) == 0) &&
+		    (unlink(conf.c_greylistdb) != 0)) {
+			syslog(LOG_ERR, "unlink \"%s\" failed",
+			    conf.c_greylistdb);
+			exit(EX_USAGE);
+		}
+
+		if ((access(conf.c_autowhitedb, F_OK) == 0) &&
+		    (unlink(conf.c_autowhitedb) != 0)) {
+			syslog(LOG_ERR, "unlink \"%s\" failed",
+			    conf.c_autowhitedb);
+			exit(EX_USAGE);
+		}
+
+		pending_init();
+		autowhite_init();
+		
+		dump_reload();
+
+		if (atexit(*rmlockfile) != 0) {
+			syslog(LOG_ERR, "atexit failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+			
+		fseek(lockfile, 0, SEEK_SET);
+		ftruncate(fileno(lockfile), 0);
+		fprintf(lockfile, "%d\n", getpid());
+		fclose(lockfile);
+
+		return;
+	}
+			
+	/* 
+	 * No lockfile, shutdown was done properly
+	 * Register the exit callback
+	 * Create the lockfile
+	 */
+	if (atexit(*rmlockfile) != 0) {
+		syslog(LOG_ERR, "atexit failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if ((lockfile = fopen(conf.c_lockfile, "w")) == NULL) {
+		syslog(LOG_ERR, "Cannot open lockfile \"%s\": %s", 
+		    conf.c_lockfile, strerror(errno));
+		exit(EX_OSERR);
+	}
+	fprintf(lockfile, "%d\n", getpid());
+	fclose(lockfile);
+
+	pending_init();
+	autowhite_init();
+
+	return;
+}
+
+void
+rmlockfile(void) {
+
+	syslog(LOG_INFO, "shutting down");
+
+	if (aw_db != NULL)
+		aw_db->close(aw_db);
+
+	if (pending_db != NULL)
+		pending_db->close(pending_db);
+
+	if (unlink(conf.c_lockfile) != 0) 
+		syslog(LOG_ERR, "Cannot unlink lockfile \"%s\": %s", 
+		    conf.c_lockfile, strerror(errno));;
+
+	return;
 }

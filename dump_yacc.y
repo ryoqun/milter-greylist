@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.13 2004/03/22 22:12:39 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.14 2004/05/15 08:41:54 manu Exp $");
 #endif
 #endif
 
@@ -34,10 +34,10 @@ lines	:	lines greyentry '\n'
 	|	error '\n'		{ yyerrok; }
 	|
 	;
-greyentry :	IPADDR EMAIL EMAIL TIME	{ pending_get(&$1, $2, $3, $4); }
+greyentry :	IPADDR EMAIL EMAIL TIME	{ pending_get(&$1, $2, $3, $4, NULL); }
 	;
 autoentry :	IPADDR EMAIL EMAIL TIME AUTO { 
-			autowhite_get(&$1, $2, $3, &$4);
+			autowhite_get(&$1, $2, $3, &$4, NULL);
 		}
 	;
 %%

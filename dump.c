@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.15 2004/05/06 13:50:55 manu Exp $ */
+/* $Id: dump.c,v 1.16 2004/05/15 08:41:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.15 2004/05/06 13:50:55 manu Exp $");
+__RCSID("$Id: dump.c,v 1.16 2004/05/15 08:41:54 manu Exp $");
 #endif
 #endif
 
@@ -119,9 +119,16 @@ dumper(dontcare)
 	}
 
 	while (1) {
-		if (pthread_cond_wait(&dump_sleepflag, &mutex) != 0)
-		    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
-			strerror(errno));
+		if (conf.c_dumpfreq == 0) {
+			if (pthread_cond_wait(&dump_sleepflag, &mutex) != 0)
+			    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
+				strerror(errno));
+		} else {
+			sleep(conf.c_dumpfreq);
+		}
+
+		if (dump_dirty == 0)
+			continue;
 
 		if (conf.c_debug) {
 			(void)gettimeofday(&tv1, NULL);
@@ -160,8 +167,8 @@ dumper(dontcare)
 
 		dump_header(dump);
 		done = 0;
-		done += pending_textdump(dump);
-		done += autowhite_textdump(dump);
+		done += pending_update(0, dump);
+		done += autowhite_update(0, dump);
 
 		fclose(dump);
 
