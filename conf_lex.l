@@ -34,6 +34,7 @@ report		[Rr][Ee][Pp][Oo][Rr][Tt]:?
 none		[Nn][Oo][Nn][Ee]
 delays		[Dd][Ee][Ll][Aa][Yy][Ss]
 nodelays	[Nn][Oo][Dd][Ee][Ll][Aa][Yy][Ss]
+lazyaw		[Ll][Aa][Zz][Yy][Aa][Ww]
 all		[Aa][Ll][Ll]
 delay		[0-9]{1,}[smhdw]?
 path		"\""[^"\n]{1,}"\""
@@ -46,7 +47,7 @@ regex		"/"[^/\n]{1,}"/"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.15 2004/04/02 15:06:52 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.16 2004/04/22 23:27:57 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -68,6 +69,7 @@ regex		"/"[^/\n]{1,}"/"
 {rcpt}		{ return RCPT; }
 {peer}		{ return PEER; }
 {autowhite}	{ return AUTOWHITE; }
+{lazyaw}	{ return LAZYAW; }
 {greylist}	{ return GREYLIST; }
 {noauth}	{ return NOAUTH; }
 {nospf}		{ return NOSPF; }

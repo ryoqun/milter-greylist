@@ -1,4 +1,4 @@
-%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL
+%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.14 2004/04/12 17:26:03 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.15 2004/04/22 23:27:57 manu Exp $");
 #endif
 #endif
 
@@ -55,6 +55,7 @@ lines	:	lines netblock '\n'
 	|	lines socket '\n'
 	|	lines user '\n'
 	|	lines nodetach '\n'
+	|	lines lazyaw '\n'
 	|	lines report '\n'
 	|	lines '\n'
 	|
@@ -93,6 +94,8 @@ nospf:		NOSPF	{ if (C_NOTFORCED(C_NOSPF)) conf.c_nospf = 1; }
 testmode:	TESTMODE{ if (C_NOTFORCED(C_TESTMODE)) conf.c_testmode = 1; }
 	;
 nodetach:	NODETACH{ if (C_NOTFORCED(C_NODETACH)) conf.c_nodetach = 1; }
+	;
+lazyaw:		LAZYAW	{ if (C_NOTFORCED(C_LAZYAW)) conf.c_lazyaw = 1; }
 	;
 pidfile:	PIDFILE PATH	{ if (C_NOTFORCED(C_PIDFILE)) 
 					conf.c_pidfile = 

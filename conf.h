@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.16 2004/04/02 15:06:52 manu Exp $ */
+/* $Id: conf.h,v 1.17 2004/04/22 23:27:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -68,6 +68,7 @@ struct conf {
 	char *c_user;
 	int c_nodetach;
 	int c_report;
+	int c_lazyaw;
 };
 
 /* c_forced flags */
@@ -85,6 +86,7 @@ struct conf {
 #define C_SOCKET	0x0400
 #define C_USER		0x0800
 #define C_NODETACH	0x1000
+#define C_LAZYAW	0x2000
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
 /* c_report */

@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.20 2004/04/22 23:14:23 manu Exp $ */
+/* $Id: autowhite.c,v 1.21 2004/04/22 23:27:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.20 2004/04/22 23:14:23 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.21 2004/04/22 23:27:57 manu Exp $");
 #endif
 #endif
 
@@ -136,8 +136,9 @@ autowhite_add(in, from, rcpt, date, queueid)
 			 * Look for an already existing entry
 			 */
 			if ((in->s_addr == aw->a_in.s_addr) &&
-			    (strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
-			    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)) {
+			    ((conf.c_lazyaw == 1) ||
+			    ((strncasecmp(from, aw->a_from, ADDRLEN) == 0) &&
+			    (strncasecmp(rcpt, aw->a_rcpt, ADDRLEN) == 0)))) {
 				timeradd(&now, &delay, &aw->a_tv);
 
 				dirty++;
