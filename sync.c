@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.18 2004/03/14 11:42:22 manu Exp $ */
+/* $Id: sync.c,v 1.19 2004/03/14 13:47:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -350,8 +350,13 @@ bad:
 void
 sync_master_restart(void) {
 	pthread_t tid;
+	int empty;
 
-	if (LIST_EMPTY(&peer_head) || (sync_master_runs == 1))
+	PEER_RDLOCK;
+	empty = LIST_EMPTY(&peer_head);
+	PEER_UNLOCK;
+
+	if (empty || sync_master_runs)
 		return;
 
 	sync_master_runs = 1;
@@ -812,6 +817,7 @@ sync_sender(dontcare)
 			goto out;
 			
 		LIST_FOREACH(peer, &peer_head, p_list) {
+			/* XXX take a read lock and then upgrade it */
 			while (TAILQ_EMPTY(&peer->p_deferred) == 0) {
 				SYNC_WRLOCK;
 				sync = TAILQ_FIRST(&peer->p_deferred);
