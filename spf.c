@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.10 2004/04/08 11:32:53 manu Exp $ */
+/* $Id: spf.c,v 1.11 2004/04/08 15:27:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.10 2004/04/08 11:32:53 manu Exp $");
+__RCSID("$Id: spf.c,v 1.11 2004/04/08 15:27:51 manu Exp $");
 #endif
 #endif
 
@@ -144,19 +144,22 @@ spf_alt_check(in, helo, fromp)
 		goto out3;
 	}
 
+	/* HELO string */
+	if (SPF_set_helo_dom(spfconf, helo) != 0) {
+		syslog(LOG_ERR, "SPF_set_helo failed");
+		goto out3;
+	}
+
 	/* 
 	 * And the enveloppe source e-mail
 	 */
+	if (fromp[0] == '<')
+		fromp++; /* strip leading < */
 	strncpy(from, fromp, NS_MAXDNAME);
 	from[NS_MAXDNAME] = '\0';
 	len = strlen(from);
 	if (fromp[len - 1] == '>')
 		from[len - 1] = '\0'; /* strip trailing > */
-
-	if (SPF_set_helo_dom(spfconf, helo) != 0) {
-		syslog(LOG_ERR, "SPF_set_helo failed");
-		goto out3;
-	}
 
 	if (SPF_set_env_from(spfconf, from) != 0) {
 		syslog(LOG_ERR, "SPF_set_env_from failed");
