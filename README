@@ -1,9 +1,9 @@
-# $Id: README,v 1.24 2004/11/28 00:33:29 manu Exp $
+# $Id: README,v 1.25 2004/12/06 22:16:06 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/11/28 00:33:29 $
+		       $Date: 2004/12/06 22:16:06 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -190,7 +190,7 @@ like this:
 peer 192.0.2.17
 peer 192.0.2.18
 
-If you have firewalls between your MX? you should enable TCP 
+If you have firewalls between your MX, you should enable TCP 
 connections in both directions between random unprivileged 
 source ports and destination port 5252.
 
@@ -248,6 +248,10 @@ At the end of the file, you will find entries with the keyword AUTO
 at the end of the line. Theses are auto-whitelisted tuples. The date
 tells you when the entry will expire.
 
+
+ 10 Known problems
+ =================
+
 If milter-greylist terminates during its operation, first check your
 system limits with ulimit (sh/ksh/bash) or limit (csh/tcsh). As it stores 
 all its database in memory, milter-greylist can eat a large amount of 
@@ -256,9 +260,29 @@ file descriptors can easily be exhausted too. Any ressource shortage will
 cause milter-greylist to quit. This is not specific to milter-greylist, 
 all milters do that.
 
+When SPF support is compiled in, if milter-greylist hangs and/or crash
+regularly, check that you linked your SPF library with a thread-safe
+resolver. This can be done by running nm(1) on milter-greylist: if
+nres_init is referenced, you are fine. if res_init is referenced, you 
+are probably at risk.
 
- 10 License
- =========
+On Solaris 2.8, milter-greylist may grow out of memory pretty quickly 
+due to some bugs in the pthread nsl and socket libraries. It is strongly 
+recommended that you install the latest revision of patch 108993 (sparc) 
+or 108994 (x86). Solaris 9 and later do not seem to be affected.
+Solaris patches are available from <http://sunsolve.sun.com/>
+
+On Solaris, and on some IRIX releases, the file descriptor field 
+of <stdio.h>'s FILE structure is a char, and thus no more than 255 
+streams can be open at once. This will cause failures in milter-greylist 
+when handling a large amount of connexions. If you are not sure whether 
+your system is affected or not, check your system headers for FILE 
+definition. On Solaris, the problem only exist with the 32 bit ABI, 
+so rebuilding milter-greylist with a 64 bit compiler will fix the problem.
+
+
+ 11 License
+ ==========
 
 This software is available under a 3 clauses BSD license:
 
