@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.40 2004/03/20 09:30:01 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.41 2004/03/21 09:37:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.40 2004/03/20 09:30:01 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.41 2004/03/21 09:37:38 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -66,6 +66,7 @@ int dont_fork = 0;
 int quiet = 0;
 
 static char *strncpy_rmsp(char *, char *, size_t);
+static int humanized_atoi(char *);
 
 struct smfiDesc smfilter =
 {
@@ -349,7 +350,12 @@ main(argc, argv)
 	while ((ch = getopt(argc, argv, "a:vDd:qw:f:hp:Tu:")) != -1) {
 		switch (ch) {
 		case 'a':
-			autowhite_validity = (time_t)atoi(optarg);
+			if (optarg == NULL) {
+				fprintf(stderr, "%s: -a needs an argument\n",
+				    argv[0]);
+				usage(argv[0]);
+			}
+			autowhite_validity = (time_t)humanized_atoi(optarg);
 			break;
 
 		case 'D':
@@ -382,7 +388,8 @@ main(argc, argv)
 			break;
 
 		case 'w':
-			if ((optarg == NULL) || ((delay = atoi(optarg)) == 0)) {
+			if ((optarg == NULL) || 
+			    ((delay = humanized_atoi(optarg)) == 0)) {
 				fprintf(stderr, 
 				    "%s: -w needs a positive argument\n",
 				    argv[0]);
@@ -586,4 +593,45 @@ strncpy_rmsp(dst, src, len)
 		dst[i] = '\0';
 
 	return dst;
+}
+
+static int
+humanized_atoi(str)	/* *str is modified */
+	char *str;
+{
+	unsigned int unit;
+	size_t len;
+
+	if ((len = strlen(str)) == 0)
+		return 0;
+
+	switch(str[len - 1]) {
+	case 's':
+		unit = 1;
+		break;
+
+	case 'm':
+		unit = 60;
+		break;
+
+	case 'h':
+		unit = 60 * 60;
+		break;
+
+	case 'd':
+		unit = 24 * 60 * 60;
+		break;
+
+	case 'w':
+		unit = 7 * 24 * 60 * 60;
+		break;
+
+	default:
+		return 0;
+		break;
+	}
+
+	str[len - 1] = '\0';
+
+	return (atoi(str) * unit);
 }

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.16 2004/03/21 08:07:03 manu Exp $
+.\" $Id: milter-greylist.8,v 1.17 2004/03/21 09:37:38 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -102,9 +102,10 @@ The following options are available:
 Configure auto-whitelisting. After a tuple (sender IP, sender e-mail, 
 recipient e-mail) has been accepted, other identical tuples will get
 accepted for 
-.Ar delay 
-seconds. The default is 86400 seconds (one day). Use zero to disable 
-auto-whitelisting.
+.Ar delay .
+The default is one day. Use zero to disable auto-whitelisting.
+A suffix can be added to specify seconds (s), minutes (m), hours (h), 
+days (d) or weeks (w). Whithout suffix, values are treated as seconds.
 .It Fl D
 Do not fork and run in the foreground. Without this flag, 
 .Nm
@@ -147,8 +148,10 @@ flag) to
 .Xr syslogd 8
 with facility LOG_MAIL.
 .It Fl w Ar delay
-sets the minimum delay (in seconds) between the first attempt and the time
-the message can be accepted. Default is 1800 seconds (30 minutes).
+sets the minimum delay between the first attempt and the time
+the message can be accepted. Default is 30 minutes. 
+A suffix can be added to specify seconds (s), minutes (m), hours (h), 
+days (d) or weeks (w). Whithout suffix, values are treated as seconds.
 .El
 .Sh GREYLIST MX SYNC
 .Nm
