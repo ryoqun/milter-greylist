@@ -48,6 +48,8 @@ syncaddr	[Ss][Yy][Nn][Cc][Aa][Dd][Dd][Rr]:?
 port		[Pp][Oo][Rr][Tt]
 star		"*"
 
+%s S_REGEX
+
 
 %{
 	#include "config.h"
@@ -56,7 +58,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.28 2004/10/13 09:56:29 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.29 2004/10/26 19:55:50 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -74,8 +76,8 @@ star		"*"
 {blank}
 {comment}
 {addr}		{ return ADDR; }
-{from}		{ return FROM; }
-{rcpt}		{ return RCPT; }
+{from}		{ BEGIN(S_REGEX); return FROM; }
+{rcpt}		{ BEGIN(S_REGEX); return RCPT; }
 {peer}		{ return PEER; }
 {autowhite}	{ return AUTOWHITE; }
 {lazyaw}	{ return LAZYAW; }
@@ -99,7 +101,7 @@ star		"*"
 {all}		{ return ALL; }
 {dumpfreq}	{ return GLDUMPFREQ; }
 {timeout}	{ return GLTIMEOUT; }
-{domain}	{ return DOMAIN; }
+{domain}	{ BEGIN(S_REGEX); return DOMAIN; }
 {syncaddr}	{ return SYNCADDR; }
 {port}		{ return PORT; }
 {star}		{ return STAR; }
@@ -146,7 +148,7 @@ star		"*"
 			yylval.domainname[ADDRLEN] = '\0';
 			return DOMAINNAME; 
 		}
-{regex}		{
+<S_REGEX>{regex} {
 			strncpy(yylval.regex, yytext, REGEXLEN);
 			yylval.regex[PATHLEN] = '\0';
 			return REGEX;
@@ -156,6 +158,7 @@ star		"*"
 			return CIDR; 
 		}
 \n		{ 
+			BEGIN(0);
 			conf_line++; 
 			return yytext[0]; 
 		}
