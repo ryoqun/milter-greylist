@@ -1,4 +1,4 @@
-/* $Id: config.h.in,v 1.9 2004/03/21 20:17:48 manu Exp $ */
+/* $Id: config.h.in,v 1.10 2004/03/21 23:19:39 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
@@ -19,6 +19,9 @@
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
 
+/* Define to 1 if you have the <getopt.h> header file. */
+#undef HAVE_GETOPT_H
+
 /* Define to 1 if you have the `gettimeofday' function. */
 #undef HAVE_GETTIMEOFDAY
 
@@ -34,7 +37,7 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
-/* Define to 1 if you have the <netdb.h> header file. */
+/* Define to 1 if you have the <netdb.h */
 #undef HAVE_NETDB_H
 
 /* Define to 1 if you have the <netinet/in.h> header file. */
