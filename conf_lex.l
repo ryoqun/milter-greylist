@@ -42,7 +42,6 @@ path		"\""[^"\n]{1,}"\""
 regex		"/"[^/\n]{1,}"/"
 greylistdb	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt][Dd][Bb]:?
 autowhitedb	[Aa][Uu][Tt][Oo][Ww][Hh][Ii][Tt][Ee][Dd][Bb]:?
-lockfile	[Ll][Oo][Cc][Kk][Ff][Ii][Ll][Ee]:?
 
 %{
 	#include "config.h"
@@ -51,7 +50,7 @@ lockfile	[Ll][Oo][Cc][Kk][Ff][Ii][Ll][Ee]:?
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.17 2004/05/15 08:41:54 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.18 2004/05/23 13:03:41 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -85,7 +84,6 @@ lockfile	[Ll][Oo][Cc][Kk][Ff][Ii][Ll][Ee]:?
 {dumpfreq}	{ return DUMPFREQ; }
 {greylistdb}	{ return GREYLISTDB; }
 {autowhitedb}	{ return AUTOWHITEDB; }
-{lockfile}	{ return LOCKFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }
 {socket}	{ return SOCKET; }
 {user}		{ return USER; }

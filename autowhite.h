@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.12 2004/05/21 10:22:08 manu Exp $ */
+/* $Id: autowhite.h,v 1.13 2004/05/23 13:03:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -64,17 +64,21 @@ struct autowhite {
 	time_t a_expire;
 };
 
+typedef enum {AS_COLD, AS_WARM} autowhite_startup_t;
+
 extern DB *aw_db;
 extern pthread_rwlock_t autowhite_lock;
 
-void autowhite_init(void);
+int autowhite_init(void);
 void autowhite_get(struct in_addr *, char *, 
     char *, time_t *, struct autowhite *);
 void autowhite_put(char *);
 void autowhite_add(struct in_addr *, char *, char *, time_t *, char *);
 int autowhite_check(struct in_addr *, char *, char *, char *);
 char *autowhite_makekey(char *, size_t, struct in_addr *, char *, char *);
-int autowhite_update(DB *, FILE *);
-void autowhite_db_options(void);
+int autowhite_update(int, FILE *);
+int autowhite_db_options(autowhite_startup_t);
+void autowhite_destroy(void);
+void autowhite_shutdown(void);
 
 #endif /* _AUTOWHITE_H_ */

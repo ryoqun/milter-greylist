@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.24 2004/05/21 10:22:08 manu Exp $ */
+/* $Id: autowhite.c,v 1.25 2004/05/23 13:03:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.24 2004/05/21 10:22:08 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.25 2004/05/23 13:03:41 manu Exp $");
 #endif
 #endif
 
@@ -49,6 +49,7 @@ __RCSID("$Id: autowhite.c,v 1.24 2004/05/21 10:22:08 manu Exp $");
 #include <errno.h>
 #include <sysexits.h>
 #include <ctype.h>
+#include <signal.h>
 #include <string.h>
 #include <time.h>
 #include <strings.h>
@@ -79,7 +80,7 @@ __RCSID("$Id: autowhite.c,v 1.24 2004/05/21 10:22:08 manu Exp $");
 DB *aw_db = NULL;
 pthread_rwlock_t autowhite_lock;
 
-void
+int
 autowhite_init(void) {
 
 	pthread_rwlock_init(&autowhite_lock, NULL);
@@ -93,10 +94,24 @@ autowhite_init(void) {
 
 	/*
 	 * Create or update the option record 
+	 * Check if we need to reload from the text dump
 	 */
-	autowhite_db_options();
+	return autowhite_db_options(AS_COLD);
+}
 
-	return;
+void  
+autowhite_destroy(void) {
+        aw_db->close(aw_db);
+ 
+        if (unlink(conf.c_autowhitedb) != 0) {
+                syslog(LOG_ERR, "Cannot delete \"%s\": %s",
+                    conf.c_autowhitedb, strerror(errno));
+                exit(EX_OSERR);
+        }
+ 
+        autowhite_init();
+ 
+        return;
 }
 
 void
@@ -361,7 +376,7 @@ autowhite_makekey(data, len, in, from, rcpt)
 			rcptcase[i] = tolower(rcpt[i]);
 		rcptcase[i] = '\0';
 
-		snprintf(data, len, "%s\t%s\t%s", addr, fromcase, rcptcase); 
+		snprintf(data, len, "A\t%s\t%s\t%s", addr, fromcase, rcptcase); 
 	}
 	data[len] = '\0';
 
@@ -370,8 +385,8 @@ autowhite_makekey(data, len, in, from, rcpt)
 }
 
 int
-autowhite_update(new_db, stream) /* aw_db must be write-locked */
-	DB *new_db;
+autowhite_update(update, stream) /* aw_db must be write-locked */
+	int update;
 	FILE *stream;
 {
 	int finished = 0;
@@ -389,12 +404,24 @@ autowhite_update(new_db, stream) /* aw_db must be write-locked */
 	char textdate[DATELEN + 1];
 	char addr[IPADDRLEN + 1];
 	struct tm tm;
+	DB *new_db = NULL;
+	char new_db_name[MAXPATHLEN + 1];
 
 	gettimeofday(&begin, NULL);
 	now = (time_t)begin.tv_sec;
 
-	if (new_db)
+	if (update) {
 		syslog(LOG_INFO, "Rebuilding autowhite database keys");
+
+		snprintf(new_db_name, MAXPATHLEN, "%s.new", conf.c_autowhitedb);
+		if ((new_db = dbopen(new_db_name,
+		    O_TRUNC|O_RDWR|O_EXLOCK|O_CREAT,
+		    0644, DB_BTREE, NULL)) == NULL) {
+			syslog(LOG_ERR, "dbopen \"%s\" failed: %s",
+			    new_db_name, strerror(errno));
+			exit(EX_OSERR);
+		}
+	}
 
 	if (stream != NULL) {
 		fprintf(stream, "\n\n#\n# Auto-whitelisted tuples\n#\n");
@@ -447,7 +474,7 @@ autowhite_update(new_db, stream) /* aw_db must be write-locked */
 			/*
 			 * Update the key by overwriting the current record. 
 			 */
-			if (new_db) {
+			if (update) {
 				key.data = autowhite_makekey(keystr, 
 				    KEYLEN, &aw->a_in, aw->a_from, aw->a_rcpt);
 				key.size = strlen(keystr) + 1;
@@ -456,7 +483,6 @@ autowhite_update(new_db, stream) /* aw_db must be write-locked */
 				    &rec, R_CURSOR) != 0)
 					syslog(LOG_ERR, "db->put failed: %s",
 					    strerror(errno));
-				dump_dirty++;
 			}
 
 			/*
@@ -490,6 +516,20 @@ autowhite_update(new_db, stream) /* aw_db must be write-locked */
 		}
 	}
 
+	if (update) {
+		if (aw_db->close(aw_db) != 0)
+			syslog(LOG_ERR, "cannot close greylist db: %s",
+			    strerror(errno));
+
+		if (rename(new_db_name, conf.c_autowhitedb) != 0) {
+			syslog(LOG_ERR, "rename \"%s\" to  \"%s\" failed: %s",
+			    new_db_name, conf.c_autowhitedb, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		aw_db = new_db;
+	}
+
 	if (dump_dirty != dirty)
 		aw_db->sync(aw_db, 0);
 
@@ -508,15 +548,15 @@ autowhite_update(new_db, stream) /* aw_db must be write-locked */
 	return count;
 }
 
-void
-autowhite_db_options(void) {
+int
+autowhite_db_options(as) 
+	autowhite_startup_t as;
+{
 	DBT key;
 	DBT rec;
 	struct db_options *dbo;
 	struct db_options dborec;
 	int found;
-	DB *new_db;
-	char new_db_name[MAXPATHLEN + 1];
 
 	key.data = DB_OPTIONS;
 	key.size = strlen(DB_OPTIONS) + 1;
@@ -528,58 +568,56 @@ autowhite_db_options(void) {
 	switch(found) {
 	case 0:	/* found */
 		dbo = rec.data;
+
+		/*
+		 * If this is a cold reload, check for improper shutdown
+		 */
+		if ((as == AS_COLD) && (dbo->dbo_busy != 0)) {
+			if (kill(dbo->dbo_busy, 0) == 0) {
+				syslog(LOG_ERR,
+				    "milter-greylist already running (pid %d)",
+				    dbo->dbo_busy);
+				exit(EX_USAGE);
+			}
+
+			/*
+			 * Bad shutdown: Cause a reload from test dump
+			 * No need to update the dbo_busy field as the
+			 * database will be destroyed and recreated.
+			 */
+			return -1;
+		}
+
+		/*
+		 * Update the dbo_busy record with our PID
+		 */
+		if (as == AS_COLD) {
+			if (atexit(*autowhite_shutdown) != 0) {
+				syslog(LOG_ERR, "atexit failed: %s",
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+
+			dbo->dbo_busy = getpid();
+
+			AUTOWHITE_WRLOCK;
+			if (aw_db->put(aw_db, &key, &rec, 0) != 0) {
+				syslog(LOG_ERR, "option record could "
+				    "not be saved: db->put failed: %s",
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+			AUTOWHITE_UNLOCK;
+		}
+
+		/*
+		 * If the database does not need a key fixup, get away now
+		 */
 		if ((dbo->dbo_match_mask.s_addr == conf.c_match_mask.s_addr) &&
 		    (dbo->dbo_lazyaw == conf.c_lazyaw))
 			break;
 
-		/*
-		 * We need to update the database keys.
-		 *
-		 * It seems Berkeley DB API limitation makes impossible
-		 * to walk the database updating the keys. We therefore
-		 * create a new database, copy the records with updated
-		 * keys in it, and replace the older database.
-		 */
-		snprintf(new_db_name, MAXPATHLEN,
-		    "%s.%s", conf.c_autowhitedb, "new");
-
-		if ((new_db = dbopen(new_db_name,
-		    O_TRUNC|O_RDWR|O_EXLOCK|O_CREAT,
-		    0644, DB_BTREE, NULL)) == NULL) {
-			syslog(LOG_ERR, "dbopen \"%s\" failed: %s",
-			    new_db_name, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		/*
-		 * Remove outdated records, and save everything
-		 * else to the new database, with updated keys.
-		 * The database remain locked until we replaced
-		 * the old one.
-		 */
-		AUTOWHITE_WRLOCK;
-		autowhite_update(new_db, NULL);
-
-		/*
-		 * At that stage we don't need the older database
-		 * anymore, close it.
-		 */
-		aw_db->close(aw_db);
-
-		/*
-		 * Replace the older database
-		 */
-		if (rename(new_db_name, conf.c_autowhitedb) != 0) {
-			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s",
-			    conf.c_autowhitedb, new_db_name, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		/*
-		 * The newer database can now be used
-		 */
-		aw_db = new_db;
-		AUTOWHITE_UNLOCK;
+		autowhite_update(1, NULL);
 		/* FALLTRHOUGH */
 
 	/*
@@ -612,6 +650,56 @@ autowhite_db_options(void) {
 	AUTOWHITE_RDLOCK;
 	aw_db->sync(aw_db, 0);
 	AUTOWHITE_UNLOCK;
+
+	return 0;
+}
+
+void
+autowhite_shutdown(void) { /* Access with no lock: exitting is monothread */
+	DBT key;
+	DBT rec;
+	struct db_options *dbo;
+	int found;
+
+	syslog(LOG_INFO, "shuting down autowhite database");
+
+	key.data = DB_OPTIONS;
+	key.size = strlen(DB_OPTIONS) + 1;
+
+	found = aw_db->get(aw_db, &key, &rec, 0);
+
+	if (found != 0) {
+		syslog(LOG_ERR, "No %s record in autowhite database",
+		    DB_OPTIONS);
+
+		if (aw_db->close(aw_db) != 0)
+			syslog(LOG_ERR, "closing autowhite database failed: %s",
+			    strerror(errno));
+
+		return;
+	}
+
+	dbo = rec.data;
+	
+	if (aw_db->sync(aw_db, 0) != 0) {
+		syslog(LOG_ERR, "sync failed on autowhite database: %s",
+		    strerror(errno));
+		return;
+	}
+
+	dbo->dbo_busy = 0;
+
+	if (aw_db->put(aw_db, &key, &rec, 0) != 0) {
+		syslog(LOG_ERR, "put %s record failed for autowhite db: %s",
+		    DB_OPTIONS, strerror(errno));
+		return;
+	}
+
+	if (aw_db->close(aw_db) != 0) {
+		syslog(LOG_ERR, "close failed on autowhite database: %s",
+		    strerror(errno));
+		return;
+	}
 
 	return;
 }

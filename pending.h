@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.27 2004/05/21 10:22:08 manu Exp $ */
+/* $Id: pending.h,v 1.28 2004/05/23 13:03:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -76,18 +76,22 @@ struct pending {
 	time_t p_accepted;
 };
 
+typedef enum {PS_COLD, PS_WARM} pending_startup_t; 
+
 extern DB *pending_db;
 extern pthread_rwlock_t pending_lock;
 
 extern struct in_addr match_mask;
 
-void pending_init(void);
+int pending_init(void);
 void pending_get(struct in_addr *, char *, char *, time_t, struct pending *);
 int pending_check(struct in_addr *, char *, char *, time_t *, time_t *, char *);
 void pending_del(struct in_addr *, char *, char *, time_t);
 void pending_put(char *);
 char *pending_makekey(char *, size_t, struct in_addr *, char *, char *);
-int pending_update(DB *, FILE *);
-void pending_db_options(void);
+int pending_update(int, FILE *);
+int pending_db_options(pending_startup_t);
+void pending_destroy(void);
+void pending_shutdown(void);
 
 #endif /* _PENDING_H_ */

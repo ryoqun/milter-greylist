@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.52 2004/05/21 10:22:08 manu Exp $ */
+/* $Id: pending.c,v 1.53 2004/05/23 13:03:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.52 2004/05/21 10:22:08 manu Exp $");
+__RCSID("$Id: pending.c,v 1.53 2004/05/23 13:03:41 manu Exp $");
 #endif
 #endif
 
@@ -51,6 +51,7 @@ __RCSID("$Id: pending.c,v 1.52 2004/05/21 10:22:08 manu Exp $");
 #include <strings.h>
 #include <pthread.h>
 #include <ctype.h>
+#include <signal.h>
 #include <errno.h>
 #include <time.h>
 #include <sysexits.h>
@@ -84,9 +85,8 @@ __RCSID("$Id: pending.c,v 1.52 2004/05/21 10:22:08 manu Exp $");
 DB *pending_db = NULL;
 pthread_rwlock_t pending_lock; 	/* protects pending_head and dump_dirty */
 
-void
+int
 pending_init(void) {
-
 	pthread_rwlock_init(&pending_lock, NULL);
 
 	if ((pending_db = dbopen(conf.c_greylistdb,
@@ -98,8 +98,22 @@ pending_init(void) {
 
 	/* 
 	 * Create or update the option record
+	 * Check if we need to reload from the text dump
 	 */
-	pending_db_options();
+	return pending_db_options(PS_COLD);
+}
+
+void
+pending_destroy(void) {
+	pending_db->close(pending_db);
+
+	if (unlink(conf.c_greylistdb) != 0) {
+		syslog(LOG_ERR, "Cannot delete \"%s\": %s",
+		    conf.c_greylistdb, strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	pending_init();
 
 	return;
 }
@@ -330,15 +344,15 @@ pending_makekey(data, len, in, from, rcpt)
 		rcptcase[i] = tolower(rcpt[i]);
 	rcptcase[i] = '\0';
 
-	snprintf(data, len, "%s\t%s\t%s", addr, fromcase, rcptcase);
+	snprintf(data, len, "G\t%s\t%s\t%s", addr, fromcase, rcptcase);
 	data[len] = '\0';
 
 	return data;
 }
 
 int
-pending_update(new_db, stream) /* pending_db must be write-locked */
-	DB *new_db;
+pending_update(update, stream) /* pending_db must be write-locked */
+	int update;
 	FILE *stream;
 {
 	int finished = 0;
@@ -356,12 +370,24 @@ pending_update(new_db, stream) /* pending_db must be write-locked */
 	char textdate[DATELEN + 1];
 	char addr[IPADDRLEN + 1];
 	struct tm tm;
+	DB *new_db = NULL;
+	char new_db_name[MAXPATHLEN + 1];
 
 	gettimeofday(&begin, NULL);
 	now = (time_t)begin.tv_sec;
 
-	if (new_db)
+	if (update) {
 		syslog(LOG_INFO, "Rebuilding pending database keys");
+
+		snprintf(new_db_name, MAXPATHLEN, "%s.new", conf.c_greylistdb);
+		if ((new_db = dbopen(new_db_name, 
+		    O_TRUNC|O_RDWR|O_EXLOCK|O_CREAT, 
+		    0644, DB_BTREE, NULL)) == NULL) {
+			syslog(LOG_ERR, "dbopen \"%s\" failed: %s",
+			    new_db_name, strerror(errno));
+			exit(EX_OSERR);
+		}
+	}
 
 	if (stream != NULL) {
 		fprintf(stream, "\n\n#\n# greylisted tuples\n#\n");
@@ -415,7 +441,7 @@ pending_update(new_db, stream) /* pending_db must be write-locked */
 			/*
 			 * Update the keys by overwriting the current record
 			 */
-			if (new_db) {
+			if (update) {
 				key.data = pending_makekey(keystr, KEYLEN, 
 				    &pending->p_addr,
 				    pending->p_from, pending->p_rcpt);
@@ -426,7 +452,6 @@ pending_update(new_db, stream) /* pending_db must be write-locked */
 					syslog(LOG_ERR, "db->put failed: %s",
 					    strerror(errno));
 				}
-				dump_dirty++;
 			}
 
 			/*
@@ -459,6 +484,20 @@ pending_update(new_db, stream) /* pending_db must be write-locked */
 		}
 	}
 
+	if (update) {
+		if (pending_db->close(pending_db) != 0)
+			syslog(LOG_ERR, "cannot close greylist db: %s",
+			    strerror(errno));
+
+		if (rename(new_db_name, conf.c_greylistdb) != 0) {
+			syslog(LOG_ERR, "rename \"%s\" to  \"%s\" failed: %s",
+			    new_db_name, conf.c_greylistdb, strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		pending_db = new_db;
+	}
+
 	if (dump_dirty != dirty)
 		pending_db->sync(pending_db, 0);	
 
@@ -477,15 +516,15 @@ pending_update(new_db, stream) /* pending_db must be write-locked */
 	return count;
 }
 
-void
-pending_db_options(void) {
+int
+pending_db_options(ps) 
+	pending_startup_t ps;
+{
 	DBT key;
 	DBT rec;
 	struct db_options *dbo;
 	struct db_options dborec;
 	int found;
-	DB *new_db;
-	char new_db_name[MAXPATHLEN + 1];
 
 	key.data = DB_OPTIONS;
 	key.size = strlen(DB_OPTIONS) + 1;
@@ -497,58 +536,56 @@ pending_db_options(void) {
 	switch(found) {
 	case 0:	/* found */
 		dbo = rec.data;
+
+		/* 
+		 * If this is a cold reload, check for improper shutdown
+		 */
+		if ((ps == PS_COLD) && (dbo->dbo_busy != 0)) {
+			if (kill(dbo->dbo_busy, 0) == 0) {
+				syslog(LOG_ERR, 
+				    "milter-greylist already running (pid %d)",
+				    dbo->dbo_busy);
+				exit(EX_USAGE);
+			}
+
+			/* 
+			 * Bad shutdown: Cause a reload from test dump 
+			 * No need to update the dbo_busy field as the
+			 * database will be destroyed and recreated.
+			 */
+			return -1;
+		}
+
+		/*
+		 * Update the dbo_busy record with our PID
+		 */
+		if (ps == PS_COLD) {
+			if (atexit(*pending_shutdown) != 0) {
+				syslog(LOG_ERR, "atexit failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+
+			dbo->dbo_busy = getpid();
+
+			PENDING_WRLOCK;
+			if (pending_db->put(pending_db, &key, &rec, 0) != 0) {
+				syslog(LOG_ERR, "option record could "
+				    "not be saved: db->put failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+			PENDING_UNLOCK;
+		}
+
+		/* 
+		 * If the database does not need a key fixup, get away now
+		 */
 		if ((dbo->dbo_match_mask.s_addr == conf.c_match_mask.s_addr) &&
 		    (dbo->dbo_lazyaw == conf.c_lazyaw))
 			break;
 
-		/* 
-		 * We need to update the database keys.
-		 *
-		 * It seems Berkeley DB API limitation makes impossible
-		 * to walk the database updating the keys. We therefore
-		 * create a new database, copy the records with updated 
-		 * keys in it, and replace the older database.
-		 */
-		snprintf(new_db_name, MAXPATHLEN, 
-		    "%s.%s", conf.c_greylistdb, "new");
-
-		if ((new_db = dbopen(new_db_name, 
-		    O_TRUNC|O_RDWR|O_EXLOCK|O_CREAT, 
-		    0644, DB_BTREE, NULL)) == NULL) {
-			syslog(LOG_ERR, "dbopen \"%s\" failed: %s",
-			    new_db_name, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		/*
-		 * Remove outdated records, and save everything
-		 * else to the new database, with updated keys.
-		 * The database remain locked until we replace
-		 * the old one.
-		 */
-		PENDING_WRLOCK;
-		pending_update(new_db, NULL);
-
-		/*
-		 * At that stage we don't need the older database
-		 * anymore, close it.
-		 */
-		pending_db->close(pending_db);
-
-		/* 
-		 * Replace the older database
-		 */
-		if (rename(new_db_name, conf.c_greylistdb) != 0) {
-			syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s",
-			    conf.c_greylistdb, new_db_name, strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		/*
-		 * The newer database can now be used 
-		 */
-		pending_db = new_db;	
-		PENDING_UNLOCK;
+		pending_update(1, NULL);
 		/* FALLTRHOUGH */
 
 	/*
@@ -559,6 +596,7 @@ pending_db_options(void) {
 	case 1: /* not found */
 		dborec.dbo_match_mask = conf.c_match_mask;
 		dborec.dbo_lazyaw = conf.c_lazyaw;
+		dborec.dbo_busy = getpid();
 
 		rec.data = &dborec;
 		rec.size = sizeof(dborec);
@@ -581,6 +619,56 @@ pending_db_options(void) {
 	PENDING_RDLOCK;
 	pending_db->sync(pending_db, 0);
 	PENDING_UNLOCK;
+
+	return 0;
+}
+
+void
+pending_shutdown(void) { /* Access with no lock: exitting is monothread */
+	DBT key;
+	DBT rec;
+	struct db_options *dbo;
+	int found;
+
+	syslog(LOG_INFO, "shuting down greylist database");
+
+	key.data = DB_OPTIONS;
+	key.size = strlen(DB_OPTIONS) + 1;
+
+	found = pending_db->get(pending_db, &key, &rec, 0);
+
+	if (found != 0) {
+		syslog(LOG_ERR, "No %s record in greylist database",
+		    DB_OPTIONS);
+
+		if (pending_db->close(pending_db) != 0)
+			syslog(LOG_ERR, "closing greylist database failed: %s",
+			    strerror(errno));
+
+		return;
+	}
+
+	dbo = rec.data;
+	
+	if (pending_db->sync(pending_db, 0) != 0) {
+		syslog(LOG_ERR, "sync failed on greylist database: %s",
+		    strerror(errno));
+		return;
+	}
+
+	dbo->dbo_busy = 0;
+
+	if (pending_db->put(pending_db, &key, &rec, 0) != 0) {
+		syslog(LOG_ERR, "put %s record failed for greylist db: %s",
+		    DB_OPTIONS, strerror(errno));
+		return;
+	}
+
+	if (pending_db->close(pending_db) != 0) {
+		syslog(LOG_ERR, "close failed on greylist database: %s",
+		    strerror(errno));
+		return;
+	}
 
 	return;
 }
