@@ -1,3 +1,5 @@
+2.0b2:
+	Check for initgroups existence
 2.0b1:
 	Shut down warnings in tolower()
 	Use initgroups() on startup to kill suplementary groups

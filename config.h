@@ -2,7 +2,7 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
-#define BUILD_ENV "manu@plan:/usr/home/manu/milter-greylist Mon Feb  7 22:59:06 CET 2005"
+#define BUILD_ENV "manu@plan:/usr/home/manu/milter-greylist Tue Feb  8 06:47:43 CET 2005"
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define HAVE_ARPA_INET_H 1
@@ -36,6 +36,9 @@
 
 /* Define to 1 if you have the `inet_ntoa' function. */
 #define HAVE_INET_NTOA 1
+
+/* Define to 1 if you have the `initgroups' function. */
+#define HAVE_INITGROUPS 1
 
 /* Define to 1 if you have the <inttypes.h> header file. */
 #define HAVE_INTTYPES_H 1
