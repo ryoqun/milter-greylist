@@ -1,4 +1,5 @@
 1.5.11:
+	Ingore self as sync peer (Matthias Scheler and Hajimu Umemoto)
 	Document ressource shortage for memory and file descriptor
 	Remove oudated documentation about IPv6
 1.5.10:

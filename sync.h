@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.13 2004/08/08 21:24:20 manu Exp $ */
+/* $Id: sync.h,v 1.14 2004/10/15 19:17:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -67,7 +67,10 @@ struct peer {
 	struct synclist p_deferred;
 	LIST_ENTRY(peer) p_list;
 	size_t p_qlen;
+	int p_flags;
 };
+
+#define P_LOCAL	1
 
 typedef enum { PS_CREATE, PS_DELETE } peer_sync_t;
 

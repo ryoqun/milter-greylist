@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.49 2004/08/09 20:26:52 manu Exp $ */
+/* $Id: sync.c,v 1.50 2004/10/15 19:17:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.49 2004/08/09 20:26:52 manu Exp $");
+__RCSID("$Id: sync.c,v 1.50 2004/10/15 19:17:39 manu Exp $");
 #endif
 #endif
 
@@ -72,6 +72,7 @@ pthread_rwlock_t sync_lock; /* For all peer's sync queue */
 pthread_cond_t sync_sleepflag;
 
 static void sync_listen(char *, char *, struct sync_master_sock *);
+static int local_addr(const struct sockaddr *sa, const socklen_t salen);
 
 void
 peer_init(void) {
@@ -144,6 +145,7 @@ peer_add(peername)
 
 	peer->p_qlen = 0;
 	peer->p_stream = NULL;
+	peer->p_flags = 0;
 	TAILQ_INIT(&peer->p_deferred);
 
 	PEER_WRLOCK;
@@ -313,6 +315,21 @@ peer_connect(peer)	/* peer list is read-locked */
 		    peer->p_name, gai_strerror(err), peer->p_qlen);
 		return -1;
 	}
+
+	for (res = res0; res; res = res->ai_next) {
+		/*We only test an address family which kernel supports. */
+		s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
+		if (s == -1)
+			continue;
+		close(s);
+
+		if (local_addr(res->ai_addr, res->ai_addrlen)) {
+			peer->p_flags |= P_LOCAL;
+			freeaddrinfo(res0);
+			return -1;
+		}
+	}
+
 	for (res = res0; res; res = res->ai_next) {
 		s = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 		if (s == -1)
@@ -358,6 +375,12 @@ peer_connect(peer)	/* peer list is read-locked */
 		syslog(LOG_ERR, "cannot sync, invalid address");
 		return -1;
 	}
+
+	if (local_addr(SA(&raddr), raddrlen)) {
+		peer->flags |= P_LOCAL;
+		return -1;
+	}
+
 	switch (SA(&raddr)->sa_family) {
 	case AF_INET:
 		SA4(&raddr)->sin_port = service;
@@ -1085,6 +1108,10 @@ sync_sender(dontcare)
 			goto out;
 			
 		LIST_FOREACH(peer, &peer_head, p_list) {
+			/* Don't try to sync with ourselves */
+			if (peer->p_flags & P_LOCAL)
+				continue;
+
 			/* XXX take a read lock and then upgrade it */
 			while (TAILQ_EMPTY(&peer->p_deferred) == 0) {
 				SYNC_WRLOCK;
@@ -1125,4 +1152,55 @@ out:
 			    tv3.tv_sec, tv3.tv_usec);
 		}
 	}
+}
+
+
+static int
+local_addr(sa, salen)
+	const struct sockaddr *sa;
+	const socklen_t salen;
+{
+	sockaddr_t addr;
+	int	sfd, islocal;
+
+	memcpy(&addr, sa, salen);
+	switch(sa->sa_family) {
+	case AF_INET:
+		SA4(&addr)->sin_port = 0;
+		break;
+
+#ifdef AF_INET6
+	case AF_INET6:
+		SA6(&addr)->sin6_port = 0;
+		break;
+#endif
+
+	default:
+		syslog(LOG_ERR, "local_addr: unsupported AF %d\n",
+		    sa->sa_family);
+		return -1;
+		break;
+	}
+
+	if ((sfd = socket(sa->sa_family, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
+		syslog(LOG_ERR, "local_addr: socket failed: %s\n",
+		    strerror(errno));
+		return -1;
+	}
+
+	if (bind(sfd, sa, salen) == -1) {
+		if (errno != EADDRNOTAVAIL) {
+			syslog(LOG_ERR, "local_addr: bind failed: %s\n",
+			    strerror(errno));
+			islocal = -1;
+		} else {
+			islocal = 0;
+		}
+	} else {
+		islocal = 1;
+	}
+
+	close(sfd);
+
+	return islocal;
 }
