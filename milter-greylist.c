@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.88 2004/05/25 09:39:49 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.89 2004/05/25 10:20:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.88 2004/05/25 09:39:49 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.89 2004/05/25 10:20:48 manu Exp $");
 #endif
 #endif
 
@@ -963,11 +963,12 @@ void
 final_dump(void) {
 
 	if (dump_dirty != 0) {
-		syslog(LOG_INFO, "Exitting, performing final database dump");
+		syslog(LOG_INFO, "Final database dump");
 		dump_perform();
 	} else {
-		syslog(LOG_INFO, "Exitting, no change to dump");
+		syslog(LOG_INFO, "Final database dump: no change to dump");
 	}
 
+	syslog(LOG_INFO, "Exitting");
 	return;
 }
