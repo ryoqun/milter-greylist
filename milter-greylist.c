@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.34 2004/03/17 17:33:40 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.35 2004/03/19 22:45:23 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.34 2004/03/17 17:33:40 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.35 2004/03/19 22:45:23 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -39,6 +39,7 @@ __RCSID("$Id: milter-greylist.c,v 1.34 2004/03/17 17:33:40 manu Exp $");
 #include <string.h>
 #include <strings.h>
 #include <syslog.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <pwd.h>
@@ -63,6 +64,8 @@ __RCSID("$Id: milter-greylist.c,v 1.34 2004/03/17 17:33:40 manu Exp $");
 int debug = 0;
 int dont_fork = 0;
 int quiet = 0;
+
+static char *strncpy_rmsp(char *, char *, size_t);
 
 struct smfiDesc smfilter =
 {
@@ -111,7 +114,11 @@ mlfi_envfrom(ctx, envfrom)
 	struct mlfi_priv *priv;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
-	strncpy(priv->priv_from, *envfrom, ADDRLEN);
+
+	/*
+	 * Strip spaces from the source address
+	 */
+	strncpy_rmsp(priv->priv_from, *envfrom, ADDRLEN);
 	priv->priv_from[ADDRLEN] = '\0';
 
 	return SMFIS_CONTINUE;
@@ -126,6 +133,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	long remaining;
 	char hdr[HDRLEN + 1];
 	char addrstr[IPADDRLEN + 1];
+	char rcpt[ADDRLEN + 1];
 	int h, mn, s;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
@@ -135,6 +143,12 @@ mlfi_envrcpt(ctx, envrcpt)
 		    inet_ntoa(priv->priv_addr), 
 		    priv->priv_from, *envrcpt);
 
+	/*
+	 * Strip spaces from the recipient address
+	 */
+	strncpy_rmsp(rcpt, *envrcpt, ADDRLEN);
+	rcpt[ADDRLEN] = '\0';
+
 	/* 
 	 * Reload the config file if it has been touched
 	 * Restart the sync master thread if nescessary
@@ -143,19 +157,19 @@ mlfi_envrcpt(ctx, envrcpt)
 	sync_master_restart();
 
 	if ((priv->priv_whitelist = except_filter(&priv->priv_addr, 
-	    priv->priv_from, *envrcpt)) != EXF_NONE) {
+	    priv->priv_from, rcpt)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
 
 	if ((priv->priv_whitelist = autowhite_check(&priv->priv_addr,
-	    priv->priv_from, *envrcpt)) != EXF_NONE) {
+	    priv->priv_from, rcpt)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
 
 	if (pending_check(&priv->priv_addr, priv->priv_from, 
-	    *envrcpt, &remaining, &priv->priv_elapsed) != 0) 
+	    rcpt, &remaining, &priv->priv_elapsed) != 0) 
 		return SMFIS_CONTINUE;
 
 	h = remaining / 3600;
@@ -498,4 +512,22 @@ cleanup_sock(path)
 	/* Remove the beast */
 	(void)unlink(path);
 	return;
+}
+
+static char *
+strncpy_rmsp(dst, src, len)
+	char *dst;
+	char *src;
+	size_t len;
+{
+	unsigned int i;
+
+	for (i = 0; src[i] && (i < len); i++) {
+		if (isgraph(src[i]))
+			dst[i] = src[i];
+		else
+			dst[i] = '_';
+	}
+
+	return dst;
 }

@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.47 2004/03/19 16:15:06 manu Exp $
+# $Id: configure.ac,v 1.48 2004/03/19 22:45:23 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -58,6 +58,7 @@ AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h strings.h s
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
+AC_TYPE_SIZE_T
 AC_HEADER_TIME
 
 # Checks for library functions.

@@ -1,4 +1,4 @@
-/* $Id: config.h.in,v 1.7 2004/03/18 09:55:14 manu Exp $ */
+/* $Id: config.h.in,v 1.8 2004/03/19 22:45:23 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
