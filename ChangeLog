@@ -2,6 +2,7 @@
 	Documentation fixes (Gary Aitken, Per Holm)
 	New broken site in the default whitelist
 	Generate .spec file from configure
+	Differentiate errors in dump file and config file
 1.7.4:
 	M4 file for easier sendmail.cf generation (Ivan F. Martinez)
 	.spec file for generating RPM (Ivan F. Martinez)

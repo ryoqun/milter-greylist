@@ -62,7 +62,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.31 2004/12/16 23:08:13 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.32 2005/01/08 14:43:29 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -181,6 +181,6 @@ void
 yyerror(err)
 	char *err;
 {
-	fprintf(stderr, "error at line %d: %s\n", conf_line, err);
+	fprintf(stderr, "config error at line %d: %s\n", conf_line, err);
 	return;
 }
