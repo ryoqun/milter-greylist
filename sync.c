@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.53 2004/12/08 22:23:09 manu Exp $ */
+/* $Id: sync.c,v 1.54 2005/01/22 13:00:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.53 2004/12/08 22:23:09 manu Exp $");
+__RCSID("$Id: sync.c,v 1.54 2005/01/22 13:00:39 manu Exp $");
 #endif
 #endif
 
@@ -407,7 +407,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	}
 
 	if (local_addr(SA(&raddr), raddrlen)) {
-		peer->flags |= P_LOCAL;
+		peer->p_flags |= P_LOCAL;
 		return -1;
 	}
 
