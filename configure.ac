@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.133 2004/12/19 19:59:25 manu Exp $
+# $Id: configure.ac,v 1.134 2004/12/29 21:44:38 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -568,5 +568,5 @@ AC_ARG_WITH(autowhite,
 	[  --with-autowhite=VALUE How long auto-whitelisting lasts],
 	[CFLAGS=$CFLAGS" -DAUTOWHITE_DELAY=$withval"])
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile milter-greylist.spec])
 AC_OUTPUT

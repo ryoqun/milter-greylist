@@ -1,7 +1,7 @@
 1.7.5:
 	Documentation fixes (Gary Aitken)
 	New broken site in the default whitelist
-	TODO: .spec file generation.
+	Generate .spec file from configure
 1.7.4:
 	M4 file for easier sendmail.cf generation (Ivan F. Martinez)
 	.spec file for generating RPM (Ivan F. Martinez)

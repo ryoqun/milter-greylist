@@ -1,6 +1,6 @@
-# $Id: milter-greylist.spec,v 1.1 2004/12/17 22:37:43 manu Exp $
+# $Id: milter-greylist.spec,v 1.2 2004/12/29 21:44:38 manu Exp $
 # Contributed by Ivan F. Martinez
-%define ver 1.7.3
+%define ver 1.7.4
 %define rel 1
 %define user smmsp
 
@@ -80,6 +80,9 @@ fi
 %dir %attr(-,%{user},root) /var/milter-greylist
 
 %changelog
+* Thu Dec 28 2004 Emmanuel Dreyfus <manu@netbsd.org> 1.7.4-1
+- generate the .spec file from configure
+
 * Thu Dec 16 2004 Ivan F. Martinez <ivanfm@users.sourceforge.net> 1.7.3-1
 - updated to new version 
 
