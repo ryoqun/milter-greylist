@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.106 2004/05/27 19:46:12 manu Exp $
+# $Id: configure.ac,v 1.107 2004/05/27 19:57:09 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -18,6 +18,13 @@ AC_CHECK_PROGS(MV, mv)
 AC_CHECK_PROGS(TEST, test)
 AC_CHECK_PROGS(SED, sed)
 AC_CHECK_PROGS(TRUE, true)
+
+# Check that the compiler won't bug us for -Wall
+AC_MSG_CHECKING([if compiler accepts -Wall])
+SAVEDCFLAGS=$CFLAGS
+CFLAGS=$CFLAGS" -Wall"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],[])], [SAVEDCFLAGS=$CFLAGS])
+CFLAGS=$SAVEDCFLAGS
 
 # Check if the linker accepts --rpath (for Darwin)
 AC_MSG_CHECKING([if ld accepts --rpath])
