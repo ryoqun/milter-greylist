@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.6 2004/03/01 14:05:41 manu Exp $ */
+/* $Id: except.c,v 1.7 2004/03/02 09:15:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -239,26 +239,21 @@ emailcmp(big, little)
 	char *big;
 	char *little;
 {
-	int i, j;
+	int i;
 
-	/* 
-	 * An e-mail address starts with [A-Za-z0-9]
-	 * Strip any leading garbage, including brackets.
-	 * eg: "  <foo@example.com>" -> "foo@xample.com>"
-	 */
-	for (j = 0; (j < ADDRLEN) && big[0] && !isalnum(big[0]); j++)
-		big++;
+	while (big[0]) {
+		if (tolower(big[0]) != tolower(little[0]))
+			big++;
 
-	/* 
-	 * Then compare it with the smaller string. 
-	 * Comparison stops as soon as the end of
-	 * a string is reached. This avoids problems
-	 * with trailing chars, including brackets.
-	 * eg: "foo@example.com> " matches "foo@example.com"
-	 */
-	 for (i = 0; (i < ADDRLEN - j) && big[i] && little[i]; i++)
-		if (tolower(big[i]) != tolower(little[i]))
-			return 1;
+		for (i = 0; big[i] && little[i] && (i < ADDRLEN); i++) {
+			if (tolower(big[0]) != tolower(little[i]))
+				break;
+			big++;
+		}
+		
+		if (little[i] == 0)
+			return 0;
+	}
 
-	return 0;
+	return 1;
 }
