@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.26 2004/10/13 10:15:12 manu Exp $
+.\" $Id: milter-greylist.8,v 1.27 2004/11/11 12:03:22 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -39,6 +39,7 @@
 .Nm
 .Op Fl A
 .Op Fl a Ar delay
+.Op Fl c
 .Op Fl D
 .Op Fl d Ar dumpfile
 .Op Fl f Ar configfile
@@ -114,6 +115,11 @@ accepted for
 The default is one day. Use zero to disable auto-whitelisting.
 A suffix can be added to specify seconds (s), minutes (m), hours (h), 
 days (d) or weeks (w). Whithout suffix, values are treated as seconds.
+.It Fl c
+Only check the configuration file and exit. Return value is 0 if the
+configuration is valid, or an error code from 
+.Aq Pa sysexit.h
+otherwise.
 .It Fl D
 Do not fork and run in the foreground. Without this flag, 
 .Nm

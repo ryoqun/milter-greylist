@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.97 2004/10/26 19:57:40 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.98 2004/11/11 12:03:22 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.97 2004/10/26 19:57:40 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.98 2004/11/11 12:03:22 manu Exp $");
 #endif
 #endif
 
@@ -564,7 +564,7 @@ main(argc, argv)
 	char *argv[];
 {
 	int ch;
-
+	int checkonly = 0;
 	/*
 	 * Load configuration defaults
 	 */
@@ -573,7 +573,7 @@ main(argc, argv)
 	/* 
 	 * Process command line options 
 	 */
-	while ((ch = getopt(argc, argv, "Aa:vDd:qw:f:hp:P:Tu:rSL:M:")) != -1) {
+	while ((ch = getopt(argc, argv, "Aa:cvDd:qw:f:hp:P:Tu:rSL:M:")) != -1) {
 		switch (ch) {
 		case 'A':
 			defconf.c_noauth = 1;
@@ -589,6 +589,9 @@ main(argc, argv)
 			defconf.c_autowhite_validity = 
 			    (time_t)humanized_atoi(optarg);
 			defconf.c_forced |= C_AUTOWHITE;
+			break;
+		case 'c':
+		        checkonly = 1;
 			break;
 
 		case 'D':
@@ -756,6 +759,10 @@ main(argc, argv)
 		}
 	}
 	
+	if (checkonly) {
+	  conf_load();
+	  exit(0);
+	}
 	/* 
 	 * Register our callbacks 
 	 */
