@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.51 2004/11/11 08:51:02 manu Exp $ */
+/* $Id: sync.c,v 1.52 2004/11/12 14:22:22 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.51 2004/11/11 08:51:02 manu Exp $");
+__RCSID("$Id: sync.c,v 1.52 2004/11/12 14:22:22 manu Exp $");
 #endif
 #endif
 
@@ -73,6 +73,8 @@ pthread_cond_t sync_sleepflag;
 
 static void sync_listen(char *, char *, struct sync_master_sock *);
 static int local_addr(const struct sockaddr *sa, const socklen_t salen);
+static int sync_queue_poke(struct peer *, struct sync *);
+static struct sync * sync_queue_peek(struct peer *);
 
 void
 peer_init(void) {
@@ -106,16 +108,12 @@ peer_clear(void) {
 	struct sync *sync;
 
 	PEER_WRLOCK;
-	SYNC_WRLOCK;
 
 	while(!LIST_EMPTY(&peer_head)) {
 		peer = LIST_FIRST(&peer_head);
-		while(!TAILQ_EMPTY(&peer->p_deferred)) {
-			sync = TAILQ_FIRST(&peer->p_deferred);
-			TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
-			peer->p_qlen--;
+
+		while((sync = sync_queue_peek(peer)) != NULL)
 			sync_free(sync);
-		}
 			
 		if (peer->p_stream != NULL)
 			fclose(peer->p_stream);
@@ -125,7 +123,6 @@ peer_clear(void) {
 		free(peer);
 	}
 
-	SYNC_UNLOCK;
 	PEER_UNLOCK;
 
 	return;	
@@ -194,6 +191,39 @@ out:
 	PEER_UNLOCK;
 	
 	return;
+}
+
+static int
+sync_queue_poke(peer, sync)
+	struct peer *peer;
+	struct sync *sync;
+{
+	SYNC_WRLOCK;
+	if (peer->p_qlen < SYNC_MAXQLEN) {
+		TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
+		peer->p_qlen++;
+		SYNC_UNLOCK;
+		return 1;
+	} else {
+		SYNC_UNLOCK;
+		return 0;
+	}
+}
+
+static struct sync *
+sync_queue_peek(peer)
+	struct peer *peer;
+{
+	struct sync *sync;
+
+	SYNC_WRLOCK;
+	sync = TAILQ_FIRST(&peer->p_deferred);
+	if (!TAILQ_EMPTY(&peer->p_deferred)) {
+		TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
+		peer->p_qlen--;
+	}
+	SYNC_UNLOCK;
+	return sync;
 }
 
 int
@@ -1014,30 +1044,24 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 	int error;
 	struct sync *sync;
 
+	if ((sync = malloc(sizeof(*sync))) == NULL) {
+		syslog(LOG_ERR, "cannot allocate memory: %s", 
+		    strerror(errno)); 
+		exit(EX_OSERR);
+	}
+
+	sync->s_peer = peer;
+	sync->s_type = type;
+	sync->s_pending = pending_ref(pending);
+
 	/*
 	 * If the queue has overflown, try to wakeup sync_sender to
 	 * void it, but do not accept new entries anymore.
 	 */
-	if (peer->p_qlen >= SYNC_MAXQLEN) {
+	if (!sync_queue_poke(peer, sync)) {
 		syslog(LOG_ERR, "peer %s queue overflow (%d entries), "
 		    "discarding new entry", peer->p_name, peer->p_qlen);
-
-	} else {
-
-		if ((sync = malloc(sizeof(*sync))) == NULL) {
-			syslog(LOG_ERR, "cannot allocate memory: %s", 
-			    strerror(errno)); 
-			exit(EX_OSERR);
-		}
-
-		sync->s_peer = peer;
-		sync->s_type = type;
-		sync->s_pending = pending_ref(pending);
-
-		SYNC_WRLOCK;
-		TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
-		peer->p_qlen++;
-		SYNC_UNLOCK;
+		sync_free(sync);
 	}
 
 	if ((error = pthread_cond_signal(&sync_sleepflag)) != 0) {
@@ -1112,27 +1136,12 @@ sync_sender(dontcare)
 			if (peer->p_flags & P_LOCAL)
 				continue;
 
-			/* XXX take a read lock and then upgrade it */
-			while (TAILQ_EMPTY(&peer->p_deferred) == 0) {
-				SYNC_WRLOCK;
-				sync = TAILQ_FIRST(&peer->p_deferred);
-				TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
-				peer->p_qlen--;
-				SYNC_UNLOCK;
+			while ((sync = sync_queue_peek(peer)) != NULL ) {
 
-				/* 
-				 * We cannot keep the lock in sync_send
-				 * as the send might timeout. Hence we
-				 * remove the item, and put it back if 
-				 * the send operation fails.
-				 */
 				if (sync_send(sync->s_peer, sync->s_type, 
 				    sync->s_pending) != 0) {
-					SYNC_WRLOCK;
-					TAILQ_INSERT_HEAD(&peer->p_deferred, 
-					    sync, s_list);
-					peer->p_qlen++;
-					SYNC_UNLOCK;
+					if (!sync_queue_poke(peer, sync))
+						sync_free(sync);
 
 					break;
 				}
