@@ -1,4 +1,4 @@
-# $Id: milter-greylist.spec.in,v 1.1 2005/01/08 15:11:43 manu Exp $
+# $Id: milter-greylist.spec.in,v 1.2 2005/02/06 10:45:55 manu Exp $
 # Contributed by Ivan F. Martinez
 %define ver @PACKAGE_VERSION@
 %define rel 1
@@ -8,15 +8,17 @@ Summary: GreyList milter for sendmail
 Name: milter-greylist
 Version:   %ver
 Release:   %rel
-Group:     System Environment/Daemons
+Group:	   System Environment/Daemons
 License: 3-clause BSD license
 Source0: ftp://ftp.espci.fr/pub/milter-greylist/%{name}-%{version}.tgz
 URL: http://hcpnet.free.fr/milter-greylist/
-BuildRoot: %{_tmppath}/%{name}-%{version}
+BuildRoot: %{_tmppath}/%{name}-%{version}-root-%(%{__id_u} -n)
 
-Requires: sendmail >= 8.12, sendmail-cf >= 8.12
+Requires: sendmail >= 8.12
+Requires: sendmail-cf >= 8.12
 BuildRequires: sendmail-devel >= 8.12
-BuildRequires: flex, bison
+BuildRequires: flex
+BuildRequires: bison
 
 %description
 milter-greylist is a stand-alone milter written in C that implements the
@@ -39,27 +41,38 @@ before the second attempt.
 
 
 %build
-./configure --prefix=%{_prefix} --mandir=%{_mandir} --with-user=%{user}
-make
+%configure --with-user=%{user}
+%{__make} %{?_smp_mflags}
+
 
 %install
 rm -rf $RPM_BUILD_ROOT
 mkdir -p ${RPM_BUILD_ROOT}%{_initrddir}
-mkdir -p ${RPM_BUILD_ROOT}/etc/mail
-mkdir -p ${RPM_BUILD_ROOT}/var/milter-greylist
-mkdir -p ${RPM_BUILD_ROOT}/usr/share/sendmail-cf/feature
+mkdir -p ${RPM_BUILD_ROOT}%{_sysconfdir}/mail
+mkdir -p ${RPM_BUILD_ROOT}%{_localstatedir}/milter-greylist
+mkdir -p ${RPM_BUILD_ROOT}%{_datadir}/sendmail-cf/feature
 
 install -m 755 rc-redhat.sh ${RPM_BUILD_ROOT}%{_initrddir}/milter-greylist
 install -m 644 milter-greylist.m4 ${RPM_BUILD_ROOT}%{_datadir}/sendmail-cf/feature/milter-greylist.m4
+touch ${RPM_BUILD_ROOT}%{_localstatedir}/milter-greylist/greylist.db
 make DESTDIR=${RPM_BUILD_ROOT} install
 
 %pre
 
 %post
 /sbin/chkconfig --add milter-greylist
+/bin/grep -q -E '(FEATURE|INPUT_MAIL_FILTER).*milter-greylist' /etc/mail/sendmail.mc
+if [ $? -ne 0 ]
+then
+	echo "You can enable milter-greylist in your sendmail, adding the line : "
+	echo "FEATURE(\`milter-greylist')dnl"
+	echo "to /etc/mail/sendmail.mc file"
+fi
+
 
 %preun
 if [ $1 = 0 ]; then
+	/sbin/service milter-greylist stop > /dev/null 2>&1 || :
 	/sbin/chkconfig --del milter-greylist
 	/bin/grep -q -E '(FEATURE|INPUT_MAIL_FILTER).*milter-greylist' /etc/mail/sendmail.mc
 	if [ $? -eq 0 ]
@@ -69,18 +82,35 @@ if [ $1 = 0 ]; then
 	fi
 fi
 
+%postun
+if [ $1 -eq 0 ]; then
+	rm -rf %{_localstatedir}/milter-greylist/
+   else
+	/sbin/service milter-greylist condrestart > /dev/null 2>&1 || :
+fi
+
 %files
 %defattr(-,root,root)
 %doc README ChangeLog
-%config (noreplace) /etc/mail/greylist.conf
+%config (noreplace) %{_sysconfdir}/mail/greylist.conf
 %{_initrddir}/milter-greylist
-%{_prefix}/bin/milter-greylist
-%{_datadir}/sendmail-cf/feature/milter-greylist.m4
+%{_bindir}/milter-greylist
 %{_mandir}/man5/greylist.conf.5.gz
 %{_mandir}/man8/milter-greylist.8.gz
-%dir %attr(-,%{user},root) /var/milter-greylist
+%{_datadir}/sendmail-cf/feature/milter-greylist.m4
+%dir %attr(-,%{user},root) %{_localstatedir}/milter-greylist
+%attr(0600,%{user},root) %ghost %{_localstatedir}/milter-greylist/greylist.db
 
 %changelog
+* Tue Jan 25 2005 Petr Kristof <Petr|Kristof_CZ> 1.7.4-3
+- Use more %macros
+- Add conditional restart during upgrade
+- Fixed %postun cleanup
+- Add %ghost for greylist.db
+
+* Mon Jan 17 2005 Ivan F. Martinez <ivanfm@users.sourceforge.net> 1.7.4-2
+- added check for milter-greylist in sendmail.mc on post
+
 * Wed Jan  5 2005 Horst H. von Brand <vonbrand@inf.utfsm.cl> 1.7.4-1
 - Updated version
 - Added missing installed milter-greylist.m4 file

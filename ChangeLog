@@ -2,6 +2,7 @@
 	Fix build problem on IPv6 disabled systems.
 	Fix build problem with libpsf
 	Fix rc-redhat startup order, drop root before starting the daemon
+	Updated .spec file (Ivan F. Martinez)
 1.7.5:
 	Documentation fixes (Gary Aitken, Per Holm)
 	New broken site in the default whitelist
