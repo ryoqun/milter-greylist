@@ -46,6 +46,9 @@ timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
 domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 syncaddr	[Ss][Yy][Nn][Cc][Aa][Dd][Dd][Rr]:?
 port		[Pp][Oo][Rr][Tt]
+acl		[Aa][Cc][Ll]
+whitelist	[Ww][Hh][Ii][Tt][Ee][Ll][Ii][Ss][Tt]:?
+default		[Dd][Ee][Ff][Aa][Uu][Ll][Tt]
 star		"*"
 
 %s S_REGEX
@@ -58,7 +61,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.29 2004/10/26 19:55:50 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.30 2004/12/08 22:23:09 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -104,6 +107,9 @@ star		"*"
 {domain}	{ BEGIN(S_REGEX); return DOMAIN; }
 {syncaddr}	{ return SYNCADDR; }
 {port}		{ return PORT; }
+{acl}		{ return ACL; }
+{whitelist}	{ return WHITELIST; }
+{default}	{ return DEFAULT; }
 {star}		{ return STAR; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);

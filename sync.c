@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.52 2004/11/12 14:22:22 manu Exp $ */
+/* $Id: sync.c,v 1.53 2004/12/08 22:23:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.52 2004/11/12 14:22:22 manu Exp $");
+__RCSID("$Id: sync.c,v 1.53 2004/12/08 22:23:09 manu Exp $");
 #endif
 #endif
 
@@ -1043,6 +1043,9 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 {
 	int error;
 	struct sync *sync;
+
+	if (peer->p_flags & P_LOCAL)
+		return;
 
 	if ((sync = malloc(sizeof(*sync))) == NULL) {
 		syslog(LOG_ERR, "cannot allocate memory: %s", 

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.15 2004/12/08 17:47:15 manu Exp $
+# $Id: Makefile,v 1.16 2004/12/08 22:23:09 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,8 +29,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-CFLAGS= 	-g -O2 -Wall -I/usr/pkg/include -D_XOPEN_SOURCE=500 -D_BSD_SOURCE
-LDFLAGS=	 -L/usr/pkg/lib -Wl,--rpath=/usr/pkg/lib
+CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE
+LDFLAGS=	
 LIBS= 		 -lresolv -lpthread -lmilter
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -51,10 +51,10 @@ LEX=		flex
 YACC=		bison -y
 TRUE=		true
 
-OBJ= 		milter-greylist.o pending.o except.o sync.o \
-		conf_yacc.o dump_yacc.o conf.o autowhite.o dump.o spf.o
-SRC= 		milter-greylist.c pending.c except.c sync.c conf.c \
-		autowhite.c dump.c spf.c
+OBJ= 		milter-greylist.o pending.o sync.o \
+		conf_yacc.o dump_yacc.o conf.o autowhite.o dump.o spf.o acl.o
+SRC= 		milter-greylist.c pending.c sync.c conf.c \
+		autowhite.c dump.c spf.c acl.c
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c 
 
 all:		milter-greylist rc-bsd.sh rc-redhat.sh \
@@ -121,8 +121,7 @@ realclean:	clean
 
 .SUFFIXES:	.o .c .h .y .l
 .l.c:
-	${LEX} $<
-	${MV} lex.yy.c $@
+	${LEX} -o $@ $<
 .y.c:
 	${YACC} -p`echo $@|${SED} 's/^\([^_]\{1,\}_\).*$$/\1/'` $<
 	${MV} y.tab.c $@

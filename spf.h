@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.9 2004/12/08 17:49:48 manu Exp $ */
+/* $Id: spf.h,v 1.10 2004/12/08 22:23:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -38,8 +38,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-
-#include "except.h"
 
 #if defined(HAVE_SPF_ALT) || defined(HAVE_SPF2)
 int spf_alt_check(struct sockaddr *, socklen_t, char *, char *);

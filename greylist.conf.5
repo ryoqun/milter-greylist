@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.14 2004/10/17 18:35:42 manu Exp $
+.\" $Id: greylist.conf.5,v 1.15 2004/12/08 22:23:09 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -48,7 +48,7 @@ The primary use of
 .Nm
 is to setup 
 .Xr milter-greylist 8 
-white list. This is done with three keywords:
+white list. This is done with four keywords:
 .Bl -tag -width flag
 .It Ar addr
 This keyword is used to specify a netblock of whitelisted source IP 
@@ -99,10 +99,70 @@ and
 may be used with regulax expressions. The regular expressions must be
 enclosed by slashes (/). No escaping is available to provide a slash
 inside a regular expression, so just do not use it. Regular expressions
-follow the format desribed in 
+follow the format described in 
 .Xr re_format 7 .
 Here is an example:
 .Dl rcpt /.*@example\.net/
+.Sh ACCESS LIST
+Starting with version 1.7, 
+.Xr milter-greylist 8
+handles an access-list that can be used to combinate 
+.Ar addr ,
+.Ar domain ,
+.Ar from
+and
+.Ar rcpt
+clauses.
+An access-list entry starts with the
+.Ar acl
+keyword followed by the
+.Ar greylist
+or
+.Ar whitelist
+keyword. Entries in the access-list are evaluated sequentialy, so order is
+very important.
+.Pp
+Example 1:
+.Dl acl whitelist from friend@toto.com rcpt grandma@example.com
+.Dl acl whitelist from other.friend@example.net rcpt grandma@example.com
+.Dl acl greylist rcpt grandma@example.com
+.Dl acl whitelist default
+.Pp
+Example 2:
+.Dl acl whitelist addr 193.54.0.0/16 domain friendly.com
+.Dl acl greylist rcpt user1@atmine.com
+.Dl acl greylist rcpt user2@atmine.com
+.Dl acl greylist rcpt user3@atmine.com
+.Dl acl whitelist default
+.Pp
+Example 3:
+.Dl acl whitelist rcpt /.*@.*otherdomain\.org/
+.Dl acl whitelist addr 192.168.42.0/24 rcpt user1@mydomain.org
+.Dl acl whitelist from friend@example.net rcpt /.*@.*mydomain\.org/
+.Dl acl whitelist rcpt user2@mydomain.org
+.Dl acl greylist rcpt /.*@.*mydomain\.org/
+.Dl acl whitelist default
+.Pp
+Access-list management is intented to replace the
+.Ar addr ,
+.Ar domain ,
+.Ar from
+and
+.Ar rcpt
+keywords that will be phased out in a future version of
+.Xr milter-greylist 8 .
+These deprecated keywords are still accepted by
+.Xr milter-greylist 8
+and are handled as simple access-list entries. They are added at the head
+of the access-list so the use of these keywords and access-lists may lead
+to unspecified behaviour.
+.Pp
+Access-list handling does not depend on the running mode (testmode or not)
+since entries explicitely contain the
+.Ar greylist
+or
+.Ar whitelist
+keyword.
 .Sh MX SYNC
 Synchronization of the greylist among multiple MX is configured using the 
 .Ar peer 

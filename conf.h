@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.27 2004/10/11 20:57:42 manu Exp $ */
+/* $Id: conf.h,v 1.28 2004/12/08 22:23:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -60,6 +60,7 @@ struct conf {
 	int c_cold;
 	int c_forced;
 	int c_debug;
+	int c_acldebug;
 	int c_quiet;
 	int c_noauth;
 	int c_nospf;
@@ -100,6 +101,7 @@ struct conf {
 #define C_NODETACH	0x1000
 #define C_LAZYAW	0x2000
 #define C_MATCHMASK6	0x4000
+#define C_ACLDEBUG	0x8000
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
 /* c_report */

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.100 2004/11/27 14:43:17 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.101 2004/12/08 22:23:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.100 2004/11/27 14:43:17 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.101 2004/12/08 22:23:09 manu Exp $");
 #endif
 #endif
 
@@ -67,7 +67,7 @@ __RCSID("$Id: milter-greylist.c,v 1.100 2004/11/27 14:43:17 manu Exp $");
 #include <libmilter/mfapi.h>
 
 #include "dump.h"
-#include "except.h"
+#include "acl.h"
 #include "conf.h"
 #include "pending.h"
 #include "sync.h"
@@ -138,12 +138,12 @@ mlfi_connect(ctx, hostname, addr)
 #endif
 		default:
 			priv->priv_elapsed = 0;
-			priv->priv_whitelist = EXF_NONIPV4;
+			priv->priv_whitelist = EXF_WHITELIST | EXF_NONIPV4;
 			break;
 		}
 	} else {
 		priv->priv_elapsed = 0;
-		priv->priv_whitelist = EXF_NONIPV4;
+		priv->priv_whitelist = EXF_WHITELIST | EXF_NONIPV4;
 	}
 
 	return SMFIS_CONTINUE;
@@ -212,7 +212,7 @@ mlfi_envfrom(ctx, envfrom)
 	/*
 	 * Is the sender non-IPv4?
 	 */
-	if (priv->priv_whitelist == EXF_NONIPV4)
+	if (priv->priv_whitelist & EXF_NONIPV4)
 		return SMFIS_CONTINUE;
 
 	/*
@@ -224,7 +224,7 @@ mlfi_envfrom(ctx, envfrom)
 		    "User %s authenticated, bypassing greylisting", 
 		    auth_authen);
 		priv->priv_elapsed = 0;
-		priv->priv_whitelist = EXF_AUTH;
+		priv->priv_whitelist = EXF_WHITELIST | EXF_AUTH;
 
 		return SMFIS_CONTINUE;
 	} 
@@ -240,21 +240,7 @@ mlfi_envfrom(ctx, envfrom)
 		    "STARTTLS succeeded for DN=\"%s\", bypassing greylisting", 
 		    cert_subject);
 		priv->priv_elapsed = 0;
-		priv->priv_whitelist = EXF_STARTTLS;
-
-		return SMFIS_CONTINUE;
-	}
-
-	/*
-	 * Is the sender IP or its e-mail address in the
-	 * permanent whitelist? We do this before SPF as
-	 * a lookup in the whitelist is less expensive
-	 * than a DNS lookup.
-	 */
-	if ((priv->priv_whitelist = except_sender_filter(SA(&priv->priv_addr),
-	    priv->priv_addrlen, priv->priv_hostname, priv->priv_from, 
-	    priv->priv_queueid)) != EXF_NONE) {
-		priv->priv_elapsed = 0;
+		priv->priv_whitelist = EXF_WHITELIST | EXF_STARTTLS;
 
 		return SMFIS_CONTINUE;
 	}
@@ -276,7 +262,7 @@ mlfi_envfrom(ctx, envfrom)
 		}
 
 		priv->priv_elapsed = 0;
-		priv->priv_whitelist = EXF_SPF;
+		priv->priv_whitelist = EXF_WHITELIST | EXF_SPF;
 
 		return SMFIS_CONTINUE;
 	}
@@ -319,13 +305,13 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * header explaining that they were whitelisted, whereas some
 	 * of them would not.
 	 */
-	if ((priv->priv_whitelist == EXF_ADDR) ||
-	    (priv->priv_whitelist == EXF_DOMAIN) ||
-	    (priv->priv_whitelist == EXF_FROM) ||
-	    (priv->priv_whitelist == EXF_AUTH) ||
-	    (priv->priv_whitelist == EXF_SPF) ||
-	    (priv->priv_whitelist == EXF_NONIPV4) ||
-	    (priv->priv_whitelist == EXF_STARTTLS))
+	if ((priv->priv_whitelist & EXF_ADDR) ||
+	    (priv->priv_whitelist & EXF_DOMAIN) ||
+	    (priv->priv_whitelist & EXF_FROM) ||
+	    (priv->priv_whitelist & EXF_AUTH) ||
+	    (priv->priv_whitelist & EXF_SPF) ||
+	    (priv->priv_whitelist & EXF_NONIPV4) ||
+	    (priv->priv_whitelist & EXF_STARTTLS))
 		return SMFIS_CONTINUE;
 
 	/* 
@@ -340,10 +326,11 @@ mlfi_envrcpt(ctx, envrcpt)
 	rcpt[ADDRLEN] = '\0';
 
 	/*
-	 * Check if the recipient e-mail is in the permanent whitelist.
+	 * Check the ACL
 	 */
-	if ((priv->priv_whitelist = except_rcpt_filter(rcpt,
-	    priv->priv_queueid)) != EXF_NONE) {
+	if ((priv->priv_whitelist = acl_filter(SA(&priv->priv_addr),
+	    priv->priv_addrlen, priv->priv_hostname, priv->priv_from,
+	    rcpt, priv->priv_queueid)) & EXF_WHITELIST) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -372,7 +359,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * for everyone, it will not go to mlfi_eom(), and priv_whitelist 
 	 * will not be used.
 	 */
-	priv->priv_whitelist = EXF_RCPT;
+	priv->priv_whitelist = EXF_WHITELIST | EXF_RCPT;
 
 	/*
 	 * Check if the tuple {sender IP, sender e-mail, recipient e-mail}
@@ -422,7 +409,7 @@ mlfi_eom(ctx)
 	char timestr[HDRLEN + 1];
 	char tzstr[HDRLEN + 1];
 	char tznamestr[HDRLEN + 1];
-	char *whystr = NULL;
+	char whystr [HDRLEN + 1];
 	char host[ADDRLEN + 1];
 	time_t t;
 	struct tm ltm;
@@ -465,48 +452,52 @@ mlfi_eom(ctx)
 		if ((conf.c_report & C_NODELAYS) == 0)
 			return SMFIS_CONTINUE;
 			
-		switch (priv->priv_whitelist) {
-		case EXF_DOMAIN:
-			whystr = "Sender DNS name whitelisted";
-			break;
-
-		case EXF_ADDR:
-			whystr = "Sender IP whitelisted";
-			break;
-
-		case EXF_FROM:
-			whystr = "Sender e-mail whitelisted";
-			break;
-
-		case EXF_AUTH:
-			whystr = "Sender succeded SMTP AUTH authentication";
-			break;
-
-		case EXF_SPF:
-			whystr = "Sender is SPF-compliant";
-			break;
-
-		case EXF_NONIPV4:
-			whystr = "Message not sent from an IPv4 address";
-			break;
-
-		case EXF_STARTTLS:
-			whystr = "Sender succeeded STARTTLS authentication";
-			break;
-
-		case EXF_RCPT:
-			whystr = "Recipient e-mail whitelisted";
-			break;
-
-		case EXF_AUTO:
-			whystr = "IP, sender and recipient auto-whitelisted";
-			break;
-
-		default:
-			syslog(LOG_ERR, "%s: unexpected priv_whitelist = %d", 	
+		whystr[0] = '\0';
+		if (priv->priv_whitelist & EXF_DOMAIN) {
+			ADD_REASON(whystr, "Sender DNS name whitelisted");
+			priv->priv_whitelist &= ~EXF_DOMAIN;
+		}
+		if (priv->priv_whitelist & EXF_ADDR) {
+			ADD_REASON(whystr, "Sender IP whitelisted");
+			priv->priv_whitelist &= ~EXF_ADDR;
+		}
+		if (priv->priv_whitelist & EXF_FROM) {
+			ADD_REASON(whystr, "Sender e-mail whitelisted");
+			priv->priv_whitelist &= ~EXF_FROM;
+		}
+		if (priv->priv_whitelist & EXF_AUTH) {
+			ADD_REASON(whystr, "Sender succeded SMTP AUTH authentication");
+			priv->priv_whitelist &= ~EXF_AUTH;
+		}
+		if (priv->priv_whitelist & EXF_SPF) {
+			ADD_REASON(whystr, "Sender is SPF-compliant");
+			priv->priv_whitelist &= ~EXF_SPF;
+		}
+		if (priv->priv_whitelist & EXF_NONIPV4) {
+			ADD_REASON(whystr, "Message not sent from an IPv4 address");
+			priv->priv_whitelist &= ~EXF_NONIPV4;
+		}
+		if (priv->priv_whitelist & EXF_STARTTLS) {
+			ADD_REASON(whystr, "Sender succeeded STARTTLS authentication");
+			priv->priv_whitelist &= ~EXF_STARTTLS;
+		}
+		if (priv->priv_whitelist & EXF_RCPT) {
+			ADD_REASON(whystr, "Recipient e-mail whitelisted");
+			priv->priv_whitelist &= ~EXF_RCPT;
+		}
+		if (priv->priv_whitelist & EXF_AUTO) {
+			ADD_REASON(whystr, "IP, sender and recipient auto-whitelisted");
+			priv->priv_whitelist &= ~EXF_AUTO;
+		}
+		if (priv->priv_whitelist & EXF_DEFAULT) {
+			ADD_REASON(whystr, "Default is to whitelist mail");
+			priv->priv_whitelist &= ~EXF_DEFAULT;
+		}
+		priv->priv_whitelist &= ~(EXF_GREYLIST | EXF_WHITELIST);
+		if (priv->priv_whitelist != 0) {
+			syslog(LOG_ERR, "%s: unexpected priv_whitelist = %d",
 			    priv->priv_queueid, priv->priv_whitelist);
-			whystr = "Internal error";
-			break;
+			strncat (whystr, "Internal error ", HDRLEN);
 		}
 
 		snprintf(hdr, HDRLEN, "%s, not delayed by "
@@ -573,7 +564,7 @@ main(argc, argv)
 	/* 
 	 * Process command line options 
 	 */
-	while ((ch = getopt(argc, argv, "Aa:cvDd:qw:f:hp:P:Tu:rSL:M:")) != -1) {
+	while ((ch = getopt(argc, argv, "Aa:cvDd:qw:f:hp:P:Tu:rSL:M:l")) != -1) {
 		switch (ch) {
 		case 'A':
 			defconf.c_noauth = 1;
@@ -752,6 +743,11 @@ main(argc, argv)
 			defconf.c_forced |= C_TESTMODE;
 			break;
 
+		case 'l':
+			defconf.c_acldebug = 1;
+			defconf.c_forced |= C_ACLDEBUG;
+			break;
+
 		case 'h':
 		default:
 			usage(argv[0]);
@@ -775,7 +771,7 @@ main(argc, argv)
 	 * Various init
 	 */
 	conf_init();
-	except_init();
+	acl_init ();
 	pending_init();
 	peer_init();
 	autowhite_init();
@@ -816,9 +812,9 @@ main(argc, argv)
 		(void)close(0);
 		(void)open("/dev/null", O_RDONLY, 0);
 		(void)close(1);
-		(void)open("/dev/null", O_RDONLY, 0);
+		(void)open("/dev/null", O_WRONLY, 0);
 		(void)close(2);
-		(void)open("/dev/null", O_RDONLY, 0);
+		(void)open("/dev/null", O_WRONLY, 0);
 
 		if (chdir("/") != 0) {
 			fprintf(stderr, "%s: cannot chdir to root: %s\n",
@@ -895,6 +891,12 @@ main(argc, argv)
 	}	
 
 	/*
+	 * Dump the ACL for debugging purposes
+	 */
+	if (conf.c_debug || conf.c_acldebug)
+		acl_dump();
+
+	/*
 	 * Here we go!
 	 */
 	return smfi_main();
@@ -905,7 +907,7 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, 
-	    "usage: %s [-ADvqSTcr] [-a autowhite] [-d dumpfile] \n"
+	    "usage: %s [-ADvqSTl] [-a autowhite] [-d dumpfile] \n"
 	    "       [-P pidfile] [-M prefix] [-f configfile]\n"
 	    "       [-w delay] [-u username] [-L cidrmask] -p socket\n", 
 	    progname);

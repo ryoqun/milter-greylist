@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.35 2004/08/02 12:11:48 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.36 2004/12/08 22:23:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -44,7 +44,7 @@
 #define NUMLEN 20
 #define PATHLEN 1024
 #define REGEXLEN 1024
-#define HDRLEN 195
+#define HDRLEN 1024
 #define HEADERNAME "X-Greylist"
 
 
@@ -192,6 +192,13 @@ int main(int, char **);
 		}							\
 	} while (/* CONSTCOND */ 0)
 #endif
+
+#define ADD_REASON(whystr, reason)					\
+	{								\
+		if (whystr[0] != '\0')					\
+			strncat(whystr, ", ", sizeof(whystr));		\
+		strncat(whystr, reason, sizeof(whystr));		\
+	}
 
 #endif /* _MILTER_GREYLIST_H_ */
 

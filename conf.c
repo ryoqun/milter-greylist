@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.29 2004/10/26 19:57:40 manu Exp $ */
+/* $Id: conf.c,v 1.30 2004/12/08 22:23:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.29 2004/10/26 19:57:40 manu Exp $");
+__RCSID("$Id: conf.c,v 1.30 2004/12/08 22:23:09 manu Exp $");
 #endif
 #endif
 
@@ -58,9 +58,9 @@ __RCSID("$Id: conf.c,v 1.29 2004/10/26 19:57:40 manu Exp $");
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "acl.h"
 #include "autowhite.h"
 #include "conf.h"
-#include "except.h"
 #include "sync.h"
 #include "pending.h"
 #include "dump.h"
@@ -132,14 +132,14 @@ conf_load(void)
 	} else {
 
 		peer_clear();
-		EXCEPT_WRLOCK;
-		except_clear();
+		ACL_WRLOCK;
+		acl_clear();
 
 		conf_in = stream;
 
 		conf_parse();
 
-		EXCEPT_UNLOCK;
+		ACL_UNLOCK;
 
 		fclose(stream);
 
@@ -161,6 +161,9 @@ conf_load(void)
 		--numb_of_conf_update_threads;
 		CONF_UNLOCK;
 	}
+
+	if (conf.c_debug || conf.c_acldebug)
+		acl_dump();
 
 	return;
 }
@@ -266,6 +269,7 @@ conf_defaults(c)
 	c->c_cold = 1;
 	c->c_forced = C_GLNONE;
 	c->c_debug = 0;
+	c->c_acldebug = 0;
 	c->c_quiet = 0;
 	c->c_noauth = 0;
 	c->c_nospf = 0;

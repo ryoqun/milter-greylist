@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.27 2004/11/11 12:03:22 manu Exp $
+.\" $Id: milter-greylist.8,v 1.28 2004/12/08 22:23:09 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -43,6 +43,7 @@
 .Op Fl D
 .Op Fl d Ar dumpfile
 .Op Fl f Ar configfile
+.Op Fl l
 .Op Fl q
 .Op Fl r
 .Op Fl S
@@ -148,6 +149,8 @@ IP addresses. With -M 64,
 the matching mask is ffff:ffff:ffff:ffff::, and all addresses within the same
 subnet are considered the same. Default is -M 128,
 which corresponds to all IPv6 addresses considered different.
+.It Fl l
+Enable debug output in the access-list management code.
 .It Fl P Ar pidfile
 write the daemon's PID to 
 .Ar pidfile .

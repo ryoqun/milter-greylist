@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.37 2004/09/13 18:41:54 manu Exp $ */
+/* $Id: autowhite.c,v 1.38 2004/12/08 22:23:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.37 2004/09/13 18:41:54 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.38 2004/12/08 22:23:09 manu Exp $");
 #endif
 #endif
 
@@ -58,10 +58,11 @@ __RCSID("$Id: autowhite.c,v 1.37 2004/09/13 18:41:54 manu Exp $");
 #include <arpa/inet.h>
 
 #include "conf.h"
-#include "except.h"
 #include "pending.h"
 #include "dump.h"
 #include "autowhite.h"
+#include "acl.h"
+#include "sync.h"
 
 struct autowhitelist autowhite_head;
 pthread_rwlock_t autowhite_lock;
@@ -181,6 +182,7 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 {
 	struct autowhite *aw;
 	struct autowhite *next_aw;
+	struct pending *pending;
 	struct timeval now, delay;
 	char addr[IPADDRSTRLEN];
 	time_t autowhite_validity;
@@ -250,6 +252,16 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 			syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
 				"autowhitelisted for more %02d:%02d:%02d",
 				queueid, addr, from, rcpt, h, mn, s);
+			/*
+			 * We need to tell our peers about this, we use a
+			 * fictive pending record
+			 */
+			pending = pending_get(sa, salen, from, rcpt, 
+			    (time_t)0);
+			if (pending != NULL) {
+				peer_delete(pending);
+				pending_put(pending);
+			}
 			break;
 		}
 	}

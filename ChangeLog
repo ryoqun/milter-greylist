@@ -1,6 +1,7 @@
 1.7.2:
 	Support libspf2 (Eugene Crosser)
-	Build with Solaris' lex
+	New ACL framework for whitelist and greylist (Remy Card)
+	Tell MX peers about autowhitelist prolongation (Remy Card)
 1.7.1:
 	Null after 1.6 tag release to help patch contributions
 1.6:

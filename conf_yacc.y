@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR PORT STAR
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR PORT ACL WHITELIST DEFAULT STAR
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.29 2004/10/14 21:53:39 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.30 2004/12/08 22:23:09 manu Exp $");
 #endif
 #endif
 
@@ -14,7 +14,7 @@ __RCSID("$Id: conf_yacc.y,v 1.29 2004/10/14 21:53:39 manu Exp $");
 #include <string.h>
 #include <sysexits.h>
 #include "conf.h"
-#include "except.h"
+#include "acl.h"
 #include "sync.h"
 #include "milter-greylist.h"
 
@@ -81,21 +81,25 @@ lines	:	lines netblock '\n'
 	|	lines dumpfreq '\n'
 	|	lines timeout '\n'
 	|       lines syncaddr '\n'
+	|	lines access_list '\n'
 	|	lines '\n'
 	|
 	;
 netblock:	ADDR IPADDR CIDR{
-			except_add_netblock(SA(&$2),
+			acl_add_netblock(SA(&$2),
 			    sizeof(struct sockaddr_in), $3);
+			acl_register_entry_first(A_WHITELIST);
 		}
 	|	ADDR IPADDR	{
-			except_add_netblock(SA(&$2),
+			acl_add_netblock(SA(&$2),
 			    sizeof(struct sockaddr_in), 32);
+			acl_register_entry_first(A_WHITELIST);
 		}
 	|	ADDR IP6ADDR CIDR{
 #ifdef AF_INET6
-			except_add_netblock(SA(&$2),
+			acl_add_netblock(SA(&$2),
 			    sizeof(struct sockaddr_in6), $3);
+			acl_register_entry_first(A_WHITELIST);
 #else
 			printf("IPv6 is not supported, ignore line %d\n",
 			    conf_line);
@@ -103,25 +107,51 @@ netblock:	ADDR IPADDR CIDR{
 		}
 	|	ADDR IP6ADDR	{
 #ifdef AF_INET6
-			except_add_netblock(SA(&$2),
+			acl_add_netblock(SA(&$2),
 			    sizeof(struct sockaddr_in6), 128);
+			acl_register_entry_first(A_WHITELIST);
 #else
 			printf("IPv6 is not supported, ignore line %d\n",
 			    conf_line);
 #endif
 		}
 	;
-fromaddr:	FROM EMAIL	{ except_add_from($2); }
+fromaddr:	FROM EMAIL	{
+			acl_add_from($2);
+			acl_register_entry_first(A_WHITELIST);
+		}
 	;
-rcptaddr:	RCPT EMAIL	{ except_add_rcpt($2); }
+rcptaddr:	RCPT EMAIL	{
+			acl_add_rcpt($2);
+			if (conf.c_testmode)
+				acl_register_entry_first(A_GREYLIST);
+			else
+				acl_register_entry_first(A_WHITELIST);
+		}
+
 	;
-fromregex:	FROM REGEX	{ except_add_from_regex($2); }
+fromregex:	FROM REGEX	{
+			acl_add_from_regex($2);
+			acl_register_entry_first(A_WHITELIST);
+		}
 	;
-rcptregex:	RCPT REGEX	{ except_add_rcpt_regex($2); }
+rcptregex:	RCPT REGEX	{
+			acl_add_rcpt_regex($2);
+			if (conf.c_testmode)
+				acl_register_entry_first(A_GREYLIST);
+			else
+				acl_register_entry_first(A_WHITELIST);
+		}
 	;
-domainaddr:	DOMAIN DOMAINNAME { except_add_domain($2); }
+domainaddr:	DOMAIN DOMAINNAME {
+			acl_add_domain($2);
+			acl_register_entry_first(A_WHITELIST);
+		}
 	;
-domainregex:	DOMAIN REGEX	 { except_add_domain_regex($2); }
+domainregex:	DOMAIN REGEX	 {
+			acl_add_domain_regex($2);
+			acl_register_entry_first(A_WHITELIST);
+		}
 	;
 peeraddr:	PEER IPADDR	{
 			char addr[IPADDRLEN + 1];
@@ -302,6 +332,73 @@ syncaddr:	SYNCADDR STAR	{
 				    "ignore line %d\n", conf_line);
 #endif /* AF_INET6 */
 				}
+	;
+
+access_list:	ACL GREYLIST  acl_entry { acl_register_entry_last(A_GREYLIST); }
+	|	ACL WHITELIST acl_entry { acl_register_entry_last(A_WHITELIST); }
+	;
+
+acl_entry:	DEFAULT
+	|	acl_clauses
+	;
+
+acl_clauses:	acl_clause
+	|	acl_clauses acl_clause
+	|	acl_clauses "\\\n" acl_clauses
+	;
+
+acl_clause:	fromaddr_clause
+	|	fromregex_clause
+	|	rcptaddr_clause
+	|	rcptregex_clause
+	|	domainaddr_clause
+	|	domainregex_clause
+	|	netblock_clause
+
+fromaddr_clause:	FROM EMAIL { acl_add_from ($2); }
+	;
+
+fromregex_clause:	FROM REGEX { acl_add_from_regex ($2); }
+	;
+
+rcptaddr_clause:	RCPT EMAIL { acl_add_rcpt ($2); }
+	;
+
+rcptregex_clause:	RCPT REGEX { acl_add_rcpt_regex ($2); }
+	;
+
+domainaddr_clause:	DOMAIN DOMAINNAME { acl_add_domain ($2); }
+	;
+
+domainregex_clause:	DOMAIN REGEX { acl_add_domain_regex ($2); }
+	;
+
+netblock_clause:	ADDR IPADDR CIDR{
+				acl_add_netblock(SA(&$2),
+			    sizeof(struct sockaddr_in), $3);
+			}
+	|		ADDR IPADDR	{
+				acl_add_netblock(SA(&$2),
+					    sizeof(struct sockaddr_in), 32);
+			}
+	|		ADDR IP6ADDR CIDR{
+#ifdef AF_INET6
+				acl_add_netblock(SA(&$2),
+				    sizeof(struct sockaddr_in6), $3);
+#else
+				printf("IPv6 is not supported, ignore line %d\n",
+				    conf_line);
+#endif
+			}
+	|		ADDR IP6ADDR	{
+#ifdef AF_INET6
+				acl_add_netblock(SA(&$2),
+				    sizeof(struct sockaddr_in6), 128);
+#else
+				printf("IPv6 is not supported, ignore line %d\n",
+				    conf_line);
+#endif
+		}
 	;
 
 %%
