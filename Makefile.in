@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.25 2004/04/01 21:45:13 manu Exp $
+# $Id: Makefile.in,v 1.26 2004/04/03 09:26:11 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -56,6 +56,8 @@ SRC= 		milter-greylist.c pending.c except.c sync.c conf.c \
 		autowhite.c dump.c spf.c
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c 
 
+all:		milter-greylist rc-bsd.sh rc-linux.sh
+
 milter-greylist:	${OBJ}
 	${CC} -o milter-greylist ${OBJ} ${LDFLAGS} ${LIBS}
 
@@ -63,7 +65,10 @@ sync_yacc.o:	sync_yacc.c sync_lex.c
 conf_yacc.o:	conf_yacc.c conf_lex.c
 dump_yacc.o:	dump_yacc.c dump_lex.c
 
-all:	depend milter-greylist
+rc-bsd.sh:      rc-bsd.sh.in
+	${SED} "s|@BINDIR@|${BINDIR}|g" rc-bsd.sh.in > rc-bsd.sh
+rc-linux.sh:    rc-linux.sh.in
+	${SED} "s|@BINDIR@|${BINDIR}|g" rc-linux.sh.in > rc-linux.sh
 
 install:	milter-greylist
 	${INSTALL} -d 755 ${BINDIR}
@@ -94,7 +99,7 @@ depend:
 	${MKDEP} ${CFLAGS} ${SRC}
 
 clean:
-	${RM} -f milter-greylist ${OBJ} ${GENSRC}
+	${RM} -f milter-greylist ${OBJ} ${GENSRC} rc-linux.sh rc-bsd.sh
 
 realclean:	clean
 	${RM} -Rf Makefile config.h config.log config.status \

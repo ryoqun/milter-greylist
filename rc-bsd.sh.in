@@ -1,0 +1,18 @@
+#!/bin/sh
+# $Id: rc-bsd.sh.in,v 1.1 2004/04/03 09:26:11 manu Exp $
+
+# PROVIDE: miltergreylist
+# REQUIRE: LOGIN
+# BEFORE: sendmail
+
+. /etc/rc.subr
+
+name="miltergreylist"
+rcvar=$name
+command="@BINDIR@/milter-greylist"
+pidfile="/var/run/milter-greylist.pid"
+command_args="-P ${pidfile}"
+required_files="/etc/mail/greylist.conf"
+
+load_rc_config ${name}
+run_rc_command "$1"
