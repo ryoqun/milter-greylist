@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.6 2004/02/29 18:07:17 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.7 2004/02/29 22:35:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -157,7 +157,7 @@ main(argc, argv)
 	struct passwd *pw = NULL;
 
 	/* Process command line options */
-	while ((ch = getopt(argc, argv, "vd:w:f:hp:u:")) != -1) {
+	while ((ch = getopt(argc, argv, "vd:w:f:hp:Tu:")) != -1) {
 		switch (ch) {
 		case 'u': {
 			if (geteuid() != 0) {
@@ -214,6 +214,10 @@ main(argc, argv)
 			}
 			(void) smfi_setconn(optarg);
 			gotsocket = 1;
+			break;
+
+		case 'T':
+			testmode = 1;	
 			break;
 
 		case 'h':
@@ -289,7 +293,7 @@ usage(progname)
 	char *progname;
 {
 	fprintf(stderr, 
-	    "usage: %s [-v] [-d dumpfile] [-f exceptionfile]\n"
+	    "usage: %s [-v] [-T] [-d dumpfile] [-f exceptionfile]\n"
 	    "       [-w delay] [-u username] -p socket\n", progname);
 	exit(EX_USAGE);
 }

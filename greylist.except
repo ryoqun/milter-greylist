@@ -1,11 +1,11 @@
 #
 # Greylisting exception file
 #
-# $Id: greylist.except,v 1.2 2004/02/29 18:07:17 manu Exp $
+# $Id: greylist.except,v 1.3 2004/02/29 22:35:09 manu Exp $
 #
 
 # Greylisting your own MTA is a very bad idea: never 
-# comment this line.
+# comment this line, except for testing purposes.
 addr 127.0.0.0/8
 
 # You will want to avoid greylisting your own clients 
@@ -14,7 +14,7 @@ addr 127.0.0.0/8
 #addr 192.0.2.0/16
 
 # You can avoid greylisting by filtering on the sender 
-# enveloppe address but this is not a good idea: this 
+# enveloppe address but this is not a good idea: it
 # can be trivially forged.
 #from friendly@example.com
 
@@ -23,4 +23,7 @@ addr 127.0.0.0/8
 # spammers. They will want to avoid the extra delivery 
 # delay caused by grey listing. You can filter on the
 # recipient enveloppe address to achieve that.
-#to John.Doe@example.net
+# NB: when using -T, the meaning of thoses lines is
+# reversed: they select the recipient for which 
+# grey listing is enabled.
+#rcpt John.Doe@example.net

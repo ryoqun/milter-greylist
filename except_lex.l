@@ -11,7 +11,7 @@ comment		#.*$
 blank		[ \t]{1,}
 addr		[Aa][Dd][Dd][Rr]:?
 from		[Ff][Rr][Oo][Mm]:?
-rcpt		[Tt][Oo]:?
+rcpt		[Rr][Cc][Pp][Tt]:?
 
 %{
 	#include <string.h>

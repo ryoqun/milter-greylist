@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.4 2004/02/29 18:07:17 manu Exp $
+.\" $Id: milter-greylist.8,v 1.5 2004/02/29 22:35:09 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -40,6 +40,7 @@
 .Op Fl v
 .Op Fl d Ar dumpfile
 .Op Fl f Ar exceptfile
+.Op Fl T
 .Op Fl u Ar username
 .Op Fl w Ar delay
 .Fl p Ar socket
@@ -102,6 +103,11 @@ as the socket used by
 to talk with
 .Nm .
 This option is mandatory.
+.It Fl T
+Enable test mode. This alters the meaning of recipient lines in 
+.Pa greylist.except ,
+so that only messages sent to recipient adresses listed there are 
+selected for grey listing.
 .It Fl u Ar username
 Drop root privileges and switch to 
 .Ar username

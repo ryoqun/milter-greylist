@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.3 2004/02/29 18:07:17 manu Exp $ */
+/* $Id: except.c,v 1.4 2004/02/29 22:35:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -44,6 +44,7 @@
 #include "except.h"
 
 extern int debug;
+int testmode = 0;
 char *exceptfile = EXCEPTFILE;
 struct exceptlist except_head;
 
@@ -162,6 +163,30 @@ except_filter(in, from, rcpt)
 	char *rcpt;
 {
 	struct except *ex;
+
+	/*
+	 * Testmode: check if the recipient is in the exception list.
+	 * If not, then avoid grey listing.
+	 */
+	if (testmode) {
+		int found = 0;
+
+		LIST_FOREACH(ex, &except_head, e_list) {
+			if (ex->e_type != E_RCPT)
+				continue;
+
+			if (emailcmp(rcpt, ex->e_rcpt) == 0) {
+				found = 1;
+				break;
+			}
+		}
+
+		if (!found) {
+			syslog(LOG_INFO, "testmode: skipping greylist "
+			    "for recipient \"%s\"\n", rcpt);
+			return 1;
+		}
+	}
 	
 	LIST_FOREACH(ex, &except_head, e_list) {
 		switch (ex->e_type) {
@@ -184,6 +209,9 @@ except_filter(in, from, rcpt)
 			break;
 
 		case E_RCPT:
+			if (testmode != 0)
+				break;
+
 			if (emailcmp(rcpt, ex->e_rcpt) == 0) {
 				syslog(LOG_INFO, "recipient %s is in "
 				    "exception list\n", rcpt);
