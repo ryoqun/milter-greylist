@@ -1,4 +1,4 @@
-%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH DELAY SUBNETMATCH SOCKET USER NODETACH REGEX
+%token ADDR IPADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SOCKET USER NODETACH REGEX
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.11 2004/04/01 20:36:00 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.12 2004/04/01 21:07:36 manu Exp $");
 #endif
 #endif
 
@@ -31,7 +31,7 @@ void conf_error(char *);
 %type <ipaddr> IPADDR;
 %type <cidr> CIDR;
 %type <email> EMAIL;
-%type <delay> DELAY;
+%type <delay> TDELAY;
 %type <path> PATH;
 %type <regex> REGEX;
 
@@ -70,12 +70,12 @@ rcptregex:	RCPT REGEX	{ except_add_rcpt_regex($2); }
 	;
 peeraddr:	PEER IPADDR	{ peer_add(&$2); }
 	;
-autowhite:	AUTOWHITE DELAY	{ if (C_NOTFORCED(C_AUTOWHITE))
+autowhite:	AUTOWHITE TDELAY{ if (C_NOTFORCED(C_AUTOWHITE))
 					conf.c_autowhite_validity =
 					    (time_t)humanized_atoi($2);
 				}
 	;
-greylist:	GREYLIST DELAY	{ if (C_NOTFORCED(C_DELAY))
+greylist:	GREYLIST TDELAY	{ if (C_NOTFORCED(C_DELAY))
 					conf.c_delay =
 					    (time_t)humanized_atoi($2);
 				}

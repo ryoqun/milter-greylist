@@ -41,7 +41,7 @@ regex		"/"[^/\n]{1,}"/"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.13 2004/04/01 20:36:00 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.14 2004/04/01 21:07:36 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -83,7 +83,7 @@ regex		"/"[^/\n]{1,}"/"
 {delay}		{
 			strncpy(yylval.delay, yytext, NUMLEN);
 			yylval.delay[NUMLEN] = '\0';
-			return DELAY;
+			return TDELAY;
 		}
 {email}		{
 			strncpy(yylval.email, yytext, ADDRLEN);
