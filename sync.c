@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.20 2004/03/14 15:43:33 manu Exp $ */
+/* $Id: sync.c,v 1.21 2004/03/16 21:58:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -367,6 +367,7 @@ sync_master_restart(void) {
 	}
 }
 
+/* ARGSUSED0 */
 void
 sync_master(dontcare)
 	void *dontcare;
@@ -746,7 +747,6 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 	peer_sync_t type;
 	struct pending *pending;
 {
-	int error;
 	struct sync *sync;
 
 	if ((sync = malloc(sizeof(*sync))) == NULL) {
@@ -769,7 +769,7 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 	TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
 	SYNC_UNLOCK;
 
-	if ((error = pthread_cond_signal(&sync_sleepflag)) != 0) {
+	if (pthread_cond_signal(&sync_sleepflag) != 0) {
 		syslog(LOG_ERR, 
 		    "cannot wakeup sync_sender: %s", strerror(errno));
 		exit(EX_SOFTWARE);
@@ -780,21 +780,19 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 void
 sync_sender_start(void) {
 	pthread_t tid;
-	int error;
 
-	if ((error = pthread_create(&tid, NULL, 
-	    (void *)sync_sender, NULL)) != 0) {
+	if (pthread_create(&tid, NULL, (void *)sync_sender, NULL) != 0) {
 		syslog(LOG_ERR, "pthread_create failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	return;
 }
 
+/* ARGSUSED0 */
 void
 sync_sender(dontcare)
 	void *dontcare;
 {
-	int error;
 	int done = 0;
 	struct peer *peer;
 	struct sync *sync;
@@ -808,7 +806,7 @@ sync_sender(dontcare)
 	}
 
 	while (1) {
-		if ((error = pthread_cond_wait(&sync_sleepflag, &mutex)) != 0)
+		if (pthread_cond_wait(&sync_sleepflag, &mutex) != 0)
 			syslog(LOG_ERR, "pthread_cond_wait failed: %s\n", 
 			    strerror(errno));
 		if (debug) {

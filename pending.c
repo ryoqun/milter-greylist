@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.28 2004/03/16 16:47:51 manu Exp $ */
+/* $Id: pending.c,v 1.29 2004/03/16 21:58:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.28 2004/03/16 16:47:51 manu Exp $");
+__RCSID("$Id: pending.c,v 1.29 2004/03/16 21:58:34 manu Exp $");
 #endif
 
 #include <stdlib.h>
@@ -232,7 +232,7 @@ pending_check(in, from, rcpt, remaining, elapsed)
 	 * It was not found. Create it and propagagte it to peers.
 	 * Error handling is useless here, we will tempfail anyway
 	 */
-	pending = pending_get(in, from, rcpt, 0);
+	pending = pending_get(in, from, rcpt, (time_t)0);
 	peer_create(pending);
 	rest = delay;
 	dirty = 1;
@@ -305,6 +305,7 @@ pending_dumper_start(void) {
 	return;
 }
 	
+/* ARGSUSED0 */
 void
 pending_dumper(dontcare) 
 	void *dontcare;
@@ -314,7 +315,6 @@ pending_dumper(dontcare)
 	struct timeval tv1, tv2, tv3;
 	pthread_mutex_t mutex;
 	char newdumpfile[MAXPATHLEN + 1];
-	int error;
 	int done;
 
 	if (pthread_mutex_init(&mutex, NULL) != 0) {
@@ -324,7 +324,7 @@ pending_dumper(dontcare)
 	}
 
 	while (1) {
-		if ((error = pthread_cond_wait(&dump_sleepflag, &mutex)) != 0)
+		if (pthread_cond_wait(&dump_sleepflag, &mutex) != 0)
 		    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
 			strerror(errno));
 
@@ -416,9 +416,7 @@ pending_reload(void) {
 
 void
 pending_flush(void) {
-	int error; 
-
-	if ((error = pthread_cond_signal(&dump_sleepflag)) != 0) {
+	if (pthread_cond_signal(&dump_sleepflag) != 0) {
 		syslog(LOG_ERR, "cannot wakeup dumper: %s", strerror(errno));
 		exit(EX_SOFTWARE);
 	}

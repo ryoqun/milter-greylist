@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.30 2004/03/16 16:43:15 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.31 2004/03/16 21:58:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.30 2004/03/16 16:43:15 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.31 2004/03/16 21:58:34 manu Exp $");
 #endif
 
 #include <stdio.h>
@@ -79,7 +79,7 @@ struct smfiDesc smfilter =
 	mlfi_close,	/* connection cleanup */
 };
 
-sfsistat 
+sfsistat
 mlfi_connect(ctx, hostname, addr)
 	SMFICTX *ctx;
 	char *hostname;
@@ -415,7 +415,6 @@ main(argc, argv)
 	 * Turn into a daemon
 	 */
 	if (dont_fork == 0) {
-		pid_t pid;
 
 		(void)close(0);
 		(void)open("/dev/null", O_RDONLY, 0);
@@ -430,7 +429,7 @@ main(argc, argv)
 			exit(EX_OSERR);
 		}
 
-		switch (pid = fork()) {
+		switch (fork()) {
 		case -1:
 			fprintf(stderr, "%s: cannot fork: %s\n",
 			    argv[0], strerror(errno));
