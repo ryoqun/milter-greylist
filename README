@@ -1,9 +1,9 @@
-# $Id: README,v 1.4 2004/03/15 07:43:57 manu Exp $
+# $Id: README,v 1.5 2004/03/18 07:37:06 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/03/15 07:43:57 $
+		       $Date: 2004/03/18 07:37:06 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -74,6 +74,10 @@ You might want to add -v and -D to get more debugging output. The
 -w flag is used to choose how long we will refuse a given message.
 If you want to check that things work, try 10 seconds with -w10.
 
+The -a option controls auto-whitelisting. Once a (sender IP, sender e-mail,
+recipient e-mail) tuple has been accepted, it is marked autowhitelisted,
+and similar tuples will be accepted with no retry for one day. Using -a0
+disable this feature.
 
  5 Running it for the whole site 
  ===============================
@@ -139,6 +143,9 @@ recipient e-mail address, and time when the message will be accepted
 Additionally, you can find a human-readable time in the comment at the
 end of each line.
 
+At the end of the file, you will find entries with the keyword AUTO
+at the end of the line. Theses are auto-whitelisted tuples. The date
+tells you when the entry will expire.
 
  7 License
  =========
