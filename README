@@ -1,9 +1,9 @@
-# $Id: README,v 1.7 2004/03/20 07:19:03 manu Exp $
+# $Id: README,v 1.8 2004/03/25 11:00:24 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/03/20 07:19:03 $
+		       $Date: 2004/03/25 11:00:24 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -79,6 +79,7 @@ recipient e-mail) tuple has been accepted, it is marked autowhitelisted,
 and similar tuples will be accepted with no retry for one day. Using -a0
 disable this feature.
 
+
  5 Running it for the whole site 
  ===============================
 
@@ -93,7 +94,22 @@ lines will prevent greylisting for the corresponding users: every
 message will get to them without any delay, including spam.
 
 
- 6 Working with multiple MX
+ 6 Dealing with mail farms
+ =========================
+
+Some Internet service provider such as Hotmail feature mail farms,
+where several different machines are able to resend an e-mail. The
+message is likely to be resent from different IP addresses, and this
+is likely to break with milter-greylist.
+
+An upcoming version will have a subnet matching feature to solve
+this problem. In the meantime, the workaround is simply to whitelist
+the netblocks allocated to mail farms. As any machine in theses 
+IP address ranges are real SMTP servers that will always resend their 
+messages, there is no point into greylisting them.
+
+
+ 7 Working with multiple MX
  ===========================
 
 When running several MX, the client should try each server after
@@ -120,7 +136,7 @@ peer 192.0.2.17
 peer 192.0.2.18
 
 
- 7 Things to look at if things get wrong
+ 8 Things to look at if things get wrong
  =======================================
 
 First, read the milter-greylist(8) man page! :-)
@@ -147,7 +163,7 @@ At the end of the file, you will find entries with the keyword AUTO
 at the end of the line. Theses are auto-whitelisted tuples. The date
 tells you when the entry will expire.
 
- 7 License
+ 9 License
  =========
 
 This software is available under a 3 clauses BSD license:
