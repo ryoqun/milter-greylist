@@ -1,4 +1,4 @@
-/* $Id: config.h.in,v 1.4 2004/03/04 10:36:46 manu Exp $ */
+/* $Id: config.h.in,v 1.5 2004/03/06 20:23:02 manu Exp $ */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
@@ -55,6 +55,9 @@
 
 /* Define to 1 if you have the <syslog.h> header file. */
 #undef HAVE_SYSLOG_H
+
+/* Define to 1 if you have the <sys/param.h> header file. */
+#undef HAVE_SYS_PARAM_H
 
 /* Define to 1 if you have the <sys/socket.h> header file. */
 #undef HAVE_SYS_SOCKET_H
