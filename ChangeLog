@@ -2,6 +2,7 @@
 	SUSe startup script, by Stephane Lentz
 	Builds again with SPF enabled
 	Update doc: flex is required
+	Prefix all install patsh by ${DESTDIR} to help sandbox builds for RPM
 1.7.2:
 	Support libspf2 (Eugene Crosser)
 	New ACL framework for whitelist and greylist (Remy Card)
