@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.145 2005/03/29 14:36:54 manu Exp $
+# $Id: configure.ac,v 1.146 2005/03/29 22:10:42 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 2.0b4, manu@netbsd.org)
+AC_INIT(milter-greylist, 2.0b5, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -246,6 +246,28 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	    [], [<time.h> defines timeradd]) timeradd=no])
 AC_MSG_RESULT([$timeradd])
 
+# Check if -D_REENTRANT is needed for localtime_r, gmtime_r
+SAVEDCFLAGS=$CFLAGS
+CFLAGS=$CFLAGS" -ansi -Wall -Werror"
+AC_MSG_CHECKING([if -D_REENTRANT is needed to use localtime_r])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+               #include <time.h>
+       ],[[
+
+               (void)localtime_r(NULL, NULL);
+       ]])], [dreentrant=no],
+               [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+                               #define _REENTRANT
+                               #include <time.h>
+                       ],[[
+                                (void)localtime_r(NULL, NULL);
+                       ]])],
+                       [SAVEDCFLAGS=$SAVEDCFLAGS" -D_REENTRANT";
+                        dreentrant=yes], [dreentrant=no])
+       ])
+AC_MSG_RESULT([$dreentrant])
+CFLAGS=$SAVEDCFLAGS
+
 # Check if -D__EXTENSIONS__ is needed for snprintf, getopt, seteuid...
 SAVEDCFLAGS=$CFLAGS
 CFLAGS=$CFLAGS" -ansi -Wall -Werror"
@@ -269,28 +291,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 			 dextensions=yes], [dextensions=no])
 	])
 AC_MSG_RESULT([$dextensions])
-CFLAGS=$SAVEDCFLAGS
-
-# Check if -D_REENTRANT is needed for localtime_r, gmtime_r
-SAVEDCFLAGS=$CFLAGS
-CFLAGS=$CFLAGS" -ansi -Wall -Werror"
-AC_MSG_CHECKING([if -D_REENTRANT is needed to use localtime_r])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
-		#include <time.h>
-	],[[
-
-		(void)localtime(NULL);
-	]])], [dreentrant=no],
-		[AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
-				#define _REENTRANT
-				#include <stdio.h>
-			],[[
-				 (void)localtime(NULL);
-			]])], 
-			[SAVEDCFLAGS=$SAVEDCFLAGS" -D_REENTRANT"; 
-			 dreentrant=yes], [dreentrant=no])
-	])
-AC_MSG_RESULT([$dreentrant])
 CFLAGS=$SAVEDCFLAGS
 
 # Check for libpthread. On FreeBSD, the libc_r does the job.
