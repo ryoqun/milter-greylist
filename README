@@ -1,9 +1,9 @@
-# $Id: README,v 1.10 2004/03/30 08:21:19 manu Exp $
+# $Id: README,v 1.11 2004/03/30 14:25:32 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/03/30 08:21:19 $
+		       $Date: 2004/03/30 14:25:32 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -111,6 +111,13 @@ The -L option is an ad-hoc hack for this problem. It provides
 milter-greylist a CIDR mask to use when comparing IPv4 addresses. 
 With -L24, the match mask is 255.255.255.0, and any address in a 
 class C network is considered the same.
+
+There is also a right fix for the problem: SPF. SPF is a DNS based
+mechanism that enable domains to publish the identity of machines
+allowed to send mail on behalf of the domain. milter-greylist knows 
+how to use SPF through libspf_alt. configure --with-libspf_alt to 
+enable that feature. libspf (the "not alt" version) might be 
+supported as well in a future release if I manage to get it working.
 
 Another workaround is simply to whitelist the netblocks allocated to 
 mail farms. As any machine in theses IP address ranges are real SMTP 

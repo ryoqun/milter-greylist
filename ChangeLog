@@ -1,3 +1,5 @@
+1.1.2:
+	SPF support with libspf_alt
 1.1.1:
 	Added a -P pidfile option to dump PID to a file
 	smfi_getsymval does not set errno, so don't display strerror
