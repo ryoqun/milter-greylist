@@ -1,4 +1,4 @@
-/* $Id: except.c,v 1.11 2004/03/04 08:38:26 manu Exp $ */
+/* $Id: except.c,v 1.12 2004/03/04 09:40:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,6 +29,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define _XOPEN_SOURCE 500
+
 #include <errno.h>
 #include <stdio.h>
 #include <ctype.h>
@@ -36,9 +38,11 @@
 #include <string.h>
 #include <strings.h>
 #include <syslog.h>
+#include <pthread.h>
 #include <sysexits.h>
 #include <sys/queue.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
@@ -49,17 +53,41 @@ extern int debug;
 int testmode = 0;
 char *exceptfile = EXCEPTFILE;
 struct exceptlist except_head;
+pthread_rwlock_t except_lock;
+struct timeval exceptfile_modified;
 
 static int emailcmp(char *, char *);
 
+#define EXCEPT_WRLOCK if (pthread_rwlock_wrlock(&except_lock) != 0) {	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_wrlock failed\n",	\
+		    __FILE__, __LINE__);				\
+		exit(EX_SOFTWARE);					\
+	}
+#define EXCEPT_RDLOCK if (pthread_rwlock_rdlock(&except_lock) != 0) {	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_rdlock failed\n",	\
+		    __FILE__, __LINE__);				\
+		exit(EX_SOFTWARE);					\
+	}
+#define EXCEPT_UNLOCK if (pthread_rwlock_unlock(&except_lock) != 0) {	\
+		syslog(LOG_ERR, "%s:%d pthread_rwlock_unlock failed\n",	\
+		    __FILE__, __LINE__);				\
+		exit(EX_SOFTWARE);					\
+	}
+
+
 int
 except_init(void) {
+	int error;
+
 	LIST_INIT(&except_head);
+	if ((error = pthread_rwlock_init(&except_lock, NULL)) == 0)
+		return error;
+
 	return 0;
 }
 
 void
-except_load(void)
+except_load(void) 	/* exceptlist must be write-locked */
 {
 	FILE *stream;
 
@@ -74,11 +102,13 @@ except_load(void)
 	except_parse();
 	fclose(stream);
 
+	(void)gettimeofday(&exceptfile_modified, NULL);
+
 	return;
 }
 
 void
-except_add_netblock(in, cidr)
+except_add_netblock(in, cidr)	/* exceptlist must be write-locked */
 	struct in_addr *in;
 	int cidr;
 {
@@ -120,7 +150,7 @@ except_add_netblock(in, cidr)
 }
 
 void
-except_add_from(email)
+except_add_from(email)	/* exceptlist must be write-locked */
 	char *email;
 {
 	struct except *except;
@@ -141,7 +171,7 @@ except_add_from(email)
 }
 
 void
-except_add_rcpt(email)
+except_add_rcpt(email)	/* exceptlist must be write-locked */
 	char *email;
 {
 	struct except *except;
@@ -169,6 +199,9 @@ except_filter(in, from, rcpt)
 {
 	struct except *ex;
 	char addrstr[IPADDRLEN + 1];
+	int retval;
+
+	EXCEPT_RDLOCK;
 
 	/*
 	 * Testmode: check if the recipient is in the exception list.
@@ -190,7 +223,8 @@ except_filter(in, from, rcpt)
 		if (!found) {
 			syslog(LOG_INFO, "testmode: skipping greylist "
 			    "for recipient \"%s\"\n", rcpt);
-			return EXF_RCPT;
+			retval = EXF_RCPT;
+			goto out;
 		}
 	}
 	
@@ -202,7 +236,8 @@ except_filter(in, from, rcpt)
 				syslog(LOG_INFO, "address %s is in "
 				    "exception list\n", 
 				    inet_ntop(AF_INET, in, addrstr, IPADDRLEN));
-				return EXF_ADDR;
+				retval = EXF_ADDR;
+				goto out;
 			}
 			break;
 		}
@@ -211,7 +246,8 @@ except_filter(in, from, rcpt)
 			if (emailcmp(from, ex->e_from) == 0) {
 				syslog(LOG_INFO, "sender %s is in "
 				    "exception list\n", from);
-				return EXF_FROM;
+				retval = EXF_FROM;
+				goto out;
 			}
 			break;
 
@@ -222,7 +258,8 @@ except_filter(in, from, rcpt)
 			if (emailcmp(rcpt, ex->e_rcpt) == 0) {
 				syslog(LOG_INFO, "recipient %s is in "
 				    "exception list\n", rcpt);
-				return EXF_RCPT;
+				retval = EXF_RCPT;
+				goto out;
 			}
 			break;
 
@@ -232,7 +269,11 @@ except_filter(in, from, rcpt)
 			break;
 		}
 	}
-	return EXF_NONE;
+
+	retval = EXF_NONE;
+out:
+	EXCEPT_UNLOCK;
+	return retval;
 }
 
 static int 
@@ -257,4 +298,41 @@ emailcmp(big, little)
 	}
 
 	return 1;
+}
+
+void
+except_update(void) {
+	struct stat st;
+	struct timeval tv1, tv2;
+	
+	if (stat(exceptfile, &st) != 0) {
+		syslog(LOG_DEBUG, "exception file \"%s\" unavailable", 
+		    exceptfile);
+		return;
+	}
+
+	/* 
+	 * exceptfile_modified is updated in except_load()
+	 */
+	if (st.st_mtime < exceptfile_modified.tv_sec) 
+		return;
+
+	syslog(LOG_INFO, "reloading \"%s\"\n", exceptfile);
+	if (debug)
+		(void)gettimeofday(&tv1, NULL);
+
+	EXCEPT_WRLOCK;
+	while(!LIST_EMPTY(&except_head))
+		LIST_REMOVE(LIST_FIRST(&except_head), e_list);
+
+	except_load();
+	EXCEPT_UNLOCK;
+
+	if (debug) {
+		(void)gettimeofday(&tv2, NULL);
+		syslog(LOG_DEBUG, "reloaded exception file in %ld.%06lds\n", 
+		    tv2.tv_sec - tv1.tv_sec, tv2.tv_usec - tv1.tv_usec);
+	}
+
+	return;
 }

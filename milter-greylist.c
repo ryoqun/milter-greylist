@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.13 2004/03/04 08:38:26 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.14 2004/03/04 09:40:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -133,6 +133,11 @@ mlfi_envrcpt(ctx, envrcpt)
 		syslog(LOG_DEBUG, "addr = %s, from = %s, rcpt = %s\n", 
 		    inet_ntoa(priv->priv_addr), 
 		    priv->priv_from, *envrcpt);
+
+	/* 
+	 * Reload the exception file if it has been touched
+	 */
+	except_update();
 
 	if ((priv->priv_whitelist = except_filter(&priv->priv_addr, 
 	    priv->priv_from, *envrcpt)) != EXF_NONE) {
@@ -386,6 +391,9 @@ main(argc, argv)
 
 	/*
 	 * Load exception list
+	 * We can do this without locking exceptlist, as
+	 * normal operation has not started: no other thread
+	 * can access the list yet.
 	 */
 	except_load();
 	

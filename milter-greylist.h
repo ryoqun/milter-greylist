@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.8 2004/03/04 08:38:26 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.9 2004/03/04 09:40:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -67,6 +67,14 @@ void cleanup_sock(char *);
 	for ((var) = ((head)->lh_first);		\
 		(var);					\
 		(var) = ((var)->field.le_next))
+#endif
+
+#ifndef LIST_FIRST
+#define LIST_FIRST(head)                ((head)->lh_first)
+#endif
+
+#ifndef LIST_EMPTY
+#define LIST_EMPTY(head)                ((head)->lh_first == NULL)
 #endif
 		
 #endif /* _MILTER_GREYLIST_H_ */

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.8 2004/03/03 16:30:12 manu Exp $
+.\" $Id: milter-greylist.8,v 1.9 2004/03/04 09:40:12 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -70,9 +70,15 @@ send e-mail. Whitelisting localhost is also a must.
 works with two files. 
 .Pa greylist.except
 holds the white list of addresses that will not suffer grey list filtering.
-It is readen upon 
+It is readen once upon 
 .Nm
-startup and is left alone once started. 
+startup, then it will be automatically reloaded when a new message
+gets in and if it had been modified. You should not send
+.Nm
+a 
+.Li kill -1
+as it will just terminate it (libmilter works that way).
+.Pp
 The format of the file is rather simple: each line gives a network address
 block or an e-mail address that is excluded from grey list filtering. 
 Here is an example:
