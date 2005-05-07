@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.146 2005/03/29 22:10:42 manu Exp $
+# $Id: configure.ac,v 1.147 2005/05/07 23:24:28 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 2.0b5, manu@netbsd.org)
+AC_INIT(milter-greylist, 2.0b6, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -18,6 +18,9 @@ AC_CHECK_PROGS(MV, mv)
 AC_CHECK_PROGS(TEST, test)
 AC_CHECK_PROGS(SED, sed)
 AC_CHECK_PROGS(TRUE, true)
+AC_CHECK_PROGS(GROFF, groff)
+
+test  -n "$GROFF" && AC_SUBST(CAT_FILES, [\${CAT_PAGES}])
 
 # Check that the compiler won't bug us for -Wall
 AC_MSG_CHECKING([if compiler accepts -Wall])

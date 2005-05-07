@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.32 2005/03/29 22:10:41 manu Exp $
+# $Id: Makefile,v 1.33 2005/05/07 23:24:28 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -50,6 +50,7 @@ INSTALL=	/usr/bin/install -c
 LEX=		flex
 YACC=		bison -y
 TRUE=		true
+GROFF=		groff
 
 OBJ= 		milter-greylist.o pending.o sync.o \
 		conf_yacc.o dump_yacc.o conf.o autowhite.o dump.o spf.o acl.o
@@ -57,8 +58,11 @@ SRC= 		milter-greylist.c pending.c sync.c conf.c \
 		autowhite.c dump.c spf.c acl.c
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c 
 
-all:		milter-greylist rc-bsd.sh rc-redhat.sh \
-		rc-solaris.sh rc-debian.sh rc-gentoo.sh rc-suse.sh
+CAT_PAGES=	milter-greylist.0 greylist.conf.0
+CAT_FILES=	${CAT_PAGES}
+
+all:		milter-greylist ${CAT_FILES} rc-bsd.sh rc-redhat.sh \
+		rc-solaris.sh rc-debian.sh rc-gentoo.sh rc-suse.sh \
 
 milter-greylist:	${OBJ}
 	${CC} -o milter-greylist ${OBJ} ${LDFLAGS} ${LIBS}
@@ -66,6 +70,8 @@ milter-greylist:	${OBJ}
 sync_yacc.o:	sync_yacc.c sync_lex.c
 conf_yacc.o:	conf_yacc.c conf_lex.c
 dump_yacc.o:	dump_yacc.c dump_lex.c
+milter-greylist.0:	milter-greylist.8
+greylist.conf.0:	greylist.conf.5
 
 rc-bsd.sh:      rc-bsd.sh.in
 	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
@@ -86,10 +92,16 @@ rc-suse.sh:	 rc-suse.sh.in
 	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
 	    rc-suse.sh.in > rc-suse.sh
 
-install:	milter-greylist
+install:	milter-greylist ${CAT_FILES}
 	${INSTALL} -d -m 755 ${DESTDIR}${BINDIR}
 	${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/man8
 	${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/man5
+	${TEST} -f milter-greylist.0 && 				\
+	    ${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/cat8 &&		\
+	    ${INSTALL} -m 644 milter-greylist.0 ${DESTDIR}${MANDIR}/cat8
+	${TEST} -f greylist.conf.0 &&					\
+	    ${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/cat5 &&		\
+	    ${INSTALL} -m 644 greylist.conf.0 ${DESTDIR}${MANDIR}/cat5
 	${INSTALL} -d -m 755 ${DESTDIR}/etc/mail
 	${INSTALL} -m 755 milter-greylist ${DESTDIR}${BINDIR}
 	${INSTALL} -m 644 milter-greylist.8 ${DESTDIR}${MANDIR}/man8
@@ -116,7 +128,7 @@ depend:
 	${MKDEP} ${CFLAGS} ${SRC}
 
 clean:
-	${RM} -f milter-greylist ${OBJ} ${GENSRC} \
+	${RM} -f milter-greylist ${OBJ} ${GENSRC} ${CAT_FILES} \
 	rc-redhat.sh rc-bsd.sh rc-solaris.sh rc-debian.sh rc-gentoo.sh \
 	rc-suse.sh
 
@@ -124,12 +136,16 @@ realclean:	clean
 	${RM} -Rf Makefile config.h config.log config.status \
 		 autom4te.cache configure.lineno *.orig *.bak autoscan.log
 
-.SUFFIXES:	.o .c .h .y .l
+.SUFFIXES:	.o .c .h .y .l .8 .5 .0
 .l.c:
 	${LEX} -o$@ $<
 .y.c:
 	${YACC} -p`echo $@|${SED} 's/^\([^_]\{1,\}_\).*$$/\1/'` $<
 	${MV} y.tab.c $@
+.8.0:
+	${GROFF} -mdoc -Tascii $< > $@
+.5.0:
+	${GROFF} -mdoc -Tascii $< > $@
 
 # This is a target for debugging
 start:	milter-greylist

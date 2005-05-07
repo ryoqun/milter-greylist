@@ -1,5 +1,6 @@
 2.0b6:
 	Fix timing bug for messages arriving on greylist timeout (Martin Paul)
+	Install formatted man page that can be displayed on Solaris
 2.0b5:
 	Missing bits from the 2.0b4 fix
 2.0b4:
