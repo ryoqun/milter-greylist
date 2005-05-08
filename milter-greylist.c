@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.108 2005/02/13 23:43:47 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.109 2005/05/08 08:31:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.108 2005/02/13 23:43:47 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.109 2005/05/08 08:31:19 manu Exp $");
 #endif
 #endif
 
@@ -487,7 +487,7 @@ mlfi_eom(ctx)
 		}
 		if (priv->priv_whitelist & EXF_AUTH) {
 			ADD_REASON(whystr, 
-			    "Sender succeded SMTP AUTH authentication");
+			    "Sender succeeded SMTP AUTH authentication");
 			priv->priv_whitelist &= ~EXF_AUTH;
 		}
 		if (priv->priv_whitelist & EXF_ACCESSDB) {
