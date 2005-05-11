@@ -1,5 +1,6 @@
 2.0b8:
 	Fix memory leak (Hajimu Umemoto)
+	dependency in .spec file: sendmail 8.11 only is required
 2.0b7:
 	Split installation targets (Elrond)
 	nroff man pages (Fredrik Pettai & Martin Paul)
