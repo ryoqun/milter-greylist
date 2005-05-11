@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.48 2005/05/11 08:47:10 manu Exp $
+# $Id: Makefile.in,v 1.49 2005/05/11 09:49:26 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -37,6 +37,7 @@ exec_prefix=	@exec_prefix@
 SYSCONFDIR=	@sysconfdir@
 LOCALSTATEDIR=	@localstatedir@
 BINDIR=		@bindir@
+SBINDIR=        @sbindir@
 MANDIR=		@mandir@
 USER=		@USER@
 
@@ -67,35 +68,48 @@ sync_yacc.o:	sync_yacc.c sync_lex.c
 conf_yacc.o:	conf_yacc.c conf_lex.c
 dump_yacc.o:	dump_yacc.c dump_lex.c
 
-rc-bsd.sh:      rc-bsd.sh.in
-	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
-	    rc-bsd.sh.in > rc-bsd.sh
-rc-redhat.sh:    rc-redhat.sh.in
-	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
-	    rc-redhat.sh.in > rc-redhat.sh
-rc-solaris.sh:    rc-solaris.sh.in
-	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
-	    rc-solaris.sh.in > rc-solaris.sh
-rc-debian.sh:    rc-debian.sh.in
-	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
-	    rc-debian.sh.in > rc-debian.sh
-rc-gentoo.sh:    rc-gentoo.sh.in
-	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
-	    rc-gentoo.sh.in > rc-gentoo.sh
-rc-suse.sh:	 rc-suse.sh.in
-	${SED} "s|@BINDIR[@]|${BINDIR}|g; s|@USER[@]|${USER}|g" \
-	    rc-suse.sh.in > rc-suse.sh
+sed_subst = "s|@BINDIR[@]|${BINDIR}|g; s|@SBINDIR[@]|${SBINDIR}|g; s|@USER[@]|${USER}|g"
 
-install:	milter-greylist
+rc-bsd.sh:      rc-bsd.sh.in
+	${SED} ${sed_subst} rc-bsd.sh.in > rc-bsd.sh
+rc-redhat.sh:    rc-redhat.sh.in
+	${SED} ${sed_subst} rc-redhat.sh.in > rc-redhat.sh
+rc-solaris.sh:    rc-solaris.sh.in
+	${SED} ${sed_subst} rc-solaris.sh.in > rc-solaris.sh
+rc-debian.sh:    rc-debian.sh.in
+	${SED} ${sed_subst} rc-debian.sh.in > rc-debian.sh
+rc-gentoo.sh:    rc-gentoo.sh.in
+	${SED} ${sed_subst} rc-gentoo.sh.in > rc-gentoo.sh
+rc-suse.sh:	 rc-suse.sh.in
+	${SED} ${sed_subst} rc-suse.sh.in > rc-suse.sh
+
+install-daemon-to-bin: milter-greylist
 	${INSTALL} -d -m 755 ${DESTDIR}${BINDIR}
+	${INSTALL} -m 755 milter-greylist ${DESTDIR}${BINDIR}
+
+install-sbin: milter-greylist
+	${INSTALL} -d -m 755 ${DESTDIR}${SBINDIR}
+	${INSTALL} -m 755 milter-greylist ${DESTDIR}${SBINDIR}
+
+install-man:
 	${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/man8
 	${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/man5
-	${INSTALL} -d -m 755 ${DESTDIR}/etc/mail
-	${INSTALL} -m 755 milter-greylist ${DESTDIR}${BINDIR}
 	${INSTALL} -m 644 milter-greylist.8 ${DESTDIR}${MANDIR}/man8
 	${INSTALL} -m 644 greylist.conf.5 ${DESTDIR}${MANDIR}/man5
+
+install-conf:
+	${INSTALL} -d -m 755 ${DESTDIR}/etc/mail
 	${TEST} -f ${DESTDIR}/etc/mail/greylist.conf -o -f ${DESTDIR}/etc/mail/greylist.except || \
 	     ${INSTALL} -m 644 greylist.conf ${DESTDIR}/etc/mail
+	@${TEST} -f ${DESTDIR}/etc/mail/greylist.except && (		 	   \
+		echo "	================================================"; \
+		echo "	 WARNING: the config file name has changed,     "; \
+		echo "	 Please rename /etc/mail/greylist.except, the   "; \
+		echo "	 default name is now in /etc/mail/greylist.conf "; \
+		echo "	================================================"; \
+	) || ${TRUE}
+
+install-db:
 	${INSTALL} -d -m 755 -o ${USER} ${DESTDIR}/var/milter-greylist
 	@${TEST} -f ${DESTDIR}/var/db/greylist.db && (			 	   \
 		echo "	================================================"; \
@@ -104,13 +118,8 @@ install:	milter-greylist
 		echo "	  location is now in /var/milter-greylist/      "; \
 		echo "	================================================"; \
 	) || ${TRUE}
-	@${TEST} -f ${DESTDIR}/etc/mail/greylist.except && (		 	   \
-		echo "	================================================"; \
-		echo "	 WARNING: the config file name has changed,     "; \
-		echo "	 Please rename /etc/mail/greylist.except, the   "; \
-		echo "	 default name is now in /etc/mail/greylist.conf "; \
-		echo "	================================================"; \
-	) || ${TRUE}
+
+install: install-daemon-to-bin install-man install-conf install-db
 
 depend:
 	${MKDEP} ${CFLAGS} ${SRC}

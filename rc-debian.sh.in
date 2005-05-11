@@ -7,7 +7,7 @@
 # Based on skeleton by Miquel van Smoorenburg and Ian Murdock
 
 PATH=/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/bin
-DAEMON=@BINDIR@/milter-greylist
+DAEMON=@SBINDIR@/milter-greylist
 NAME=greylist
 SNAME=greylist
 DESC="Greylist Mail Filter Daemon"
@@ -16,6 +16,11 @@ PNAME="milter-greylist"
 USER="@USER@"
 SOCKET=/var/run/milter-greylist/greylist.sock
 DOPTIONS="-P $PIDFILE -u $USER -p $SOCKET"
+
+
+[ -x $DAEMON ] || DAEMON=@BINDIR@/milter-greylist
+[ -x $DAEMON ] || exit 0
+
 
 export TMPDIR=/tmp
 # Apparently people have trouble if this isn't explicitly set...
