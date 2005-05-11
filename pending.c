@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.66 2005/04/19 16:57:47 manu Exp $ */
+/* $Id: pending.c,v 1.67 2005/05/11 16:25:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.66 2005/04/19 16:57:47 manu Exp $");
+__RCSID("$Id: pending.c,v 1.67 2005/05/11 16:25:43 manu Exp $");
 #endif
 #endif
 
@@ -531,8 +531,10 @@ ipfromstring(str, sa, salen, family)
 	hints.ai_socktype = SOCK_STREAM;
 	if (getaddrinfo(str, "0", &hints, &res) != 0)
 		return 0;
-	if (*salen < res->ai_addrlen)
+	if (*salen < res->ai_addrlen) {
+		freeaddrinfo(res);
 		return -1;
+	}
 	memcpy(sa, res->ai_addr, res->ai_addrlen);
 	*salen = res->ai_addrlen;
 	freeaddrinfo(res);
