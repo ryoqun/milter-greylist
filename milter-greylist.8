@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.34 2005/05/07 23:24:28 manu Exp $
+.\" $Id: milter-greylist.8,v 1.35 2005/05/11 14:09:25 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -28,280 +28,305 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 .\" OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd Feb 21, 2004
-.Dt milter-greylist 8
-.Os
-.Sh NAME
-.Nm milter-greylist
-.Nd grey listing filter for sendmail
-.Sh SYNOPSIS
-.Nm
-.Op Fl A
-.Op Fl a Ar delay
-.Op Fl c
-.Op Fl D
-.Op Fl d Ar dumpfile
-.Op Fl f Ar configfile
-.Op Fl l
-.Op Fl q
-.Op Fl r
-.Op Fl S
-.Op Fl T
-.Op Fl u Ar username
-.Op Fl v
-.Op Fl w Ar delay
-.Op Fl L Ar cidrmask
-.Op Fl M Ar prefixlen
-.Op Fl P Ar pidfile
-.Fl p Ar socket
-.Sh DESCRIPTION
-.Nm 
+.TH "milter-greylist" "8" "May 10, 2005" "" ""
+.SH NAME
+.B milter-greylist 
+- grey listing filter for sendmail
+.SH SYNOPSIS
+.B milter-greylist 
+[\fB-A\fR]
+[\fB-a \fIdelay\fR]
+[\fB-c\fR]
+[\fB-D\fR]
+[\fB-d \fIdumpfile\fR]
+[\fB-f \fIconfigfile\fR]
+[\fB-l\fR]
+[\fB-q\fR]
+[\fB-r\fR]
+[\fB-S\fR]
+[\fB-T\fR]
+[\fB-u \fIusername\fR]
+[\fB-v\fR]
+[\fB-w \fIdelay\fR]
+[\fB-L \fIcidrmask\fR]
+[\fB-M \fIprefixlen\fR]
+[\fB-P \fIpidfile\fR]
+.B -p
+.I socket
+.SH DESCRIPTION
+.B milter-greylist
 is a mail filter for sendmail that implements grey listing,
 a spam filtering technique proposed by Evan Harris.
-.Pp
+.PP
 Grey listing works by assuming that contrarily to legitimate MTA, spam engines
 will not retry sending their junk mail on a temporary error. The filter
 will always temporarily reject mail on a first attempt, and 
 accept it after some time has elapsed.
-.Pp
+.PP
 If spammers ever try to resend rejected messages, we can assume they will 
 not stay idle between the two sends. Odds are good that the spammer will 
 send a mail to an honey pot address and get blacklisted in a distributed 
 black list before the second attempt.
-.Pp
+.PP
 Of course, the filter can be configured to not apply grey listing to some
 hosts or networks. You can whitelist friendly SMTP servers, and you should
-whitelist your own network, otherwise your SMTP clients will have real trouble to 
-send e-mail. Whitelisting localhost is also a must.
-.Pp
-.Nm
+whitelist your own network, otherwise your SMTP clients will have real 
+trouble to send e-mail. Whitelisting localhost is also a must.
+.PP
+.B milter-greylist
 works with two files. 
-.Pa greylist.conf
+.I greylist.conf
 is the configuration file. It holds the whitelist of addresses that will 
 not suffer grey list filtering.  It is read once upon 
-.Nm
+.B milter-greylist
 startup, then it will be automatically reloaded whenever a new message
 gets in and if it had been modified. You should not send
-.Nm
-a 
-.Li kill -1
-as it will just terminate it (libmilter works that way).
-.Pp
+.B milter-greylist
+a kill -1 as it will just terminate it (libmilter works that way).
+.PP
 See 
-.Xr greylist.conf 5
+.B greylist.conf(5)
 for documentation on the file's format.
-.Pp
+.PP
 The second file is
-.Pa greylist.db .
-.Nm
+.I greylist.db\fR.
+.B milter-greylist
 will regularly dump its grey list database into this file, which is used
 on startup to restore the previous grey list state. If the file does not
 exist or is unreadable, 
-.Nm
+.B milter-greylist
 will start with an empty grey list. 
-.Pp
+.PP
 The default location for the grey list database and the socket for
-communicating with sendmail is normally /var/milter-greylist.
+communicating with sendmail is
+.B /var/milter-greylist/\fR.
 That directory must be owned and writeable by the user id under
 which 
-.Nm
-will run.
-.Pp
+.B milter-greylist
+runs.
+.PP
 The following options are available;
-if present, they override their equivalents specified in the configuration file:
-.Bl -tag -width flag
-.It Fl A
+if present, they override their equivalents specified in the 
+configuration file:
+.TP
+.B -A
 Normally, 
-.Nm
+.B milter-greylist
 does not greylist senders that succeeded SMTP AUTH. This option disables that
 feature and causes authentication to be ignored.
 Equivalent to the
-"noauth"
+.I noauth
 option in the configuration file.
-.It Fl a Ar delay
+.TP
+.B -a \fIdelay\fR
 Configure auto-whitelisting. After a tuple (sender IP, sender e-mail, 
 recipient e-mail) has been accepted, other identical tuples will get
 accepted for 
-.Ar delay .
+.I delay\fR.
 The default is one day. Use zero to disable auto-whitelisting.
 A suffix can be added to specify seconds (s), minutes (m), hours (h), 
 days (d) or weeks (w). Without any suffix, values are treated as seconds.
 Equivalent to the
-"autowhite"
+.I autowhite
 option in the configuration file.
-.It Fl c
+.TP
+.B -c
 Only check the configuration file and exit. Return value is 0 if the
 configuration is valid, or an error code from 
-.Aq Pa sysexit.h
+.I <sysexit.h>
 otherwise.
-.It Fl D
+.TP
+.B -D
 Do not fork; run in the foreground instead. Without this flag, 
-.Nm
+.B milter-greylist
 will become a daemon.
 Equivalent to the
-"nodetach"
+.I nodetach
 option in the configuration file.
-.It Fl d Ar dumpfile
+.TP
+.B -d \fIdumpfile\fR
 Location of the dump file. Default is 
-.Pa /var/milter-greylist/greylist.db
+.I /var/milter-greylist/greylist.db\fR.
 Equivalent to the
-"dumpfile"
+.I dumpfile
 option in the configuration file.
-.It Fl f Ar configfile
+.TP
+.B -f \fIconfigfile\fR
 Location of the config file. Default is
-.Pa /etc/mail/greylist.conf .
-.It Fl L Ar cidrmask
+.I /etc/mail/greylist.conf\fR.
+.TP
+.B -L \fIcidrmask\fR
 Use 
-.Ar cidrmask
+.I cidrmask
 as a matching mask when checking IPv4 addresses entries in the greylist. This
 is aimed as a workaround to mail farms that re-emit messages from different
-IP addresses. With -L 24,
+IP addresses. With 
+.B -L 24\fR,
 the matching mask is 255.255.255.0, and all addresses within the same class C
-network are considered the same. Default is -L 32, 
+network are considered the same. Default is 
+.B -L 32\fR, 
 which corresponds to all addresses considered different.
-.It Fl L Ar prefixlen
+.TP
+.B -M \fIprefixlen\fR
 Use 
-.Ar prefixlen
+.I prefixlen
 as a matching mask when checking IPv6 addresses entries in the greylist. This
 is aimed as a workaround to mail farms that re-emit messages from different
-IP addresses. With -M 64,
+IP addresses. With 
+.B -M 64\fR,
 the matching mask is ffff:ffff:ffff:ffff::, and all addresses within the same
-subnet are considered the same. Default is -M 128,
+subnet are considered the same. Default is 
+.B -M 128\fR,
 which corresponds to all IPv6 addresses considered different.
-.It Fl l
+.TP
+.B -l
 Enable debug output in the access-list management code.
-.It Fl P Ar pidfile
+.TP
+.B -P \fIpidfile\fR
 write the daemon's PID to 
-.Ar pidfile .
+.I pidfile\fR.
 Equivalent to the
-"pidfile"
+.I pidfile
 option in the configuration file.
-.It Fl p Ar socket
+.TP
+.B -p \fIsocket\fR
 Use 
-.Ar socket
+.I socket
 as the socket used by 
-.Xr sendmail 8
+.B sendmail(8)
 to communicate with
-.Nm .
-.It Fl q
+.B milter-greylist\fR.
+.TP
+.B -q
 Quiet mode. 
-.Nm
+.B milter-greylist
 will not tell SMTP clients how much time they have to wait before the
 message will be accepted.
 Equivalent to the
-"quiet"
+.I quiet
 option in the configuration file.
-.It Fl r
+.TP
+.B -r
 Display 
-.Nm
-version and build environnement, then exit.
-.It Fl S
+.B milter-greylist
+version and build environment, then exit.
+.TP
+.B -S
 If
-.Nm
+.B milter-greylist
 was built with SPF support, then SPF-compliant senders bypass greylisting.
 This flag causes messages to be greylisted regardless of whether they are 
 SPF-compliant or not.
 Equivalent to the
-"nospf"
+.I nospf
 option in the configuration file.
-.It Fl T
+.TP
+.B -T
 Enable test mode. This alters the meaning of 
-.Ar rcpt
+.I rcpt
 lines in 
-.Pa greylist.conf ,
+.I greylist.conf\fR,
 so that only messages sent to recipient adresses listed there are 
 selected for greylisting. This option and the 
-.Ar rcpt
+.I rcpt
 lines have been deprecated in favor of ACL, so do not use it. 
-.It Fl u Ar username
+.TP
+.B -u \fIusername\fR
 Drop root privileges and switch to 
-.Ar username
+.I username
 credentials.  Make sure this user has write access to 
-.Pa greylist.db .
+.I greylist.db\fR.
 Equivalent to the
-"user"
+.I user
 option in the configuration file.
-.It Fl v
+.TP
+.B -v
 Enable debug output. 
-.Nm 
+.B milter-greylist 
 will send messages (and debug output if it is given the
-.Fl v
+.B -v
 flag) to 
-.Xr syslogd 8
+.B syslogd(8)
 with facility LOG_MAIL.
 Equivalent to the
-"verbose"
+.I verbose
 option in the configuration file.
-.It Fl w Ar delay
+.TP
+.B -w \fIdelay\fR
 sets the minimum delay between the first attempt and the time
 the message can be accepted. Default is 30 minutes. 
 A suffix can be added to specify seconds (s), minutes (m), hours (h), 
 days (d) or weeks (w). Whithout any suffix, values are treated as seconds.
 Equivalent to the
-"greylist"
+.I greylist
 option in the configuration file.
-.El
-.Sh GREYLIST MX SYNC
-.Nm
+.SH GREYLIST MX SYNC
+.B milter-greylist
 is now able to sync the greylist between multiple MX. In order to enable
-this feature, you need to list the peer MX's in 
-.Pa greylist.conf ,
-just like this:
-.Dl peer 192.0.2.17
-.Dl peer 192.0.2.18
-.Pp
+this feature, you need to list the peer MXs in 
+.B greylist.conf(5)
+like this:
+.PP
+  peer 192.0.2.17
+  peer 192.0.2.18
+.PP
 When peers are configured, 
-.Nm
-will listen on port defined for the mxglsync service in
-.Pa /etc/services 
+.B milter-greylist
+will listen on the port defined for the mxglsync service in
+.I /etc/services 
 (defaults to 5252), and it will connect to peers at this port. Each time 
-an entry will be added or deleted on one MX, it will be propagated to 
+an entry is added or deleted on one MX, it will be propagated to 
 the others. 
-.Pp
+.PP
 The protocol is quite simple, just
-telnet to your MX at port 5252, and type help to see how it works. Note that
-connections will only be accepted from peer MX's, even localhost will be
+telnet to your MX at port 5252, and type 
+.I help
+to see how it works. Note that
+connections will only be accepted from peer MXs, even localhost will be
 rejected (and don't ever add localhost as a peer for MX sync, as you will 
 cause each entry in the greylist to be added twice).
-.Pp
+.PP
 If an MX is down, changes to the greylist will be queued until it gets
 back up again. The queue length is limited (default is 1024 entries), and
 if it overflows, newer entries will be discarded.
-.Sh AUTHORS
-.An Emmanuel Dreyfus Aq manu@netbsd.org
-.Pp 
-.Nm
-received many contributions from (in alphabetic order):
-.An Gary Aitkeno ,  
-.An Joel Bertrand ,
-.An Moritz Both ,
-.An Attila Bruncsak ,
-.An Remy Card ,
-.An Alexandre Cherif , 
-.An Eugene Crosser ,
-.An Cyril Guibourg ,
-.An Klas Heggemann ,
-.An Mattieu Herrb ,
-.An Dan Hollis ,
-.An Per Holm ,
-.An Stephane Lentz ,
-.An Ivan F. Martinez ,
-.An Christian Pelissier ,
-.An Matthias Scheler , 
-.An Wolfgang Solfrank , 
-.An Hajimu Umemoto ,
+.SH AUTHORS
+Emmanuel Dreyfus <manu@netbsd.org>
+.PP 
+.B milter-greylist
+received many contributions from (in alphabetical order):
+Gary Aitkeno,  
+Joel Bertrand,
+Moritz Both,
+Attila Bruncsak,
+Remy Card,
+Alexandre Cherif, 
+Eugene Crosser,
+Cyril Guibourg,
+Klas Heggemann,
+Mattieu Herrb,
+Dan Hollis,
+Per Holm,
+Stephane Lentz,
+Ivan F. Martinez,
+Christian Pelissier,
+Matthias Scheler, 
+Wolfgang Solfrank, 
+Hajimu Umemoto,
 and
-.An Lev Walkin .
-.Pp
+Lev Walkin.
+.PP
 Thanks to 
-.An Helmut Messerer
+Helmut Messerer
 and
-.An Thomas Pfau
-for their feebacks on the first releases of this software.
-.Sh SEE ALSO
-.Xr greylist.conf 5 ,
-.Xr sendmail 8 , 
-.Xr syslogd 8 .
-.Pp
-Evan Harris's paper
-.Pa http://projects.puremagic.com/greylisting
+Thomas Pfau
+for their feedback on the first releases of this software.
+.SH SEE ALSO
+greylist.conf(5),
+sendmail(8), 
+syslogd(8).
+.TP
+Evan Harris's paper:
+.I http://projects.puremagic.com/greylisting/
+.TP
+milter-greylist's web site:
+.I http://hcpnet.free.fr/milter-greylist/

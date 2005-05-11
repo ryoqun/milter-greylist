@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.24 2005/05/07 23:24:28 manu Exp $
+.\" $Id: greylist.conf.5,v 1.25 2005/05/11 14:09:25 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -28,398 +28,444 @@
 .\" ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 .\" OF THE POSSIBILITY OF SUCH DAMAGE.
 .\"
-.Dd Mar 31, 2004
-.Dt greylist.conf 5
-.Os
-.Sh NAME
-.Nm greylist.conf
-.Nd milter-greylist configuration file
-.Sh DESCRIPTION
-.Nm 
+.TH "greylist.conf" "5" "May 10, 2005" "" ""
+.SH NAME
+.B greylist.conf
+- milter-greylist configuration file
+.SH DESCRIPTION
+.B greylist.conf 
 configures 
-.Xr milter-greylist 8
+.B milter-greylist(8)
 operation. The format is simple: each line contains a keyword and 
-optionnal arguments. Any line starting with a # is considered as a comment
+optional arguments. Any line starting with a # is considered as a comment
 and is ignored. Blank lines are ignored as well. Comments at the end of
-are accepted in some situations, but do not take them as granted.
-.Sh WHITELIST
+lines are accepted in some situations, but do not take them as granted.
+.SH WHITELIST
 The primary use of 
-.Nm
+.B greylist.conf
 is to setup 
-.Xr milter-greylist 8 
+.B milter-greylist(8)
 whitelist. 
 Access-lists (ACL) are used to do that. ACL enable the administrator 
 to specify complex conditions on sender IP, sender DNS address, 
 sender e-mail address, and recipient e-mail address.
-.Pp
+.PP
 An access-list entry starts with the
-.Ar acl
+.I acl
 keyword followed by the
-.Ar greylist
+.I greylist
 or
-.Ar whitelist
+.I whitelist
 keyword, and by any set of the 4 clauses: 
-.Ar addr ,
-.Ar domain ,
-.Ar from
+.I addr\fR,
+.I domain\fR,
+.I from\fR,
 and
-.Ar rcpt .
+.I rcpt\fR.
 A message will match an ACL entry when it complies with all of its clauses.
-.Bl -tag -width flag
-.It Ar addr
+.TP
+.I addr
 This clause is used to specify a netblock of source IP 
 addresses. The syntax is an IP address followed by a slash and a CIDR
 netmask. Here is an example:
-.Dl acl whitelist addr 127.0.0.0/8
-.Dl acl whitelist addr 192.168.3.0/24
-.Dl acl whitelist addr ::1
+.IP
+  acl whitelist addr 127.0.0.0/8
+  acl whitelist addr 192.168.3.0/24
+  acl whitelist addr ::1
+.IP
 If the netmask is ommitted, /32 is assumed for an IPv4 address and
 /128 is assumed for an IPv6 address.
-.Pp
+.IP
 You should at least whitelist localhost (127.0.0.1/8), and if you have
 some user clients connecting to the machine, you should whitelist the
 addresses they connect from if you don't want them to get error 
 messages when sending e-mail.
-.It Ar domain
-This clause selects sources machines based on their DNS name.
-For instance, this will whitelist any machine in the example.net domain:
-.Dl acl whitelist domain example.net
-.Pp
+.TP
+.I domain
+This clause selects source machines based on their DNS name.
+For instance, this will whitelist any machine in the 
+.I example.net
+domain:
+.IP
+  acl whitelist domain example.net
+.IP
 The name resolution is made by Sendmail, which hands it to 
-.Xr milter-greylist 8 .
+.B milter-greylist(8)\fR.
 As a result, it is impossible to use DNS aliases here. On the other
 hand, this will work even if your DNS resolver is not thread-safe.
-.It Ar from
+.TP
+.I from
 This is used to select sender e-mail addresses. You should not use
 that feature, because sender e-mail addresses can be trivially forged.
 Example:
-.Dl acl whitelist from postmaster@example.com
-.It Ar rcpt
+.IP
+  acl whitelist from postmaster@example.com
+.TP
+.I rcpt
 This is used to select recipient addresses. Example:
-.Dl acl greylist rcpt John.Doe@example.net
-.El
-.Pp
-.Ar domain ,
-.Ar from
+.IP
+  acl greylist rcpt John.Doe@example.net
+.PP
+.I domain\fR,
+.I from\fR,
 and
-.Ar rcpt
+.I rcpt
 may be used with regular expressions. The regular expressions must be
 enclosed by slashes (/). No escaping is available to provide a slash
 inside a regular expression, so just do not use it. Regular expressions
 follow the format described in 
-.Xr re_format 7 .
+.B re_format(7)\fR.
 Here is an example:
-.Dl acl greylist rcpt /.*@example\.net/
-.Pp
-Entries in the access-list are evaluated sequentialy, so order is
+.PP
+  acl greylist rcpt /.*@example\.net/
+.PP
+Entries in the access-list are evaluated sequentially, so order is
 very important. The first matching entry is used to decide if 
 a message will be whitelisted or greylisted. A special
-.Ar default
+.I default
 clause can be used in the last ACL entry as a wildcard. 
 Here are a few complete ACL examples:
-.Pp
+.PP
 Example 1:
-.Dl acl whitelist from friend@toto.com rcpt grandma@example.com
-.Dl acl whitelist from other.friend@example.net rcpt grandma@example.com
-.Dl acl greylist rcpt grandma@example.com
-.Dl acl whitelist default
-.Pp
+.nf
+
+acl whitelist from friend@toto.com rcpt grandma@example.com
+acl whitelist from other.friend@example.net rcpt grandma@example.com
+acl greylist rcpt grandma@example.com
+acl whitelist default
+.fi
+.PP
 Example 2:
-.Dl acl whitelist addr 193.54.0.0/16 domain friendly.com
-.Dl acl greylist rcpt user1@atmine.com
-.Dl acl greylist rcpt user2@atmine.com
-.Dl acl greylist rcpt user3@atmine.com
-.Dl acl whitelist default
-.Pp
+.nf
+
+acl whitelist addr 193.54.0.0/16 domain friendly.com
+acl greylist rcpt user1@atmine.com
+acl greylist rcpt user2@atmine.com
+acl greylist rcpt user3@atmine.com
+acl whitelist default
+.fi
+.PP
 Example 3:
-.Dl acl whitelist rcpt /.*@.*otherdomain\.org/
-.Dl acl whitelist addr 192.168.42.0/24 rcpt user1@mydomain.org
-.Dl acl whitelist from friend@example.net rcpt /.*@.*mydomain\.org/
-.Dl acl whitelist rcpt user2@mydomain.org
-.Dl acl greylist rcpt /.*@.*mydomain\.org/
-.Dl acl whitelist default
-.Pp
-.Sh BACKWARD COMPATIBILITY
+.nf
+
+acl whitelist rcpt /.*@.*otherdomain\.org/
+acl whitelist addr 192.168.42.0/24 rcpt user1@mydomain.org
+acl whitelist from friend@example.net rcpt /.*@.*mydomain\.org/
+acl whitelist rcpt user2@mydomain.org
+acl greylist rcpt /.*@.*mydomain\.org/
+acl whitelist default
+.fi
+.SH BACKWARD COMPATIBILITY
 Previous versions of 
-.Xr  milter-greylist 8
+.B milter-greylist(8)
 used 
-.Ar addr ,
-.Ar domain ,
-.Ar from
+.I addr\fR,
+.I domain\fR,
+.I from\fR,
 and
-.Ar rcpt
+.I rcpt
 lines, without the
-.Ar acl
+.I acl
 keyword.
-Access-list management is intented to replace them.
+Access-list management is intended to replace them.
 These lines are still accepted by
-.Xr milter-greylist 8 ,
+.B milter-greylist(8)\fR,
 but they are deprecated.
-.Xr milter-greylist 8
-handle them as access-list entries with a single clause. They are added 
+.B milter-greylist(8)
+handles them as access-list entries with a single clause. They are added 
 at the head of the access-list so the use of these keywords and 
 access-lists may lead to unspecified behaviour. Do not mix them.
-.Pp
+.PP
 test mode (using
-.Fl T )
-is also deprecated. Access-list semantics does not depend on this flag.
-.Sh MX SYNC
+.B -T\fR)
+is also deprecated. Access-list semantics do not depend on this flag.
+.SH MX SYNC
 Synchronization of the greylist among multiple MX is configured using the 
-.Ar peer 
+.I peer 
 keyword. List each other MX IP addresses using the 
-.Ar peer 
+.I peer 
 keyword. Here is
 an example:
-.Dl peer 192.0.2.18
-.Dl peer 192.0.2.17
-.Pp
+.PP
+  peer 192.0.2.18
+  peer 192.0.2.17
+.PP
 You can list the local machine in the peer statements, it will be ignored.
-.Pp
+.PP
 By default, milter-greylist will listen on all interfaces using TCP port
-5252 or port number given by service named mxglsync if defined in /etc/services
+5252 or the port number given by service named mxglsync if defined in 
+.I /etc/services
 or other directory service. This behaviour can be changed by using the
-.Ar syncaddr
+.I syncaddr
 keyword. Here are a few examples:
-.Dl syncaddr *
-.Dl syncaddr * port 7689
-.Dl syncaddr 192.0.2.2 port 9785
-.Dl syncaddr 2001:db8::1:c3b5:123
-.Dl syncaddr 2001:db8::1:c3b5:123 port 1234
-.Pp
+.PP
+  syncaddr *
+  syncaddr * port 7689
+  syncaddr 192.0.2.2 port 9785
+  syncaddr 2001:db8::1:c3b5:123
+  syncaddr 2001:db8::1:c3b5:123 port 1234
+.PP
 Using '*' as the address means to bind to all local interfaces' addresses.
-Note that if you are not using the default port, all MX must use the same 
+Note that if you are not using the default port, all MXs must use the same 
 port number. 
-.Sh TEXT DUMP
-.Xr milter-greylist 8
+.SH TEXT DUMP
+.B milter-greylist(8)
 uses a text dump of its database to resume operation after a crash. The dump
 is performed at regular time interval, but as it is a heavy operation,
 you might want to configure a particular time interval, using the
-.Ar dumpfreq
+.I dumpfreq
 option. 
-.Pp
+.PP
 If the
-.Ar dumpfreq
+.I dumpfreq
 value is too small, it will kill performance. If it is too high, 
 you will loose a bigger part of the database on a crash. 
-.Pp
+.PP
 Set 
-.Ar dumpfreq
+.I dumpfreq
 to 0 to get a dump on each change (kills performance),
-Set it to -1 to never dump to a file (unsafe as you loose the whole 
+Set it to -1 to never dump to a file (unsafe as you lose the whole 
 greylist on each crash), or give a time value for the delay between dumps.
 The time is given in seconds, except if a unit is given: m for minutes, 
-h pour hours, and d for day.
-.Sh REPORTING
+h for hours, and d for days.
+.SH REPORTING
 By default, 
-.Xr milter-greylist 8 
+.B milter-greylist(8)
 will add a 
-.Ar X-Greylist
-header to any message it handles. The header shows what happenned to the
+.I X-Greylist
+header to any message it handles. The header shows what happened to the
 message: delayed or not delayed, and why. The following options can be
 used in
-.Nm
+.B greylist.conf
 to alter this behavior:
-.Bl -tag -width flag
-.It Ar report none
+.TP
+.I report none
 Never add a 
-.Ar X-Greylist
+.I X-Greylist
 header.
-.It Ar report delays
-Only add a header when the message was delayed.
-.It Ar report nodelays
-Add a header when the message was not delayed. The header explains why 
+.TP
+.I report delays
+Only add a header if the message was delayed.
+.TP
+.I report nodelays
+Add a header if the message was not delayed. The header explains why 
 the message was not delayed.
-.It Ar report all
+.TP
+.I report all
 Always add a header. This is the default.
-.El
-.Sh SENDER CALLBACK SYSTEMS
+.SH SENDER CALLBACK SYSTEMS
 Sender callback systems are another anti-spam measure that attempts to
 send a DSN to the sender address before accepting a message. If that
 fails, then the sender address is wrong and the message is rejected. 
 Such systems usually stop their callback check at the RCPT stage of 
 the SMTP transaction. 
-.Pp
-Greylisting temporarilly rejects at the RCPT stage, so sender callback
+.PP
+Greylisting temporarily rejects at the RCPT stage, so sender callback
 and greylisting love to fight each others. 
-.Xr milter-greylist 8
-proposes a work around to that problem with the 
-.Ar delayedreject
+.B milter-greylist(8)
+proposes a workaround to that problem with the 
+.I delayedreject
 option. For messages coming from <> (that is, for DSN), it will cause 
 the temporary reject to happen at the DATA stage of the SMTP transaction 
 instead of the RCPT stage. That way,
-.Xr milter-greylist 8
+.B milter-greylist(8)
 will cope much better with sender callback systems. 
-.Pp
+.PP
 This has a minor drawback (and this is why it is not enabled by default): 
 for a multi recipient DSN, whitelisted recipient will not be honoured: 
 the message will be delayed for everyone. 
-.Sh COMMAND-LINE FLAG EQUIVALENTS
+.SH COMMAND-LINE FLAG EQUIVALENTS
 Most 
-.Xr milter-greylist 8
+.B milter-greylist(8)
 command-line options have equivalent options that can be set in the 
 configuration file. Note that if a command line option is supplied,
 it will always override the configuration file.
-.Pp
+.PP
 If a command-line equivalent keyword is used more than once, the last 
 keyword will override the previous ones.
-.Bl -tag -width flag
-.It Ar verbose
+.TP
+.I verbose
 Enable debug output. This is equivalent to the
-.Fl d
+.B -d
 flag.
-.It Ar quiet
-Do not tell clients how many time remains before their e-mail will
+.TP
+.I quiet
+Do not tell clients how much time remains before their e-mail will
 be accepted. This is equivalent to the
-.Fl q
+.B -q
 flag.
-.It Ar nodetach
-Do not fork and go into the background. This is equivalent to
-.Fl D .
-.It Ar noauth
-Greylist clients regardless if they succeeded SMTP AUTH. Equivalent to
-.Fl A .
-.It Ar noaccessdb
+.TP
+.I nodetach
+Do not fork and go into the background. This is equivalent to the
+.B -D
+flag.
+.TP
+.I noauth
+Greylist clients regardless if they succeeded SMTP AUTH. Equivalent to the
+.B -A
+flag.
+.TP
+.I noaccessdb
 Normally 
-.Xr milter-greylist 8 
+.B milter-greylist(8)
 will whitelist a message if 
-.Xr sendmail 8
-defines a ${greylist} macro set to WHITE. This enable complex whitelisting
-rules based on the Sendmail access DB. This option inhibit this behavior.
-.It Ar nospf
-Greylist clients regardless if they are SPF-compliant. Equivalent to
-.Fl S .
-.It Ar testmode
-Enable test mode. Equivalent to 
-.Fl T .
-This option is deprecated.
-.It Ar greylist
+.B sendmail(8)
+defines a ${greylist} macro set to WHITE. This enables complex whitelisting
+rules based on the Sendmail access DB. This option inhibits this behavior.
+.TP
+.I nospf
+Greylist clients regardless if they are SPF-compliant. Equivalent to the
+.B -S
+flag.
+.TP
+.I testmode
+Enable test mode. Equivalent to the
+.B -T
+flag. This option is deprecated.
+.TP
+.I greylist
 The argument sets how much time 
-.Xr milter-greylist 8
+.B milter-greylist(8)
 will want the client to wait between the first attempt and the time
 the message is accepted. The time is given in seconds, except if a 
-unit is given: m for minutes, h pour hours, and d for day. 
+unit is given: m for minutes, h for hours, and d for days. 
 The 
-.Ar greylist 
+.I greylist 
 keyword is equivalent to the
-.Fl w 
+.B -w 
 option. Here is an example that sets the delay to 45 minutes:
-.Dl greylist 45m
-.It Ar autowhite
+.IP
+  greylist 45m
+.TP
+.I autowhite
 This sets the auto-whitelisting duration, equivalent to the
-.Fl a
+.B -a
 command-line option. As for the 
-.Ar greylist keywords , 
+.I greylist
+keyword, 
 units can be
-supplied. Here is an example for a 3 days long auto-whitelisting:
-.Dl autowhite 3d
-.It Ar pidfile
-This cause 
-.Xr milter-greylist 8
-to write its PID in the file given in argument, like the 
-.Fl P
+supplied. Here is an example for a 3 day long auto-whitelisting:
+.IP
+  autowhite 3d
+.TP
+.I pidfile
+This causes
+.B milter-greylist(8)
+to write its PID into the file given as argument, like the 
+.B -P
 command line argument does. The path to the file
-must be absolute and it must be enclosed with quotes. Here is an example:
-.Dl pidfile Qq /var/run/greylist.pid 
-.It Ar dumpfile
+must be absolute and it must be enclosed in quotes. Here is an example:
+.IP
+  pidfile "/var/run/greylist.pid"
+.TP
+.I dumpfile
 This chooses the location of the greylist dump file, like the
-.Fl d
-command line option does. The path must be absolute and enclosed by quotes.
+.B -d
+command line option does. The path must be absolute and enclosed in quotes.
 Example:
-.Dl dumpfile Qq /var/milter-greylist/greylist.db
-.It Ar subnetmatch
+.IP
+  dumpfile "/var/milter-greylist/greylist.db"
+.TP
+.I subnetmatch
 This is equivalent to the 
-.Fl L 
+.B -L 
 command line option. It takes a slash followed by a CIDR mask as argument, 
 and it commands the subnet matching feature. Example, for a class C wide
 matching:
-.Dl subnetmatch /24
-.It Ar subnetmatch6
+.IP
+  subnetmatch /24
+.TP
+.I subnetmatch6
 This is equivalent to the
-.Fl M
+.B -M
 command line option. It takes a slash followed by a prefixlen as argument,
 and it commands the subnet matching feature. Example, for a subnet wide
 matching:
-.Dl subnetmatch6 /64
-.It Ar socket
+.IP
+  subnetmatch6 /64
+.TP
+.I socket
 Like the 
-.Fl p
+.B -p
 command line option, this keyword is used to specify the socket used
 to communicate with
-.Xr sendmail 8 .
-It must be enclosed with quotes:
-.Dl socket Qq /var/milter-greylist/milter-greylist.sock
-.It Ar user
+.B sendmail(8)\fR.
+It must be enclosed in quotes:
+.IP
+  socket "/var/milter-greylist/milter-greylist.sock"
+.TP
+.I user
 This keyword should be followed by a quoted user login. Like the 
-.Fl u
+.B -u
 option, this is used to run
-.Xr milter-greylist 8 
+.B milter-greylist(8)
 as a non root user.  Here is an example:
-.Dl user Qq smmsp
-.El
-.Sh MISCELANEOUS
-This option has no command line equivalent:
-.Bl -tag -width flag
-.It Ar timeout
+.IP
+  user "smmsp"
+.SH MISCELLANEOUS
+These options have no command line equivalent:
+.TP
+.I timeout
 is used to control how long greylist tuples are retained in the database. 
 Value is in seconds, except if a suffix is given (m for minutes, h for hours,
 d for days). Default is 5 days.
-.It Ar extendedregex
+.TP
+.I extendedregex
 Use extended regular expressions instead of basic regular expressions.
-.El
-.Pp
+.PP
 The configuration file is reloaded automatically once it is modified when
-a new e-mail arrives. Most configuration keywords will take effect
-immediatly, except the following, which will only take effect after 
+new e-mail arrives. Most configuration keywords will take effect
+immediately, except the following, which will only take effect after 
 a restart of 
-.Xr milter-greylist 8 : 
-.Ar nodetach ,
-.Ar pidfile ,
-.Ar socket ,
+.B milter-greylist(8)\fR: 
+.I nodetach\fR,
+.I pidfile\fR,
+.I socket\fR,
 and 
-.Ar user .
-.Pp
+.I user\fR.
+.PP
 The 
-.Ar dumpfreq
-option can be dynamically changed, but the change will only take effect 
+.I dumpfreq
+option can be changed dynamically, but the change will only take effect 
 after the next dump.
-.Sh AUTHORS
-.An Emmanuel Dreyfus Aq manu@netbsd.org
-.Pp
-milter-greylist
-received many contributions from (in alphabetic order):
-.An Gary Aitkeno ,
-.An Joel Bertrand ,
-.An Moritz Both ,
-.An Attila Bruncsak ,
-.An Remy Card ,
-.An Alexandre Cherif ,
-.An Eugene Crosser ,
-.An Cyril Guibourg ,
-.An Klas Heggemann ,
-.An Mattieu Herrb ,
-.An Dan Hollis ,
-.An Per Holm ,
-.An Stephane Lentz ,
-.An Ivan F. Martinez ,
-.An Christian Pelissier ,
-.An Matthias Scheler ,
-.An Wolfgang Solfrank ,
-.An Hajimu Umemoto ,
+.SH AUTHORS
+Emmanuel Dreyfus <manu@netbsd.org>
+.PP
+.B milter-greylist
+received many contributions from (in alphabetical order):
+Gary Aitkeno,
+Joel Bertrand,
+Moritz Both,
+Attila Bruncsak,
+Remy Card,
+Alexandre Cherif,
+Eugene Crosser,
+Cyril Guibourg,
+Klas Heggemann,
+Mattieu Herrb,
+Dan Hollis,
+Per Holm,
+Stephane Lentz,
+Ivan F. Martinez,
+Christian Pelissier,
+Matthias Scheler,
+Wolfgang Solfrank,
+Hajimu Umemoto,
 and
-.An Lev Walkin .
-.Pp    
+Lev Walkin.
+.PP    
 Thanks to
-.An Helmut Messerer 
+Helmut Messerer 
 and    
-.An Thomas Pfau
-for their feebacks on the first releases of this software.
-.Sh SEE ALSO
-.Xr milter-greylist 8 ,
-.Xr sendmail 8 , 
-.Xr syslogd 8 .
-.Pp
-Evan Harris's paper
-.Pa http://projects.puremagic.com/greylisting
-.Pp
+Thomas Pfau
+for their feedback on the first releases of this software.
+.SH SEE ALSO
+milter-greylist(8),
+sendmail(8), 
+syslogd(8).
+.TP
+Evan Harris's paper:
+.I http://projects.puremagic.com/greylisting/
+.TP
 milter-greylist's web site:
-.Pa http://hcpnet.free.fr/milter-greylist
+.I http://hcpnet.free.fr/milter-greylist/

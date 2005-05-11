@@ -1,5 +1,6 @@
 2.0b7:
 	Split installation targets (Elrond)
+	nroff man pages (Fredrik Pettai & Martin Paul)
 2.0b6:
 	Fix timing bug for messages arriving on greylist timeout (Martin Paul)
 	Install formatted man page that can be displayed on Solaris
