@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.35 2005/05/11 09:49:26 manu Exp $
+# $Id: Makefile,v 1.36 2005/05/11 14:12:12 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -68,8 +68,7 @@ sync_yacc.o:	sync_yacc.c sync_lex.c
 conf_yacc.o:	conf_yacc.c conf_lex.c
 dump_yacc.o:	dump_yacc.c dump_lex.c
 
-sed_subst = "s|@BINDIR[@]|${BINDIR}|g; s|@SBINDIR[@]|${SBINDIR}|g; \
-	     s|@USER[@]|${USER}|g"
+sed_subst = "s|@BINDIR[@]|${BINDIR}|g; s|@SBINDIR[@]|${SBINDIR}|g; s|@USER[@]|${USER}|g"
 
 rc-bsd.sh:      rc-bsd.sh.in
 	${SED} ${sed_subst} rc-bsd.sh.in > rc-bsd.sh
