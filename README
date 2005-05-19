@@ -1,9 +1,9 @@
-# $Id: README,v 1.32 2004/12/29 21:33:35 manu Exp $
+# $Id: README,v 1.33 2005/05/19 18:30:52 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2004/12/29 21:33:35 $
+		       $Date: 2005/05/19 18:30:52 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -23,7 +23,7 @@ Build dependencies:
 - libmilter (comes with Sendmail)
 - Any POSIX threads library (Provided by libc on some systems)
 
-Optionnal dependencies: 
+Optional dependencies: 
 - libspf2, libspf_alt or libspf.
 
 Before building milter-greylist, it might be wise to view the
@@ -51,9 +51,9 @@ file in /etc/mail/greylist.conf, except if there is already such
 a file. In that case the original file is preserved.
 
 Some startup scripts are available: rc-redhat.sh, rc-debian, rc-gentoo.sh,
-and rc-suse.sh for Linux and rc-bsd.sh for NetBSD and FreeBSD. They are 
-not installed by default; you have install the startup script by hand if 
-you want to use one.
+rc-suse.sh for Linux, rc-bsd.sh for NetBSD and FreeBSD, and rc-solaris.sh
+for Solaris. They are not installed by default; you have install the 
+startup script manually if you want to use one.
 
 
  2 Configuring sendmail with milter-greylist
@@ -67,7 +67,7 @@ O Milter.macros.connect=j,{if_addr}
 O Milter.macros.envfrom=i
 
 If you want to bypass greylisting for users that succeeded SMTP AUTH, 
-You also need {auth_authen} in Milter.macros.envfrom:
+you also need {auth_authen} in Milter.macros.envfrom:
 O Milter.macros.envfrom=i, {auth_authen}
 
 If you want to bybass greylisting for users that use STARTTLS with 
@@ -80,7 +80,7 @@ will need {greylist} too. milter-greylist will whitelist a message
 when the {greylist} macro is defined and set as WHITE.
 O Milter.macros.envrcpt={greylist}
 
-Alternatively, you can use the following m4 macros definitions 
+Alternatively, you can use the following m4 macro definitions 
 if you build sendmail.cf with m4 (contributed by Hubert Ulliac):
 
 INPUT_MAIL_FILTER(`greylist',
@@ -90,8 +90,8 @@ define(`confMILTER_MACROS_HELO', `{verify}, {cert_subject}')
 define(`confMILTER_MACROS_ENVFROM', `i, {auth_authen}')
 define(`confMILTER_MACROS_ENVRCPT', `{greylist}')
 
-Ivan F. Martinez also made the milter-greylist.m4 file that includes 
-thoses definitions and will make easier an automatic generation 
+Ivan F. Martinez contributed the milter-greylist.m4 file that includes 
+thoses definitions and will simplify an automatic generation 
 of sendmail.cf.
 
 
@@ -100,14 +100,14 @@ of sendmail.cf.
  =============================
 
 Edit /etc/mail/greylist.conf, and add addr lines for at least
-localhost and all you local network addresses. Here is an example:
+localhost and all your local network addresses. Here is an example:
 
 acl whitelist addr 127.0.0.0/8
 acl whitelist addr 192.0.2.0/24 
 acl whitelist addr 10.0.0.0/8
 
-Then consider adding addresses of all the friendly network you get
-mail from. By friendly network, we mean network with no spammers:
+Then consider adding addresses of all the friendly networks you get
+mail from. By friendly networks, we mean networks with no spammers:
 Universities are usually friendly, some companies are friendly,
 some other are not, and dial-up and ADSL ISPs are definitively not
 friendly at all.
@@ -143,7 +143,7 @@ If you want to check that things work, try 10 seconds with -w10.
 The -a option controls auto-whitelisting. Once a (sender IP, sender e-mail,
 recipient e-mail) tuple has been accepted, it is marked autowhitelisted,
 and similar tuples will be accepted with no retry for one day. Using -a0
-disable this feature.
+disables this feature.
 
 
  5 Running it for the whole site 
@@ -156,9 +156,9 @@ acl greylist default
 
 Now greylisting is enabled for every recipient. If some of your 
 users don't want greylisting, add a "acl whitelist rcpt" line for them 
-in /etc/mail/greylist.conf. Make sure you do it before 
+in /etc/mail/greylist.conf. Make sure you put it before 
 "acl greylist default": ordering does matter, as the ACL rules are
-evaluated on a first match win basis.
+evaluated on a first match wins basis.
 
 If your mail server handles several domains and you want to enable
 milter-greylist for a whole domain but not for everyone, this is 
@@ -181,8 +181,8 @@ milter-greylist a CIDR mask to use when comparing IPv4 addresses.
 With -L24, the match mask is 255.255.255.0, and any address in a 
 class C network is considered the same.
 
-There is also a right fix for the problem: SPF. SPF is a DNS based
-mechanism that enable domains to publish the identity of machines
+There is also a real fix for the problem: SPF. SPF is a DNS based
+mechanism that enables domains to publish the identity of machines
 allowed to send mail on behalf of the domain. milter-greylist knows 
 how to use SPF through libspf or libspf_alt. See section 8 of this
 document: Building with SPF
@@ -193,7 +193,7 @@ servers that will always resend their messages, there is no point in
 greylisting them.
 
 
- 7 Working with multiple MX
+ 7 Working with multiple MXs
  ===========================
 
 When running several MXs, the client should try each server after
@@ -233,9 +233,9 @@ this feature. DIR must be the base directory where include and lib
 directories containing the headers and library can be found. 
 
 WARNING: milter-greylist is a multithreaded program. The external
-function it uses must be thread-safe. While libspf and libspf_alt
+functions it uses must be thread-safe. While libspf and libspf_alt
 contain only thread-safe code, they use the DNS resolver. By default,
-the DNS resolver is used from libc or libresolv. If this resolver
+the DNS resolver from libc or libresolv is used. If this resolver
 is not thread-safe, milter-greylist with SPF will quickly crash or
 hang.
 
@@ -313,9 +313,9 @@ use multiple MX servers or whose mail is actually served by another site.
 
 If milter-greylist terminates during its operation, first check your
 system limits with ulimit (sh/ksh/bash) or limit (csh/tcsh). As it stores 
-all its database in memory, milter-greylist can eat a large amount of 
+its complete database in memory, milter-greylist can eat a large amount of 
 memory on a busy mail server. Each incoming connection uses a socket, so
-file descriptors can easily be exhausted too. Any ressource shortage will
+file descriptors can easily be exhausted too. Any resource shortage will
 cause milter-greylist to quit. This is not specific to milter-greylist; 
 all milters do that.
 
@@ -334,7 +334,7 @@ Solaris patches are available from <http://sunsolve.sun.com/>
 On Solaris, and on some IRIX releases, the file descriptor field 
 of <stdio.h>'s FILE structure is a char, and thus no more than 255 
 streams can be open at once. This will cause failures in milter-greylist 
-when handling a large number of connexions. If you are not sure whether 
+when handling a large number of connections. If you are not sure whether 
 your system is affected or not, check your system headers for the FILE 
 definition. On Solaris, the problem only exists with the 32 bit ABI, 
 so rebuilding milter-greylist with a 64 bit compiler will fix the problem.
