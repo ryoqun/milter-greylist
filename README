@@ -1,9 +1,9 @@
-# $Id: README,v 1.33 2005/05/19 18:30:52 manu Exp $
+# $Id: README,v 1.34 2005/05/19 18:32:19 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2005/05/19 18:30:52 $
+		       $Date: 2005/05/19 18:32:19 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -11,7 +11,20 @@
 Table of contents:  
 ==================
 
-Run this command to produce a table of contents:
+ 1 Building and installing milter-greylist 
+ 2 Configuring sendmail with milter-greylist
+ 3 Configuring milter-greylist 
+ 4 Trying it out for a few users 
+ 5 Running it for the whole site 
+ 6 Dealing with mail farms
+ 7 Working with multiple MXs
+ 8 Building with SPF
+ 9 Packaging
+ 10 Things to look at if things get wrong
+ 11 Known problems
+ 12 License
+
+Run this command to regenerate a table of contents:
  sed '/^.====/{g;p;};h;d' README
 
  1 Building and installing milter-greylist 

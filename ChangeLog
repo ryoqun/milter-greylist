@@ -1,4 +1,5 @@
 2.0b8:
+	README table of content
 	README spell check (Martin Paul)
 	Fix memory leak (Hajimu Umemoto)
 	dependency in .spec file: sendmail 8.11 only is required
