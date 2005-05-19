@@ -1,4 +1,4 @@
-2.0b8:
+2.0rc1:
 	README table of content
 	README spell check (Martin Paul)
 	Fix memory leak (Hajimu Umemoto)

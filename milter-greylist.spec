@@ -1,6 +1,6 @@
-# $Id: milter-greylist.spec,v 1.16 2005/05/11 14:12:12 manu Exp $
+# $Id: milter-greylist.spec,v 1.17 2005/05/19 18:34:19 manu Exp $
 # Contributed by Ivan F. Martinez
-%define ver 2.0b7
+%define ver 2.0rc1
 %define rel 1
 %define user root
 
@@ -14,9 +14,9 @@ Source0: ftp://ftp.espci.fr/pub/milter-greylist/%{name}-%{version}.tgz
 URL: http://hcpnet.free.fr/milter-greylist/
 BuildRoot: %{_tmppath}/%{name}-%{version}-root-%(%{__id_u} -n)
 
-Requires: sendmail >= 8.12
-Requires: sendmail-cf >= 8.12
-BuildRequires: sendmail-devel >= 8.12
+Requires: sendmail >= 8.11
+Requires: sendmail-cf >= 8.11
+BuildRequires: sendmail-devel >= 8.11
 BuildRequires: flex
 BuildRequires: bison
 

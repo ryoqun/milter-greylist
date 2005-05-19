@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.149 2005/05/11 14:12:12 manu Exp $
+# $Id: configure.ac,v 1.150 2005/05/19 18:34:19 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 2.0b7, manu@netbsd.org)
+AC_INIT(milter-greylist, 2.0rc1, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
