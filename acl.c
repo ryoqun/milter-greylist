@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.5 2005/03/19 07:38:53 manu Exp $ */
+/* $Id: acl.c,v 1.6 2005/05/22 10:12:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.5 2005/03/19 07:38:53 manu Exp $");
+__RCSID("$Id: acl.c,v 1.6 2005/05/22 10:12:54 manu Exp $");
 #endif
 #endif
 
@@ -580,36 +580,52 @@ emailcmp(big, little)
 	char *little;
 {
 	int i;
+	int retval = -1;
+	char *cbig;
+	char *clittle;
 
-	printf("big = \"%s\", little = \"%s\"\n", big, little);
+	if ((cbig = malloc(strlen(big) + 1)) == NULL) {
+		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	strcpy(cbig, big);
+
+	if ((clittle = malloc(strlen(little) + 1)) == NULL) {
+		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	strcpy(clittle, little);
+
 	/* Strip leading <, tabs and spaces */
-	while (strchr("< \t", big[0]) != NULL)
-		big++;
-	while (strchr("< \t", little[0]) != NULL)
-		little++;
+	while (strchr("< \t", cbig[0]) != NULL)
+		cbig++;
+	while (strchr("< \t", clittle[0]) != NULL)
+		clittle++;
 
 	/* Strip trailing >, tabs and spaces */
-	i = strlen(big) - 1;
-	while ((i >= 0) && (strchr("> \t", big[i]) != NULL))
-		big[i--] = '\0';
-	i = strlen(little) - 1;
-	while ((i >= 0) && (strchr("> \t", little[i]) != NULL))
-		little[i--] = '\0';
+	i = strlen(cbig) - 1;
+	while ((i >= 0) && (strchr("> \t", cbig[i]) != NULL))
+		cbig[i--] = '\0';
+	i = strlen(clittle) - 1;
+	while ((i >= 0) && (strchr("> \t", clittle[i]) != NULL))
+		clittle[i--] = '\0';
 
-	printf(">> big = \"%s\", little = \"%s\"\n", big, little);
-
-	while (big[0] && little[0]) {
-		if (tolower((int)big[0]) != tolower((int)little[0]))
+	while (cbig[0] && clittle[0]) {
+		if (tolower((int)cbig[0]) != tolower((int)clittle[0]))
 			break;
-		big++;
-		little++;
+		cbig++;
+		clittle++;
 	}
 		
-	if (big[0] || little[0])
-		return -1;
+	if (cbig[0] || clittle[0])
+		retval = -1;
+	else
+		retval = 0;
 
-	printf("match\n");
-	return 0;
+	free(cbig);
+	free(clittle);
+
+	return retval;
 }
 
 void
