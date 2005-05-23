@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.6 2005/05/22 10:12:54 manu Exp $ */
+/* $Id: acl.c,v 1.7 2005/05/23 20:41:31 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.6 2005/05/22 10:12:54 manu Exp $");
+__RCSID("$Id: acl.c,v 1.7 2005/05/23 20:41:31 manu Exp $");
 #endif
 #endif
 
@@ -583,17 +583,21 @@ emailcmp(big, little)
 	int retval = -1;
 	char *cbig;
 	char *clittle;
+	char *ocbig;
+	char *oclittle;
 
 	if ((cbig = malloc(strlen(big) + 1)) == NULL) {
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
+	ocbig = cbig;
 	strcpy(cbig, big);
 
 	if ((clittle = malloc(strlen(little) + 1)) == NULL) {
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
+	oclittle = clittle;
 	strcpy(clittle, little);
 
 	/* Strip leading <, tabs and spaces */
@@ -622,8 +626,8 @@ emailcmp(big, little)
 	else
 		retval = 0;
 
-	free(cbig);
-	free(clittle);
+	free(ocbig);
+	free(oclittle);
 
 	return retval;
 }
