@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.26 2005/05/11 14:22:09 manu Exp $
+.\" $Id: greylist.conf.5,v 1.27 2005/06/05 21:59:02 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -286,7 +286,7 @@ keyword will override the previous ones.
 .TP
 .I verbose
 Enable debug output. This is equivalent to the
-.B -d
+.B -v
 flag.
 .TP
 .I quiet
@@ -412,6 +412,10 @@ d for days). Default is 5 days.
 .TP
 .I extendedregex
 Use extended regular expressions instead of basic regular expressions.
+.TP
+.I lazyaw
+Make auto-whitelist look at just the IP instead of the (sender IP,
+sender e-mail address, recipient e-mail address) tuple.
 .PP
 The configuration file is reloaded automatically once it is modified when
 new e-mail arrives. Most configuration keywords will take effect

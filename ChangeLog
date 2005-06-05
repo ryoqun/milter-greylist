@@ -1,4 +1,5 @@
 2.0rc3:
+	Missing options in usage (Martin Paul)
 	SPF build fix
 2.0rc2:
 	Bug fix in address comparison code	
