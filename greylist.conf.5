@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.27 2005/06/05 21:59:02 manu Exp $
+.\" $Id: greylist.conf.5,v 1.28 2005/06/08 19:33:17 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -82,7 +82,8 @@ addresses they connect from if you don't want them to get error
 messages when sending e-mail.
 .TP
 .I domain
-This clause selects source machines based on their DNS name.
+This clause selects source machines based on their DNS name, performing 
+a suffix search.
 For instance, this will whitelist any machine in the 
 .I example.net
 domain:
@@ -118,6 +119,15 @@ follow the format described in
 Here is an example:
 .PP
   acl greylist rcpt /.*@example\.net/
+.PP
+When regluar expressions are not used, 
+.I from\fR,
+and
+.I rcpt
+perform a case insensitive exact match with leading and trailing brackets, 
+spaces and tabs stripped out. 
+.I domain
+performs a case insensitive suffix match.
 .PP
 Entries in the access-list are evaluated sequentially, so order is
 very important. The first matching entry is used to decide if 

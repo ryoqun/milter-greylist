@@ -1,3 +1,5 @@
+2.0rc4:
+	Perform suffix match for the domain clause (Martin Paul)
 2.0rc3:
 	Missing options in usage (Martin Paul)
 	SPF build fix

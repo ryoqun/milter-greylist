@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.7 2005/05/23 20:41:31 manu Exp $ */
+/* $Id: acl.c,v 1.8 2005/06/08 19:33:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.7 2005/05/23 20:41:31 manu Exp $");
+__RCSID("$Id: acl.c,v 1.8 2005/06/08 19:33:17 manu Exp $");
 #endif
 #endif
 
@@ -71,6 +71,7 @@ pthread_rwlock_t acl_lock;
 static struct acl_entry gacl;
 
 static int emailcmp(char *, char *);
+static int domaincmp(char *, char *);
 
 static void
 acl_init_entry (void) {
@@ -448,8 +449,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 			}
 		}
 		if (acl->a_domain != NULL) {
-			/* Use emailcmp even if it's not an e-mail */
-			if (emailcmp(hostname, acl->a_domain) == 0)
+			if (domaincmp(hostname, acl->a_domain) == 0)
 				retval |= EXF_DOMAIN;
 			else {
 				match = 0;
@@ -572,6 +572,37 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 	}
 	ACL_UNLOCK;
 	return retval;
+}
+
+
+static int
+domaincmp(host, domain)
+	char *host;
+	char *domain;
+{
+	int hidx, didx;
+
+	if ((host[0] == '\0') && domain[0] == '\0')
+		return 1;
+
+	if ((host[0] == '\0') || domain[0] == '\0') 
+		return 0;
+
+	hidx = strlen(host) - 1;
+	didx = strlen(domain) - 1;
+
+	while ((hidx >= 0) && (didx >= 0)) {
+		if (tolower((int)host[hidx]) != tolower((int)domain[didx])) {
+			return (0);
+		}
+		hidx--;
+		didx--;
+	}
+
+	if (didx >= 0)
+		return (0);
+
+	return (1);
 }
 
 static int 
