@@ -1,7 +1,6 @@
 2.0rc4:
 	Perform suffix match for the domain clause (Martin Paul)
 	Documentation fixes (Martin Paul)
-	New MTA farm in the default configuration
 2.0rc3:
 	Missing options in usage (Martin Paul)
 	SPF build fix
