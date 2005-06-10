@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.28 2005/06/08 19:33:17 manu Exp $
+.\" $Id: greylist.conf.5,v 1.29 2005/06/10 08:36:50 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -120,11 +120,11 @@ Here is an example:
 .PP
   acl greylist rcpt /.*@example\.net/
 .PP
-When regluar expressions are not used, 
+When regular expressions are not used, 
 .I from\fR,
 and
 .I rcpt
-perform a case insensitive exact match with leading and trailing brackets, 
+perform a case insensitive substring match with leading and trailing brackets,
 spaces and tabs stripped out. 
 .I domain
 performs a case insensitive suffix match.

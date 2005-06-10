@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.8 2005/06/08 19:33:17 manu Exp $ */
+/* $Id: acl.c,v 1.9 2005/06/10 08:36:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.8 2005/06/08 19:33:17 manu Exp $");
+__RCSID("$Id: acl.c,v 1.9 2005/06/10 08:36:50 manu Exp $");
 #endif
 #endif
 
@@ -449,7 +449,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 			}
 		}
 		if (acl->a_domain != NULL) {
-			if (domaincmp(hostname, acl->a_domain) == 0)
+			if (domaincmp(hostname, acl->a_domain))
 				retval |= EXF_DOMAIN;
 			else {
 				match = 0;
