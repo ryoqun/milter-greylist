@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.38 2004/12/08 22:23:09 manu Exp $ */
+/* $Id: autowhite.c,v 1.39 2005/09/16 15:23:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.38 2004/12/08 22:23:09 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.39 2005/09/16 15:23:25 manu Exp $");
 #endif
 #endif
 
@@ -249,19 +249,6 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 
 			dirty++;
 
-			syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
-				"autowhitelisted for more %02d:%02d:%02d",
-				queueid, addr, from, rcpt, h, mn, s);
-			/*
-			 * We need to tell our peers about this, we use a
-			 * fictive pending record
-			 */
-			pending = pending_get(sa, salen, from, rcpt, 
-			    (time_t)0);
-			if (pending != NULL) {
-				peer_delete(pending);
-				pending_put(pending);
-			}
 			break;
 		}
 	}
@@ -270,10 +257,25 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 	if (dirty != 0)
 		dump_dirty += dirty;
 
-	if (aw != NULL) 
-		return EXF_AUTO;	
+	if (aw == NULL) 
+		return EXF_NONE;
 
-	return EXF_NONE;
+	syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
+		"autowhitelisted for more %02d:%02d:%02d",
+		queueid, addr, from, rcpt, h, mn, s);
+	/*
+	 * We need to tell our peers about this, we use a
+	 * fictive pending record
+	 */
+	PENDING_WRLOCK;
+	pending = pending_get(sa, salen, from, rcpt, 
+	    (time_t)0);
+	PENDING_UNLOCK;
+	if (pending != NULL) {
+		peer_delete(pending);
+		pending_put(pending);
+	}
+	return EXF_AUTO;	
 }
 
 int

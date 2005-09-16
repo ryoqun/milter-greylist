@@ -1,3 +1,5 @@
+2.0.1:
+        Fix deadlock in autowhitelisting code (Attila Bruncsak)
 2.0:
 2.0rc5:
 	Fix suffix match for the domain clause (Martin Paul)
