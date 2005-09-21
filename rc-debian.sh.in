@@ -47,13 +47,7 @@ case "$1" in
 	echo "$NAME."
 	;;
 
-  reload|force-reload)
-	echo -n "Reloading $DESC: "
-	start-stop-daemon --stop --pidfile $PIDFILE --signal HUP --name $PNAME
-	echo "$NAME."
-	;;
-
-  restart)
+  restart|force-reload)
 	echo -n "Restarting $DESC: "
 	start-stop-daemon --stop --pidfile $PIDFILE --name $PNAME \
 	    --retry 5 --oknodo
