@@ -1,6 +1,7 @@
 2.0.1:
         Fix deadlock in autowhitelisting code (Attila Bruncsak)
 	Avoid using inet_makeaddr because it breaks on IRIX (Pavel Cahyna)
+	Check if -D_SGI_SOURCE is needed on IRIX
 2.0:
 2.0rc5:
 	Fix suffix match for the domain clause (Martin Paul)

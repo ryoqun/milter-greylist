@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.155 2005/06/25 15:18:03 manu Exp $
+# $Id: configure.ac,v 1.156 2005/09/21 11:48:43 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -395,7 +395,23 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	])], [xopen=no], [CFLAGS="$CFLAGS -D_XOPEN_SOURCE=500"; xopen=yes])
 AC_MSG_RESULT([$xopen])
 
-# IRIX requires -D_XOPEN_SOURCE=500 to use <stdio.h> and -ansi
+# IRIX requires -D_SGI_SOURCE to use <stdio.h> and -ansi
+AC_MSG_CHECKING([whether you need -D_SGI_SOURCE to use <stdio.h> with -ansi])
+SAVEDCFLAGS=$CFLAGS
+CFLAGS=$CFLAGS" -ansi"
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <stdio.h>
+	],[
+		FILE *f;
+
+		f = fdopen(0, "w+");
+	])], [xstdio=no], 
+	[SAVEDCFLAGS=$SAVEDCFLAGS" -D_SGI_SOURCE"; 
+	 xstdio=yes])
+CFLAGS=$SAVEDCFLAGS
+AC_MSG_RESULT([$xstdio])
+
+# IRIX may also require -D_XOPEN_SOURCE=500 to use <stdio.h> and -ansi
 AC_MSG_CHECKING([whether you need -D_XOPEN_SOURCE to use <stdio.h> with -ansi])
 SAVEDCFLAGS=$CFLAGS
 CFLAGS=$CFLAGS" -ansi"
