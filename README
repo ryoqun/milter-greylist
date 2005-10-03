@@ -1,9 +1,9 @@
-# $Id: README,v 1.35 2005/09/21 11:50:14 manu Exp $
+# $Id: README,v 1.36 2005/10/03 07:58:53 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2005/09/21 11:50:14 $
+		       $Date: 2005/10/03 07:58:53 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -240,10 +240,16 @@ source ports and destination port 5252.
  8 Building with SPF
  ===================
 
-milter-greylist can use either libspf or libspf_alt to perform SPF
-checks. Use --with-libspf=DIR or --with-libspf_alt=DIR to enable
-this feature. DIR must be the base directory where include and lib
-directories containing the headers and library can be found. 
+milter-greylist can use either libspf or libspf2 to perform SPF
+checks. Use --with-libspf=DIR or --with-libspf2=DIR to enable this
+feature. DIR must be the base directory where include and lib
+directories containing the headers and library can be found.
+
+If you want to link with an older version of libspf2, you will
+need one of the following configure flags:
+For older libspf_alt: --with-libspf_alt=DIR
+For older libspf2 up to version 1.0: --with-libspf2_10=DIR
+For newer libspf2: --with-libspf2=DIR
 
 WARNING: milter-greylist is a multithreaded program. The external
 functions it uses must be thread-safe. While libspf and libspf_alt

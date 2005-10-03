@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.10 2004/12/08 22:23:09 manu Exp $ */
+/* $Id: spf.h,v 1.11 2005/10/03 07:58:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -39,7 +39,11 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#if defined(HAVE_SPF_ALT) || defined(HAVE_SPF2)
+#if defined(HAVE_SPF2)
+int spf2_check(struct sockaddr *, socklen_t, char *, char *);
+#define SPF_CHECK(w,x,y,z) spf2_check((w),(x),(y),(z))
+
+#elif defined(HAVE_SPF_ALT) || defined(HAVE_SPF2_10)
 int spf_alt_check(struct sockaddr *, socklen_t, char *, char *);
 #define SPF_CHECK(w,x,y,z) spf_alt_check((w),(x),(y),(z))
 

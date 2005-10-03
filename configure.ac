@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.156 2005/09/21 11:48:43 manu Exp $
+# $Id: configure.ac,v 1.157 2005/10/03 07:58:53 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -76,18 +76,43 @@ AC_ARG_WITH(libspf2,
        [  --with-libspf2=DIR  Find libspf2 in DIR],
        [LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
            CFLAGS=$CFLAGS" -I$withval/include"
-           AC_CHECK_LIB(spf2, SPF_create_config, [
+           AC_CHECK_LIB(spf2, SPF_server_new, [
                SAVEDLDFLAGS=$LDFLAGS
                SAVEDCFLAGS=$CFLAGS
                LIBS=$LIBS"-lspf2"
                AC_DEFINE([HAVE_SPF2], [], [we use libspf2])
-               ],[AC_CHECK_LIB([spf2 -lintl],  SPF_create_config, [
+               ],[AC_CHECK_LIB([spf2 -lintl],  SPF_server_new, [
                        SAVEDLDFLAGS=$LDFLAGS
                        SAVEDCFLAGS=$CFLAGS
                        LIBS=$LIBS"-lspf2 -lintl"
                        AC_DEFINE([HAVE_SPF2], [], [we use libspf2])
                ], [echo "libspf2 not found, check config.log for details"
                    echo "Remove --with-libspf2 to build without SPF support"
+                   exit 1;])
+       ])
+])
+LDFLAGS=$SAVEDLDFLAGS
+CFLAGS=$SAVEDCFLAGS
+
+# Try to configure for libspf2 1.0
+SAVEDLDFLAGS=$LDFLAGS
+SAVEDCFLAGS=$CFLAGS
+AC_ARG_WITH(libspf2_10,
+       [  --with-libspf2_10=DIR  Find libspf2 1.0 in DIR],
+       [LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+           CFLAGS=$CFLAGS" -I$withval/include"
+           AC_CHECK_LIB(spf2, SPF_create_config, [
+               SAVEDLDFLAGS=$LDFLAGS
+               SAVEDCFLAGS=$CFLAGS
+               LIBS=$LIBS"-lspf2"
+               AC_DEFINE([HAVE_SPF2_10], [], [we use libspf2 1.0])
+               ],[AC_CHECK_LIB([spf2 -lintl],  SPF_create_config, [
+                       SAVEDLDFLAGS=$LDFLAGS
+                       SAVEDCFLAGS=$CFLAGS
+                       LIBS=$LIBS"-lspf2 -lintl"
+                       AC_DEFINE([HAVE_SPF2_10], [], [we use libspf2 1.0])
+               ], [echo "libspf2 1.0 not found, check config.log for details"
+                   echo "Remove --with-libspf2_10 to build without SPF support"
                    exit 1;])
        ])
 ])

@@ -4,6 +4,7 @@
 	Check if -D_SGI_SOURCE is needed on IRIX
 	Document ABI problems on IRIX (Pavel Cahyna)
 	Remove reload by SIGHUP in rc-debian.sh (Pavel Cahyna)
+	Add support for newer libspf2 (Hajimu UMEMOTO)
 2.0:
 2.0rc5:
 	Fix suffix match for the domain clause (Martin Paul)

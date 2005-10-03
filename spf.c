@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.20 2005/06/05 21:42:30 manu Exp $ */
+/* $Id: spf.c,v 1.21 2005/10/03 07:58:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.20 2005/06/05 21:42:30 manu Exp $");
+__RCSID("$Id: spf.c,v 1.21 2005/10/03 07:58:53 manu Exp $");
 #endif
 #endif
 
@@ -110,21 +110,24 @@ out1:
 #endif /* HAVE_SPF */
 
 
+#if defined(HAVE_SPF_ALT) || defined(HAVE_SPF2_10) || defined(HAVE_SPF2)
+/* SMTP needs at least 64 chars for local part and 255 for doamin... */
+#define NS_MAXDNAME 1025
+#endif
+
 #ifdef HAVE_SPF_ALT
 #include <spf_alt/spf.h>
 #include <spf_alt/spf_dns_resolv.h>
 #include <spf_alt/spf_lib_version.h>
 #endif
 
-#ifdef HAVE_SPF2
+#ifdef HAVE_SPF2_10
 #include <spf2/spf.h>
 #include <spf2/spf_dns_resolv.h>
 #include <spf2/spf_lib_version.h>
 #endif
 
-#if defined(HAVE_SPF_ALT) || defined(HAVE_SPF2)
-/* SMTP needs at least 64 chars for local part and 255 for doamin... */
-#define NS_MAXDNAME 1025 
+#if defined(HAVE_SPF_ALT) || defined(HAVE_SPF2_10)
 int
 spf_alt_check(sa, salen, helo, fromp)
 	struct sockaddr *sa;
@@ -220,3 +223,105 @@ out1:
 }
 
 #endif /* HAVE_SPF_ALT */
+
+#ifdef HAVE_SPF2
+#include <spf2/spf.h>
+
+int
+spf2_check(sa, salen, helo, fromp)
+	struct sockaddr *sa;
+	socklen_t salen;
+	char *helo;
+	char *fromp;
+{
+	SPF_server_t *spf_server;
+	SPF_request_t *spf_request;
+	SPF_response_t *spf_response;
+	char from[NS_MAXDNAME + 1];
+	int res, result = EXF_NONE;
+	struct timeval tv1, tv2, tv3;
+	size_t len;
+
+	if (conf.c_debug)
+		gettimeofday(&tv1, NULL);
+
+	if ((spf_server = SPF_server_new(SPF_DNS_CACHE, 0)) == NULL) {
+		syslog(LOG_ERR, "SPF_server_new failed");
+		goto out1;
+	}
+
+	if ((spf_request = SPF_request_new(spf_server)) == NULL) {
+		syslog(LOG_ERR, "SPF_request_new failed");
+		goto out2;
+	}
+
+	/*
+	 * Get the IP address
+	 */
+	switch (sa->sa_family) {
+	case AF_INET:
+		res = SPF_request_set_ipv4(spf_request, *SADDR4(sa));
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		res = SPF_request_set_ipv6(spf_request, *SADDR6(sa));
+		break;
+#endif
+	default:
+		syslog(LOG_ERR, "unknown address family %d", sa->sa_family);
+		goto out3;
+	}
+	if (res != 0) {
+		syslog(LOG_ERR, "SPF_request_set_ip_str failed");
+		goto out3;
+	}
+
+	/* HELO string */
+	if (SPF_request_set_helo_dom(spf_request, helo) != 0) {
+		syslog(LOG_ERR, "SPF_request_set_helo_dom failed");
+		goto out3;
+	}
+
+	/*
+	 * And the enveloppe source e-mail
+	 */
+	if (fromp[0] == '<')
+		fromp++; /* strip leading < */
+	strncpy(from, fromp, NS_MAXDNAME);
+	from[NS_MAXDNAME] = '\0';
+	len = strlen(from);
+	if (fromp[len - 1] == '>')
+		from[len - 1] = '\0'; /* strip trailing > */
+
+	if (SPF_request_set_env_from(spf_request, from) != 0) {
+		syslog(LOG_ERR, "SPF_request_set_env_from failed");
+		goto out3;
+	}
+
+	/*
+	 * Get the SPF result
+	 */
+	SPF_request_query_mailfrom(spf_request, &spf_response);
+	if ((res = SPF_response_result(spf_response)) == SPF_RESULT_PASS)
+		result = EXF_SPF;
+
+	if (conf.c_debug)
+		syslog(LOG_DEBUG, "SPF return code %d", res);
+
+	SPF_response_free(spf_response);
+out3:
+	SPF_request_free(spf_request);
+out2:
+	SPF_server_free(spf_server);
+out1:
+	if (conf.c_debug) {
+		gettimeofday(&tv2, NULL);
+		timersub(&tv2, &tv1, &tv3);
+		syslog(LOG_DEBUG, "SPF lookup performed in %ld.%06lds",
+		    tv3.tv_sec, tv3.tv_usec);
+	}
+
+	return result;
+}
+
+#endif /* HAVE_SPF2 */
