@@ -81,6 +81,9 @@
 /* we use libspf2 */
 #undef HAVE_SPF2
 
+/* we use libspf2 1.0 */
+#undef HAVE_SPF2_10
+
 /* we use libspf_alt */
 #undef HAVE_SPF_ALT
 

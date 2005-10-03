@@ -2,7 +2,7 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
-#define BUILD_ENV "manu@plan:/usr/home/manu/milter-greylist Sat Jun 25 17:16:47 CEST 2005"
+#define BUILD_ENV "manu@plan:/usr/home/manu/milter-greylist Mon Oct  3 10:00:38 CEST 2005"
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define HAVE_ARPA_INET_H 1
@@ -81,6 +81,9 @@
 
 /* we use libspf2 */
 /* #undef HAVE_SPF2 */
+
+/* we use libspf2 1.0 */
+/* #undef HAVE_SPF2_10 */
 
 /* we use libspf_alt */
 /* #undef HAVE_SPF_ALT */
