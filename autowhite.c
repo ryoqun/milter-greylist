@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.40 2005/09/21 13:15:22 manu Exp $ */
+/* $Id: autowhite.c,v 1.41 2005/10/04 19:15:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.40 2005/09/21 13:15:22 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.41 2005/10/04 19:15:55 manu Exp $");
 #endif
 #endif
 
@@ -97,6 +97,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 	time_t autowhite_validity;
 	int h, mn, s;
 	int dirty = 0;
+	ipaddr *mask = NULL;
 
 	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
 		return;
@@ -111,6 +112,17 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return;
+
+	switch (sa->sa_family) {
+	case AF_INET:
+		mask = (ipaddr *)&conf.c_match_mask;
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		mask = (ipaddr *)&conf.c_match_mask6;
+		break;
+#endif
+	}
 
 	AUTOWHITE_WRLOCK;
 	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
@@ -137,7 +149,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 		/*
 		 * Look for an already existing entry
 		 */
-		if (ip_equal(sa, aw->a_sa) &&
+		if (ip_match(sa, aw->a_sa, mask) &&
 		    ((conf.c_lazyaw == 1) ||
 		    ((strcasecmp(from, aw->a_from) == 0) &&
 		    (strcasecmp(rcpt, aw->a_rcpt) == 0)))) {
@@ -204,6 +216,17 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return EXF_NONE;
 
+	switch (sa->sa_family) {
+	case AF_INET:
+		mask = (ipaddr *)&conf.c_match_mask;
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		mask = (ipaddr *)&conf.c_match_mask6;
+		break;
+#endif
+	}
+
 	AUTOWHITE_WRLOCK;
 	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
 		next_aw = TAILQ_NEXT(aw, a_list);
@@ -231,16 +254,6 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 		/*
 		 * Look for our record
 		 */
-		switch (sa->sa_family) {
-		case AF_INET:
-			mask = (ipaddr *)&conf.c_match_mask;
-			break;
-#ifdef AF_INET6
-		case AF_INET6:
-			mask = (ipaddr *)&conf.c_match_mask6;
-			break;
-#endif
-		}
 		if (ip_match(sa, aw->a_sa, mask) &&
 		    ((conf.c_lazyaw == 1) ||
 		    ((strcasecmp(from, aw->a_from) == 0) &&
