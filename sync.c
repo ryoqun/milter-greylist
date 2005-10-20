@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.55 2005/01/22 17:23:17 manu Exp $ */
+/* $Id: sync.c,v 1.56 2005/10/20 07:24:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.55 2005/01/22 17:23:17 manu Exp $");
+__RCSID("$Id: sync.c,v 1.56 2005/10/20 07:24:53 manu Exp $");
 #endif
 #endif
 
@@ -558,19 +558,35 @@ sync_master_restart(void) {
 		    strerror(errno));
 		exit(EX_OSERR);
 	}
-	if (sync_master6.runs &&
-	    (error = pthread_create(&tid, NULL, sync_master,
-	    (void *)&sync_master6)) != 0) {
-		syslog(LOG_ERR, "Cannot run MX sync thread for IPv6: %s\n",
-		    strerror(error));
-		exit(EX_OSERR);
+	if (sync_master6.runs) {
+		if ((error = pthread_create(&tid, NULL, sync_master,
+		    (void *)&sync_master6)) != 0) {
+			syslog(LOG_ERR, 
+			    "Cannot run MX sync thread for IPv6: %s\n",
+			    strerror(error));
+			exit(EX_OSERR);
+		}
+		if ((error = pthread_detach(tid)) != 0) {
+			syslog(LOG_ERR, 
+			    "pthread_detach failed for IPv6 MX sync: %s\n",
+			    strerror(error));
+			exit(EX_OSERR);
+		}
 	}
-	if (sync_master4.runs &&
-	    (error = pthread_create(&tid, NULL, sync_master,
-	    (void *)&sync_master4)) != 0) {
-		syslog(LOG_ERR, "Cannot run MX sync thread for IPv4: %s\n",
-		    strerror(error));
-		exit(EX_OSERR);
+	if (sync_master4.runs) {
+		if ((error = pthread_create(&tid, NULL, sync_master,
+		    (void *)&sync_master4)) != 0) {
+			syslog(LOG_ERR, 
+			    "Cannot run MX sync thread for IPv4: %s\n",
+			    strerror(error));
+			exit(EX_OSERR);
+		}
+		if ((error = pthread_detach(tid)) != 0) {
+			syslog(LOG_ERR, 
+			    "pthread_detach failed for IPv4 MX sync: %s\n",
+			    strerror(error));
+			exit(EX_OSERR);
+		}
 	}
 }
 
@@ -693,6 +709,12 @@ sync_master(arg)
 			    peerstr, strerror(error));
 			fclose(stream);
 			continue;
+		}
+		if ((error = pthread_detach(tid)) != 0) {
+			syslog(LOG_ERR, "incoming connexion from %s failed, "
+			    "pthread_detach failed: %s",
+			    peerstr, strerror(error));
+			exit(EX_OSERR);
 		}
 	}
 
@@ -1091,6 +1113,10 @@ sync_sender_start(void) {
 	if ((error = pthread_create(&tid, NULL, 
 	    (void *(*)(void *))sync_sender, NULL)) != 0) {
 		syslog(LOG_ERR, "pthread_create failed: %s", strerror(error));
+		exit(EX_OSERR);
+	}
+	if ((error = pthread_detach(tid)) != 0) {
+		syslog(LOG_ERR, "pthread_detach failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
 	return;

@@ -1,3 +1,5 @@
+2.0.2:
+	Fix memory leak within MX sync code (Hajimu UMEMOTO)
 2.0.1:
 	correctly update autowhitelist when subnetmask is used (Attila Bruncsak)
 	Fix deadlock in autowhitelisting code (Attila Bruncsak)
