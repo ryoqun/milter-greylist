@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.111 2005/09/20 14:00:35 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.112 2005/10/31 09:53:02 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.111 2005/09/20 14:00:35 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.112 2005/10/31 09:53:02 manu Exp $");
 #endif
 #endif
 
@@ -291,8 +291,8 @@ mlfi_envrcpt(ctx, envrcpt)
 		return SMFIS_CONTINUE;
 
 	if (conf.c_debug)
-		syslog(LOG_DEBUG, "%s: addr = %s, from = %s, rcpt = %s", 
-		    priv->priv_queueid, addrstr, priv->priv_from, *envrcpt);
+		syslog(LOG_DEBUG, "%s: addr = %s[%s], from = %s, rcpt = %s", 
+		    priv->priv_queueid, priv->priv_hostname, addrstr, priv->priv_from, *envrcpt);
 
 	 /*
 	  * If sendmail rules have defined a ${greylist} macro
@@ -1200,8 +1200,8 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	else
 		delayed_rj = "";
 
-	syslog(LOG_INFO, "%s: addr %s from %s to %s delayed%s for %02d:%02d:%02d",
-	    priv->priv_queueid, addrstr, priv->priv_from, rcpt, delayed_rj,
+	syslog(LOG_INFO, "%s: addr %s[%s] from %s to %s delayed%s for %02d:%02d:%02d",
+	    priv->priv_queueid, priv->priv_hostname, addrstr, priv->priv_from, rcpt, delayed_rj,
 	    h, mn, s);
 
 	if (conf.c_quiet) {

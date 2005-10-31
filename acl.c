@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.9 2005/06/10 08:36:50 manu Exp $ */
+/* $Id: acl.c,v 1.10 2005/10/31 09:53:02 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.9 2005/06/10 08:36:50 manu Exp $");
+__RCSID("$Id: acl.c,v 1.10 2005/10/31 09:53:02 manu Exp $");
 #endif
 #endif
 
@@ -521,8 +521,8 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 		}
 		if (conf.c_debug || conf.c_acldebug) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
-			syslog(LOG_DEBUG, "Mail from=%s, rcpt=%s, addr=%s "
-			    "is matched by entry %s", from, rcpt, addrstr,
+			syslog(LOG_DEBUG, "Mail from=%s, rcpt=%s, addr=%s[%s} "
+			    "is matched by entry %s", from, rcpt, hostname, addrstr,
 			    acl_entry(acl));
 		}
 	} else {
@@ -564,7 +564,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 		}
 		iptostring(sa, salen, addrstr, sizeof(addrstr));
 		snprintf(tmpstr, sizeof(tmpstr),
-		    "(from=%s, rcpt=%s, addr=%s)", from, rcpt, addrstr);
+		    "(from=%s, rcpt=%s, addr=%s[%s})", from, rcpt, hostname, addrstr);
 		ADD_REASON(whystr, tmpstr);
 
 		syslog(LOG_INFO, "%s: skipping greylist because %s",
