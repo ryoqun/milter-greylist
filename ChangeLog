@@ -1,5 +1,6 @@
 2.0.3:
 	Log hostname as well as IP in ACL debug (Alexey Popov)
+	Record HELO for SPF 2 (Hajimu UMEMOTO)
 2.0.2:
 	Fix memory leak within MX sync code (Hajimu UMEMOTO)
 2.0.1:
