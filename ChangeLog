@@ -1,4 +1,5 @@
 2.0.3:
+	DRAC support (Romain Kang)
 	Log hostname as well as IP in ACL debug (Alexey Popov)
 	Record HELO for SPF 2 (Hajimu UMEMOTO)
 2.0.2:

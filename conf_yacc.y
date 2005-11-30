@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DRAC DB NODRAC
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.37 2005/03/19 07:38:53 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.38 2005/11/30 23:32:12 manu Exp $");
 #endif
 #endif
 
@@ -85,6 +85,8 @@ lines	:	lines netblock '\n'
 	|	lines timeout '\n'
 	|       lines syncaddr '\n'
 	|	lines access_list '\n'
+	|	lines dracdb '\n'
+	|	lines nodrac '\n'
 	|	lines '\n'
 	|
 	;
@@ -404,10 +406,24 @@ netblock_clause:	ADDR IPADDR CIDR{
 				acl_add_netblock(SA(&$2),
 				    sizeof(struct sockaddr_in6), 128);
 #else
-				printf("IPv6 is not supported, ignore line %d\n",
-				    conf_line);
+				printf("IPv6 is not supported, "
+				     "ignore line %d\n", conf_line);
 #endif
 		}
+	;
+
+dracdb:			DRAC DB PATH	{ 
+#ifdef USE_DRAC
+				conf.c_dracdb = 
+					    quotepath(c_dracdb, $3, PATHLEN);
+#else
+				printf("DRAC support not compiled "
+				    "in line %d\n", conf_line);
+#endif
+		}
+	;
+
+nodrac:			NODRAC	{ conf.c_nodrac = 1; }
 	;
 
 %%

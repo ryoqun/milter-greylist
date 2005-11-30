@@ -52,6 +52,9 @@ port		[Pp][Oo][Rr][Tt]
 acl		[Aa][Cc][Ll]
 whitelist	[Ww][Hh][Ii][Tt][Ee][Ll][Ii][Ss][Tt]:?
 default		[Dd][Ee][Ff][Aa][Uu][Ll][Tt]
+drac		[Dd][Rr][Aa][Cc]
+db		[Dd][Bb]
+nodrac		[Nn][Oo][Dd][Rr][Aa][Cc]
 star		"*"
 
 %s S_REGEX
@@ -64,7 +67,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.37 2005/03/19 07:38:53 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.38 2005/11/30 23:32:12 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -117,6 +120,9 @@ star		"*"
 {whitelist}	{ return WHITELIST; }
 {default}	{ return DEFAULT; }
 {star}		{ return STAR; }
+{drac}		{ return DRAC; }
+{nodrac}	{ return NODRAC; }
+{db}		{ return DB; }
 {path}		{
 			strncpy(yylval.path, yytext, PATHLEN);
 			yylval.path[PATHLEN] = '\0';

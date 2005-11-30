@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.29 2005/06/10 08:36:50 manu Exp $
+.\" $Id: greylist.conf.5,v 1.30 2005/11/30 23:32:13 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -426,6 +426,15 @@ Use extended regular expressions instead of basic regular expressions.
 .I lazyaw
 Make auto-whitelist look at just the IP instead of the (sender IP,
 sender e-mail address, recipient e-mail address) tuple.
+.TP
+.I drac db
+Tell where the DRAC DB file is. This is only available if DRAC support
+was compiled in. Here is an example:
+.IP
+  drac db "/usr/local/etc/drac.db"
+.TP
+.I nodrac
+Disable DRAC.
 .PP
 The configuration file is reloaded automatically once it is modified when
 new e-mail arrives. Most configuration keywords will take effect
@@ -451,6 +460,7 @@ Gary Aitkeno,
 Joel Bertrand,
 Moritz Both,
 Attila Bruncsak,
+Pavel Cahyna,
 Remy Card,
 Alexandre Cherif,
 Eugene Crosser,
@@ -460,6 +470,7 @@ Klas Heggemann,
 Mattieu Herrb,
 Dan Hollis,
 Per Holm,
+Romain Kang,
 Matt Kettler,
 Petr Kristof,
 Stephane Lentz,
@@ -467,6 +478,7 @@ Ivan F. Martinez,
 Martin Paul,
 Fredrik Pettai,
 Christian Pelissier,
+Alexey Popov,
 Matthias Scheler,
 Wolfgang Solfrank,
 Hajimu Umemoto,

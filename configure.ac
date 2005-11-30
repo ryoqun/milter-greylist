@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.160 2005/10/21 12:30:49 manu Exp $
+# $Id: configure.ac,v 1.161 2005/11/30 23:32:13 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -318,6 +318,11 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 AC_MSG_RESULT([$dextensions])
 CFLAGS=$SAVEDCFLAGS
 
+# Check for DRAC
+AC_ARG_ENABLE(drac,
+	[  --enable-drac	Enable DRAC support],
+	[CFLAGS=$CFLAGS" -DUSE_DRAC"])
+
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use
 AC_CHECK_LIB([pthread], [pthread_create], 
@@ -622,6 +627,9 @@ AC_ARG_WITH(timeout,
 AC_ARG_WITH(autowhite,  
 	[  --with-autowhite=VALUE How long auto-whitelisting lasts],
 	[CFLAGS=$CFLAGS" -DAUTOWHITE_DELAY=$withval"])
+AC_ARG_WITH([drac-db],
+	[  --with-drac-db=PATH   Where is the DRAC database ],
+	[CFLAGS=$CFLAGS" -DDRACDB=\\\"$withval\\\""])
 
 AC_CONFIG_FILES([Makefile milter-greylist.spec])
 AC_OUTPUT

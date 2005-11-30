@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.113 2005/11/29 06:41:06 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.114 2005/11/30 23:32:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.113 2005/11/29 06:41:06 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.114 2005/11/30 23:32:13 manu Exp $");
 #endif
 #endif
 
@@ -64,6 +64,11 @@ __RCSID("$Id: milter-greylist.c,v 1.113 2005/11/29 06:41:06 manu Exp $");
 #include <sys/types.h>
 #include <sys/time.h>
 #include <sys/stat.h>
+
+#ifdef USE_DRAC
+#include <db.h>
+static int check_drac(char *dotted_ip);
+#endif
 
 #include <libmilter/mfapi.h>
 
@@ -295,6 +300,18 @@ mlfi_envrcpt(ctx, envrcpt)
 		syslog(LOG_DEBUG, "%s: addr = %s[%s], from = %s, rcpt = %s", 
 		    priv->priv_queueid, priv->priv_hostname, addrstr, priv->priv_from, *envrcpt);
 
+#ifdef USE_DRAC
+	if ((SA(&priv->priv_addr)->sa_family == AF_INET) && 
+	    (conf.c_nodrac == 0) &&
+	    check_drac(addrstr)) {
+		syslog(LOG_DEBUG, "whitelisted by DRAC");
+		priv->priv_elapsed = 0;
+		priv->priv_whitelist = EXF_DRAC;
+
+		return SMFIS_CONTINUE;
+	}
+#endif
+
 	 /*
 	  * If sendmail rules have defined a ${greylist} macro
 	  * with value WHITE, then it is whitelisted
@@ -495,6 +512,11 @@ mlfi_eom(ctx)
 			ADD_REASON(whystr, 
 			    "Message whitelisted by Sendmail access database");
 			priv->priv_whitelist &= ~EXF_ACCESSDB;
+		}
+		if (priv->priv_whitelist & EXF_DRAC) {
+			ADD_REASON(whystr, 
+			    "Message whitelisted by DRAC access database");
+			priv->priv_whitelist &= ~EXF_DRAC;
 		}
 		if (priv->priv_whitelist & EXF_SPF) {
 			ADD_REASON(whystr, "Sender is SPF-compliant");
@@ -1231,3 +1253,48 @@ final_dump(void) {
 	syslog(LOG_INFO, "Exiting");
 	return;
 }
+
+#ifdef	USE_DRAC
+static int
+check_drac(dotted_ip)
+	char *dotted_ip;
+{
+	DB *ddb;
+	DBT key, data;
+	char ipkey[16];
+	int rc;
+
+	ddb = dbopen(conf.c_dracdb, O_RDONLY | O_SHLOCK, 0666, DB_BTREE, NULL);
+	if (ddb == NULL) {
+		syslog(LOG_DEBUG, "dbopen \"%s\" failed", conf.c_dracdb);
+		return 0;
+	}
+
+	key.data = strncpy(ipkey, dotted_ip, sizeof(ipkey));
+	key.size = strlen(ipkey);
+	rc = ddb->get(ddb, &key, &data, 0);
+	ddb->close(ddb);
+
+	switch (rc) {
+	case 0:
+#ifdef TEST
+		syslog(LOG_DEBUG, "key.data=%.*s (len=%d) "
+		    "data.data=%.*s (len=%d)",
+		    key.size, key.data, key.size,
+		    data.size, data.data, data.size);
+#endif /* TEST */
+		return 1;
+		break;
+
+	case 1:
+		return 0;
+		break;
+
+	default:
+		syslog(LOG_ERR, "check_drack: errno=%d", errno);
+		break;
+	}
+
+	return 0;
+}
+#endif	/* USE_DRAC */

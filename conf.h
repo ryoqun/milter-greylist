@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.31 2005/03/19 07:38:53 manu Exp $ */
+/* $Id: conf.h,v 1.32 2005/11/30 23:32:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -52,6 +52,10 @@
 #define CONFFILE "/etc/mail/greylist.conf"
 #endif
 
+#ifndef DRACDB
+#define DRACDB "/usr/local/etc/dracdb.db"
+#endif
+
 #define CONF_WRLOCK WRLOCK(conf_lock) 
 #define CONF_RDLOCK RDLOCK(conf_lock) 
 #define CONF_UNLOCK UNLOCK(conf_lock)
@@ -85,6 +89,8 @@ struct conf {
 	int c_dumpfreq;
 	int c_timeout;
 	int c_extendedregex;
+	char *c_dracdb;
+	int c_nodrac;
 };
 
 /* c_forced flags */
@@ -122,6 +128,7 @@ extern char c_socket[PATHLEN + 1];
 extern char c_user[PATHLEN + 1];
 extern char c_syncaddr[IPADDRSTRLEN + 1];
 extern char c_syncport[NUMLEN + 1];
+extern char c_dracdb[PATHLEN + 1];
 
 extern pthread_rwlock_t conf_lock;
 

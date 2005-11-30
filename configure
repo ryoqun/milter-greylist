@@ -841,6 +841,11 @@ if test -n "$ac_init_help"; then
    esac
   cat <<\_ACEOF
 
+Optional Features:
+  --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
+  --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
+  --enable-drac	Enable DRAC support
+
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
@@ -857,6 +862,7 @@ Optional Packages:
   --with-delay=VALUE     Delay before accepting mail
   --with-timeout=VALUE   Timeout before we forget about a send
   --with-autowhite=VALUE How long auto-whitelisting lasts
+  --with-drac-db=PATH   Where is the DRAC database
 
 Some influential environment variables:
   CC          C compiler command
@@ -7363,6 +7369,13 @@ echo "$as_me:$LINENO: result: $dextensions" >&5
 echo "${ECHO_T}$dextensions" >&6
 CFLAGS=$SAVEDCFLAGS
 
+# Check for DRAC
+# Check whether --enable-drac or --disable-drac was given.
+if test "${enable_drac+set}" = set; then
+  enableval="$enable_drac"
+  CFLAGS=$CFLAGS" -DUSE_DRAC"
+fi;
+
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use
 echo "$as_me:$LINENO: checking for pthread_create in -lpthread" >&5
@@ -8801,6 +8814,12 @@ fi;
 if test "${with_autowhite+set}" = set; then
   withval="$with_autowhite"
   CFLAGS=$CFLAGS" -DAUTOWHITE_DELAY=$withval"
+fi;
+
+# Check whether --with-drac-db or --without-drac-db was given.
+if test "${with_drac_db+set}" = set; then
+  withval="$with_drac_db"
+  CFLAGS=$CFLAGS" -DDRACDB=\\\"$withval\\\""
 fi;
 
                     ac_config_files="$ac_config_files Makefile milter-greylist.spec"

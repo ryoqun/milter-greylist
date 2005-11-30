@@ -1,9 +1,9 @@
-# $Id: README,v 1.36 2005/10/03 07:58:53 manu Exp $
+# $Id: README,v 1.37 2005/11/30 23:32:12 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2005/10/03 07:58:53 $
+		       $Date: 2005/11/30 23:32:12 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -19,10 +19,11 @@ Table of contents:
  6 Dealing with mail farms
  7 Working with multiple MXs
  8 Building with SPF
- 9 Packaging
- 10 Things to look at if things get wrong
- 11 Known problems
- 12 License
+ 9 Using DRAC
+ 10 Packaging
+ 11 Things to look at if things get wrong
+ 12 Known problems
+ 13 License
 
 Run this command to regenerate a table of contents:
  sed '/^.====/{g;p;};h;d' README
@@ -269,7 +270,19 @@ libbind is only available as a static library. It seems to be the
 default with BIND 8, which causes troubles. BIND 9 is fine.
 
 
- 9 Packaging
+ 9 Using DRAC
+ ============
+
+milter-greylist can be built with DRAC support, by giving the
+--enable-drac flag to configure. Location of the DRAC DB file can 
+be chosen at build time with --with-dracdb=PATH, and at runtime
+with the drac db "PATH" configuration file option.
+
+If built-in, DRAC can be disabled by the nodrac configuration file 
+option.
+
+
+ 10 Packaging
  ===========
 
 milter-greylist is available from NetBSD pkgsrc and FreeBSD ports.
@@ -278,7 +291,7 @@ RedHat Linux. That is achieved by running rpmbuild on milter-greylist
 source tarball: rpmbuild -bb  milter-greylist-1.7.3.tgz
 
 
- 10 Things to look at if things get wrong
+ 11 Things to look at if things get wrong
  =======================================
 
 First, read the milter-greylist(8) and greylist.conf(5) man page! :-)
@@ -327,7 +340,7 @@ tells you when the entry will expire.
 Examining the tail of this file may reveal problems with domains which
 use multiple MX servers or whose mail is actually served by another site.
 
- 11 Known problems
+ 12 Known problems
  =================
 
 If milter-greylist terminates during its operation, first check your
@@ -366,7 +379,7 @@ configure with the CC environment variable set to cc. This
 incompatibility may be fixed in gcc 3.4.
 
 
- 12 License
+ 13 License
  ==========
 
 This software is available under a 3 clauses BSD license:
