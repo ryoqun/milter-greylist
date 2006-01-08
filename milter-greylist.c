@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.114 2005/11/30 23:32:13 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.115 2006/01/08 00:04:37 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.114 2005/11/30 23:32:13 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.115 2006/01/08 00:04:37 manu Exp $");
 #endif
 #endif
 
@@ -300,6 +300,30 @@ mlfi_envrcpt(ctx, envrcpt)
 		syslog(LOG_DEBUG, "%s: addr = %s[%s], from = %s, rcpt = %s", 
 		    priv->priv_queueid, priv->priv_hostname, addrstr, priv->priv_from, *envrcpt);
 
+	/*
+	 * For multiple-recipients messages, if the sender IP or the
+	 * sender e-mail address is whitelisted, authenticated, or
+	 * SPF compliant, then there is no need to check again, 
+	 * it is whitelisted for all the recipients.
+	 * 
+	 * Moreover, this will prevent a wrong X-Greylist header display
+	 * if the {IP, sender e-mail} address was whitelisted and the
+	 * last recipient was also whitelisted. If we would set priv_whitelist
+	 * on the last recipient, all recipient would have a X-Greylist
+	 * header explaining that they were whitelisted, whereas some
+	 * of them would not.
+	 */
+	if ((priv->priv_whitelist & EXF_ADDR) ||
+	    (priv->priv_whitelist & EXF_DOMAIN) ||
+	    (priv->priv_whitelist & EXF_FROM) ||
+	    (priv->priv_whitelist & EXF_AUTH) ||
+	    (priv->priv_whitelist & EXF_SPF) ||
+	    (priv->priv_whitelist & EXF_NONIPV4) ||
+	    (priv->priv_whitelist & EXF_DRAC) ||
+	    (priv->priv_whitelist & EXF_ACCESSDB) ||
+	    (priv->priv_whitelist & EXF_STARTTLS))
+		return SMFIS_CONTINUE;
+
 #ifdef USE_DRAC
 	if ((SA(&priv->priv_addr)->sa_family == AF_INET) && 
 	    (conf.c_nodrac == 0) &&
@@ -326,28 +350,6 @@ mlfi_envrcpt(ctx, envrcpt)
  
 		return SMFIS_CONTINUE;
 	}
-
-	/*
-	 * For multiple-recipients messages, if the sender IP or the
-	 * sender e-mail address is whitelisted, authenticated, or
-	 * SPF compliant, then there is no need to check again, 
-	 * it is whitelisted for all the recipients.
-	 * 
-	 * Moreover, this will prevent a wrong X-Greylist header display
-	 * if the {IP, sender e-mail} address was whitelisted and the
-	 * last recipient was also whitelisted. If we would set priv_whitelist
-	 * on the last recipient, all recipient would have a X-Greylist
-	 * header explaining that they were whitelisted, whereas some
-	 * of them would not.
-	 */
-	if ((priv->priv_whitelist & EXF_ADDR) ||
-	    (priv->priv_whitelist & EXF_DOMAIN) ||
-	    (priv->priv_whitelist & EXF_FROM) ||
-	    (priv->priv_whitelist & EXF_AUTH) ||
-	    (priv->priv_whitelist & EXF_SPF) ||
-	    (priv->priv_whitelist & EXF_NONIPV4) ||
-	    (priv->priv_whitelist & EXF_STARTTLS))
-		return SMFIS_CONTINUE;
 
 	/* 
 	 * Restart the sync master thread if nescessary

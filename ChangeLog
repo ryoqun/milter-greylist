@@ -1,4 +1,5 @@
 2.0.3:
+	Fix ACCESSDB whitelist with multiple recipients (Alexander Lobodzinski)
 	DRAC support (Romain Kang)
 	Log hostname as well as IP in ACL debug (Alexey Popov)
 	Record HELO for SPF 2 (Hajimu UMEMOTO)
