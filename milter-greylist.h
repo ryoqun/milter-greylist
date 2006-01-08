@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.37 2005/01/29 18:42:53 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.38 2006/01/08 00:38:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -77,6 +77,30 @@ typedef union {
 #ifdef AF_INET6
 #define SA6(sa)		((struct sockaddr_in6 *)(sa))
 #define SADDR6(sa)	(&SA6(sa)->sin6_addr)
+#endif
+
+#ifdef AF_INET6
+/* Notes:
+ * -For IPv6 not using s6_addr32 as Solaris 8 for some reason has it only defined for its kernel... 
+ * -Using also first two characters in "from" and "rcpt" to distribute potentially lot of triplets
+ *  coming from a single host (first two chars only because "<>" is the "shortest" email address)
+ */
+#define F2B(s) (tolower((int)*(s)) | (tolower((int)*((s)+1)) << 8))
+#define BUCKET_HASH(sa, from, rcpt, bucket_count)	\
+	(sa->sa_family == AF_INET ? \
+	  ((ntohl(SADDR4(sa)->s_addr) ^ F2B(from) ^ F2B(rcpt)) \
+	    % bucket_count) \
+	: sa->sa_family == AF_INET6 ? \
+	  (((uint32_t)(SADDR6(sa)->s6_addr)[3] ^ F2B(from) ^ F2B(rcpt)) \
+	    % bucket_count) \
+	: 0)
+
+#else
+#define BUCKET_HASH(sa, from, rcpt, bucket_count) \
+	(sa->sa_family == AF_INET ? \
+	  ((ntohl(SADDR4(sa)->s_addr) ^ F2B(from) ^ F2B(rcpt)) \
+	    % bucket_count) \
+	: 0)
 #endif
 
 struct mlfi_priv {

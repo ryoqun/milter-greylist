@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.24 2004/10/13 09:35:23 manu Exp $ */
+/* $Id: dump.c,v 1.25 2006/01/08 00:38:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.24 2004/10/13 09:35:23 manu Exp $");
+__RCSID("$Id: dump.c,v 1.25 2006/01/08 00:38:25 manu Exp $");
 #endif
 #endif
 
@@ -164,6 +164,7 @@ dump_perform(void) {
 	int done;
 	int greylisted_count;
 	int whitelisted_count;
+	char *s_buffer = NULL;
 
 	if (conf.c_debug) {
 		(void)gettimeofday(&tv1, NULL);
@@ -200,7 +201,17 @@ dump_perform(void) {
 		    newdumpfile, strerror(errno));
 		exit(EX_OSERR);
 	}
-
+	
+#define BIG_BUFFER	(10 * 1024 * 1024)
+	/* XXX TODO: make this configurable */
+	if ((s_buffer = calloc(1, BIG_BUFFER + 1)) == NULL) { 
+		syslog(LOG_ERR, "Unable to allocate big buffer for \"%s\": %s "
+		    "- continuing with sys default", 
+		    newdumpfile, strerror(errno));
+	} else {
+		setvbuf(dump, s_buffer, _IOFBF, BIG_BUFFER);
+	}
+	
 	dump_header(dump);
 	greylisted_count = pending_textdump(dump);
 	whitelisted_count = autowhite_textdump(dump);
@@ -210,6 +221,8 @@ dump_perform(void) {
 	    "whitelisted\n#\n", done, greylisted_count, whitelisted_count);
 
 	fclose(dump);
+	if (s_buffer)
+		free(s_buffer);
 
 	if (rename(newdumpfile, conf.c_dumpfile) != 0) {
 		syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",

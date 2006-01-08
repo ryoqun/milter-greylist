@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.30 2005/11/30 23:32:13 manu Exp $
+.\" $Id: greylist.conf.5,v 1.31 2006/01/08 00:38:25 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -238,6 +238,15 @@ Set it to -1 to never dump to a file (unsafe as you lose the whole
 greylist on each crash), or give a time value for the delay between dumps.
 The time is given in seconds, except if a unit is given: m for minutes, 
 h for hours, and d for days.
+.PP
+You may further improve the performance of the dump operation at the expense
+of humanly readable timestamp which by default appears as a comment at 
+the end of each line in the dumpfile. You may disable generation of
+this comment by specifying
+.I dump_no_time_translation
+option in the configuration file. This is specifficaly recommended if
+your dumpfile grows to 100's of megabytes - it can reduce the time
+needed for the dump operation by the order of magnitude!
 .SH REPORTING
 By default, 
 .B milter-greylist(8)

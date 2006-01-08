@@ -55,6 +55,7 @@ default		[Dd][Ee][Ff][Aa][Uu][Ll][Tt]
 drac		[Dd][Rr][Aa][Cc]
 db		[Dd][Bb]
 nodrac		[Nn][Oo][Dd][Rr][Aa][Cc]
+dump_no_time_translation [Dd][Uu][Mm][Pp]_[Nn][Oo]_[Tt][Ii][Mm][Ee]_[Tt][Rr][Aa][Nn][Ss][Ll][Aa][Tt][Ii][Oo][Nn]
 star		"*"
 
 %s S_REGEX
@@ -67,7 +68,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.38 2005/11/30 23:32:12 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.39 2006/01/08 00:38:25 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -99,6 +100,7 @@ star		"*"
 {quiet}		{ return QUIET; }
 {testmode}	{ return TESTMODE; }
 {verbose}	{ return VERBOSE; }
+{dump_no_time_translation}	{ return DUMP_NO_TIME_TRANSLATION; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }

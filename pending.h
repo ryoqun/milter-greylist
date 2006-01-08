@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.32 2004/09/13 18:41:55 manu Exp $ */
+/* $Id: pending.h,v 1.33 2006/01/08 00:38:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -53,6 +53,10 @@
 #define TIMEOUT (3600 * 24 * 5) /* 432000 seconds = 5 days */
 #endif
 
+#ifndef PENDING_BUCKETS
+#define PENDING_BUCKETS 32768
+#endif
+
 #include "milter-greylist.h"
 
 #define PENDING_WRLOCK WRLOCK(pending_lock)
@@ -70,9 +74,16 @@ struct pending {
 	struct timeval p_tv;
 	int p_refcnt;
 	TAILQ_ENTRY(pending) p_list;
+	TAILQ_ENTRY(pending) pb_list;
+};
+
+struct pending_bucket {
+	pthread_mutex_t	bucket_mtx;
+	TAILQ_HEAD(, pending) b_pending_head;
 };
 
 extern pthread_rwlock_t pending_lock;
+extern pthread_mutex_t pending_change_lock;
 
 void pending_init(void);
 struct pending *pending_get(struct sockaddr *, socklen_t, char *, char *,

@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.41 2005/10/04 19:15:55 manu Exp $ */
+/* $Id: autowhite.c,v 1.42 2006/01/08 00:38:24 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.41 2005/10/04 19:15:55 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.42 2006/01/08 00:38:24 manu Exp $");
 #endif
 #endif
 
@@ -44,6 +44,7 @@ __RCSID("$Id: autowhite.c,v 1.41 2005/10/04 19:15:55 manu Exp $");
 #endif
 
 #include <stdlib.h>
+#include <ctype.h>
 #include <syslog.h>
 #include <errno.h>
 #include <sysexits.h>
@@ -65,20 +66,82 @@ __RCSID("$Id: autowhite.c,v 1.41 2005/10/04 19:15:55 manu Exp $");
 #include "sync.h"
 
 struct autowhitelist autowhite_head;
+struct autowhite_bucket *autowhite_buckets;
 pthread_rwlock_t autowhite_lock;
+pthread_mutex_t autowhite_change_lock;
 
 void
 autowhite_init(void) {
-	int error;
+	int error, i;
 
 	TAILQ_INIT(&autowhite_head);
-	if ((error = pthread_rwlock_init(&autowhite_lock, NULL)) != 0) {
+	if ((autowhite_buckets = calloc(AUTOWHITE_BUCKETS, 
+	    sizeof(struct autowhite_bucket))) == NULL) {
+		syslog(LOG_ERR, 
+		    "Unable to allocate autowhite list buckets: %s", 
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
+	
+	if ((error = pthread_rwlock_init(&autowhite_lock, NULL)) != 0 ||
+	    (error = pthread_mutex_init(&autowhite_change_lock, NULL)) != 0) {
 		syslog(LOG_ERR, "pthread_rwlock_init failed: %s",
 		    strerror(error));
 		    exit(EX_OSERR);
 	}	
 
+	for(i = 0; i < AUTOWHITE_BUCKETS; i++) {
+		TAILQ_INIT(&autowhite_buckets[i].b_autowhite_head);
+		
+		if ((error = 
+		    pthread_mutex_init(&autowhite_buckets[i].bucket_mtx, 
+		    NULL)) != 0) {
+			syslog(LOG_ERR, 
+			    "pthread_mutex_init failed: %s", strerror(error));
+			exit(EX_OSERR);
+		}
+		
+	}
+
 	return;
+}
+
+int
+autowhite_timeout(void)
+{
+	struct autowhite *aw;
+	struct autowhite *next_aw;
+	struct timeval now;
+	int dirty = 0;
+	
+	gettimeofday(&now, NULL);
+	
+	AUTOWHITE_WRLOCK;
+	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
+		next_aw = TAILQ_NEXT(aw, a_list);
+		
+		/*
+		 * Expiration
+		 */
+		if (aw->a_tv.tv_sec < now.tv_sec) {
+			char buf[IPADDRLEN + 1];
+
+			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
+			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+			    "autowhitelisted entry expired",
+			    buf, aw->a_from, aw->a_rcpt);
+
+			autowhite_put(aw);
+
+			dirty++;
+
+			continue;
+		}
+		break;
+	}
+	AUTOWHITE_UNLOCK;
+	
+	return dirty;
 }
 
 void
@@ -98,6 +161,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 	int h, mn, s;
 	int dirty = 0;
 	ipaddr *mask = NULL;
+	struct autowhite_bucket *b;
 
 	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
 		return;
@@ -124,12 +188,16 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 #endif
 	}
 
-	AUTOWHITE_WRLOCK;
-	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
-		next_aw = TAILQ_NEXT(aw, a_list);
+	dirty = autowhite_timeout();
+	
+	AUTOWHITE_RDLOCK;
+	b = &autowhite_buckets[BUCKET_HASH(sa, from, rcpt, AUTOWHITE_BUCKETS)];
+	pthread_mutex_lock(&b->bucket_mtx);
+	for (aw = TAILQ_FIRST(&b->b_autowhite_head); aw; aw = next_aw) {
+		next_aw = TAILQ_NEXT(aw, ab_list);
 
 		/*
-		 * Expiration
+		 * Expiration (left this one in too until the list gets sorted)
 		 */
 		if (aw->a_tv.tv_sec < now.tv_sec) {
 			char buf[IPADDRLEN + 1];
@@ -155,6 +223,12 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 		    (strcasecmp(rcpt, aw->a_rcpt) == 0)))) {
 			timeradd(&now, &delay, &aw->a_tv);
 
+			/* Push it at the back of the big queue */
+			pthread_mutex_lock(&autowhite_change_lock);
+			TAILQ_REMOVE(&autowhite_head, aw, a_list);
+			TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
+			pthread_mutex_unlock(&autowhite_change_lock);
+
 			dirty++;
 
 			syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
@@ -176,6 +250,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 		    "autowhitelisted for %02d:%02d:%02d", 
 		    queueid, addr, from, rcpt, h, mn, s);
 	}
+	pthread_mutex_unlock(&b->bucket_mtx);
 	AUTOWHITE_UNLOCK;
 
 	if (dirty != 0)
@@ -201,6 +276,7 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 	int h, mn, s;
 	int dirty = 0;
 	ipaddr *mask = NULL;
+	struct autowhite_bucket *b;
 
 	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
 		return EXF_NONE;
@@ -227,13 +303,19 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 #endif
 	}
 
-	AUTOWHITE_WRLOCK;
-	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
-		next_aw = TAILQ_NEXT(aw, a_list);
+	dirty = autowhite_timeout();
+	
+	AUTOWHITE_RDLOCK;
+	b = &autowhite_buckets[BUCKET_HASH(sa, from, rcpt, AUTOWHITE_BUCKETS)];
+	pthread_mutex_lock(&b->bucket_mtx);
+	for (aw = TAILQ_FIRST(&b->b_autowhite_head); aw; aw = next_aw) {
+		next_aw = TAILQ_NEXT(aw, ab_list);
 
 		/*
 		 * Do expiration first as we don't want
 		 * an outdated record to match
+		 * I've left this one too until the lists
+		 * gets sorted
 		 */
 		if (aw->a_tv.tv_sec < now.tv_sec) {
 			char buf[IPADDRSTRLEN];
@@ -260,11 +342,18 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 		    (strcasecmp(rcpt, aw->a_rcpt) == 0)))) {
 			timeradd(&now, &delay, &aw->a_tv);
 
+			/* Push it at the back of the big queue */
+			pthread_mutex_lock(&autowhite_change_lock);
+			TAILQ_REMOVE(&autowhite_head, aw, a_list);
+			TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
+			pthread_mutex_unlock(&autowhite_change_lock);
+
 			dirty++;
 
 			break;
 		}
 	}
+	pthread_mutex_unlock(&b->bucket_mtx);
 	AUTOWHITE_UNLOCK;
 
 	if (dirty != 0)
@@ -306,19 +395,28 @@ autowhite_textdump(stream)
 	    "Sender e-mail", "Recipient e-mail");
 
 	AUTOWHITE_RDLOCK;
+	pthread_mutex_lock(&autowhite_change_lock);
 	TAILQ_FOREACH(aw, &autowhite_head, a_list) {
-		localtime_r((time_t *)&aw->a_tv.tv_sec, &tm);
-		strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
-
 		iptostring(aw->a_sa, aw->a_salen, textaddr, sizeof(textaddr));
-
-		fprintf(stream, 
-		    "%s\t%s\t%s\t%ld AUTO # %s\n",
-		    textaddr, aw->a_from, aw->a_rcpt, 
-		    (long)aw->a_tv.tv_sec, textdate);
+	
+		if (conf.c_dump_no_time_translation) {
+			fprintf(stream, 
+			    "%s\t%s\t%s\t%ld AUTO\n",
+			    textaddr, aw->a_from, aw->a_rcpt, 
+			    (long)aw->a_tv.tv_sec);
+		} else {
+			localtime_r((time_t *)&aw->a_tv.tv_sec, &tm);
+			strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
+	
+			fprintf(stream, 
+			    "%s\t%s\t%s\t%ld AUTO # %s\n",
+			    textaddr, aw->a_from, aw->a_rcpt, 
+			    (long)aw->a_tv.tv_sec, textdate);
+		}
 
 		done++;
 	}
+	pthread_mutex_unlock(&autowhite_change_lock);
 	AUTOWHITE_UNLOCK;
 
 	return done;
@@ -362,7 +460,11 @@ autowhite_get(sa, salen, from, rcpt, date) /* autowhite list must be locked */
 	else
 		aw->a_tv.tv_sec = *date;
 
+	pthread_mutex_lock(&autowhite_change_lock);
 	TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
+	TAILQ_INSERT_TAIL(&autowhite_buckets[BUCKET_HASH(aw->a_sa, 
+	    from, rcpt, AUTOWHITE_BUCKETS)].b_autowhite_head, aw, ab_list);
+	pthread_mutex_unlock(&autowhite_change_lock);
 
 	return aw;
 }
@@ -371,7 +473,12 @@ void
 autowhite_put(aw)	/* autowhite list must be write-locked */
 	struct autowhite *aw;
 {
+	pthread_mutex_lock(&autowhite_change_lock);
 	TAILQ_REMOVE(&autowhite_head, aw, a_list);	
+	TAILQ_REMOVE(&autowhite_buckets[BUCKET_HASH(aw->a_sa, 
+	    aw->a_from, aw->a_rcpt, AUTOWHITE_BUCKETS)].b_autowhite_head, 
+	    aw, ab_list);
+	pthread_mutex_unlock(&autowhite_change_lock);
 	free(aw->a_sa);
 	free(aw->a_from);
 	free(aw->a_rcpt);

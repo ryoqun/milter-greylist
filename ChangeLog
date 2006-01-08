@@ -1,4 +1,9 @@
-2.0.3:
+2.1.1
+	Bucketed in-memory databases for better concurency (Ranko Zivojnovic)
+	Large buffer for writing the dump file (Ranko Zivojnovic) 
+	Option to disable human-readable date in dumps (Ranko Zivojnovic)
+	Check for MXsync sends (Ranko Zivojnovic) 
+	Better handle non fatal I/O errors in MXsync (Ranko Zivojnovic)
 	Fix ACCESSDB whitelist with multiple recipients (Alexander Lobodzinski)
 	DRAC support (Romain Kang)
 	Log hostname as well as IP in ACL debug (Alexey Popov)

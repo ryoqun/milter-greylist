@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.67 2005/05/11 16:25:43 manu Exp $ */
+/* $Id: pending.c,v 1.68 2006/01/08 00:38:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.67 2005/05/11 16:25:43 manu Exp $");
+__RCSID("$Id: pending.c,v 1.68 2006/01/08 00:38:25 manu Exp $");
 #endif
 #endif
 
@@ -46,6 +46,7 @@ __RCSID("$Id: pending.c,v 1.67 2005/05/11 16:25:43 manu Exp $");
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <string.h>
 #include <strings.h>
 #include <pthread.h>
@@ -70,7 +71,9 @@ __RCSID("$Id: pending.c,v 1.67 2005/05/11 16:25:43 manu Exp $");
 #include "milter-greylist.h"
 
 struct pendinglist pending_head;
+struct pending_bucket *pending_buckets;
 pthread_rwlock_t pending_lock; 	/* protects pending_head and dump_dirty */
+pthread_mutex_t pending_change_lock;
 /*
  * protects pending->p_refcnt
  * since we hold many pending entries, requied memory for the lock
@@ -82,21 +85,43 @@ static pthread_rwlock_t refcnt_lock;
 void
 pending_init(void) {
 	int error;
+	int i;
 
 	TAILQ_INIT(&pending_head);
+	if ((pending_buckets = calloc(PENDING_BUCKETS, 
+	    sizeof(struct pending_bucket))) == NULL) {
+		syslog(LOG_ERR, 
+		    "Unable to allocate pending list buckets: %s", 
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
+	
 	if ((error = pthread_rwlock_init(&pending_lock, NULL)) != 0 ||
-	    (error = pthread_rwlock_init(&refcnt_lock, NULL)) != 0) {
+	    (error = pthread_rwlock_init(&refcnt_lock, NULL)) != 0 ||
+	    (error = pthread_mutex_init(&pending_change_lock, NULL)) != 0) {
 		syslog(LOG_ERR, 
 		    "pthread_rwlock_init failed: %s", strerror(error));
 		exit(EX_OSERR);
+	}
+	
+	for(i = 0; i < PENDING_BUCKETS; i++) {
+		TAILQ_INIT(&pending_buckets[i].b_pending_head);
+		
+		if ((error = pthread_mutex_init(&pending_buckets[i].bucket_mtx,
+		    NULL)) != 0) {
+			syslog(LOG_ERR, 
+			    "pthread_mutex_init failed: %s", strerror(error));
+			exit(EX_OSERR);
+		}
+		
 	}
 
 	return;
 }
 
-
+/* pending_lock must be write-locked & bucket must be locked */
 struct pending *
-pending_get(sa, salen, from, rcpt, date)  /* pending_lock must be write-locked */
+pending_get(sa, salen, from, rcpt, date)  
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *from;
@@ -152,7 +177,10 @@ pending_get(sa, salen, from, rcpt, date)  /* pending_lock must be write-locked *
 
 	pending->p_refcnt = 1;
 
+	pthread_mutex_lock(&pending_change_lock);
 	TAILQ_INSERT_TAIL(&pending_head, pending, p_list); 
+	TAILQ_INSERT_TAIL(&pending_buckets[BUCKET_HASH(pending->p_sa, 
+	    from, rcpt, PENDING_BUCKETS)].b_pending_head, pending, pb_list); 
 
 	dump_dirty++;
 
@@ -163,12 +191,14 @@ pending_get(sa, salen, from, rcpt, date)  /* pending_lock must be write-locked *
 		    pending->p_addr, pending->p_from, pending->p_rcpt, 
 		    pending->p_tv.tv_sec - tv.tv_sec);
 	}
+	pthread_mutex_unlock(&pending_change_lock);
 out:
 	return pending;
 }
 
+/* pending list should be write-locked & bucket must be locked */
 void
-pending_put(pending) /* pending list should be write-locked */
+pending_put(pending) 
 	struct pending *pending;
 {
 	if (conf.c_debug) {
@@ -176,12 +206,52 @@ pending_put(pending) /* pending list should be write-locked */
 		    pending->p_addr, pending->p_from, pending->p_rcpt);
 	}
 
+	pthread_mutex_lock(&pending_change_lock);
 	TAILQ_REMOVE(&pending_head, pending, p_list);	
+	TAILQ_REMOVE(&pending_buckets[BUCKET_HASH(pending->p_sa, 
+	    pending->p_from, pending->p_rcpt, PENDING_BUCKETS)].b_pending_head,
+	    pending, pb_list); 
+	
 	pending_free(pending);
 
 	dump_dirty++;
+	pthread_mutex_unlock(&pending_change_lock);
 
 	return;
+}
+
+int
+pending_timeout(void)
+{
+	struct pending *pending;
+	struct pending *next;
+	struct timeval now;
+	int dirty = 0;
+	
+	gettimeofday(&now, NULL);
+	
+	PENDING_WRLOCK;
+	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
+		next = TAILQ_NEXT(pending, p_list);
+		/*
+		 * Check for expired entries
+		 */
+		if (now.tv_sec - pending->p_tv.tv_sec > conf.c_timeout) {
+			if (conf.c_debug) {
+				syslog(LOG_DEBUG,
+				    "del: %s from %s to %s timed out",
+				    pending->p_addr, pending->p_from,
+				    pending->p_rcpt);
+			}
+			dirty = 1;
+			pending_put(pending);
+			continue;
+		}
+		break; /* The rest of the entries are OK */
+	}
+	PENDING_UNLOCK;
+
+	return dirty;
 }
 
 void
@@ -196,14 +266,18 @@ pending_del(sa, salen, from, rcpt, time)
 	struct pending *pending;
 	struct pending *next;
 	struct timeval tv;
+	struct pending_bucket *b;
 
 	gettimeofday(&tv, NULL);
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return;
 
-	PENDING_WRLOCK;	/* XXX take it as read and upgrade it */
-	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
-		next = TAILQ_NEXT(pending, p_list);
+	PENDING_RDLOCK;
+	b = &pending_buckets[BUCKET_HASH(sa, from, rcpt, PENDING_BUCKETS)];
+	pthread_mutex_lock(&b->bucket_mtx);
+	for (pending = TAILQ_FIRST(&b->b_pending_head); 
+	    pending; pending = next) {
+		next = TAILQ_NEXT(pending, pb_list);
 
 		/*
 		 * Look for our entry.
@@ -216,22 +290,12 @@ pending_del(sa, salen, from, rcpt, time)
 			break;
 		}
 
-		/*
-		 * Check for expired entries
-		 */
-		if (tv.tv_sec - pending->p_tv.tv_sec > conf.c_timeout) {
-			if (conf.c_debug) {
-				syslog(LOG_DEBUG,
-				    "del: %s from %s to %s timed out",
-				    pending->p_addr, pending->p_from,
-				    pending->p_rcpt);
-			}
-
-			pending_put(pending);
-			continue;
-		}
 	}
+	pthread_mutex_unlock(&b->bucket_mtx);
 	PENDING_UNLOCK;
+	
+	pending_timeout();
+	
 	return;
 }
 
@@ -253,36 +317,26 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
 	time_t accepted = -1;
 	int dirty = 0;
 	int delay = conf.c_delay;
+	struct pending_bucket *b;
 	ipaddr *mask = NULL;
 
 	now = time(NULL);
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return 1;
 
-	PENDING_WRLOCK;	/* XXX take a read lock and upgrade */
-	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
-		next = TAILQ_NEXT(pending, p_list);
+	dirty = pending_timeout();
+	
+	PENDING_RDLOCK;
+	b = &pending_buckets[BUCKET_HASH(sa, from, rcpt, PENDING_BUCKETS)];
+	pthread_mutex_lock(&b->bucket_mtx);
+	for (pending = TAILQ_FIRST(&b->b_pending_head); 
+	    pending; pending = next) {
+		next = TAILQ_NEXT(pending, pb_list);
 
 		/*
 		 * The time the entry shall be accepted
 		 */
 		accepted = pending->p_tv.tv_sec;
-
-		/*
-		 * Check for expired entries
-		 */
-		if (now - accepted > conf.c_timeout) {
-			if (conf.c_debug) {
-				syslog(LOG_DEBUG,
-				    "check: %s from %s to %s timed out",
-				    pending->p_addr, pending->p_from,
-				    pending->p_rcpt);
-			}
-
-			pending_put(pending);
-			dirty = 1;
-			continue;
-		}
 
 		/*
 		 * Look for our entry.
@@ -325,6 +379,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
 	dirty = 1;
 
 out:
+	pthread_mutex_unlock(&b->bucket_mtx);
 	PENDING_UNLOCK;
 
 	if (remaining != NULL)
@@ -356,16 +411,25 @@ pending_textdump(stream)
 	    "Sender e-mail", "Recipient e-mail");
 
 	PENDING_RDLOCK;
+	pthread_mutex_lock(&pending_change_lock);
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
-		localtime_r((time_t *)&pending->p_tv.tv_sec, &tm);
-		strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
-
-		fprintf(stream, "%s\t%s\t%s\t%ld # %s\n", 
-		    pending->p_addr, pending->p_from, 
-		    pending->p_rcpt, (long)pending->p_tv.tv_sec, textdate);
+		if (conf.c_dump_no_time_translation) {
+			fprintf(stream, "%s\t%s\t%s\t%ld\n", 
+			    pending->p_addr, pending->p_from, 
+			    pending->p_rcpt, (long)pending->p_tv.tv_sec);
+		} else {
+			localtime_r((time_t *)&pending->p_tv.tv_sec, &tm);
+			strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
+		
+			fprintf(stream, "%s\t%s\t%s\t%ld # %s\n", 
+			    pending->p_addr, pending->p_from, 
+			    pending->p_rcpt, 
+			    (long)pending->p_tv.tv_sec, textdate);
+		}
 		
 		done++;
 	}
+	pthread_mutex_unlock(&pending_change_lock);
 	PENDING_UNLOCK;
 
 	return done;

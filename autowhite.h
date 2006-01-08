@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.16 2004/09/13 18:41:54 manu Exp $ */
+/* $Id: autowhite.h,v 1.17 2006/01/08 00:38:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -38,6 +38,10 @@
 #define AUTOWHITE_VALIDITY (24 * 3600) /* 1 day */
 #endif
 
+#ifndef AUTOWHITE_BUCKETS
+#define AUTOWHITE_BUCKETS 512
+#endif
+
 #define AUTOWHITE_WRLOCK WRLOCK(autowhite_lock) 
 #define AUTOWHITE_RDLOCK RDLOCK(autowhite_lock) 
 #define AUTOWHITE_UNLOCK UNLOCK(autowhite_lock)
@@ -51,9 +55,16 @@ struct autowhite {
 	char *a_rcpt;
 	struct timeval a_tv;
 	TAILQ_ENTRY(autowhite) a_list;
+	TAILQ_ENTRY(autowhite) ab_list;
+};
+
+struct autowhite_bucket {
+	pthread_mutex_t	bucket_mtx;
+	TAILQ_HEAD(, autowhite) b_autowhite_head;
 };
 
 extern pthread_rwlock_t autowhite_lock;
+extern pthread_mutex_t autowhite_change_lock;
 
 void autowhite_init(void);
 struct autowhite *autowhite_get(struct sockaddr *, socklen_t, char *, char *,

@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.56 2005/10/20 07:24:53 manu Exp $ */
+/* $Id: sync.c,v 1.57 2006/01/08 00:38:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.56 2005/10/20 07:24:53 manu Exp $");
+__RCSID("$Id: sync.c,v 1.57 2006/01/08 00:38:25 manu Exp $");
 #endif
 #endif
 
@@ -237,25 +237,53 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 	int replycode;
 	char line[LINELEN + 1];
 	char *cookie = NULL;
+	char *keyw;
 
 	if ((peer->p_stream == NULL) && (peer_connect(peer) != 0))
 		return -1;
 
+	*line = '\0';
 	if (type == PS_CREATE)
-		fprintf(peer->p_stream, "add ");
+		keyw = "add";
 	else
-		fprintf(peer->p_stream, "del ");
+		keyw = "del";
 
-	fprintf(peer->p_stream, "addr %s from %s rcpt %s date %ld\r\n", 
-	    pending->p_addr, pending->p_from, 
-	    pending->p_rcpt, (long)pending->p_tv.tv_sec);
+	{
+		int bw;
+		bw = snprintf(line, LINELEN, "%s addr %s from %s "
+		    "rcpt %s date %ld\r\n", keyw, pending->p_addr, 
+			pending->p_from, pending->p_rcpt, 
+			(long)pending->p_tv.tv_sec);
+		if (bw > LINELEN) {
+			syslog(LOG_ERR, "closing connexion with peer %s: "
+			    "send buffer would overflow (%d entries queued)", 
+			    peer->p_name, peer->p_qlen);
+			fclose(peer->p_stream);
+			peer->p_stream = NULL;
+			return -1;
+		}
+		bw = fprintf(peer->p_stream, "%s", line);
+		if (bw != strlen(line)) {
+			syslog(LOG_ERR, "closing connexion with peer %s: "
+			    "%s (%d entries queued) - I was unable to send "
+			    "complete line \"%s\" - bytes written: %i", 
+			    peer->p_name, strerror(errno), peer->p_qlen, 
+			    line, bw);
+			fclose(peer->p_stream);
+			peer->p_stream = NULL;
+			return -1;
+		}
+	}
 	fflush(peer->p_stream);
 
 	/* 
 	 * Check the return code 
 	 */
+	get_more:
 	sync_waitdata(peer->p_socket);
 	if (fgets(line, LINELEN, peer->p_stream) == NULL) {
+		if (errno == EAGAIN) 
+			goto get_more;
 		syslog(LOG_ERR, "lost connexion with peer %s: "
 		    "%s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);

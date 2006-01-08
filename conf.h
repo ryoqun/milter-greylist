@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.32 2005/11/30 23:32:12 manu Exp $ */
+/* $Id: conf.h,v 1.33 2006/01/08 00:38:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -91,6 +91,7 @@ struct conf {
 	int c_extendedregex;
 	char *c_dracdb;
 	int c_nodrac;
+	int c_dump_no_time_translation;
 };
 
 /* c_forced flags */
