@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.115 2006/01/08 00:04:37 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.116 2006/01/08 08:49:04 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.115 2006/01/08 00:04:37 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.116 2006/01/08 08:49:04 manu Exp $");
 #endif
 #endif
 
@@ -167,7 +167,7 @@ mlfi_helo(ctx, helostr)
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
-     defined(HAVE_SPF2) || defined(HAVE_SPF2)) 
+     defined(HAVE_SPF2_10) || defined(HAVE_SPF2)) 
 	strncpy_rmsp(priv->priv_helo, helostr, ADDRLEN);
 	priv->priv_helo[ADDRLEN] = '\0';
 #endif

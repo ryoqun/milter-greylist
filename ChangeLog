@@ -1,3 +1,5 @@
+2.1.2
+	Missing SPF 2 bit (Hajimu UMEMOTO)
 2.1.1
 	Bucketed in-memory databases for better concurency (Ranko Zivojnovic)
 	Large buffer for writing the dump file (Ranko Zivojnovic) 
