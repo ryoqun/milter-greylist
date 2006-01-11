@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.57 2006/01/08 00:38:25 manu Exp $ */
+/* $Id: sync.c,v 1.58 2006/01/11 06:40:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.57 2006/01/08 00:38:25 manu Exp $");
+__RCSID("$Id: sync.c,v 1.58 2006/01/11 06:40:39 manu Exp $");
 #endif
 #endif
 
@@ -396,7 +396,11 @@ peer_connect(peer)	/* peer list is read-locked */
 		switch (res->ai_family) {
 		case AF_INET:
 			SA4(res->ai_addr)->sin_port = service;
-			laddrstr = "0.0.0.0";
+			if (conf.c_syncsrcaddr != NULL) {
+				laddrstr = conf.c_syncsrcaddr;
+			} else {
+				laddrstr = "0.0.0.0";
+				}
 			break;
 #ifdef AF_INET6
 		case AF_INET6:
@@ -442,7 +446,11 @@ peer_connect(peer)	/* peer list is read-locked */
 	switch (SA(&raddr)->sa_family) {
 	case AF_INET:
 		SA4(&raddr)->sin_port = service;
-		laddrstr = "0.0.0.0";
+		if (conf.c_syncsrcaddr != NULL) {
+			laddrstr = conf.c_syncsrcaddr;
+		} else {
+			laddrstr = "0.0.0.0";
+			}
 		break;
 #ifdef AF_INET6
 	case AF_INET6:

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.31 2006/01/08 00:38:25 manu Exp $
+.\" $Id: greylist.conf.5,v 1.32 2006/01/11 06:40:39 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -218,6 +218,12 @@ keyword. Here are a few examples:
 Using '*' as the address means to bind to all local interfaces' addresses.
 Note that if you are not using the default port, all MXs must use the same 
 port number. 
+.PP
+For outbound connections the system is selecting one of the possible adresses.
+If you want to use a specific ip you can use:
+.PP
+  syncsrcaddr 123.456.78.9
+.PP
 .SH TEXT DUMP
 .B milter-greylist(8)
 uses a text dump of its database to resume operation after a crash. The dump
@@ -481,6 +487,7 @@ Dan Hollis,
 Per Holm,
 Romain Kang,
 Matt Kettler,
+Guido Kerkewitz,
 Petr Kristof,
 Stephane Lentz,
 Ivan F. Martinez,
@@ -489,6 +496,7 @@ Fredrik Pettai,
 Christian Pelissier,
 Alexey Popov,
 Matthias Scheler,
+Thomas Scheunemann,
 Wolfgang Solfrank,
 Hajimu Umemoto,
 and

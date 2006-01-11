@@ -48,6 +48,7 @@ dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
 timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
 domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 syncaddr	[Ss][Yy][Nn][Cc][Aa][Dd][Dd][Rr]:?
+syncsrcaddr	[Ss][Yy][Nn][Cc][Ss][Rr][Cc][Aa][Dd][Dd][Rr]:?
 port		[Pp][Oo][Rr][Tt]
 acl		[Aa][Cc][Ll]
 whitelist	[Ww][Hh][Ii][Tt][Ee][Ll][Ii][Ss][Tt]:?
@@ -68,7 +69,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.39 2006/01/08 00:38:25 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.40 2006/01/11 06:40:39 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -117,6 +118,7 @@ star		"*"
 {timeout}	{ return GLTIMEOUT; }
 {domain}	{ BEGIN(S_REGEX); return DOMAIN; }
 {syncaddr}	{ return SYNCADDR; }
+{syncsrcaddr}	{ return SYNCSRCADDR; }
 {port}		{ return PORT; }
 {acl}		{ return ACL; }
 {whitelist}	{ return WHITELIST; }

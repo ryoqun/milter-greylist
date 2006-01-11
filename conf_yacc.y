@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DUMP_NO_TIME_TRANSLATION DRAC NODRAC DB
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.39 2006/01/08 00:38:25 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.40 2006/01/11 06:40:39 manu Exp $");
 #endif
 #endif
 
@@ -85,6 +85,7 @@ lines	:	lines netblock '\n'
 	|	lines dumpfreq '\n'
 	|	lines timeout '\n'
 	|       lines syncaddr '\n'
+	|       lines syncsrcaddr '\n'
 	|	lines access_list '\n'
 	|	lines dracdb '\n'
 	|	lines nodrac '\n'
@@ -341,6 +342,68 @@ syncaddr:	SYNCADDR STAR	{
 				conf.c_syncport = c_syncport;
 				strncpy(conf.c_syncport, $4, NUMLEN);
 				conf.c_syncport[NUMLEN] = '\0';
+#else /* AF_INET6 */
+				printf("IPv6 is not supported, "
+				    "ignore line %d\n", conf_line);
+#endif /* AF_INET6 */
+				}
+	;
+
+syncsrcaddr:	SYNCSRCADDR STAR	{
+				   conf.c_syncsrcaddr = NULL;
+				   conf.c_syncsrcport = NULL;
+				}
+	|	SYNCSRCADDR IPADDR	{
+				if (IP4TOSTRING($2, c_syncsrcaddr) == NULL) {
+					printf("invalid IPv4 address "
+					    "line %d\n", conf_line);
+					exit(EX_DATAERR);
+				}
+				conf.c_syncsrcaddr = c_syncsrcaddr;
+				conf.c_syncsrcport = NULL;
+	                        }
+	|	SYNCSRCADDR IP6ADDR {
+#ifdef AF_INET6
+				if (IP6TOSTRING($2, c_syncsrcaddr) == NULL) {
+					printf("invalid IPv6 address "
+					    "line %d\n", conf_line);
+					exit(EX_DATAERR);
+				}
+				conf.c_syncsrcaddr = c_syncsrcaddr;
+				conf.c_syncsrcport = NULL;
+#else /* AF_INET6 */
+				printf("IPv6 is not supported, "
+				    "ignore line %d\n", conf_line);
+#endif /* AF_INET6 */
+				}
+	|	SYNCSRCADDR STAR PORT TNUMBER {
+				conf.c_syncsrcaddr = NULL;
+				conf.c_syncsrcport = c_syncsrcport;
+				strncpy(conf.c_syncsrcport, $4, NUMLEN);
+				conf.c_syncsrcport[NUMLEN] = '\0';
+				}
+	|	SYNCSRCADDR IPADDR PORT TNUMBER {
+				if (IP4TOSTRING($2, c_syncsrcaddr) == NULL) {
+					printf("invalid IPv4 address "
+					    "line %d\n", conf_line);
+					exit(EX_DATAERR);
+				}
+				conf.c_syncsrcaddr = c_syncsrcaddr;
+				conf.c_syncsrcport = c_syncsrcport;
+				strncpy(conf.c_syncsrcport, $4, NUMLEN);
+				conf.c_syncsrcport[NUMLEN] = '\0';
+				}
+	|	SYNCSRCADDR IP6ADDR PORT TNUMBER {
+#ifdef AF_INET6
+				if (IP6TOSTRING($2, c_syncsrcaddr) == NULL) {
+					printf("invalid IPv6 address "
+					    "line %d\n", conf_line);
+					exit(EX_DATAERR);
+				}
+				conf.c_syncsrcaddr = c_syncsrcaddr;
+				conf.c_syncsrcport = c_syncsrcport;
+				strncpy(conf.c_syncsrcport, $4, NUMLEN);
+				conf.c_syncsrcport[NUMLEN] = '\0';
 #else /* AF_INET6 */
 				printf("IPv6 is not supported, "
 				    "ignore line %d\n", conf_line);
