@@ -1,3 +1,5 @@
+2.1.3
+	Build fix for IPv6 (Ranko Zivojnovic)
 2.1.2
 	Missing SPF 2 bit (Hajimu UMEMOTO)
 	Selectable MX sync source address (Guido Kerkewitz)
