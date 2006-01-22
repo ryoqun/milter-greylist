@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.163 2006/01/08 08:50:29 manu Exp $
+# $Id: configure.ac,v 1.164 2006/01/22 17:17:02 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -491,6 +491,15 @@ AC_CHECK_MEMBER([struct sockaddr.sa_len],
 	[AC_DEFINE([HAVE_SA_LEN], [], [sa_len field in struct sockaddr])],, [
 		#include <sys/types.h>
 		#include <sys/socket.h>
+	])
+
+# Pre-RFC2553 system does not have a sin6_scope_id field in sockaddr_in6
+AC_CHECK_MEMBER([struct sockaddr_in6.sin6_scope_id],
+	[AC_DEFINE([HAVE_SIN6_SCOPE_ID], [1],
+	    [sin6_scope_id field in struct sockaddr_in6])],, [
+		#include <sys/types.h>
+		#include <sys/socket.h>
+		#include <netinet/in.h>
 	])
 
 # Darwin seems to have no definition for socklen_t beyond _BSD_SOCKLEN_T_

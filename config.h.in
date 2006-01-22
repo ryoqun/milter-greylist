@@ -72,6 +72,9 @@
 /* Define to 1 if you have the `select' function. */
 #undef HAVE_SELECT
 
+/* sin6_scope_id field in struct sockaddr_in6 */
+#undef HAVE_SIN6_SCOPE_ID
+
 /* Define to 1 if you have the `socket' function. */
 #undef HAVE_SOCKET
 

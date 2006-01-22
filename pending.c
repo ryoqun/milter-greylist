@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.68 2006/01/08 00:38:25 manu Exp $ */
+/* $Id: pending.c,v 1.69 2006/01/22 17:17:02 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.68 2006/01/08 00:38:25 manu Exp $");
+__RCSID("$Id: pending.c,v 1.69 2006/01/22 17:17:02 manu Exp $");
 #endif
 #endif
 
@@ -483,7 +483,7 @@ ip_match(sa, pat, mask)
 		break;
 #ifdef AF_INET6
 	case AF_INET6:
-#ifdef HAVE_GETADDRINFO
+#if defined(HAVE_SIN6_SCOPE_ID) && defined(HAVE_GETADDRINFO)
 		if (SA6(pat)->sin6_scope_id != 0 &&
 		    SA6(sa)->sin6_scope_id != SA6(pat)->sin6_scope_id)
 			return 0;
@@ -517,7 +517,7 @@ ip_equal(sa, pat)
 		break;
 #ifdef AF_INET6
 	case AF_INET6:
-#ifdef HAVE_GETADDRINFO
+#if defined(HAVE_SIN6_SCOPE_ID) && defined(HAVE_GETADDRINFO)
 		if (SA6(pat)->sin6_scope_id != 0 &&
 		    SA6(sa)->sin6_scope_id != SA6(pat)->sin6_scope_id)
 			return 0;
