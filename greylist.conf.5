@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.32 2006/01/11 06:40:39 manu Exp $
+.\" $Id: greylist.conf.5,v 1.33 2006/02/17 19:46:13 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -450,6 +450,14 @@ was compiled in. Here is an example:
 .TP
 .I nodrac
 Disable DRAC.
+.TP
+.I logexpired
+This option causes greylist entries that expire to be logged via syslog.
+This allows you to easily collect the IP addresses and sender names and
+use them for blacklisting, SPAM scoring, etc.  Normally, expirations are
+only logged if the
+.B debug
+option is set, but that generates a lot of extra messages.
 .PP
 The configuration file is reloaded automatically once it is modified when
 new e-mail arrives. Most configuration keywords will take effect
