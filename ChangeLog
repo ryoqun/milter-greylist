@@ -1,5 +1,6 @@
 2.1.4
 	Option to log expired entries (Jeff Rife)
+	Cosmetic changes in debug logs (Fredrik Pettai)
 2.1.3
 	Build fix for IPv6 (Ranko Zivojnovic)
 	Build on systems without IPv6 scope ID (Hajimu UMEMOTO)

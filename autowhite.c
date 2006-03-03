@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.42 2006/01/08 00:38:24 manu Exp $ */
+/* $Id: autowhite.c,v 1.43 2006/03/03 21:54:31 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.42 2006/01/08 00:38:24 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.43 2006/03/03 21:54:31 manu Exp $");
 #endif
 #endif
 
@@ -127,7 +127,7 @@ autowhite_timeout(void)
 			char buf[IPADDRLEN + 1];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
-			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+			syslog(LOG_INFO, "(local) addr %s from %s rcpt %s: "
 			    "autowhitelisted entry expired",
 			    buf, aw->a_from, aw->a_rcpt);
 
@@ -203,7 +203,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 			char buf[IPADDRLEN + 1];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
-			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+			syslog(LOG_INFO, "(local) addr %s from %s rcpt %s: "
 			    "autowhitelisted entry expired",
 			    buf, aw->a_from, aw->a_rcpt);
 
@@ -321,7 +321,7 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 			char buf[IPADDRSTRLEN];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
-			syslog(LOG_INFO, "addr %s from %s rcpt %s: "
+			syslog(LOG_INFO, "(local) addr %s from %s rcpt %s: "
 			    "autowhitelisted entry expired",
 			    buf, aw->a_from, aw->a_rcpt);
 
