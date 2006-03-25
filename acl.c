@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.11 2006/03/03 21:54:31 manu Exp $ */
+/* $Id: acl.c,v 1.12 2006/03/25 08:03:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.11 2006/03/03 21:54:31 manu Exp $");
+__RCSID("$Id: acl.c,v 1.12 2006/03/25 08:03:38 manu Exp $");
 #endif
 #endif
 
@@ -429,22 +429,17 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 	char whystr[HDRLEN];
 	char tmpstr[HDRLEN];
 	int retval;
-	int match;
 	int testmode = conf.c_testmode;
 
 	ACL_RDLOCK;
 
-	match = 0;
-	retval = 0;
 	TAILQ_FOREACH(acl, &acl_head, a_list) {
-		match = 1;
 		retval = 0;
 
 		if (acl->a_addr != NULL) {
 			if (ip_match(sa, acl->a_addr, acl->a_mask))
 				retval |= EXF_ADDR;
 			else  {
-				match = 0;
 				continue;
 			}
 		}
@@ -452,7 +447,6 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 			if (domaincmp(hostname, acl->a_domain))
 				retval |= EXF_DOMAIN;
 			else {
-				match = 0;
 				continue;
 			}
 		}
@@ -461,7 +455,6 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 			    hostname, 0, NULL, 0) == 0)
 				retval |= EXF_DOMAIN;
 			else {
-				match = 0;
 				continue;
 			}
 		}
@@ -469,7 +462,6 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 			if (emailcmp(from, acl->a_from) == 0) {
 				retval |= EXF_FROM;
 			} else {
-				match = 0;
 				continue;
 			}
 		}
@@ -477,7 +469,6 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 			if (regexec(acl->a_from_re, from, 0, NULL, 0) == 0) {
 				retval |= EXF_FROM;
 			} else {
-				match = 0;
 				continue;
 			}
 		}
@@ -485,7 +476,6 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 			if (emailcmp(rcpt, acl->a_rcpt) == 0) {
 				retval |= EXF_RCPT;
 			} else {
-				match = 0;
 				continue;
 			}
 		}
@@ -493,7 +483,6 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 			if (regexec(acl->a_rcpt_re, rcpt, 0, NULL, 0) == 0) {
 				retval |= EXF_RCPT;
 			} else {
-				match = 0;
 				continue;
 			}
 		}
@@ -504,7 +493,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 		break;
 	}
 
-	if (match == 1) {
+	if (acl) {
 		if (retval == 0)
 			retval = EXF_DEFAULT;
 		switch (acl->a_type) {
