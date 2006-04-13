@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.39 2006/01/22 17:15:32 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.40 2006/04/13 17:32:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -80,27 +80,51 @@ typedef union {
 #endif
 
 /* Notes:
- * -For IPv6 not using s6_addr32 as Solaris 8 for some reason has it only defined for its kernel... 
- * -Using also first two characters in "from" and "rcpt" to distribute potentially lot of triplets
- *  coming from a single host (first two chars only because "<>" is the "shortest" email address)
+ * -For IPv6 not using s6_addr32 as Solaris 8 for some reason has it only 
+ *  defined for its kernel... 
+ * -Using also first two characters in "from" and "rcpt" to distribute 
+ *  potentially lot of triplets coming from a single host (first two chars 
+ *  only because "<>" is the "shortest" email address)
  */
 #define F2B(s) (tolower((int)*(s)) | (tolower((int)*((s)+1)) << 8))
-#ifdef AF_INET6
-#define BUCKET_HASH(sa, from, rcpt, bucket_count)	\
-	(sa->sa_family == AF_INET ? \
-	  ((ntohl(SADDR4(sa)->s_addr) ^ F2B(from) ^ F2B(rcpt)) \
-	    % bucket_count) \
-	: sa->sa_family == AF_INET6 ? \
-	  (((uint32_t)(SADDR6(sa)->s6_addr)[3] ^ F2B(from) ^ F2B(rcpt)) \
-	    % bucket_count) \
-	: 0)
+#define F2B_SPICE(from, rcpt) (conf.c_lazyaw ? 0 : (F2B(from) ^ F2B(rcpt)))
 
-#else
-#define BUCKET_HASH(sa, from, rcpt, bucket_count) \
-	(sa->sa_family == AF_INET ? \
-	  ((ntohl(SADDR4(sa)->s_addr) ^ F2B(from) ^ F2B(rcpt)) \
-	    % bucket_count) \
-	: 0)
+#define BUCKET_HASH_V4(v4a, v4m, from, rcpt, bucket_count) 	\
+  ((ntohl((v4a)->s_addr & (v4m)->s_addr)			\
+    ^ F2B_SPICE(from, rcpt))					\
+   % bucket_count) 
+
+#ifdef AF_INET6
+#define IN6CAST32(_a) ((uint32_t *)(&(_a)->s6_addr))
+
+#define BUCKET_HASH_V6(v6a, v6m, from, rcpt, bucket_count)	\
+  ((ntohl(IN6CAST32(v6a)[0] & IN6CAST32(v6m)[0]) ^		\
+    ntohl(IN6CAST32(v6a)[1] & IN6CAST32(v6m)[1]) ^		\
+    ntohl(IN6CAST32(v6a)[2] & IN6CAST32(v6m)[2]) ^		\
+    ntohl(IN6CAST32(v6a)[3] & IN6CAST32(v6m)[3])		\
+    ^ F2B_SPICE(from, rcpt))					\
+   % bucket_count)
+
+#define BUCKET_HASH(sa, from, rcpt, bucket_count)		\
+  (sa->sa_family == AF_INET ?					\
+   BUCKET_HASH_V4(SADDR4(sa), 					\
+		  &conf.c_match_mask,				\
+		  from, rcpt, bucket_count)			\
+   : sa->sa_family == AF_INET6 ? 				\
+   BUCKET_HASH_V6(SADDR6(sa),					\
+		  &conf.c_match_mask6, 				\
+		  from, rcpt, bucket_count)			\
+   : 0)
+
+#else /* AF_INET6 */
+
+#define BUCKET_HASH(sa, from, rcpt, bucket_count) 		\
+  (sa->sa_family == AF_INET ?					\
+   BUCKET_HASH_V4(SADDR4(sa), 					\
+		  &conf.c_match_mask,				\
+		  from, rcpt, bucket_count)			\
+   : 0)
+
 #endif
 
 struct mlfi_priv {
