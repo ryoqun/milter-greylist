@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.116 2006/01/08 08:49:04 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.117 2006/04/13 11:19:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.116 2006/01/08 08:49:04 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.117 2006/04/13 11:19:44 manu Exp $");
 #endif
 #endif
 
@@ -146,12 +146,12 @@ mlfi_connect(ctx, hostname, addr)
 #endif
 		default:
 			priv->priv_elapsed = 0;
-			priv->priv_whitelist = EXF_WHITELIST | EXF_NONIPV4;
+			priv->priv_whitelist = EXF_WHITELIST | EXF_NONIP;
 			break;
 		}
 	} else {
 		priv->priv_elapsed = 0;
-		priv->priv_whitelist = EXF_WHITELIST | EXF_NONIPV4;
+		priv->priv_whitelist = EXF_WHITELIST | EXF_NONIP;
 	}
 
 	return SMFIS_CONTINUE;
@@ -219,9 +219,9 @@ mlfi_envfrom(ctx, envfrom)
 	conf_update();
 
 	/*
-	 * Is the sender non-IPv4?
+	 * Is the sender non-IP?
 	 */
-	if (priv->priv_whitelist & EXF_NONIPV4)
+	if (priv->priv_whitelist & EXF_NONIP)
 		return SMFIS_CONTINUE;
 
 	/*
@@ -318,7 +318,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	    (priv->priv_whitelist & EXF_FROM) ||
 	    (priv->priv_whitelist & EXF_AUTH) ||
 	    (priv->priv_whitelist & EXF_SPF) ||
-	    (priv->priv_whitelist & EXF_NONIPV4) ||
+	    (priv->priv_whitelist & EXF_NONIP) ||
 	    (priv->priv_whitelist & EXF_DRAC) ||
 	    (priv->priv_whitelist & EXF_ACCESSDB) ||
 	    (priv->priv_whitelist & EXF_STARTTLS))
@@ -524,10 +524,14 @@ mlfi_eom(ctx)
 			ADD_REASON(whystr, "Sender is SPF-compliant");
 			priv->priv_whitelist &= ~EXF_SPF;
 		}
-		if (priv->priv_whitelist & EXF_NONIPV4) {
+		if (priv->priv_whitelist & EXF_NONIP) {
 			ADD_REASON(whystr, 
+#ifdef AF_INET6
+			    "Message not sent from an IPv4 neither IPv6 address");
+#else
 			    "Message not sent from an IPv4 address");
-			priv->priv_whitelist &= ~EXF_NONIPV4;
+#endif
+			priv->priv_whitelist &= ~EXF_NONIP;
 		}
 		if (priv->priv_whitelist & EXF_STARTTLS) {
 			ADD_REASON(whystr, "Sender succeeded STARTTLS authentication");
