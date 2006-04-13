@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.12 2006/03/25 08:03:38 manu Exp $ */
+/* $Id: acl.c,v 1.13 2006/04/13 11:17:10 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.12 2006/03/25 08:03:38 manu Exp $");
+__RCSID("$Id: acl.c,v 1.13 2006/04/13 11:17:10 manu Exp $");
 #endif
 #endif
 
@@ -553,7 +553,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 		}
 		iptostring(sa, salen, addrstr, sizeof(addrstr));
 		snprintf(tmpstr, sizeof(tmpstr),
-		    "(from=%s, rcpt=%s, addr=%s[%s})", from, rcpt, hostname, addrstr);
+		    "(from=%s, rcpt=%s, addr=%s[%s])", from, rcpt, hostname, addrstr);
 		ADD_REASON(whystr, tmpstr);
 
 		syslog(LOG_INFO, "%s: skipping greylist because %s",
