@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.117 2006/04/13 11:19:44 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.118 2006/04/24 18:51:23 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.117 2006/04/13 11:19:44 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.118 2006/04/24 18:51:23 manu Exp $");
 #endif
 #endif
 
@@ -525,10 +525,11 @@ mlfi_eom(ctx)
 			priv->priv_whitelist &= ~EXF_SPF;
 		}
 		if (priv->priv_whitelist & EXF_NONIP) {
-			ADD_REASON(whystr, 
 #ifdef AF_INET6
+			ADD_REASON(whystr, 
 			    "Message not sent from an IPv4 neither IPv6 address");
 #else
+			ADD_REASON(whystr, 
 			    "Message not sent from an IPv4 address");
 #endif
 			priv->priv_whitelist &= ~EXF_NONIP;

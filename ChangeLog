@@ -1,3 +1,5 @@
+2.1.5
+	Build fix (Attila Bruncsak)
 2.1.4
 	Fixes to bucketed databases when using lazyaw (Ranko Zivojnovic)
 	Tell local connexions are non IP instead of non IPv4 (Attila Bruncsak)
