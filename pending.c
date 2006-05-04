@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.72 2006/05/04 19:29:45 manu Exp $ */
+/* $Id: pending.c,v 1.73 2006/05/04 19:31:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.72 2006/05/04 19:29:45 manu Exp $");
+__RCSID("$Id: pending.c,v 1.73 2006/05/04 19:31:53 manu Exp $");
 #endif
 #endif
 
@@ -239,7 +239,7 @@ pending_timeout(void)
 		if (now.tv_sec - pending->p_tv.tv_sec > conf.c_timeout) {
 			if (conf.c_debug || conf.c_logexpired) {
 				syslog(LOG_DEBUG,
-                              "(local): addr %s from %s to %s:
+				    "(local): %s from %s to %s: greylisted "
 				    "entry timed out",
 				    pending->p_addr, pending->p_from,
 				    pending->p_rcpt);
