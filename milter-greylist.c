@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.118 2006/04/24 18:51:23 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.119 2006/07/24 22:49:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.118 2006/04/24 18:51:23 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.119 2006/07/24 22:49:43 manu Exp $");
 #endif
 #endif
 
@@ -289,6 +289,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	char *greylist;
 	char addrstr[IPADDRSTRLEN];
 	char rcpt[ADDRLEN + 1];
+	time_t delay, autowhite;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
@@ -367,7 +368,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	 */
 	if ((priv->priv_whitelist = acl_filter(SA(&priv->priv_addr),
 	    priv->priv_addrlen, priv->priv_hostname, priv->priv_from,
-	    rcpt, priv->priv_queueid)) & EXF_WHITELIST) {
+	    rcpt, priv->priv_queueid, &delay, &autowhite)) & EXF_WHITELIST) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -377,8 +378,8 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * was autowhitelisted
 	 */
 	if ((priv->priv_whitelist = autowhite_check(SA(&priv->priv_addr),
-	    priv->priv_addrlen, priv->priv_from, rcpt, priv->priv_queueid)) !=
-	    EXF_NONE) {
+	    priv->priv_addrlen, priv->priv_from, rcpt, priv->priv_queueid,
+	    delay, autowhite)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -405,7 +406,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	 */
 	if (pending_check(SA(&priv->priv_addr), priv->priv_addrlen,
 	    priv->priv_from, rcpt, &remaining, &priv->priv_elapsed,
-	    priv->priv_queueid) != 0)
+	    priv->priv_queueid, delay, autowhite) != 0)
 		return SMFIS_CONTINUE;
 
 	priv->priv_remaining = remaining;

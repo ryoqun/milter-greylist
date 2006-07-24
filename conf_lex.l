@@ -39,6 +39,7 @@ report		[Rr][Ee][Pp][Oo][Rr][Tt]:?
 none		[Nn][Oo][Nn][Ee]
 delays		[Dd][Ee][Ll][Aa][Yy][Ss]
 nodelays	[Nn][Oo][Dd][Ee][Ll][Aa][Yy][Ss]
+gldelay		[Dd][Ee][Ll][Aa][Yy]
 lazyaw		[Ll][Aa][Zz][Yy][Aa][Ww]
 all		[Aa][Ll][Ll]
 delay		-?[0-9]+[smhdw]?
@@ -70,7 +71,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.41 2006/02/17 19:46:13 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.42 2006/07/24 22:49:43 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -115,6 +116,7 @@ star		"*"
 {none}		{ return NONE; }
 {delays}	{ return DELAYS; }
 {nodelays}	{ return NODELAYS; }
+{gldelay}	{ return GLDELAY; }
 {all}		{ return ALL; }
 {dumpfreq}	{ return GLDUMPFREQ; }
 {timeout}	{ return GLTIMEOUT; }

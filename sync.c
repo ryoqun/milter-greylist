@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.58 2006/01/11 06:40:39 manu Exp $ */
+/* $Id: sync.c,v 1.59 2006/07/24 22:49:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.58 2006/01/11 06:40:39 manu Exp $");
+__RCSID("$Id: sync.c,v 1.59 2006/07/24 22:49:43 manu Exp $");
 #endif
 #endif
 
@@ -166,7 +166,7 @@ peer_create(pending)
 		goto out;
 
 	LIST_FOREACH(peer, &peer_head, p_list) 
-		sync_queue(peer, PS_CREATE, pending);
+		sync_queue(peer, PS_CREATE, pending, -1); /* -1: unused */
 
 out:
 	PEER_UNLOCK;
@@ -175,8 +175,9 @@ out:
 }
 
 void
-peer_delete(pending)
+peer_delete(pending, autowhite)
 	struct pending *pending;
+	time_t autowhite;
 {
 	struct peer *peer;
 
@@ -185,7 +186,7 @@ peer_delete(pending)
 		goto out;
 
 	LIST_FOREACH(peer, &peer_head, p_list) 
-		sync_queue(peer, PS_DELETE, pending);
+		sync_queue(peer, PS_DELETE, pending, autowhite);
 
 out:
 	PEER_UNLOCK;
@@ -227,10 +228,11 @@ sync_queue_peek(peer)
 }
 
 int
-sync_send(peer, type, pending)	/* peer list is read-locked */
+sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	struct peer *peer;
 	peer_sync_t type;
 	struct pending *pending;
+	time_t autowhite;
 {
 	char sep[] = " \n\t\r";
 	char *replystr;
@@ -238,22 +240,31 @@ sync_send(peer, type, pending)	/* peer list is read-locked */
 	char line[LINELEN + 1];
 	char *cookie = NULL;
 	char *keyw;
+	char awstr[LINELEN + 1];
 
 	if ((peer->p_stream == NULL) && (peer_connect(peer) != 0))
 		return -1;
 
 	*line = '\0';
-	if (type == PS_CREATE)
+	if (type == PS_CREATE) {
 		keyw = "add";
-	else
-		keyw = "del";
+		awstr[0] = '\0';
+	} else {
+		if (peer->p_vers >= 2) {
+			keyw = "del2";
+			snprintf(awstr, LINELEN, " aw %ld", autowhite);
+		} else {
+			keyw = "del";
+			awstr[0] = '\0';
+		}
+	}
 
 	{
 		int bw;
 		bw = snprintf(line, LINELEN, "%s addr %s from %s "
-		    "rcpt %s date %ld\r\n", keyw, pending->p_addr, 
+		    "rcpt %s date %ld%s\r\n", keyw, pending->p_addr, 
 			pending->p_from, pending->p_rcpt, 
-			(long)pending->p_tv.tv_sec);
+			(long)pending->p_tv.tv_sec, awstr);
 		if (bw > LINELEN) {
 			syslog(LOG_ERR, "closing connexion with peer %s: "
 			    "send buffer would overflow (%d entries queued)", 
@@ -548,7 +559,39 @@ peer_connect(peer)	/* peer list is read-locked */
 		goto bad;
 	}
 
-	syslog(LOG_INFO, "Connection to %s established", peer->p_name);
+	fprintf(stream, "vers2\n");
+
+	sync_waitdata(s);	
+	if (fgets(line, LINELEN, stream) == NULL) {
+		syslog(LOG_ERR, "Lost connexion with peer %s: "
+		    "%s (%d entries queued)", 
+		    peer->p_name, strerror(errno), peer->p_qlen);
+		goto bad;
+	}
+
+	fflush(stream);
+
+	if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
+		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
+		    "closing connexion (%d entries queued)", 
+		    line, peer->p_name, peer->p_qlen);
+		goto bad;
+	}
+
+	replycode = atoi(replystr);
+	if (replycode != 802) {
+		syslog(LOG_DEBUG, "peer %s answered code %d to command vers2",
+		    peer->p_name, replycode);
+		peer->p_vers = 1;
+	} else {
+		peer->p_vers = 2;
+	}
+
+	fflush(stream);
+
+
+	syslog(LOG_INFO, "Connection to %s established, protocol version %d", 
+	    peer->p_name, peer->p_vers);
 	peer->p_stream = stream;
 	peer->p_socket = s;
 	return 0;
@@ -870,12 +913,14 @@ sync_server(arg)
 	char *from;
 	char *rcpt;
 	char *datestr;
+	char *awstr;
 	char *cookie;
 	char line[LINELEN + 1];
 	peer_sync_t action;
 	sockaddr_t addr;
 	socklen_t addrlen;
 	time_t date;
+	time_t aw = time(NULL) + conf.c_autowhite_validity;
 
 	fprintf(stream, "200 Yeah, what do you want?\n");
 	fflush(stream);
@@ -906,8 +951,14 @@ sync_server(arg)
 		} else if ((strncmp(cmd, "help", CMDLEN)) == 0) {
 			sync_help(stream);
 			continue;
+		} else if ((strncmp(cmd, "vers2", CMDLEN)) == 0) {
+			sync_vers(stream);
+			continue;
 		} else if ((strncmp(cmd, "add", CMDLEN)) == 0) {
 			action = PS_CREATE;
+		} else if ((strncmp(cmd, "del2", CMDLEN)) == 0) {
+			action = PS_DELETE;
+			aw = -1;
 		} else if ((strncmp(cmd, "del", CMDLEN)) == 0) {
 			action = PS_DELETE;
 		} else {
@@ -1014,6 +1065,32 @@ sync_server(arg)
 
 		date = atoi(datestr);
 
+		if (aw == -1) {
+			/*
+			 * get { "aw" valid_date }
+			 */
+			if ((keyword = strtok_r(NULL, sep, &cookie)) == NULL) {
+				fprintf(stream, "103 Incomplete command\n");
+				fflush(stream);
+				continue;
+			}
+
+			if (strncmp(keyword, "aw", CMDLEN) != 0) {
+				fprintf(stream, 
+				    "104 Unexpected keyword \"%s\"\n", keyword);
+				fflush(stream);
+				continue;
+			}
+
+			if ((awstr = strtok_r(NULL, sep, &cookie)) == NULL) {
+				fprintf(stream, "103 Incomplete command\n");
+				fflush(stream);
+				continue;
+			}
+
+			aw = atoi(awstr);
+		}
+
 		/* 
 		 * Check nothing remains
 		 */
@@ -1029,13 +1106,14 @@ sync_server(arg)
 
 		if (action == PS_CREATE) {
 			PENDING_WRLOCK;
+			/* delay = -1 means unused: we supply the date */
 			pending_get(SA(&addr), addrlen, from, rcpt, date);
 			PENDING_UNLOCK;
 		}
 		if (action == PS_DELETE) {
 			pending_del(SA(&addr), addrlen, from, rcpt, date);
-			autowhite_add(SA(&addr), addrlen, from, rcpt, NULL,
-			    "(mxsync)");
+			autowhite_add(SA(&addr), addrlen, from, 
+			    rcpt, &aw, "(mxsync)");
 		}
 
 		/* Flush modifications to disk */
@@ -1050,6 +1128,15 @@ sync_server(arg)
 }
 
 void
+sync_vers(stream)
+	FILE *stream;
+{
+	fprintf(stream, "802 Yes, I speak version 2, what do you think?\n");
+	fflush(stream);
+	return;
+}
+
+void
 sync_help(stream)
 	FILE *stream;
 {
@@ -1058,12 +1145,17 @@ sync_help(stream)
 	fprintf(stream, "203 Available commands are:\n");
 	fprintf(stream, "203 help  -- displays this message\n");
 	fprintf(stream, "203 quit  -- terminate connexion\n");
+	fprintf(stream, "203 vers2 -- speak version 2 protocol\n");
 	fprintf(stream, 
 	    "203 add addr <ip> from <email> rcpt <email> date <time>  "
 	    "-- add en entry\n");
 	fprintf(stream, 
 	    "203 del addr <ip> from <email> rcpt <email> date <time>  "
 	    "-- remove en entry\n");
+	fprintf(stream, 
+	    "203 del2 addr <ip> from <email> rcpt <email> date <time> "
+	    "aw <time> -- remove en entry, adding it to autowhite with "
+	    "given delay (version 2 only)\n");
 	fflush(stream);
 
 	return;
@@ -1094,10 +1186,11 @@ sync_waitdata(fd)
 
 
 void
-sync_queue(peer, type, pending)	/* peer list must be read-locked */
+sync_queue(peer, type, pending, autowhite)/* peer list must be read-locked */
 	struct peer *peer;
 	peer_sync_t type;
 	struct pending *pending;
+	time_t autowhite;
 {
 	int error;
 	struct sync *sync;
@@ -1113,6 +1206,7 @@ sync_queue(peer, type, pending)	/* peer list must be read-locked */
 
 	sync->s_peer = peer;
 	sync->s_type = type;
+	sync->s_autowhite = autowhite;
 	sync->s_pending = pending_ref(pending);
 
 	/*
@@ -1204,7 +1298,7 @@ sync_sender(dontcare)
 			while ((sync = sync_queue_peek(peer)) != NULL ) {
 
 				if (sync_send(sync->s_peer, sync->s_type, 
-				    sync->s_pending) != 0) {
+				    sync->s_pending, sync->s_autowhite) != 0) {
 					if (!sync_queue_poke(peer, sync))
 						sync_free(sync);
 

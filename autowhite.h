@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.17 2006/01/08 00:38:25 manu Exp $ */
+/* $Id: autowhite.h,v 1.18 2006/07/24 22:49:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -68,11 +68,12 @@ extern pthread_mutex_t autowhite_change_lock;
 
 void autowhite_init(void);
 struct autowhite *autowhite_get(struct sockaddr *, socklen_t, char *, char *,
-    time_t *);
+    time_t);
 void autowhite_put(struct autowhite *);
 void autowhite_add(struct sockaddr *, socklen_t, char *, char *, time_t *,
     char *);
-int autowhite_check(struct sockaddr *, socklen_t, char *, char *, char *);
+int autowhite_check(struct sockaddr *, socklen_t, char *, char *, 
+    char *, time_t, time_t);
 int autowhite_textdump(FILE *);
 
 #endif /* _AUTOWHITE_H_ */

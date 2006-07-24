@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.13 2006/04/13 11:17:10 manu Exp $ */
+/* $Id: acl.c,v 1.14 2006/07/24 22:49:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.13 2006/04/13 11:17:10 manu Exp $");
+__RCSID("$Id: acl.c,v 1.14 2006/07/24 22:49:43 manu Exp $");
 #endif
 #endif
 
@@ -76,6 +76,8 @@ static int domaincmp(char *, char *);
 static void
 acl_init_entry (void) {
 	memset (&gacl, 0, sizeof (gacl));
+	gacl.a_delay = -1;
+	gacl.a_autowhite = -1;
 }
 
 void
@@ -416,13 +418,15 @@ acl_register_entry_last(acl_type)	/* acllist must be write-locked */
 }
 
 int 
-acl_filter(sa, salen, hostname, from, rcpt, queueid)
+acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite)
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *hostname;
 	char *from;
 	char *rcpt;
 	char *queueid;
+	time_t *delay;
+	time_t *autowhite;
 {
 	struct acl_entry *acl;
 	char addrstr[IPADDRSTRLEN];
@@ -508,11 +512,18 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 			exit(EX_SOFTWARE);
 			break;
 		}
+
+		*delay =
+		    (acl->a_delay != -1) ? acl->a_delay : conf.c_delay;
+		*autowhite = 
+		    (acl->a_autowhite != -1) ? 
+		    acl->a_autowhite : conf.c_autowhite_validity;
+
 		if (conf.c_debug || conf.c_acldebug) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
 			syslog(LOG_DEBUG, "Mail from=%s, rcpt=%s, addr=%s[%s] "
-			    "is matched by entry %s", from, rcpt, hostname, addrstr,
-			    acl_entry(acl));
+			    "is matched by entry %s", from, rcpt, 
+			    hostname, addrstr, acl_entry(acl));
 		}
 	} else {
 		/*
@@ -523,6 +534,9 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid)
 		else
 			retval = EXF_GREYLIST;
 		retval |= EXF_DEFAULT;
+
+		*delay = conf.c_delay;
+		*autowhite = conf.c_autowhite_validity;
 	}
 
 	if (retval & EXF_WHITELIST) {
@@ -747,6 +761,18 @@ acl_entry(acl)
 		strncat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
+	if (acl->a_delay != -1) {
+		snprintf(tempstr, sizeof(tempstr), 
+		    "[delay %ld] ", acl->a_delay);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+	}
+
+	if (acl->a_autowhite != -1) {
+		snprintf(tempstr, sizeof(tempstr), 
+		    "[aw %ld] ", acl->a_autowhite);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+	}
+
 	if (def)
 		strncat(entrystr, "default", sizeof(entrystr));
 	return entrystr;
@@ -775,4 +801,40 @@ acl_dump (void) {	/* acllist must be write locked */
 	ACL_UNLOCK;
 	if (debug != NULL)
 		fclose(debug);
+}
+
+void 
+acl_add_delay(delay)
+	time_t delay;
+{
+	if (gacl.a_delay != -1) {
+		fprintf (stderr,
+		    "delay specified twice in ACL line %d\n", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	gacl.a_delay = delay;
+		
+	if (conf.c_debug || conf.c_acldebug)
+		printf("load acl delay %ld\n", delay);
+
+	return;
+}
+
+void
+acl_add_autowhite(delay)
+	time_t delay;
+{
+	if (gacl.a_autowhite != -1) {
+		fprintf (stderr,
+		    "autowhite specified twice in ACL line %d\n", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	gacl.a_autowhite = delay;
+		
+	if (conf.c_debug || conf.c_acldebug)
+		printf("load acl delay %ld\n", delay);
+
+	return;
 }

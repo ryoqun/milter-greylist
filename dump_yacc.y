@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.17 2005/02/03 09:41:27 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.18 2006/07/24 22:49:43 manu Exp $");
 #endif
 #endif
 
@@ -59,12 +59,12 @@ greyentry :	IPADDR EMAIL EMAIL TIME	{
 	;
 autoentry :	IPADDR EMAIL EMAIL TIME AUTO { 
 			autowhite_get(SA(&$1), sizeof(struct sockaddr_in), $2,
-			    $3, &$4);
+			    $3, $4);
 		}
 	|	IP6ADDR EMAIL EMAIL TIME AUTO {
 #ifdef AF_INET6
 			autowhite_get(SA(&$1), sizeof(struct sockaddr_in6), $2,
-			    $3, &$4);
+			    $3, $4);
 #else
 			printf("IPv6 is not supported, ignore line %d\n",
 			    conf_line);

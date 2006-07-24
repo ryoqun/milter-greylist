@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.33 2006/01/08 00:38:25 manu Exp $ */
+/* $Id: pending.h,v 1.34 2006/07/24 22:49:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -89,7 +89,7 @@ void pending_init(void);
 struct pending *pending_get(struct sockaddr *, socklen_t, char *, char *,
     time_t);
 int pending_check(struct sockaddr *, socklen_t, char *, char *, time_t *,
-    time_t *, char *);
+    time_t *, char *, time_t, time_t);
 void pending_del(struct sockaddr *, socklen_t, char *, char *, time_t);
 void pending_put(struct pending *);
 int pending_textdump(FILE *);

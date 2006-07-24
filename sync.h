@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.15 2004/11/12 14:22:56 manu Exp $ */
+/* $Id: sync.h,v 1.16 2006/07/24 22:49:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -70,16 +70,18 @@ struct peer {
 	LIST_ENTRY(peer) p_list;
 	size_t p_qlen;
 	int p_flags;
+	int p_vers;
 };
 
 #define P_LOCAL	1
 
-typedef enum { PS_CREATE, PS_DELETE } peer_sync_t;
+typedef enum { PS_CREATE, PS_DELETE, PS_DELETE2 } peer_sync_t;
 
 struct sync {
 	struct peer *s_peer;
 	struct pending *s_pending;
 	peer_sync_t s_type;
+	time_t s_autowhite;
 	TAILQ_ENTRY(sync) s_list;
 };
 
@@ -88,11 +90,11 @@ void peer_clear(void);
 void peer_add(char *);
 int peer_connect(struct peer *);
 void peer_create(struct pending *);
-void peer_delete(struct pending *);
+void peer_delete(struct pending *, time_t);
 
-int sync_send(struct peer *, peer_sync_t,  struct pending *);
+int sync_send(struct peer *, peer_sync_t,  struct pending *, time_t);
 void sync_sender_start(void);
-void sync_queue(struct peer *, peer_sync_t, struct pending *);
+void sync_queue(struct peer *, peer_sync_t, struct pending *, time_t);
 void sync_free(struct sync *);
 
 void sync_sender(void *);
@@ -100,6 +102,7 @@ void sync_master_restart(void);
 void *sync_master(void *);
 void sync_server(void *);
 void sync_help(FILE *);
+void sync_vers(FILE *);
 int sync_waitdata(int);
 
 

@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.73 2006/05/04 19:31:53 manu Exp $ */
+/* $Id: pending.c,v 1.74 2006/07/24 22:49:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.73 2006/05/04 19:31:53 manu Exp $");
+__RCSID("$Id: pending.c,v 1.74 2006/07/24 22:49:43 manu Exp $");
 #endif
 #endif
 
@@ -130,20 +130,13 @@ pending_get(sa, salen, from, rcpt, date)
 {
 	struct pending *pending;
 	struct timeval tv;
-	int delay = conf.c_delay;
 	char addr[IPADDRSTRLEN];
 
 	if ((pending = malloc(sizeof(*pending))) == NULL)
 		goto out;
 
 	bzero((void *)pending, sizeof(pending));
-
-	if (date == 0) {
-		gettimeofday(&pending->p_tv, NULL);
-		pending->p_tv.tv_sec += delay;
-	} else {
-		pending->p_tv.tv_sec = date;
-	}
+	pending->p_tv.tv_sec = date;
 
 	if ((pending->p_sa = malloc(salen)) == NULL) {
 		free(pending);
@@ -301,7 +294,7 @@ pending_del(sa, salen, from, rcpt, time)
 }
 
 int
-pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
+pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *from;
@@ -309,6 +302,8 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
 	time_t *remaining;
 	time_t *elapsed;
 	char *queueid;
+	time_t delay;
+	time_t aw;
 {
 	char addr[IPADDRSTRLEN];
 	struct pending *pending;
@@ -317,9 +312,9 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
 	time_t rest = -1;
 	time_t accepted = -1;
 	int dirty = 0;
-	int delay = conf.c_delay;
 	struct pending_bucket *b;
 	ipaddr *mask = NULL;
+	time_t date;
 
 	now = time(NULL);
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
@@ -358,10 +353,11 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
 			rest = accepted - now;
 
 			if (rest <= 0) {
-				peer_delete(pending);
+				date = now + aw;
+				peer_delete(pending, date);
 				pending_put(pending);
-				autowhite_add(sa, salen, from, rcpt, NULL,
-				    queueid);
+				autowhite_add(sa, salen, from, rcpt, 
+				    &date, queueid);
 				rest = 0;
 				dirty = 1;
 			}
@@ -374,9 +370,10 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid)
 	 * It was not found. Create it and propagagte it to peers.
 	 * Error handling is useless here, we will tempfail anyway
 	 */
-	pending = pending_get(sa, salen, from, rcpt, (time_t)0);
-	peer_create(pending);
-	rest = delay;
+	date = now + delay;
+	pending = pending_get(sa, salen, from, rcpt, date);
+	peer_create(pending); /* XXXmanu if pending == NULL? */
+	rest = pending->p_tv.tv_sec - now;
 	dirty = 1;
 
 out:
@@ -392,7 +389,7 @@ out:
 	if (dirty)
 		dump_flush();
 
-	if (rest == 0)
+	if (rest <= 0)
 		return 1;
 	else
 		return 0;

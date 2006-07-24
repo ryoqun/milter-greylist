@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.44 2006/05/04 19:29:45 manu Exp $ */
+/* $Id: autowhite.c,v 1.45 2006/07/24 22:49:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.44 2006/05/04 19:29:45 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.45 2006/07/24 22:49:43 manu Exp $");
 #endif
 #endif
 
@@ -155,24 +155,20 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 {
 	struct autowhite *aw;
 	struct autowhite *next_aw;
-	struct timeval now, delay;
+	struct timeval now;
 	char addr[IPADDRSTRLEN];
-	time_t autowhite_validity;
 	int h, mn, s;
 	int dirty = 0;
 	ipaddr *mask = NULL;
 	struct autowhite_bucket *b;
-
-	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
-		return;
+	time_t autowhite;
 
 	gettimeofday(&now, NULL);
-	delay.tv_sec = autowhite_validity;
-	delay.tv_usec = 0;
+	autowhite = *date - now.tv_sec;
 
-	h = autowhite_validity / 3600;
-	mn = ((autowhite_validity % 3600) / 60);
-	s = (autowhite_validity % 3600) % 60;
+	h = autowhite / 3600;
+	mn = ((autowhite % 3600) / 60);
+	s = (autowhite % 3600) % 60;
 
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return;
@@ -221,7 +217,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 		    ((conf.c_lazyaw == 1) ||
 		    ((strcasecmp(from, aw->a_from) == 0) &&
 		    (strcasecmp(rcpt, aw->a_rcpt) == 0)))) {
-			timeradd(&now, &delay, &aw->a_tv);
+			aw->a_tv.tv_sec = *date;
 
 			/* Push it at the back of the big queue */
 			pthread_mutex_lock(&autowhite_change_lock);
@@ -242,7 +238,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 	 * Entry not found, create it
 	 */
 	if (aw == NULL) {
-		aw = autowhite_get(sa, salen, from, rcpt, date);
+		aw = autowhite_get(sa, salen, from, rcpt, *date);
 
 		dirty++;
 
@@ -260,34 +256,35 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 }
 
 int
-autowhite_check(sa, salen, from, rcpt, queueid)
+autowhite_check(sa, salen, from, rcpt, queueid, gldelay, autowhite)
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *from;
 	char *rcpt;
 	char *queueid;
+	time_t gldelay;
+	time_t autowhite;
 {
 	struct autowhite *aw;
 	struct autowhite *next_aw;
 	struct pending *pending;
 	struct timeval now, delay;
 	char addr[IPADDRSTRLEN];
-	time_t autowhite_validity;
 	int h, mn, s;
 	int dirty = 0;
 	ipaddr *mask = NULL;
 	struct autowhite_bucket *b;
 
-	if ((autowhite_validity = conf.c_autowhite_validity) == 0)
+	if (autowhite == 0)
 		return EXF_NONE;
 
 	gettimeofday(&now, NULL);
-	delay.tv_sec = autowhite_validity;
+	delay.tv_sec = autowhite;
 	delay.tv_usec = 0;
 
-	h = autowhite_validity / 3600;
-	mn = ((autowhite_validity % 3600) / 60);
-	s = (autowhite_validity % 3600) % 60;
+	h = autowhite / 3600;
+	mn = ((autowhite % 3600) / 60);
+	s = (autowhite % 3600) % 60;
 
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return EXF_NONE;
@@ -370,10 +367,9 @@ autowhite_check(sa, salen, from, rcpt, queueid)
 	 * fictive pending record
 	 */
 	PENDING_WRLOCK;
-	pending = pending_get(sa, salen, from, rcpt, 
-	    (time_t)0);
+	pending = pending_get(sa, salen, from, rcpt, now.tv_sec + gldelay);
 	if (pending != NULL) {
-		peer_delete(pending);
+		peer_delete(pending, now.tv_sec + autowhite);
 		pending_put(pending);
 	}
 	PENDING_UNLOCK;
@@ -428,15 +424,9 @@ autowhite_get(sa, salen, from, rcpt, date) /* autowhite list must be locked */
 	socklen_t salen;
 	char *from;
 	char *rcpt;
-	time_t *date;
+	time_t date;
 {
 	struct autowhite *aw;
-	struct timeval now, delay;
-	time_t autowhite_validity = conf.c_autowhite_validity;
-
-	gettimeofday(&now, NULL);
-	delay.tv_sec = autowhite_validity;
-	delay.tv_usec = 0;
 
 	if ((aw = malloc(sizeof(*aw))) == NULL) {
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
@@ -451,14 +441,10 @@ autowhite_get(sa, salen, from, rcpt, date) /* autowhite list must be locked */
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
+	aw->a_tv.tv_sec = date;
 
 	memcpy(aw->a_sa, sa, salen);
 	aw->a_salen = salen;
-
-	if (date == NULL)
-		timeradd(&now, &delay, &aw->a_tv);
-	else
-		aw->a_tv.tv_sec = *date;
 
 	pthread_mutex_lock(&autowhite_change_lock);
 	TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
