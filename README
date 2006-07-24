@@ -1,9 +1,9 @@
-# $Id: README,v 1.37 2005/11/30 23:32:12 manu Exp $
+# $Id: README,v 1.38 2006/07/24 22:51:47 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2005/11/30 23:32:12 $
+		       $Date: 2006/07/24 22:51:47 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -57,7 +57,7 @@ UID, use the --with-user flag.
 A Makefile is supplied in the distribution in case you run into real 
 trouble with configure and are unable to get it generating a Makefile
 suited to your system. Of course this Makefile is not likely to work 
-on your system (it is configured for NetBSD-1.6.x) and it will probably
+on your system (it is configured for NetBSD-3.0) and it will probably
 need manual tweaks.
 
 On the make install step, the Makefile will install a default config
