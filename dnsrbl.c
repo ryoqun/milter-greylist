@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.1 2006/07/26 07:31:17 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.2 2006/07/26 08:38:16 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.1 2006/07/26 07:31:17 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.2 2006/07/26 08:38:16 manu Exp $");
 #endif
 #endif
 
@@ -58,50 +58,17 @@ __RCSID("$Id: dnsrbl.c,v 1.1 2006/07/26 07:31:17 manu Exp $");
 #include "milter-greylist.h"
 #include "dnsrbl.h"
 
+/* 
+ * locking is done through the same lock as acllist: both are static 
+ * configuration, which are readen or changed at the same times.
+ */
 struct dnsrbllist dnsrbl_head;
-pthread_rwlock_t dnsrbl_lock;
 
 void
 dnsrbl_init(void) {
-	int error;
-       
 	LIST_INIT(&dnsrbl_head);
-	if ((error = pthread_rwlock_init(&dnsrbl_lock, NULL)) != 0) {
-		syslog(LOG_ERR, "pthread_rwlock_init failed: %s",
-		    strerror(error));
-		exit(EX_OSERR);
-	}
-       
 	return;
 }  
-
-int
-dnsrbl_check(sa, matched, len)
-	struct sockaddr *sa;	
-	char *matched;
-	size_t len;
-{
-	struct dnsrbl_entry *source;
-	int retval = 0;
-
-	if (matched != NULL)
-		bzero(matched, len);
-
-	DNSRBL_RDLOCK;
-	LIST_FOREACH(source, &dnsrbl_head, de_list) {
-		if (dnsrbl_check_source(sa, source) == 1) {
-			retval = 1;
-			if (matched != NULL) {
-				strncpy(matched, source->de_name, len);
-				matched[len - 1] = '\0';
-			}
-			break;
-		}
-	}
-	DNSRBL_UNLOCK;
-
-	return retval;
-}
 
 int
 dnsrbl_check_source(sa, source)
@@ -208,7 +175,7 @@ dnsrbl_check_source(sa, source)
 }
 
 
-
+/* XXX this code is probably broken with IPv6 */
 void
 reverse_endian(dst, src)
 	struct sockaddr *src;
@@ -247,7 +214,7 @@ reverse_endian(dst, src)
 }
 
 void
-dnsrbl_source_add(name, domain, blacklisted) /* dnsrbl must be write locked */
+dnsrbl_source_add(name, domain, blacklisted) /* acllist must be write locked */
 	char *name;
 	char *domain;
 	struct sockaddr *blacklisted;
@@ -271,45 +238,33 @@ dnsrbl_source_add(name, domain, blacklisted) /* dnsrbl must be write locked */
 }
 
 struct dnsrbl_entry *
-dnsrbl_byname(dnsrbl)
+dnsrbl_byname(dnsrbl)	/* acllist must be read locked */
 	char *dnsrbl;
 {
 	struct dnsrbl_entry *de;	
 
-	DNSRBL_RDLOCK;
 	LIST_FOREACH(de, &dnsrbl_head, de_list) {
 		if (strcmp(de->de_name, dnsrbl) == 0)
 			break;
 	}
-	DNSRBL_UNLOCK;
 
 	return de;
 }
 
-#if 0 /* For debugging */
-int main(ac, av)
-	int ac;
-	char **av;
+void
+dnsrbl_clear(void)	/* acllist must be write locked */
 {
-	struct sockaddr_in sin;
-	char source[1024];
+	struct dnsrbl_entry *de;
 
-	openlog("dnsrbl", LOG_PERROR, LOG_DAEMON);
+	while(!LIST_EMPTY(&dnsrbl_head)) {
+		de = LIST_FIRST(&dnsrbl_head);
+		LIST_REMOVE(de, de_list);
+		free(de);
+	}
 
 	dnsrbl_init();
-	dnsrbl_source_add("SORBS dynamic", "dnsbl.sorbs.net", "127.0.0.10");
-	dnsrbl_source_add("SORBS open relay", "dnsbl.sorbs.net", "127.0.0.5");
 
-	bzero(&sin, sizeof(sin));
-	sin.sin_family = AF_INET;
-	sin.sin_len = sizeof(sin);
-	inet_aton(av[1], &sin.sin_addr);
-
-	if (dnsrbl_check((struct sockaddr *)&sin, source, sizeof(source)))
-		printf("matched by %s\n", source);
-
-	return 0;
+	return;
 }
-#endif
 
 #endif /* USE_DNSRBL */

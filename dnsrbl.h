@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.h,v 1.1 2006/07/26 07:31:17 manu Exp $ */
+/* $Id: dnsrbl.h,v 1.2 2006/07/26 08:38:16 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -31,10 +31,6 @@
 
 #include <arpa/nameser.h>
 
-#define DNSRBL_WRLOCK WRLOCK(dnsrbl_lock)
-#define DNSRBL_RDLOCK RDLOCK(dnsrbl_lock)
-#define DNSRBL_UNLOCK UNLOCK(dnsrbl_lock)
-
 LIST_HEAD(dnsrbllist, dnsrbl_entry);
 
 struct dnsrbl_entry {
@@ -45,8 +41,8 @@ struct dnsrbl_entry {
 };
 
 void dnsrbl_init(void);
-int dnsrbl_check(struct sockaddr *, char *, size_t);
 int dnsrbl_check_source(struct sockaddr *, struct dnsrbl_entry *);
 void reverse_endian(struct sockaddr *, struct sockaddr *);
 void dnsrbl_source_add(char *, char *, struct sockaddr *);
 struct dnsrbl_entry *dnsrbl_byname(char *);
+void dnsrbl_clear(void);

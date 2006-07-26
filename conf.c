@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.35 2006/01/11 06:40:39 manu Exp $ */
+/* $Id: conf.c,v 1.36 2006/07/26 08:38:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.35 2006/01/11 06:40:39 manu Exp $");
+__RCSID("$Id: conf.c,v 1.36 2006/07/26 08:38:16 manu Exp $");
 #endif
 #endif
 
@@ -59,6 +59,9 @@ __RCSID("$Id: conf.c,v 1.35 2006/01/11 06:40:39 manu Exp $");
 #include <arpa/inet.h>
 
 #include "acl.h"
+#ifdef USE_DNSRBL
+#include "dnsrbl.h"
+#endif
 #include "autowhite.h"
 #include "conf.h"
 #include "sync.h"
@@ -136,12 +139,14 @@ conf_load(void)
 
 		peer_clear();
 		ACL_WRLOCK;
+#ifdef USE_DNSRBL
+		dnsrbl_clear();
+#endif
 		acl_clear();
 
 		conf_in = stream;
 
 		conf_parse();
-
 		ACL_UNLOCK;
 
 		fclose(stream);
