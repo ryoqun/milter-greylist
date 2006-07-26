@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.43 2006/07/26 07:31:17 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.44 2006/07/26 07:49:11 manu Exp $");
 #endif
 #endif
 
@@ -421,7 +421,9 @@ access_list:	ACL GREYLIST  acl_entry { acl_register_entry_last(A_GREYLIST); }
 	|	ACL WHITELIST acl_entry { acl_register_entry_last(A_WHITELIST); }
 	;
 
-acl_entry:	DEFAULT
+acl_entry:	DEFAULT acl_values
+	|	acl_clauses acl_values
+	|	DEFAULT
 	|	acl_clauses
 	;
 
@@ -437,7 +439,13 @@ acl_clause:	fromaddr_clause
 	|	domainregex_clause
 	|	netblock_clause
 	|	dnsrbl_clause
-	|	greylist_value
+	;
+
+acl_values:	acl_value
+	|	acl_values acl_value
+	;
+
+acl_value:	greylist_value
 	|	autowhite_value
 	;
 

@@ -1,3 +1,6 @@
+2.1.7
+	Per-ACL greylisting and autowhitelisting delays
+	DNSRBL support in ACL
 2.1.6
 	Make log output consistent (Fredrik Pettai)
 2.1.5
