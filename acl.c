@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.17 2006/07/26 08:22:41 manu Exp $ */
+/* $Id: acl.c,v 1.18 2006/07/26 13:26:02 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.17 2006/07/26 08:22:41 manu Exp $");
+__RCSID("$Id: acl.c,v 1.18 2006/07/26 13:26:02 manu Exp $");
 #endif
 #endif
 
@@ -530,7 +530,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 					    "Mail from addr=%s[%s] exists in "
 					    "DNSRBL \"%s\"", 
 			    		    hostname, addrstr, 
-					    acl->a_dnsrbl->de_name);
+					    acl->a_dnsrbl->d_name);
 				}
 			} else {
 				continue;
@@ -812,7 +812,7 @@ acl_entry(acl)
 	}
 	if (acl->a_dnsrbl != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "dnsrbl \"%s\" ",
-		    acl->a_dnsrbl->de_name);
+		    acl->a_dnsrbl->d_name);
 		strncat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}

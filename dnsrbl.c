@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.2 2006/07/26 08:38:16 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.3 2006/07/26 13:26:02 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.2 2006/07/26 08:38:16 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.3 2006/07/26 13:26:02 manu Exp $");
 #endif
 #endif
 
@@ -84,10 +84,10 @@ dnsrbl_check_source(sa, source)
 	ns_msg handle;
 	ns_rr rr;
 	int i;
-	char *dnsrbl = source->de_domain;
+	char *dnsrbl = source->d_domain;
 	struct sockaddr *blacklisted;
 
-	blacklisted = (struct sockaddr *)&source->de_blacklisted;
+	blacklisted = (struct sockaddr *)&source->d_blacklisted;
 
 	res_ninit(&res);
 
@@ -226,13 +226,13 @@ dnsrbl_source_add(name, domain, blacklisted) /* acllist must be write locked */
 		exit(EX_OSERR);
 	}
 
-	strncpy(de->de_name, name, sizeof(de->de_name));
-	de->de_name[sizeof(de->de_name) - 1] = '\0';
-	strncpy(de->de_domain, domain, sizeof(de->de_domain));
-	de->de_domain[sizeof(de->de_domain) - 1] = '\0';
-	memcpy(&de->de_blacklisted, blacklisted, blacklisted->sa_len);
+	strncpy(de->d_name, name, sizeof(de->d_name));
+	de->d_name[sizeof(de->d_name) - 1] = '\0';
+	strncpy(de->d_domain, domain, sizeof(de->d_domain));
+	de->d_domain[sizeof(de->d_domain) - 1] = '\0';
+	memcpy(&de->d_blacklisted, blacklisted, blacklisted->sa_len);
 
-	LIST_INSERT_HEAD(&dnsrbl_head, de, de_list);
+	LIST_INSERT_HEAD(&dnsrbl_head, de, d_list);
 
 	return;
 }
@@ -243,8 +243,8 @@ dnsrbl_byname(dnsrbl)	/* acllist must be read locked */
 {
 	struct dnsrbl_entry *de;	
 
-	LIST_FOREACH(de, &dnsrbl_head, de_list) {
-		if (strcmp(de->de_name, dnsrbl) == 0)
+	LIST_FOREACH(de, &dnsrbl_head, d_list) {
+		if (strcmp(de->d_name, dnsrbl) == 0)
 			break;
 	}
 
@@ -258,7 +258,7 @@ dnsrbl_clear(void)	/* acllist must be write locked */
 
 	while(!LIST_EMPTY(&dnsrbl_head)) {
 		de = LIST_FIRST(&dnsrbl_head);
-		LIST_REMOVE(de, de_list);
+		LIST_REMOVE(de, d_list);
 		free(de);
 	}
 

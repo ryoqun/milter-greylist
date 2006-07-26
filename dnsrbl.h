@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.h,v 1.2 2006/07/26 08:38:16 manu Exp $ */
+/* $Id: dnsrbl.h,v 1.3 2006/07/26 13:26:02 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,10 +34,10 @@
 LIST_HEAD(dnsrbllist, dnsrbl_entry);
 
 struct dnsrbl_entry {
-	char de_name[NS_MAXDNAME + 1];
-	char de_domain[NS_MAXDNAME + 1];
-	struct sockaddr_storage de_blacklisted;
-	LIST_ENTRY(dnsrbl_entry) de_list;
+	char d_name[QSTRLEN + 1];
+	char d_domain[NS_MAXDNAME + 1];
+	struct sockaddr_storage d_blacklisted;
+	LIST_ENTRY(dnsrbl_entry) d_list;
 };
 
 void dnsrbl_init(void);

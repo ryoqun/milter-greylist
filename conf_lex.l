@@ -60,6 +60,7 @@ nodrac		[Nn][Oo][Dd][Rr][Aa][Cc]
 dump_no_time_translation [Dd][Uu][Mm][Pp]_[Nn][Oo]_[Tt][Ii][Mm][Ee]_[Tt][Rr][Aa][Nn][Ss][Ll][Aa][Tt][Ii][Oo][Nn]
 logexpired    [Ll][Oo][Gg][Ee][Xx][Pp][Ii][Rr][Ee][Dd]
 dnsrbl		[Dd][Nn][Ss][Rr][Bb][Ll]
+list		[Ll][Ii][Ss][Tt]
 star		"*"
 
 %s S_REGEX
@@ -72,7 +73,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.44 2006/07/26 13:03:11 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.45 2006/07/26 13:26:02 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -107,6 +108,7 @@ star		"*"
 {dump_no_time_translation}	{ return DUMP_NO_TIME_TRANSLATION; }
 {logexpired}  { return LOGEXPIRED; }
 {dnsrbl}  	{ return DNSRBL; }
+{list}  	{ return LIST; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }
@@ -134,8 +136,8 @@ star		"*"
 {nodrac}	{ return NODRAC; }
 {db}		{ return DB; }
 {qstring}	{
-			strncpy(yylval.qstring, yytext, PATHLEN);
-			yylval.qstring[PATHLEN] = '\0';
+			strncpy(yylval.qstring, yytext, QSTRLEN);
+			yylval.qstring[QSTRLEN] = '\0';
 			return QSTRING;
 		}
 {number}	{
@@ -178,7 +180,7 @@ star		"*"
 		}
 <S_REGEX>{regex} {
 			strncpy(yylval.regex, yytext, REGEXLEN);
-			yylval.regex[PATHLEN] = '\0';
+			yylval.regex[REGEXLEN] = '\0';
 			return REGEX;
 		}
 {cidr}		{ 

@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLDELAY DNSRBL
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLDELAY DNSRBL LIST
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.46 2006/07/26 13:03:11 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.47 2006/07/26 13:26:02 manu Exp $");
 #endif
 #endif
 
@@ -42,7 +42,7 @@ void conf_error(char *);
 	int cidr;
 	char email[ADDRLEN + 1];
 	char domainname[ADDRLEN + 1];
-	char path[PATHLEN + 1];
+	char qstring[QSTRLEN + 1];
 	char delay[NUMLEN + 1];
 	char regex[REGEXLEN + 1];
 	}
@@ -242,12 +242,12 @@ lazyaw:		LAZYAW	{ if (C_NOTFORCED(C_LAZYAW)) conf.c_lazyaw = 1; }
 	;
 pidfile:	PIDFILE QSTRING	{ if (C_NOTFORCED(C_PIDFILE)) 
 					conf.c_pidfile = 
-					    quotepath(c_pidfile, $2, PATHLEN);
+					    quotepath(c_pidfile, $2, QSTRLEN);
 				}
 	;
 dumpfile:	GLDUMPFILE QSTRING{ if (C_NOTFORCED(C_DUMPFILE)) 
 					conf.c_dumpfile = 
-					    quotepath(c_dumpfile, $2, PATHLEN);
+					    quotepath(c_dumpfile, $2, QSTRLEN);
 				}
 	;
 subnetmatch:	SUBNETMATCH CIDR{ if (C_NOTFORCED(C_MATCHMASK))
@@ -266,12 +266,12 @@ subnetmatch6:	SUBNETMATCH6 CIDR{
 	;
 socket:		SOCKET QSTRING	{ if (C_NOTFORCED(C_SOCKET)) 
 					conf.c_socket = 
-					    quotepath(c_socket, $2, PATHLEN);
+					    quotepath(c_socket, $2, QSTRLEN);
 				}
 	;
 user:		USER QSTRING	{ if (C_NOTFORCED(C_USER))
 					conf.c_user =
-					    quotepath(c_user, $2, PATHLEN);
+					    quotepath(c_user, $2, QSTRLEN);
 				}
 	;	
 report:		REPORT NONE	{ conf.c_report = C_GLNONE; }
@@ -479,9 +479,9 @@ domainregex_clause:	DOMAIN REGEX { acl_add_domain_regex ($2); }
 
 dnsrbl_clause:		DNSRBL QSTRING { 
 #ifdef USE_DNSRBL
-			char path[PATHLEN + 1];
+			char path[QSTRLEN + 1];
 
-			acl_add_dnsrbl(quotepath(path, $2, PATHLEN));
+			acl_add_dnsrbl(quotepath(path, $2, QSTRLEN));
 #else
 			printf("DNSRBL support not compiled in line %d\n", 
 			    conf_line);
@@ -521,7 +521,7 @@ netblock_clause:	ADDR IPADDR CIDR{
 dracdb:			DRAC DB QSTRING	{ 
 #ifdef USE_DRAC
 				conf.c_dracdb = 
-					    quotepath(c_dracdb, $3, PATHLEN);
+					    quotepath(c_dracdb, $3, QSTRLEN);
 #else
 				printf("DRAC support not compiled "
 				    "in line %d\n", conf_line);
@@ -534,9 +534,9 @@ nodrac:			NODRAC	{ conf.c_nodrac = 1; }
 
 dnsrbldef:	DNSRBL QSTRING DOMAINNAME IPADDR {
 #ifdef USE_DNSRBL
-			char path[PATHLEN + 1];
+			char path[QSTRLEN + 1];
 
-			dnsrbl_source_add(quotepath(path, $2, PATHLEN), 
+			dnsrbl_source_add(quotepath(path, $2, QSTRLEN), 
 			    $3, SA(&$4));
 #else
 			printf("DNSRBL support not compiled in line %d\n", 
