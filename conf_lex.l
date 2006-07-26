@@ -43,7 +43,7 @@ gldelay		[Dd][Ee][Ll][Aa][Yy]
 lazyaw		[Ll][Aa][Zz][Yy][Aa][Ww]
 all		[Aa][Ll][Ll]
 delay		-?[0-9]+[smhdw]?
-path		"\""[^"\n]+"\""
+qstring		"\""[^"\n]+"\""
 regex		"/"[^/\n]+"/"
 dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
 timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
@@ -72,7 +72,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.43 2006/07/26 07:31:17 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.44 2006/07/26 13:03:11 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -133,10 +133,10 @@ star		"*"
 {drac}		{ return DRAC; }
 {nodrac}	{ return NODRAC; }
 {db}		{ return DB; }
-{path}		{
-			strncpy(yylval.path, yytext, PATHLEN);
-			yylval.path[PATHLEN] = '\0';
-			return PATH;
+{qstring}	{
+			strncpy(yylval.qstring, yytext, PATHLEN);
+			yylval.qstring[PATHLEN] = '\0';
+			return QSTRING;
 		}
 {number}	{
 			strncpy(yylval.delay, yytext, NUMLEN);

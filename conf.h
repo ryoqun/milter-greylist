@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.35 2006/02/17 19:46:13 manu Exp $ */
+/* $Id: conf.h,v 1.36 2006/07/26 13:03:11 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -126,15 +126,15 @@ struct conf {
 extern struct conf defconf;
 extern struct conf conf;
 extern char *conffile;
-extern char c_pidfile[PATHLEN + 1];
-extern char c_dumpfile[PATHLEN + 1];
-extern char c_socket[PATHLEN + 1];
-extern char c_user[PATHLEN + 1];
+extern char c_pidfile[QSTRLEN + 1];
+extern char c_dumpfile[QSTRLEN + 1];
+extern char c_socket[QSTRLEN + 1];
+extern char c_user[QSTRLEN + 1];
 extern char c_syncaddr[IPADDRSTRLEN + 1];
 extern char c_syncport[NUMLEN + 1];
 extern char c_syncsrcaddr[IPADDRSTRLEN + 1];
 extern char c_syncsrcport[NUMLEN + 1];
-extern char c_dracdb[PATHLEN + 1];
+extern char c_dracdb[QSTRLEN + 1];
 
 extern pthread_rwlock_t conf_lock;
 

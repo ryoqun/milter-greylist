@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.41 2006/07/26 08:22:41 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.42 2006/07/26 13:03:11 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -42,7 +42,7 @@
 #include "dump.h"
 
 #define NUMLEN 20
-#define PATHLEN 1024
+#define QSTRLEN 1024
 #define REGEXLEN 1024
 #define HDRLEN 1024
 #define HEADERNAME "X-Greylist"
