@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.18 2006/07/26 13:26:02 manu Exp $ */
+/* $Id: acl.c,v 1.19 2006/07/26 21:41:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.18 2006/07/26 13:26:02 manu Exp $");
+__RCSID("$Id: acl.c,v 1.19 2006/07/26 21:41:00 manu Exp $");
 #endif
 #endif
 
@@ -63,6 +63,7 @@ __RCSID("$Id: acl.c,v 1.18 2006/07/26 13:26:02 manu Exp $");
 #include "acl.h"
 #include "conf.h"
 #include "sync.h"
+#include "list.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
 #endif
@@ -72,9 +73,6 @@ struct acllist acl_head;
 pthread_rwlock_t acl_lock;
 
 static struct acl_entry gacl;
-
-static int emailcmp(char *, char *);
-static int domaincmp(char *, char *);
 
 static void
 acl_init_entry (void) {
@@ -469,28 +467,55 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 	TAILQ_FOREACH(acl, &acl_head, a_list) {
 		retval = 0;
 
-		if (acl->a_addr != NULL) {
-			if (ip_match(sa, acl->a_addr, acl->a_mask))
+		if (acl->a_addrlist != NULL) {
+			if (list_addr_filter(acl->a_addrlist, sa)) {
 				retval |= EXF_ADDR;
-			else  {
+			} else {
 				continue;
 			}
 		}
-		if (acl->a_domain != NULL) {
-			if (domaincmp(hostname, acl->a_domain))
+
+		if (acl->a_addr != NULL) {
+			if (ip_match(sa, acl->a_addr, acl->a_mask)) {
+				retval |= EXF_ADDR;
+			} else  {
+				continue;
+			}
+		}
+
+		if (acl->a_domainlist != NULL) {
+			if (list_domain_filter(acl->a_domainlist, hostname)) {
 				retval |= EXF_DOMAIN;
-			else {
+			} else {
 				continue;
 			}
 		}
+
+		if (acl->a_domain != NULL) {
+			if (domaincmp(hostname, acl->a_domain)) {
+				retval |= EXF_DOMAIN;
+			} else {
+				continue;
+			}
+		}
+
 		if (acl->a_domain_re != NULL) {
 			if (regexec(acl->a_domain_re,
-			    hostname, 0, NULL, 0) == 0)
+			    hostname, 0, NULL, 0) == 0) {
 				retval |= EXF_DOMAIN;
-			else {
+			} else {
 				continue;
 			}
 		}
+
+		if (acl->a_fromlist != NULL) {
+			if (list_from_filter(acl->a_fromlist, from)) {
+				retval |= EXF_FROM;
+			} else {
+				continue;
+			}
+		}
+
 		if (acl->a_from != NULL) {
 			if (emailcmp(from, acl->a_from) == 0) {
 				retval |= EXF_FROM;
@@ -498,6 +523,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 				continue;
 			}
 		}
+
 		if (acl->a_from_re != NULL) {
 			if (regexec(acl->a_from_re, from, 0, NULL, 0) == 0) {
 				retval |= EXF_FROM;
@@ -505,6 +531,15 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 				continue;
 			}
 		}
+
+		if (acl->a_rcptlist != NULL) {
+			if (list_rcpt_filter(acl->a_rcptlist, rcpt)) {
+				retval |= EXF_RCPT;
+			} else {
+				continue;
+			}
+		}
+
 		if (acl->a_rcpt != NULL) {
 			if (emailcmp(rcpt, acl->a_rcpt) == 0) {
 			retval |= EXF_RCPT;
@@ -512,6 +547,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 				continue;
 			}
 		}
+
 		if (acl->a_rcpt_re != NULL) {
 			if (regexec(acl->a_rcpt_re, rcpt, 0, NULL, 0) == 0) {
 				retval |= EXF_RCPT;
@@ -520,6 +556,23 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 			}
 		}
 #ifdef USE_DNSRBL
+		if (acl->a_dnsrbllist != NULL) {
+			if (list_dnsrbl_filter(acl->a_dnsrbllist, sa)) {
+				retval |= EXF_DNSRBL;
+				if (conf.c_debug) {
+					iptostring(sa, salen, 
+					    addrstr, sizeof(addrstr));
+					syslog(LOG_DEBUG, 
+					    "Mail from addr=%s[%s] exists in "
+					    "DNSRBL \"%s\"", 
+			    		    hostname, addrstr, 
+					    acl->a_dnsrbl->d_name);
+				}
+			} else {
+				continue;
+			}
+		}
+
 		if (acl->a_dnsrbl != NULL) {
 			if (dnsrbl_check_source(sa, acl->a_dnsrbl) != 0) {
 				retval |= EXF_DNSRBL;
@@ -627,7 +680,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 }
 
 
-static int
+int
 domaincmp(host, domain)
 	char *host;
 	char *domain;
@@ -657,7 +710,7 @@ domaincmp(host, domain)
 	return (1);
 }
 
-static int 
+int 
 emailcmp(big, little)
 	char *big;
 	char *little;
@@ -768,12 +821,24 @@ acl_entry(acl)
 	strncat(entrystr,
 	    (acl->a_type == A_GREYLIST) ? "greylist " : "whitelist ",
 	    sizeof(entrystr));
+	if (acl->a_addrlist != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "addr list \"%s\" ", 
+		    acl->a_addrlist->al_name);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
 	if (acl->a_addr != NULL) {
 		iptostring(acl->a_addr, acl->a_addrlen, addrstr,
 		    sizeof(addrstr));
 		inet_ntop(acl->a_addr->sa_family, acl->a_mask, maskstr,
 		    sizeof(maskstr));
 		snprintf(tempstr, sizeof(tempstr), "addr %s/%s ", addrstr, maskstr);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_fromlist != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "from list \"%s\" ", 
+		    acl->a_fromlist->al_name);
 		strncat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
@@ -788,6 +853,12 @@ acl_entry(acl)
 		strncat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
+	if (acl->a_rcptlist != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "rcpt list \"%s\" ", 
+		    acl->a_rcptlist->al_name);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
 	if (acl->a_rcpt != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "rcpt %s ", acl->a_rcpt);
 		strncat(entrystr, tempstr, sizeof(entrystr));
@@ -799,6 +870,12 @@ acl_entry(acl)
 		strncat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
+	if (acl->a_domainlist != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "domainlist \"%s\" ", 
+		    acl->a_domainlist->al_name);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
 	if (acl->a_domain != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "domain %s ", acl->a_domain);
 		strncat(entrystr, tempstr, sizeof(entrystr));
@@ -807,6 +884,12 @@ acl_entry(acl)
 	if (acl->a_domain_re != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "domain /%s/ ",
 		    acl->a_domain_re_copy);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_dnsrbllist != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "dnsrbllist \"%s\" ", 
+		    acl->a_dnsrbllist->al_name);
 		strncat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
@@ -890,6 +973,85 @@ acl_add_autowhite(delay)
 		
 	if (conf.c_debug || conf.c_acldebug)
 		printf("load acl delay %ld\n", delay);
+
+	return;
+}
+
+void
+acl_add_list(list)
+	char *list;
+{
+	struct all_list_entry *ale;
+
+	if ((ale = all_list_byname(list)) == NULL) {
+		syslog(LOG_ERR, "inexistent list \"%s\" line %d",
+		    list, conf_line);
+		exit(EX_DATAERR);
+	}
+
+	switch (ale->al_type) {
+	case LT_FROM:
+		if (gacl.a_from != NULL || gacl.a_from_re != NULL) {
+			fprintf (stderr,
+			    "list \"%s\" conficts with from statement line %d",
+			    list, conf_line);
+			exit(EX_DATAERR);
+		}
+		gacl.a_fromlist = ale;
+		break;
+
+	case LT_RCPT:
+		if (gacl.a_rcpt != NULL || gacl.a_rcpt_re != NULL) {
+			fprintf (stderr,
+			    "list \"%s\" conficts with rcpt statement line %d",
+			    list, conf_line);
+			exit(EX_DATAERR);
+		}
+		gacl.a_rcptlist = ale;
+		break;
+
+	case LT_DOMAIN:
+		if (gacl.a_domain != NULL || gacl.a_domain_re != NULL) {
+			fprintf (stderr,
+			    "list \"%s\" conficts with "
+			    "domain statement line %d",
+			    list, conf_line);
+			exit(EX_DATAERR);
+		}
+		gacl.a_domainlist = ale;
+		break;
+
+	case LT_DNSRBL:
+		if (gacl.a_dnsrbl != NULL) {
+			fprintf (stderr,
+			    "list \"%s\" conficts with "
+			    "DNSRBL statement line %d",
+			    list, conf_line);
+			exit(EX_DATAERR);
+		}
+		gacl.a_dnsrbllist = ale;
+		break;
+
+	case LT_ADDR:
+		if (gacl.a_addr != NULL) {
+			fprintf (stderr,
+			    "list \"%s\" conficts with "
+			    "addr statement line %d",
+			    list, conf_line);
+			exit(EX_DATAERR);
+		}
+		gacl.a_addrlist = ale;
+		break;
+
+	default:
+		syslog(LOG_ERR, "unexpected al_type %d line %d", 
+		    ale->al_type, conf_line);
+		exit(EX_DATAERR);
+		break;
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		printf("load acl list \"%s\"\n", list);
 
 	return;
 }

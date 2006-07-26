@@ -2,6 +2,7 @@
 	Per-ACL greylisting and autowhitelisting delays
 	DNSRBL support in ACL
 	Report matching ACL line number in the logs
+	Lists for from, rcpt, domain, netblocks and DNSRBL
 2.1.6
 	Make log output consistent (Fredrik Pettai)
 2.1.5

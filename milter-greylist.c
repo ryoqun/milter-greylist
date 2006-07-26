@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.121 2006/07/26 08:22:41 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.122 2006/07/26 21:41:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.121 2006/07/26 08:22:41 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.122 2006/07/26 21:41:00 manu Exp $");
 #endif
 #endif
 
@@ -74,6 +74,7 @@ static int check_drac(char *dotted_ip);
 
 #include "dump.h"
 #include "acl.h"
+#include "list.h"
 #include "conf.h"
 #include "pending.h"
 #include "sync.h"
@@ -833,6 +834,7 @@ main(argc, argv)
 	 * Various init
 	 */
 	conf_init();
+	all_list_init();
 	acl_init ();
 	pending_init();
 	peer_init();

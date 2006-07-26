@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.55 2006/07/26 07:31:17 manu Exp $
+# $Id: Makefile,v 1.56 2006/07/26 21:41:00 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -52,10 +52,10 @@ LEX=		flex
 YACC=		bison -y
 TRUE=		true
 
-OBJ= 		milter-greylist.o pending.o sync.o dnsrbl.o \
+OBJ= 		milter-greylist.o pending.o sync.o dnsrbl.o list.o \
 		conf_yacc.o dump_yacc.o conf.o autowhite.o dump.o spf.o acl.o
 SRC= 		milter-greylist.c pending.c sync.c conf.c \
-		autowhite.c dump.c spf.c acl.c dnsrbl.c
+		autowhite.c dump.c spf.c acl.c dnsrbl.c list.c
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c 
 
 all:		milter-greylist rc-bsd.sh rc-redhat.sh \

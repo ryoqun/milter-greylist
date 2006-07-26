@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.7 2006/07/26 08:22:41 manu Exp $ */
+/* $Id: acl.h,v 1.8 2006/07/26 21:41:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -86,6 +86,11 @@ struct acl_entry {
 #ifdef USE_DNSRBL
 	struct dnsrbl_entry *a_dnsrbl; 
 #endif
+	struct all_list_entry *a_fromlist;
+	struct all_list_entry *a_rcptlist;
+	struct all_list_entry *a_domainlist;
+	struct all_list_entry *a_dnsrbllist;
+	struct all_list_entry *a_addrlist;
 	time_t a_delay;
 	time_t a_autowhite;
 	TAILQ_ENTRY(acl_entry) a_list;
@@ -105,6 +110,7 @@ void acl_add_from_regex(char *);
 void acl_add_rcpt_regex(char *);
 void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
+void acl_add_list(char *);
 #ifdef USE_DNSRBL
 void acl_add_dnsrbl(char *);
 #endif
@@ -114,6 +120,8 @@ int acl_filter(struct sockaddr *, socklen_t, char *, char *, char *, char *,
 	time_t *, time_t *, int *);
 char *acl_entry(struct acl_entry  *);
 void acl_dump(void);
+int emailcmp(char *, char *);        
+int domaincmp(char *, char *);
 
 /* acl_filter() return codes */
 #define	EXF_UNSET	0

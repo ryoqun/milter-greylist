@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.47 2006/07/26 13:26:02 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.48 2006/07/26 21:41:00 manu Exp $");
 #endif
 #endif
 
@@ -16,6 +16,7 @@ __RCSID("$Id: conf_yacc.y,v 1.47 2006/07/26 13:26:02 manu Exp $");
 #include "conf.h"
 #include "acl.h"
 #include "sync.h"
+#include "list.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
 #endif
@@ -94,6 +95,7 @@ lines	:	lines netblock '\n'
 	|	lines nodrac '\n'
 	|       lines logexpired '\n'
 	|	lines dnsrbldef '\n'
+	|	lines listdef '\n'
 	|	lines '\n'
 	|
 	;
@@ -443,6 +445,7 @@ acl_clause:	fromaddr_clause
 	|	domainregex_clause
 	|	netblock_clause
 	|	dnsrbl_clause
+	|	list_clause
 	;
 
 acl_values:	acl_value
@@ -489,6 +492,12 @@ dnsrbl_clause:		DNSRBL QSTRING {
 			}
 			
 	;
+
+list_clause:		LIST QSTRING { 
+				char path[QSTRLEN + 1];
+
+				acl_add_list(quotepath(path, $2, QSTRLEN));
+			}
 
 netblock_clause:	ADDR IPADDR CIDR{
 				acl_add_netblock(SA(&$2),
@@ -543,5 +552,86 @@ dnsrbldef:	DNSRBL QSTRING DOMAINNAME IPADDR {
 			    conf_line);
 #endif
 		}
+	;
+
+listdef:	LIST QSTRING list_clause {
+			char path[QSTRLEN + 1];
+
+			all_list_setname(glist, quotepath(path, $2, QSTRLEN));
+			glist_init();
+		}
+	;
+
+list_clause:	FROM email_list
+			{ all_list_settype(glist, LT_FROM); }
+	|	RCPT email_list
+			{ all_list_settype(glist, LT_RCPT); }
+	|	DOMAIN domain_list
+			{ all_list_settype(glist, LT_DOMAIN); }
+	|	DNSRBL qstring_list
+			{ all_list_settype(glist, LT_DNSRBL); }
+	|	ADDR addr_list
+			{ all_list_settype(glist, LT_ADDR); }
+	;
+
+email_list:	email_item
+	|	email_list email_item
+	;
+
+email_item: 	EMAIL	{ list_add(glist, L_STRING, $1); }
+	|	REGEX	{ list_add(glist, L_REGEX, $1); }
+	;
+
+domain_list:	domain_item
+	|	domain_list domain_item
+	;
+
+domain_item:	DOMAINNAME	{ list_add(glist, L_STRING, $1); }
+	|	REGEX		{ list_add(glist, L_REGEX, $1); }	
+	;
+
+qstring_list:	qstring_item
+	|	qstring_list qstring_item
+	;
+
+qstring_item:	QSTRING		{ 
+			char tmpstr[QSTRLEN + 1];
+
+			list_add(glist, L_STRING, 
+			    quotepath(tmpstr, $1, QSTRLEN));
+		}
+	;
+
+addr_list:	addr_item
+	|	addr_list addr_item
+	;
+
+addr_item: 	IPADDR CIDR {
+			list_add_netblock(glist, SA(&$1), 
+			    sizeof(struct sockaddr_in), $2);
+		}
+	|	IPADDR {
+			list_add_netblock(glist, SA(&$1), 
+			    sizeof(struct sockaddr_in), 32);
+		}
+	|	IP6ADDR CIDR{
+#ifdef AF_INET6
+			list_add_netblock(glist, SA(&$1), 
+			    sizeof(struct sockaddr_in6), $2);
+#else
+			printf("IPv6 is not supported, ignore line %d\n",
+			    conf_line);
+#endif
+		}
+	|	IP6ADDR	{
+#ifdef AF_INET6
+			list_add_netblock(glist, SA(&$1), 
+			    sizeof(struct sockaddr_in6), 128);
+#else
+			printf("IPv6 is not supported, ignore line %d\n",
+			    conf_line);
+#endif
+		}
+	;
 %%
 #include "conf_lex.c"
