@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.120 2006/07/26 07:31:17 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.121 2006/07/26 08:22:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.120 2006/07/26 07:31:17 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.121 2006/07/26 08:22:41 manu Exp $");
 #endif
 #endif
 
@@ -371,7 +371,8 @@ mlfi_envrcpt(ctx, envrcpt)
 	 */
 	if ((priv->priv_whitelist = acl_filter(SA(&priv->priv_addr),
 	    priv->priv_addrlen, priv->priv_hostname, priv->priv_from,
-	    rcpt, priv->priv_queueid, &delay, &autowhite)) & EXF_WHITELIST) {
+	    rcpt, priv->priv_queueid, &delay, 
+	    &autowhite, &priv->priv_acl_line)) & EXF_WHITELIST) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -1217,6 +1218,7 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	char addrstr[IPADDRSTRLEN];
 	time_t remaining;
 	char *delayed_rj;
+	char aclstr[16];
 
 	/*
 	 * The message has been added to the greylist and will be delayed.
@@ -1237,9 +1239,16 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	else
 		delayed_rj = "";
 
-	syslog(LOG_INFO, "%s: addr %s[%s] from %s to %s delayed%s for %02d:%02d:%02d",
-	    priv->priv_queueid, priv->priv_hostname, addrstr, priv->priv_from, rcpt, delayed_rj,
-	    h, mn, s);
+	if (priv->priv_acl_line != 0)
+		snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
+		    priv->priv_acl_line);
+	else
+		aclstr[0] = '\0';
+
+	syslog(LOG_INFO, 
+	    "%s: addr %s[%s] from %s to %s delayed%s for %02d:%02d:%02d%s",
+	    priv->priv_queueid, priv->priv_hostname, addrstr, 
+	    priv->priv_from, rcpt, delayed_rj, h, mn, s, aclstr);
 
 	if (conf.c_quiet) {
 		(void)smfi_setreply(ctx, "451", "4.7.1",

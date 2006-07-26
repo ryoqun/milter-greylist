@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.6 2006/07/26 07:31:17 manu Exp $ */
+/* $Id: acl.h,v 1.7 2006/07/26 08:22:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -67,6 +67,7 @@ typedef enum {
 #define a_mask a_netblock.nb_mask
 
 struct acl_entry {
+	int a_line;
 	acl_type_t a_type;
 	struct {
 		struct sockaddr *nb_addr;
@@ -110,7 +111,7 @@ void acl_add_dnsrbl(char *);
 struct acl_entry *acl_register_entry_first (acl_type_t);
 struct acl_entry *acl_register_entry_last (acl_type_t);
 int acl_filter(struct sockaddr *, socklen_t, char *, char *, char *, char *,
-	time_t *, time_t *);
+	time_t *, time_t *, int *);
 char *acl_entry(struct acl_entry  *);
 void acl_dump(void);
 

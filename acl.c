@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.16 2006/07/26 07:54:38 manu Exp $ */
+/* $Id: acl.c,v 1.17 2006/07/26 08:22:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.16 2006/07/26 07:54:38 manu Exp $");
+__RCSID("$Id: acl.c,v 1.17 2006/07/26 08:22:41 manu Exp $");
 #endif
 #endif
 
@@ -411,6 +411,7 @@ acl_register_entry_first(acl_type)	/* acllist must be write-locked */
 	}
 	*acl = gacl;
 	acl->a_type = acl_type;
+	acl->a_line = conf_line - 1;
 	TAILQ_INSERT_HEAD(&acl_head, acl, a_list);
 	acl_init_entry ();
 
@@ -433,6 +434,7 @@ acl_register_entry_last(acl_type)	/* acllist must be write-locked */
 	}
 	*acl = gacl;
 	acl->a_type = acl_type;
+	acl->a_line = conf_line - 1;
 	TAILQ_INSERT_TAIL(&acl_head, acl, a_list);
 	acl_init_entry ();
 
@@ -444,7 +446,7 @@ acl_register_entry_last(acl_type)	/* acllist must be write-locked */
 }
 
 int 
-acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite)
+acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *hostname;
@@ -453,6 +455,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite)
 	char *queueid;
 	time_t *delay;
 	time_t *autowhite;
+	int *line;
 {
 	struct acl_entry *acl;
 	char addrstr[IPADDRSTRLEN];
@@ -556,6 +559,8 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite)
 			exit(EX_SOFTWARE);
 			break;
 		}
+
+		*line = acl->a_line;
 
 		*delay =
 		    (acl->a_delay != -1) ? acl->a_delay : conf.c_delay;

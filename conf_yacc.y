@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.44 2006/07/26 07:49:11 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.45 2006/07/26 08:22:41 manu Exp $");
 #endif
 #endif
 
@@ -417,8 +417,12 @@ syncsrcaddr:	SYNCSRCADDR STAR	{
 				}
 	;
 
-access_list:	ACL GREYLIST  acl_entry { acl_register_entry_last(A_GREYLIST); }
-	|	ACL WHITELIST acl_entry { acl_register_entry_last(A_WHITELIST); }
+access_list:	ACL GREYLIST  acl_entry { 
+			acl_register_entry_last(A_GREYLIST);
+		}
+	|	ACL WHITELIST acl_entry { 
+			acl_register_entry_last(A_WHITELIST);
+		}
 	;
 
 acl_entry:	DEFAULT acl_values
