@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.119 2006/07/24 22:49:43 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.120 2006/07/26 07:31:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.119 2006/07/24 22:49:43 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.120 2006/07/26 07:31:17 manu Exp $");
 #endif
 #endif
 
@@ -80,6 +80,9 @@ static int check_drac(char *dotted_ip);
 #include "spf.h"
 #include "autowhite.h"
 #include "milter-greylist.h"
+#ifdef USE_DNSRBL
+#include "dnsrbl.h"
+#endif
 
 static char *strncpy_rmsp(char *, char *, size_t);
 static char *gmtoffset(time_t *, char *, size_t);
@@ -834,6 +837,9 @@ main(argc, argv)
 	peer_init();
 	autowhite_init();
 	dump_init();
+#ifdef USE_DNSRBL
+	dnsrbl_init();
+#endif
 
 	/*
 	 * Load config file

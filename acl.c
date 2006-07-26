@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.14 2006/07/24 22:49:43 manu Exp $ */
+/* $Id: acl.c,v 1.15 2006/07/26 07:31:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.14 2006/07/24 22:49:43 manu Exp $");
+__RCSID("$Id: acl.c,v 1.15 2006/07/26 07:31:17 manu Exp $");
 #endif
 #endif
 
@@ -63,6 +63,9 @@ __RCSID("$Id: acl.c,v 1.14 2006/07/24 22:49:43 manu Exp $");
 #include "acl.h"
 #include "conf.h"
 #include "sync.h"
+#ifdef USE_DNSRBL
+#include "dnsrbl.h"
+#endif
 #include "milter-greylist.h"
 
 struct acllist acl_head;
@@ -194,6 +197,29 @@ acl_add_from(email)
 
 	return;
 }
+
+#ifdef USE_DNSRBL
+void
+acl_add_dnsrbl(dnsrbl)
+	char *dnsrbl;
+{
+	if (gacl.a_dnsrbl != NULL) {
+		fprintf (stderr,
+		    "dnsrbl specified twice in ACL line %d\n",
+		    conf_line);
+		exit(EX_DATAERR);
+	}
+	if ((gacl.a_dnsrbl = dnsrbl_byname(dnsrbl)) == NULL) {
+		syslog(LOG_ERR, "unknown DNSRBL \"%s\"", dnsrbl);
+		exit(EX_DATAERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		printf("load acl dnsrbl %s\n", dnsrbl);
+
+	return;
+}
+#endif
 
 void
 acl_add_rcpt(email)
@@ -490,6 +516,15 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite)
 				continue;
 			}
 		}
+#ifdef USE_DNSRBL
+		if (acl->a_dnsrbl != NULL) {
+			if (dnsrbl_check_source(sa, acl->a_dnsrbl) != 0) {
+				retval |= EXF_DNSRBL;
+			} else {
+				continue;
+			}
+		}
+#endif
 		/*
 		 * We found an entry that matches, exit the evaluation
 		 * loop
@@ -758,6 +793,12 @@ acl_entry(acl)
 	if (acl->a_domain_re != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "domain /%s/ ",
 		    acl->a_domain_re_copy);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_dnsrbl != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "dnsrbl \"%s\" ",
+		    acl->a_dnsrbl->de_name);
 		strncat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}

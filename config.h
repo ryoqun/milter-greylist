@@ -209,3 +209,4 @@
 
 /* Define as `fork' if `vfork' does not work. */
 /* #undef vfork */
+#define USE_DNSRBL 1

@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLDELAY 
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE PATH TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLDELAY DNSRBL
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.42 2006/07/24 22:49:43 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.43 2006/07/26 07:31:17 manu Exp $");
 #endif
 #endif
 
@@ -16,6 +16,9 @@ __RCSID("$Id: conf_yacc.y,v 1.42 2006/07/24 22:49:43 manu Exp $");
 #include "conf.h"
 #include "acl.h"
 #include "sync.h"
+#ifdef USE_DNSRBL
+#include "dnsrbl.h"
+#endif
 #include "milter-greylist.h"
 
 #define LEN4 sizeof(struct sockaddr_in)
@@ -89,7 +92,8 @@ lines	:	lines netblock '\n'
 	|	lines access_list '\n'
 	|	lines dracdb '\n'
 	|	lines nodrac '\n'
-      |       lines logexpired '\n'
+	|       lines logexpired '\n'
+	|	lines dnsrbldef '\n'
 	|	lines '\n'
 	|
 	;
@@ -432,6 +436,7 @@ acl_clause:	fromaddr_clause
 	|	domainaddr_clause
 	|	domainregex_clause
 	|	netblock_clause
+	|	dnsrbl_clause
 	|	greylist_value
 	|	autowhite_value
 	;
@@ -458,6 +463,19 @@ domainaddr_clause:	DOMAIN DOMAINNAME { acl_add_domain ($2); }
 	;
 
 domainregex_clause:	DOMAIN REGEX { acl_add_domain_regex ($2); }
+	;
+
+dnsrbl_clause:		DNSRBL PATH { 
+#ifdef USE_DNSRBL
+			char path[PATHLEN + 1];
+
+			acl_add_dnsrbl(quotepath(path, $2, PATHLEN));
+#else
+			printf("DNSRBL support not compiled in line %d\n", 
+			    conf_line);
+#endif
+			}
+			
 	;
 
 netblock_clause:	ADDR IPADDR CIDR{
@@ -502,5 +520,16 @@ dracdb:			DRAC DB PATH	{
 nodrac:			NODRAC	{ conf.c_nodrac = 1; }
 	;
 
+dnsrbldef:	DNSRBL PATH DOMAINNAME IPADDR {
+#ifdef USE_DNSRBL
+			char path[PATHLEN + 1];
+
+			dnsrbl_source_add(quotepath(path, $2, PATHLEN), 
+			    $3, SA(&$4));
+#else
+			printf("DNSRBL support not compiled in line %d\n", 
+			    conf_line);
+#endif
+		}
 %%
 #include "conf_lex.c"
