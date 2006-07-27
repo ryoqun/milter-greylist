@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.19 2006/07/26 21:41:00 manu Exp $ */
+/* $Id: acl.c,v 1.20 2006/07/27 08:53:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.19 2006/07/26 21:41:00 manu Exp $");
+__RCSID("$Id: acl.c,v 1.20 2006/07/27 08:53:16 manu Exp $");
 #endif
 #endif
 
@@ -887,6 +887,7 @@ acl_entry(acl)
 		strncat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
+#if USE_DNSRBL
 	if (acl->a_dnsrbllist != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "dnsrbllist \"%s\" ", 
 		    acl->a_dnsrbllist->al_name);
@@ -899,6 +900,7 @@ acl_entry(acl)
 		strncat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
+#endif
 	if (acl->a_delay != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[delay %ld] ", acl->a_delay);
@@ -1021,6 +1023,7 @@ acl_add_list(list)
 		gacl.a_domainlist = ale;
 		break;
 
+#if USE_DNSRBL
 	case LT_DNSRBL:
 		if (gacl.a_dnsrbl != NULL) {
 			fprintf (stderr,
@@ -1031,6 +1034,7 @@ acl_add_list(list)
 		}
 		gacl.a_dnsrbllist = ale;
 		break;
+#endif
 
 	case LT_ADDR:
 		if (gacl.a_addr != NULL) {
