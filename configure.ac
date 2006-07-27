@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.168 2006/07/24 22:51:48 manu Exp $
+# $Id: configure.ac,v 1.169 2006/07/27 08:49:11 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 2.1.6, manu@netbsd.org)
+AC_INIT(milter-greylist, 2.1.7, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -322,6 +322,11 @@ CFLAGS=$SAVEDCFLAGS
 AC_ARG_ENABLE(drac,
 	[  --enable-drac	Enable DRAC support],
 	[CFLAGS=$CFLAGS" -DUSE_DRAC"])
+
+# Check for DNSRBL
+AC_ARG_ENABLE(dnsrbl,
+	[  --enable-dnsrbl	Enable DNSRBL support],
+	[CFLAGS=$CFLAGS" -DUSE_DNSRBL"])
 
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use
