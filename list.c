@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.1 2006/07/27 12:42:42 manu Exp $ */
+/* $Id: list.c,v 1.2 2006/07/27 15:08:30 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.1 2006/07/27 12:42:42 manu Exp $");
+__RCSID("$Id: list.c,v 1.2 2006/07/27 15:08:30 manu Exp $");
 #endif
 #endif
 
@@ -485,7 +485,7 @@ list_domain_filter(list, domain)
 	LIST_FOREACH(le, &list->al_head, l_list) {
 		switch(le->l_type) {
 		case L_STRING:
-			if (domaincmp(domain, le->l_data.string) == 0)
+			if (domaincmp(domain, le->l_data.string))
 				goto domain_out;
 			break;
 		case L_REGEX:
