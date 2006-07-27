@@ -1,9 +1,9 @@
-# $Id: README,v 1.38 2006/07/24 22:51:47 manu Exp $
+# $Id: README,v 1.39 2006/07/27 09:12:00 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2006/07/24 22:51:47 $
+		       $Date: 2006/07/27 09:12:00 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -16,14 +16,16 @@ Table of contents:
  3 Configuring milter-greylist 
  4 Trying it out for a few users 
  5 Running it for the whole site 
- 6 Dealing with mail farms
- 7 Working with multiple MXs
- 8 Building with SPF
- 9 Using DRAC
- 10 Packaging
- 11 Things to look at if things get wrong
- 12 Known problems
- 13 License
+ 6 Lists and per-ACL settings
+ 7 Dealing with mail farms
+ 8 Working with multiple MXs
+ 9 Using DNSRBL
+ 10 Building with SPF
+ 11 Using DRAC
+ 12 Packaging
+ 13 Things to look at if things get wrong
+ 14 Known problems
+ 15 License
 
 Run this command to regenerate a table of contents:
  sed '/^.====/{g;p;};h;d' README
@@ -182,7 +184,35 @@ acl greylist rcpt /.*@example\.net/
 acl whitelist default
 
 
- 6 Dealing with mail farms
+ 6 Lists and per-ACL settings
+ ============================
+
+It is possible to have per-ACL greylisting and autowhitelisting
+settings:
+
+acl greylist rcpt /.*@example\.net/ delay 15m autowhite 3d
+acl greylist default delay 30m autowhite 1d
+
+Here, all messages to domain example.net will have a greylisting delay
+of 15 minutes and will be autowhitelisted for 3 days, while messages
+to other domains will be greylisted for 30 minutes and autowhitelisted
+for one day.
+
+milter-greylist is now also able to use lists, which is very useful for
+factoring rules:
+
+list "users" rcpt { user1@example.com user2@example.com user3@example.com }
+acl greylist list "users"
+acl whitelist default
+
+Here message sent to members of the "users" list will be greylisted, while
+other messages will not.
+
+Theses two advanced features were added in release 2.1.7 and may not be
+fully stable.
+
+
+ 7 Dealing with mail farms
  =========================
 
 Some Internet service provider such as Hotmail feature mail farms,
@@ -207,7 +237,7 @@ servers that will always resend their messages, there is no point in
 greylisting them.
 
 
- 7 Working with multiple MXs
+ 8 Working with multiple MXs
  ===========================
 
 When running several MXs, the client should try each server after
@@ -238,8 +268,34 @@ connections in both directions between random unprivileged
 source ports and destination port 5252.
 
 
- 8 Building with SPF
- ===================
+ 9 Using DNSRBL
+ ==============
+
+milter-greylist can use a DNSRBL to decide wether a host should be
+greylisted or whitelisted. For instance, let us say that you cant to
+greylist any host appearing in the SORBS dynamic pool list (this include
+DSL and cable pools). You would do this:
+
+# if IP a.b.c.d is positive, then nslookup of d.c.b.a.dnsbl.sorbs.net 
+# returns 127.0.0.10
+dnsrbl "SORBS DUN" dnsbl.sorbs.net 127.0.0.10
+acl greylist dnsrbl "SORBS DUN"
+
+You can combine it with variable greylisting delays so that dynamic hosts
+get a greylisting delay of 12 hours while other hosts only get 15 minutes:
+
+dnsrbl "SORBS DUN" dnsbl.sorbs.net 127.0.0.10
+acl greylist dnsrbl "SORBS DUN" delay 12h
+acl greylist default delay 15m
+
+This feature was introduced in milter-greylist 2.1.7 and may not be
+fully stable. You need the --enable-dnsrbl flag to configure to use 
+it. You must link milter-greylist with a thread-safe resolver, else 
+the milter will be unstable (see the explanation in the SPF section)
+
+
+ 10 Building with SPF
+ ====================
 
 milter-greylist can use either libspf or libspf2 to perform SPF
 checks. Use --with-libspf=DIR or --with-libspf2=DIR to enable this
@@ -270,8 +326,8 @@ libbind is only available as a static library. It seems to be the
 default with BIND 8, which causes troubles. BIND 9 is fine.
 
 
- 9 Using DRAC
- ============
+ 11 Using DRAC
+ =============
 
 milter-greylist can be built with DRAC support, by giving the
 --enable-drac flag to configure. Location of the DRAC DB file can 
@@ -282,8 +338,8 @@ If built-in, DRAC can be disabled by the nodrac configuration file
 option.
 
 
- 10 Packaging
- ===========
+ 12 Packaging
+ ============
 
 milter-greylist is available from NetBSD pkgsrc and FreeBSD ports.
 A .spec file is included in the distribution to build a RPM for
@@ -291,8 +347,8 @@ RedHat Linux. That is achieved by running rpmbuild on milter-greylist
 source tarball: rpmbuild -bb  milter-greylist-1.7.3.tgz
 
 
- 11 Things to look at if things get wrong
- =======================================
+ 13 Things to look at if things get wrong
+ ========================================
 
 First, read the milter-greylist(8) and greylist.conf(5) man page! :-)
 
@@ -340,7 +396,7 @@ tells you when the entry will expire.
 Examining the tail of this file may reveal problems with domains which
 use multiple MX servers or whose mail is actually served by another site.
 
- 12 Known problems
+ 14 Known problems
  =================
 
 If milter-greylist terminates during its operation, first check your
@@ -356,6 +412,9 @@ regularly, check that you linked your SPF library with a thread-safe
 resolver. This can be done by running nm(1) on milter-greylist: if
 nres_init is referenced, you are fine.  If res_init is referenced, you 
 are probably at risk.
+
+When DNSRBL support is compiled in, you also need to make sure that
+milter-greylist itself is linked with a thread-safe resolver.
 
 On Solaris 2.8, milter-greylist may grow out of memory rather quickly 
 due to some bugs in the pthread nsl and socket libraries. It is strongly 
@@ -379,7 +438,7 @@ configure with the CC environment variable set to cc. This
 incompatibility may be fixed in gcc 3.4.
 
 
- 13 License
+ 15 License
  ==========
 
 This software is available under a 3 clauses BSD license:
