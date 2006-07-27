@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.169 2006/07/27 08:49:11 manu Exp $
+# $Id: configure.ac,v 1.170 2006/07/27 16:04:57 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -50,6 +50,12 @@ AC_ARG_WITH(libpthread,
 	[  --with-libpthread=DIR  Find libpthread in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
+AC_ARG_WITH(libbind, 
+	[  --with-libbind=DIR	Find libbind in DIR],
+	[CFLAGS=$CFLAGS" -I$withval/include/bind -I$withval/include"
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+	    AC_CHECK_LIB([bind], [res_init], [LIBS="-lbind $LIBS"])
+	 ])
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -322,11 +328,6 @@ CFLAGS=$SAVEDCFLAGS
 AC_ARG_ENABLE(drac,
 	[  --enable-drac	Enable DRAC support],
 	[CFLAGS=$CFLAGS" -DUSE_DRAC"])
-
-# Check for DNSRBL
-AC_ARG_ENABLE(dnsrbl,
-	[  --enable-dnsrbl	Enable DNSRBL support],
-	[CFLAGS=$CFLAGS" -DUSE_DNSRBL"])
 
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use
@@ -617,6 +618,36 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([
 	])], [brokenpth=no], 
 	AC_DEFINE([HAVE_BROKEN_RWLOCK], [], [broken rwlock in libpthread]))
 AC_MSG_RESULT([$brokenpth])
+
+# Check is DNS resolver is re-entrant
+SAVEDCFLAGS=$CFLAGS
+CFLAGS=$CFLAGS" -Wall -Werror"
+AC_MSG_CHECKING([if DNS resolver is re-entrant])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+		#include <netinet/in.h>
+		#include <arpa/inet.h>
+		#include <arpa/nameser.h>
+		#include <resolv.h>
+	],[
+		struct __res_state res;
+
+		res_ninit(&res);
+	])], [rdns=yes], [rdns=no])
+AC_MSG_RESULT([$rdns])
+CFLAGS=$SAVEDCFLAGS
+
+# Check for DNSRBL
+AC_ARG_ENABLE(dnsrbl,
+	[  --enable-dnsrbl	Enable DNSRBL support],
+	[if test $rdns = yes; then
+		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
+	 else
+		echo "--enable-dnsrbl used but DNS resolver is not thread safe";
+		echo "Try installing BIND9 and using --with-libbind";
+		exit 1;
+	 fi
+	])
+
 
 # Record the build environnement for milter-greylist -r
 AC_DEFINE_UNQUOTED([BUILD_ENV], ["`logname`@`uname -n`:`pwd` `date`"], 

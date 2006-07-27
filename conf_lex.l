@@ -75,7 +75,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.47 2006/07/27 08:20:12 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.48 2006/07/27 16:04:57 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -122,7 +122,7 @@ star		"*"
 {none}		{ return NONE; }
 {delays}	{ return DELAYS; }
 {nodelays}	{ return NODELAYS; }
-{gldelay}	{ return GLDELAY; }
+{gldelay}	{ return GLXDELAY; }
 {all}		{ return ALL; }
 {dumpfreq}	{ return GLDUMPFREQ; }
 {timeout}	{ return GLTIMEOUT; }

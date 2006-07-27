@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.2 2006/07/27 15:08:30 manu Exp $ */
+/* $Id: list.c,v 1.3 2006/07/27 16:04:57 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.2 2006/07/27 15:08:30 manu Exp $");
+__RCSID("$Id: list.c,v 1.3 2006/07/27 16:04:57 manu Exp $");
 #endif
 #endif
 
@@ -48,6 +48,8 @@ __RCSID("$Id: list.c,v 1.2 2006/07/27 15:08:30 manu Exp $");
 
 #include <sys/queue.h>
 #include <sys/types.h>
+
+#include <netinet/in.h>
 
 #include "milter-greylist.h"
 #include "conf.h"

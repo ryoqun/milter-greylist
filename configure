@@ -853,6 +853,7 @@ Optional Packages:
   --with-db=DIR   Find Berkeley DB in DIR
   --with-libmilter=DIR   Find libmilter in DIR
   --with-libpthread=DIR  Find libpthread in DIR
+  --with-libbind=DIR	Find libbind in DIR
   --with-libspf2=DIR  Find libspf2 in DIR
   --with-libspf2_10=DIR  Find libspf2 1.0 in DIR
   --with-libspf_alt=DIR  Find libspf_alt in DIR
@@ -3050,6 +3051,82 @@ if test "${with_libpthread+set}" = set; then
   withval="$with_libpthread"
   CFLAGS=$CFLAGS" -I$withval/include"
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+fi;
+
+# Check whether --with-libbind or --without-libbind was given.
+if test "${with_libbind+set}" = set; then
+  withval="$with_libbind"
+  CFLAGS=$CFLAGS" -I$withval/include/bind -I$withval/include"
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+	    echo "$as_me:$LINENO: checking for res_init in -lbind" >&5
+echo $ECHO_N "checking for res_init in -lbind... $ECHO_C" >&6
+if test "${ac_cv_lib_bind_res_init+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lbind  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char res_init ();
+int
+main ()
+{
+res_init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_bind_res_init=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_bind_res_init=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_bind_res_init" >&5
+echo "${ECHO_T}$ac_cv_lib_bind_res_init" >&6
+if test $ac_cv_lib_bind_res_init = yes; then
+  LIBS="-lbind $LIBS"
+fi
+
+
 fi;
 
 # Checks for header files.
@@ -7377,13 +7454,6 @@ if test "${enable_drac+set}" = set; then
   CFLAGS=$CFLAGS" -DUSE_DRAC"
 fi;
 
-# Check for DNSRBL
-# Check whether --enable-dnsrbl or --disable-dnsrbl was given.
-if test "${enable_dnsrbl+set}" = set; then
-  enableval="$enable_dnsrbl"
-  CFLAGS=$CFLAGS" -DUSE_DNSRBL"
-fi;
-
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use
 echo "$as_me:$LINENO: checking for pthread_create in -lpthread" >&5
@@ -8895,6 +8965,84 @@ rm -f core *.core gmon.out bb.out conftest$ac_exeext conftest.$ac_objext conftes
 fi
 echo "$as_me:$LINENO: result: $brokenpth" >&5
 echo "${ECHO_T}$brokenpth" >&6
+
+# Check is DNS resolver is re-entrant
+SAVEDCFLAGS=$CFLAGS
+CFLAGS=$CFLAGS" -Wall -Werror"
+echo "$as_me:$LINENO: checking if DNS resolver is re-entrant" >&5
+echo $ECHO_N "checking if DNS resolver is re-entrant... $ECHO_C" >&6
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+		#include <netinet/in.h>
+		#include <arpa/inet.h>
+		#include <arpa/nameser.h>
+		#include <resolv.h>
+
+int
+main ()
+{
+
+		struct __res_state res;
+
+		res_ninit(&res);
+
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext
+if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
+  (eval $ac_compile) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest.$ac_objext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  rdns=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+rdns=no
+fi
+rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
+echo "$as_me:$LINENO: result: $rdns" >&5
+echo "${ECHO_T}$rdns" >&6
+CFLAGS=$SAVEDCFLAGS
+
+# Check for DNSRBL
+# Check whether --enable-dnsrbl or --disable-dnsrbl was given.
+if test "${enable_dnsrbl+set}" = set; then
+  enableval="$enable_dnsrbl"
+  if test $rdns = yes; then
+		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
+	 else
+		echo "--enable-dnsrbl used but DNS resolver is not thread safe";
+		echo "Try installing BIND9 and using --with-libbind";
+		exit 1;
+	 fi
+
+fi;
+
 
 # Record the build environnement for milter-greylist -r
 
