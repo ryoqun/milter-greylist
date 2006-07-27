@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.21 2005/10/03 07:58:53 manu Exp $ */
+/* $Id: spf.c,v 1.22 2006/07/27 12:48:24 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.21 2005/10/03 07:58:53 manu Exp $");
+__RCSID("$Id: spf.c,v 1.22 2006/07/27 12:48:24 manu Exp $");
 #endif
 #endif
 
@@ -112,7 +112,9 @@ out1:
 
 #if defined(HAVE_SPF_ALT) || defined(HAVE_SPF2_10) || defined(HAVE_SPF2)
 /* SMTP needs at least 64 chars for local part and 255 for doamin... */
+#ifndef NS_MAXDNAME
 #define NS_MAXDNAME 1025
+#endif
 #endif
 
 #ifdef HAVE_SPF_ALT

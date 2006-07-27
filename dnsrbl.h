@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.h,v 1.3 2006/07/26 13:26:02 manu Exp $ */
+/* $Id: dnsrbl.h,v 1.4 2006/07/27 12:48:24 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -30,6 +30,10 @@
  */
 
 #include <arpa/nameser.h>
+
+#ifndef NS_MAXDNAME
+#define NS_MAXDNAME 1025 
+#endif 
 
 LIST_HEAD(dnsrbllist, dnsrbl_entry);
 
