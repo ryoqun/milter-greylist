@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.37 2006/07/26 13:03:11 manu Exp $ */
+/* $Id: conf.c,v 1.38 2006/07/27 08:20:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.37 2006/07/26 13:03:11 manu Exp $");
+__RCSID("$Id: conf.c,v 1.38 2006/07/27 08:20:12 manu Exp $");
 #endif
 #endif
 
@@ -145,6 +145,7 @@ conf_load(void)
 		acl_clear();
 
 		conf_in = stream;
+		conf_line = 1;
 
 		conf_parse();
 		ACL_UNLOCK;
