@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.33 2006/02/17 19:46:13 manu Exp $
+.\" $Id: greylist.conf.5,v 1.34 2006/07/27 16:32:29 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -48,7 +48,8 @@ is to setup
 whitelist. 
 Access-lists (ACL) are used to do that. ACL enable the administrator 
 to specify complex conditions on sender IP, sender DNS address, 
-sender e-mail address, and recipient e-mail address.
+sender e-mail address, and recipient e-mail address. If support for
+DNSRBL was built-in, it is even possible to use DNSRBL in ACL.
 .PP
 An access-list entry starts with the
 .I acl
@@ -60,9 +61,17 @@ keyword, and by any set of the 4 clauses:
 .I addr\fR,
 .I domain\fR,
 .I from\fR,
-and
-.I rcpt\fR.
+.I rcpt\fR,
+and (if built with --enable-dnsrbl)
+.I dnsrbl\fR.
 A message will match an ACL entry when it complies with all of its clauses.
+.PP
+An ACL entry can also carry the greylisting and autowhitelisiting delays
+that will be applied to messages matching the entry. This is done with 
+the 2 clauses
+.I delay\fR,
+and
+.I autowhite\fR.
 .TP
 .I addr
 This clause is used to specify a netblock of source IP 
@@ -106,6 +115,29 @@ Example:
 This is used to select recipient addresses. Example:
 .IP
   acl greylist rcpt John.Doe@example.net
+.TP
+.I dnsrbl
+This is used to select a DNSRBL. See the section on that topic for
+more information.
+.TP
+.I delay
+Specify the greylisting delay used before the message can be accepted.
+This overrides the 
+.I greylist
+global setting, and it only  makes sense on an 
+.I acl greylist
+entry. 
+.TP
+.I autowhite
+Specify the autowhitelisting duration for messages matching this ACL.
+This overrides the
+.I autowhite
+global setting, and it only makes sense on an
+.I acl greylist
+entry. Example:
+.IP
+  acl greylist rcpt JDoe@example.net greylist 15m autowhite 3d
+  acl greylist rcpt root@example.net greylist 1h autowhite 3d
 .PP
 .I domain\fR,
 .I from\fR,
@@ -165,6 +197,18 @@ acl whitelist rcpt user2@mydomain.org
 acl greylist rcpt /.*@.*mydomain\.org/
 acl whitelist default
 .fi
+.SH LISTS
+It is often useful to group several users or sender IP addresses in a single
+ACL. This can be done with lists. Lists must be first defined and given 
+a name before they can be used in ACL entries. Here is an example:
+.IP
+  list "my users" rcpt { user1@example.com user2@example.com }
+  list "local addr { 192.0.2.0/24 10.0.0.0/8 }
+
+  acl whitelist list "local"
+  acl greylist list "my users"
+  acl whitelist default
+
 .SH BACKWARD COMPATIBILITY
 Previous versions of 
 .B milter-greylist(8)
@@ -299,6 +343,28 @@ will cope much better with sender callback systems.
 This has a minor drawback (and this is why it is not enabled by default): 
 for a multi recipient DSN, whitelisted recipient will not be honoured: 
 the message will be delayed for everyone. 
+.SH DNSRBL
+DNS Reverse Black List can be used to toggle an ACL. They must be defined
+and named before they can be used. Here is an example which uses 
+a bigger greylisting delay for hosts caught in the SORBS dynamic pool 
+DNRSBL (this will include DSL and cable customers pools, which are well 
+known to be massively infected by spamwares):
+.IP
+  dnsrbl "SORBS DUN" dnsbl.sorbs.net 127.0.0.10
+
+  acl greylist dnsrbl "SORBS DUN" delay 1h
+  acl greylist default delay 15m
+.PP
+The definition of a DNSRBL starts by the
+.I dnsrbl
+keyword, followed by the quoted name of the DNSRBL, the DNS domain on 
+which addresses should be looked up, and the answer we should consider
+as a positive hit.
+.PP
+DNSRBL support is only available if enabled through the --enable-dnsrbl
+config flag. Please make sure
+.B milter-greylist(8)
+is linked against a thread-safe DNS resolver, otherwise it shall crash.
 .SH COMMAND-LINE FLAG EQUIVALENTS
 Most 
 .B milter-greylist(8)
