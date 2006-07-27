@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.20 2006/07/27 08:53:16 manu Exp $ */
+/* $Id: acl.c,v 1.21 2006/07/27 09:37:24 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.20 2006/07/27 08:53:16 manu Exp $");
+__RCSID("$Id: acl.c,v 1.21 2006/07/27 09:37:24 manu Exp $");
 #endif
 #endif
 
@@ -179,7 +179,9 @@ void
 acl_add_from(email)
 	char *email;
 {
-	if (gacl.a_from != NULL || gacl.a_from_re != NULL) {
+	if (gacl.a_from != NULL || 
+	    gacl.a_from_re != NULL ||
+	    gacl.a_fromlist != NULL ) {
 		fprintf (stderr,
 		    "from specified twice in ACL line %d\n",
 		    conf_line);
@@ -201,7 +203,8 @@ void
 acl_add_dnsrbl(dnsrbl)
 	char *dnsrbl;
 {
-	if (gacl.a_dnsrbl != NULL) {
+	if (gacl.a_dnsrbl != NULL ||
+	    gacl.a_dnsrbllist != NULL) {
 		fprintf (stderr,
 		    "dnsrbl specified twice in ACL line %d\n",
 		    conf_line);
@@ -223,7 +226,9 @@ void
 acl_add_rcpt(email)
 	char *email;
 {
-	if (gacl.a_rcpt != NULL || gacl.a_rcpt_re != NULL) {
+	if (gacl.a_rcpt != NULL || 
+	    gacl.a_rcpt_re != NULL ||
+	    gacl.a_rcptlist != NULL) {
 		fprintf (stderr,
 		    "rcpt specified twice in ACL line %d\n",
 		    conf_line);
@@ -244,7 +249,9 @@ void
 acl_add_domain(domain)
 	char *domain;
 {
-	if (gacl.a_domain != NULL || gacl.a_domain_re != NULL) {
+	if (gacl.a_domain != NULL || 
+	    gacl.a_domain_re != NULL ||
+	    gacl.a_domainlist != NULL) {
 		fprintf (stderr,
 		    "domain specified twice in ACL line %d\n",
 		    conf_line);
@@ -270,7 +277,9 @@ acl_add_from_regex(regexstr)
 	int error;
 	char errstr[ERRLEN + 1];
 
-	if (gacl.a_from != NULL || gacl.a_from_re != NULL) {
+	if (gacl.a_from != NULL || 
+	    gacl.a_from_re != NULL ||
+	    gacl.a_fromlist != NULL) {
 		fprintf (stderr,
 		    "from specified twice in ACL line %d\n",
 		    conf_line);
@@ -315,7 +324,9 @@ acl_add_rcpt_regex(regexstr)
 	int error;
 	char errstr[ERRLEN + 1];
 
-	if (gacl.a_rcpt != NULL || gacl.a_rcpt_re != NULL) {
+	if (gacl.a_rcpt != NULL || 
+	    gacl.a_rcpt_re != NULL ||
+	    gacl.a_rcptlist != NULL) {
 		fprintf (stderr,
 		    "rcpt specified twice in ACL line %d\n",
 		    conf_line);
@@ -360,7 +371,9 @@ acl_add_domain_regex(regexstr)
 	int error;
 	char errstr[ERRLEN + 1];
 
-	if (gacl.a_domain != NULL || gacl.a_domain_re != NULL) {
+	if (gacl.a_domain != NULL || 
+	    gacl.a_domain_re != NULL ||
+	    gacl.a_domainlist != NULL) {
 		fprintf (stderr,
 		    "domain specified twice in ACL line %d\n",
 		    conf_line);
@@ -993,9 +1006,11 @@ acl_add_list(list)
 
 	switch (ale->al_type) {
 	case LT_FROM:
-		if (gacl.a_from != NULL || gacl.a_from_re != NULL) {
+		if (gacl.a_from != NULL || 
+		    gacl.a_from_re != NULL ||
+		    gacl.a_fromlist != NULL) {
 			fprintf (stderr,
-			    "list \"%s\" conficts with from statement line %d",
+			    "muliple from statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
 		}
@@ -1003,9 +1018,11 @@ acl_add_list(list)
 		break;
 
 	case LT_RCPT:
-		if (gacl.a_rcpt != NULL || gacl.a_rcpt_re != NULL) {
+		if (gacl.a_rcpt != NULL ||
+		    gacl.a_rcpt_re != NULL ||
+		    gacl.a_rcptlist != NULL) {
 			fprintf (stderr,
-			    "list \"%s\" conficts with rcpt statement line %d",
+			    "muliple rcpt statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
 		}
@@ -1013,10 +1030,11 @@ acl_add_list(list)
 		break;
 
 	case LT_DOMAIN:
-		if (gacl.a_domain != NULL || gacl.a_domain_re != NULL) {
+		if (gacl.a_domain != NULL ||
+		    gacl.a_domain_re != NULL ||
+		    gacl.a_domainlist != NULL) {
 			fprintf (stderr,
-			    "list \"%s\" conficts with "
-			    "domain statement line %d",
+			    "muliple domain statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
 		}
@@ -1025,10 +1043,10 @@ acl_add_list(list)
 
 #if USE_DNSRBL
 	case LT_DNSRBL:
-		if (gacl.a_dnsrbl != NULL) {
+		if (gacl.a_dnsrbl != NULL ||
+		    gacl.a_dnsrbllist != NULL) {
 			fprintf (stderr,
-			    "list \"%s\" conficts with "
-			    "DNSRBL statement line %d",
+			    "muliple dnsrbl statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
 		}
@@ -1037,10 +1055,10 @@ acl_add_list(list)
 #endif
 
 	case LT_ADDR:
-		if (gacl.a_addr != NULL) {
+		if (gacl.a_addr != NULL ||
+		    gacl.a_addrlist != NULL) {
 			fprintf (stderr,
-			    "list \"%s\" conficts with "
-			    "addr statement line %d",
+			    "muliple addr statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
 		}
