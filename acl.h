@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.8 2006/07/26 21:41:00 manu Exp $ */
+/* $Id: acl.h,v 1.9 2006/07/27 20:08:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -59,7 +59,8 @@ TAILQ_HEAD(acllist, acl_entry);
 
 typedef enum { 
 	A_GREYLIST,
-	A_WHITELIST
+	A_WHITELIST,
+	A_BLACKLIST,
 } acl_type_t;
 
 #define a_addr a_netblock.nb_addr
@@ -142,4 +143,5 @@ int domaincmp(char *, char *);
 #define EXF_ACCESSDB	(1 << 13)
 #define EXF_DRAC	(1 << 14)
 #define EXF_DNSRBL	(1 << 15)
+#define EXF_BLACKLIST	(1 << 16)
 #endif /* _ACL_H_ */

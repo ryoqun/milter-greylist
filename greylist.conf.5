@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.34 2006/07/27 16:32:29 manu Exp $
+.\" $Id: greylist.conf.5,v 1.35 2006/07/27 20:08:32 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -45,7 +45,7 @@ The primary use of
 .B greylist.conf
 is to setup 
 .B milter-greylist(8)
-whitelist. 
+whitelist. It also offers a handy blacklist feature. 
 Access-lists (ACL) are used to do that. ACL enable the administrator 
 to specify complex conditions on sender IP, sender DNS address, 
 sender e-mail address, and recipient e-mail address. If support for
@@ -54,10 +54,11 @@ DNSRBL was built-in, it is even possible to use DNSRBL in ACL.
 An access-list entry starts with the
 .I acl
 keyword followed by the
-.I greylist
+.I greylist\fR,
+.I whitelist\fR,
 or
-.I whitelist
-keyword, and by any set of the 4 clauses: 
+.I blacklist
+keyword, and by any set of the 5 clauses: 
 .I addr\fR,
 .I domain\fR,
 .I from\fR,
@@ -66,7 +67,9 @@ and (if built with --enable-dnsrbl)
 .I dnsrbl\fR.
 A message will match an ACL entry when it complies with all of its clauses.
 .PP
-An ACL entry can also carry the greylisting and autowhitelisiting delays
+An 
+.I acl greylist
+entry can also carry the greylisting and autowhitelisiting delays
 that will be applied to messages matching the entry. This is done with 
 the 2 clauses
 .I delay\fR,

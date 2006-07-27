@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.122 2006/07/26 21:41:00 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.123 2006/07/27 20:08:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.122 2006/07/26 21:41:00 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.123 2006/07/27 20:08:32 manu Exp $");
 #endif
 #endif
 
@@ -376,6 +376,26 @@ mlfi_envrcpt(ctx, envrcpt)
 	    &autowhite, &priv->priv_acl_line)) & EXF_WHITELIST) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
+	}
+
+	/* 
+	 * Blacklist overrides autowhitelisting...
+	 */
+	if (priv->priv_whitelist & EXF_BLACKLIST) {
+		char aclstr[16];
+
+		if (priv->priv_acl_line != 0)
+			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
+			    priv->priv_acl_line);
+
+		syslog(LOG_INFO, 
+		    "%s: addr %s[%s] from %s to %s %s",
+		    priv->priv_queueid, priv->priv_hostname, addrstr, 
+		    priv->priv_from, rcpt, aclstr);
+
+		(void)smfi_setreply(ctx, "551", "5.7.1", "Go away!");
+
+		return SMFIS_REJECT;
 	}
 
 	/* 

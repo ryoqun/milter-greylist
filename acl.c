@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.21 2006/07/27 09:37:24 manu Exp $ */
+/* $Id: acl.c,v 1.22 2006/07/27 20:08:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.21 2006/07/27 09:37:24 manu Exp $");
+__RCSID("$Id: acl.c,v 1.22 2006/07/27 20:08:32 manu Exp $");
 #endif
 #endif
 
@@ -426,9 +426,23 @@ acl_register_entry_first(acl_type)	/* acllist must be write-locked */
 	TAILQ_INSERT_HEAD(&acl_head, acl, a_list);
 	acl_init_entry ();
 
-	if (conf.c_debug || conf.c_acldebug)
-		printf("register acl first %s\n",
-		    (acl_type == A_GREYLIST) ? "GREYLIST" : "WHITELIST");
+	if (conf.c_debug || conf.c_acldebug) {
+		switch(acl_type) {
+		case A_GREYLIST:
+			printf("register acl first GREYLIST\n");
+			break;
+		case A_WHITELIST:
+			printf("register acl first WHITELIST\n");
+			break;
+		case A_BLACKLIST:
+			printf("register acl first BLACKLIST\n");
+			break;
+		default:
+			syslog(LOG_ERR, "unecpected acl_type %d", acl_type);
+			exit(EX_SOFTWARE);
+			break;
+		}
+	}
 
 	return acl;
 }
@@ -449,9 +463,23 @@ acl_register_entry_last(acl_type)	/* acllist must be write-locked */
 	TAILQ_INSERT_TAIL(&acl_head, acl, a_list);
 	acl_init_entry ();
 
-	if (conf.c_debug || conf.c_acldebug)
-		printf("register acl last %s\n",
-		    (acl_type == A_GREYLIST) ? "GREYLIST" : "WHITELIST");
+	if (conf.c_debug || conf.c_acldebug) {
+		switch(acl_type) {
+		case A_GREYLIST:
+			printf("register acl last GREYLIST\n");
+			break;
+		case A_WHITELIST:
+			printf("register acl last WHITELIST\n");
+			break;
+		case A_BLACKLIST:
+			printf("register acl last BLACKLIST\n");
+			break;
+		default:
+			syslog(LOG_ERR, "unecpected acl_type %d", acl_type);
+			exit(EX_SOFTWARE);
+			break;
+		}
+	}
 
 	return acl;
 }
@@ -619,6 +647,9 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 			break;
 		case A_WHITELIST:
 			retval |= EXF_WHITELIST;
+			break;
+		case A_BLACKLIST:
+			retval |= EXF_BLACKLIST;
 			break;
 		default:
 			syslog(LOG_ERR, "corrupted acl list");
@@ -831,9 +862,23 @@ acl_entry(acl)
 	int def = 1;
 
 	strcpy(entrystr, "acl ");
-	strncat(entrystr,
-	    (acl->a_type == A_GREYLIST) ? "greylist " : "whitelist ",
-	    sizeof(entrystr));
+
+	switch (acl->a_type) {
+	case A_GREYLIST:
+		strncat(entrystr, "greylist ", sizeof(entrystr));
+		break;
+	case A_WHITELIST:
+		strncat(entrystr, "whitelist ", sizeof(entrystr));
+		break;
+	case A_BLACKLIST:
+		strncat(entrystr, "blacklist ", sizeof(entrystr));
+		break;
+	default:
+		syslog(LOG_ERR, "corrupted acl list");
+		exit(EX_SOFTWARE);
+		break;
+	}
+
 	if (acl->a_addrlist != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "addr list \"%s\" ", 
 		    acl->a_addrlist->al_name);

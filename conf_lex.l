@@ -53,6 +53,7 @@ syncsrcaddr	[Ss][Yy][Nn][Cc][Ss][Rr][Cc][Aa][Dd][Dd][Rr]:?
 port		[Pp][Oo][Rr][Tt]
 acl		[Aa][Cc][Ll]
 whitelist	[Ww][Hh][Ii][Tt][Ee][Ll][Ii][Ss][Tt]:?
+blacklist	[Bb][Ll][Aa][Cc][Kk][Ll][Ii][Ss][Tt]:?
 default		[Dd][Ee][Ff][Aa][Uu][Ll][Tt]
 drac		[Dd][Rr][Aa][Cc]
 db		[Dd][Bb]
@@ -75,7 +76,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.48 2006/07/27 16:04:57 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.49 2006/07/27 20:08:32 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -132,6 +133,7 @@ star		"*"
 {port}		{ return PORT; }
 {acl}		{ return ACL; }
 {whitelist}	{ return WHITELIST; }
+{blacklist}	{ return BLACKLIST; }
 {default}	{ return DEFAULT; }
 {star}		{ return STAR; }
 {drac}		{ return DRAC; }
