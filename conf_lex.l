@@ -61,6 +61,8 @@ dump_no_time_translation [Dd][Uu][Mm][Pp]_[Nn][Oo]_[Tt][Ii][Mm][Ee]_[Tt][Rr][Aa]
 logexpired    [Ll][Oo][Gg][Ee][Xx][Pp][Ii][Rr][Ee][Dd]
 dnsrbl		[Dd][Nn][Ss][Rr][Bb][Ll]
 list		[Ll][Ii][Ss][Tt]
+openlist	"{"
+closelist	"}"
 star		"*"
 
 %s S_REGEX
@@ -73,7 +75,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.45 2006/07/26 13:26:02 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.46 2006/07/27 08:16:19 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -187,6 +189,8 @@ star		"*"
 			yylval.cidr = atoi(yytext + 1);
 			return CIDR; 
 		}
+{openlist}	{	return OPENLIST; }
+{closelist}	{	return CLOSELIST; }
 \n		{ 
 			BEGIN(0);
 			conf_line++; 

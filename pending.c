@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.75 2006/07/26 21:41:00 manu Exp $ */
+/* $Id: pending.c,v 1.76 2006/07/27 08:16:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.75 2006/07/26 21:41:00 manu Exp $");
+__RCSID("$Id: pending.c,v 1.76 2006/07/27 08:16:19 manu Exp $");
 #endif
 #endif
 
@@ -475,9 +475,6 @@ ip_match(sa, pat, mask)
 		return 0;
 	switch (sa->sa_family) {
 	case AF_INET:
-		printf("%x/%x vs %x/%x\n", 
-		    SADDR4(sa)->s_addr, mask->in4.s_addr,
-		    SADDR4(pat)->s_addr, mask->in4.s_addr);
 		if ((SADDR4(sa)->s_addr & mask->in4.s_addr) !=
 		    (SADDR4(pat)->s_addr & mask->in4.s_addr))
 			return 0;
