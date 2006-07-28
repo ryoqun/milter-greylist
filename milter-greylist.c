@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.123 2006/07/27 20:08:32 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.124 2006/07/28 15:53:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.123 2006/07/27 20:08:32 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.124 2006/07/28 15:53:30 manu Exp $");
 #endif
 #endif
 
@@ -571,6 +571,10 @@ mlfi_eom(ctx)
 		if (priv->priv_whitelist & EXF_AUTO) {
 			ADD_REASON(whystr, "IP, sender and recipient auto-whitelisted");
 			priv->priv_whitelist &= ~EXF_AUTO;
+		}
+		if (priv->priv_whitelist & EXF_DNSRBL) {
+			ADD_REASON(whystr, "Sender IP whitelisted by DNSRBL");
+			priv->priv_whitelist &= ~EXF_DNSRBL;
 		}
 		if (priv->priv_whitelist & EXF_DEFAULT) {
 			ADD_REASON(whystr, "Default is to whitelist mail");

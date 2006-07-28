@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.23 2006/07/28 15:41:51 manu Exp $ */
+/* $Id: acl.c,v 1.24 2006/07/28 15:53:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.23 2006/07/28 15:41:51 manu Exp $");
+__RCSID("$Id: acl.c,v 1.24 2006/07/28 15:53:30 manu Exp $");
 #endif
 #endif
 
@@ -692,6 +692,12 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
 			snprintf(tmpstr, sizeof(tmpstr),
 			     "address %s is whitelisted", addrstr);
+			ADD_REASON(whystr, tmpstr);
+		}
+		if (retval & EXF_DNSRBL) {
+			iptostring(sa, salen, addrstr, sizeof(addrstr));
+			snprintf(tmpstr, sizeof(tmpstr),
+			    "address %s is whitelisted by DNSRBL", addrstr);
 			ADD_REASON(whystr, tmpstr);
 		}
 		if (retval & EXF_DOMAIN) {

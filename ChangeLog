@@ -1,6 +1,7 @@
 2.1.9
 	Handle FreeBSD 5.2 DNS resolver for DNSRBL (Hajimu UMEMOTO)
 	Build fixes for Linux (Hajimu UMEMOTO)
+	Fix uninitialized string (Hajimu UMEMOTO)
 2.1.8
 	acl blacklist feature
 2.1.7
