@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.35 2006/07/27 20:08:32 manu Exp $
+.\" $Id: greylist.conf.5,v 1.36 2006/07/28 16:44:17 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -40,6 +40,8 @@ operation. The format is simple: each line contains a keyword and
 optional arguments. Any line starting with a # is considered as a comment
 and is ignored. Blank lines are ignored as well. Comments at the end of
 lines are accepted in some situations, but do not take them as granted.
+A statement can be continued on the next line by using a backslash. Anything
+after the backslash will be ignored.
 .SH WHITELIST
 The primary use of 
 .B greylist.conf

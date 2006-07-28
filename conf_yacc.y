@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.51 2006/07/27 20:08:32 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.52 2006/07/28 16:44:17 manu Exp $");
 #endif
 #endif
 
@@ -582,7 +582,7 @@ email_list:	email_item
 	;
 
 email_item: 	EMAIL	{ list_add(glist, L_STRING, $1); }
-	|	REGEX	{ list_add(glist, L_REGEX, $1); }
+	|	REGEX 	{ list_add(glist, L_REGEX, $1); }
 	;
 
 domain_list:	domain_item

@@ -64,6 +64,7 @@ dnsrbl		[Dd][Nn][Ss][Rr][Bb][Ll]
 list		[Ll][Ii][Ss][Tt]
 openlist	"{"
 closelist	"}"
+nextln		"\\".*"\n"
 star		"*"
 
 %s S_REGEX
@@ -76,7 +77,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.49 2006/07/27 20:08:32 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.50 2006/07/28 16:44:17 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -198,6 +199,7 @@ star		"*"
 			conf_line++; 
 			return yytext[0]; 
 		}
+{nextln}	{	conf_line++; }
 <*>.|\n		{ 
 			printf("unknown token \"%s\" line %d\n", 
 			    yytext, conf_line); 

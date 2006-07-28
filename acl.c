@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.24 2006/07/28 15:53:30 manu Exp $ */
+/* $Id: acl.c,v 1.25 2006/07/28 16:44:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.24 2006/07/28 15:53:30 manu Exp $");
+__RCSID("$Id: acl.c,v 1.25 2006/07/28 16:44:17 manu Exp $");
 #endif
 #endif
 
@@ -868,7 +868,7 @@ acl_entry(acl)
 	char maskstr[IPADDRSTRLEN];
 	int def = 1;
 
-	strcpy(entrystr, "acl ");
+	snprintf(entrystr, HDRLEN, "acl %d ", acl->a_line);
 
 	switch (acl->a_type) {
 	case A_GREYLIST:
