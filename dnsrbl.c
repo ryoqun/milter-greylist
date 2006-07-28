@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.5 2006/07/28 15:41:51 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.6 2006/07/28 20:48:06 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.5 2006/07/28 15:41:51 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.6 2006/07/28 20:48:06 manu Exp $");
 #endif
 #endif
 
@@ -47,7 +47,11 @@ __RCSID("$Id: dnsrbl.c,v 1.5 2006/07/28 15:41:51 manu Exp $");
 #include <errno.h>
 #include <sysexits.h>
 
+#ifdef HAVE_OLD_QUEUE_H 
+#include "queue.h"
+#else 
 #include <sys/queue.h>
+#endif
 #include <sys/types.h>
 
 #include <netinet/in.h>

@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.175 2006/07/28 15:53:30 manu Exp $
+# $Id: configure.ac,v 1.176 2006/07/28 20:48:06 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -627,6 +627,8 @@ AC_ARG_WITH(thread-safe-resolver,
 		CFLAGS=$CFLAGS" -Wall -Werror"
 		AC_MSG_CHECKING([if DNS resolver is re-entrant])
 		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+				#define _BSD_SOURCE
+
 				#include <netinet/in.h>
 				#include <arpa/inet.h>
 				#include <arpa/nameser.h>
