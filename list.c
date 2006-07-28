@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.5 2006/07/28 20:14:13 manu Exp $ */
+/* $Id: list.c,v 1.6 2006/07/28 20:43:41 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.5 2006/07/28 20:14:13 manu Exp $");
+__RCSID("$Id: list.c,v 1.6 2006/07/28 20:43:41 manu Exp $");
 #endif
 #endif
 
@@ -46,7 +46,11 @@ __RCSID("$Id: list.c,v 1.5 2006/07/28 20:14:13 manu Exp $");
 #include <sysexits.h>
 #include <regex.h>
 
+#ifdef HAVE_OLD_QUEUE_H 
+#include "queue.h"
+#else 
 #include <sys/queue.h>
+#endif
 #include <sys/types.h>
 
 #include <netinet/in.h>
