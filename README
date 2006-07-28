@@ -1,9 +1,9 @@
-# $Id: README,v 1.39 2006/07/27 09:12:00 manu Exp $
+# $Id: README,v 1.40 2006/07/28 05:16:07 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2006/07/27 09:12:00 $
+		       $Date: 2006/07/28 05:16:07 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -291,7 +291,12 @@ acl greylist default delay 15m
 This feature was introduced in milter-greylist 2.1.7 and may not be
 fully stable. You need the --enable-dnsrbl flag to configure to use 
 it. You must link milter-greylist with a thread-safe resolver, else 
-the milter will be unstable (see the explanation in the SPF section)
+the milter will be unstable (see the explanation in the SPF section).
+If your resolver is not thread safe, install BIND9, and use 
+--with-libbind. If you know your resolver is thread-safe but 
+configure tells otherwise (becaue you lack the res_ninit() function),
+then use --with-thread-safe-resolver. 
+
 
 
  10 Building with SPF

@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.3 2006/07/26 13:26:02 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.4 2006/07/28 05:16:07 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.3 2006/07/26 13:26:02 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.4 2006/07/28 05:16:07 manu Exp $");
 #endif
 #endif
 
@@ -55,6 +55,23 @@ __RCSID("$Id: dnsrbl.c,v 1.3 2006/07/26 13:26:02 manu Exp $");
 #include <arpa/nameser.h>
 #include <resolv.h>
 
+#ifndef NS_MAXMSG
+#define NS_MAXMSG	65535
+#endif
+
+#ifdef res_ninit
+#define HAVE_RESN	1
+#ifndef res_ndestroy
+#define res_ndestroy(res)	res_nclose(res)
+#endif
+#else
+#define	res_ninit(res) \
+	((_res.options & RES_INIT) == 0 && res_init())
+#define res_nquery(res, req, class, type, ans, anslen)	\
+	res_query(req, class, type, ans, anslen)
+#define res_ndestroy(res)
+#endif
+
 #include "milter-greylist.h"
 #include "dnsrbl.h"
 
@@ -68,14 +85,16 @@ void
 dnsrbl_init(void) {
 	LIST_INIT(&dnsrbl_head);
 	return;
-}  
+}
 
 int
 dnsrbl_check_source(sa, source)
 	struct sockaddr *sa;
         struct dnsrbl_entry *source;
 {
+#ifdef HAVE_RESN
 	struct __res_state res;
+#endif
 	struct sockaddr_storage ss;
 	char req[NS_MAXDNAME + 1];
 	char ans[NS_MAXMSG + 1];
@@ -86,6 +105,7 @@ dnsrbl_check_source(sa, source)
 	int i;
 	char *dnsrbl = source->d_domain;
 	struct sockaddr *blacklisted;
+	int retval = 0;
 
 	blacklisted = (struct sockaddr *)&source->d_blacklisted;
 
@@ -110,7 +130,8 @@ dnsrbl_check_source(sa, source)
 
 	if ((inet_ntop(ss.ss_family, addr, req, NS_MAXDNAME)) == NULL){
 		syslog(LOG_ERR, "inet_ntop failed: %s", strerror(errno));
-		return -1;
+		retval = -1;
+		goto end;
 	}
 
 	(void)strncat(req, ".", NS_MAXDNAME);
@@ -118,13 +139,14 @@ dnsrbl_check_source(sa, source)
 
 	anslen = res_nquery(&res, req, C_IN, T_A, ans, sizeof(ans));
 	if (anslen == -1)
-		return 0;
+		goto end;
 
 	if (ns_initparse(ans, anslen, &handle) < 0) {
 		syslog(LOG_ERR, "ns_initparse failed: %s", strerror(errno));
-		return -1;
+		retval = -1;
+		goto end;
 	}
-	
+
 	for (i = 0; i < ns_msg_count(handle, ns_s_an); i++) {
 		char *addr;
 		size_t len;
@@ -132,7 +154,8 @@ dnsrbl_check_source(sa, source)
 		if ((ns_parserr(&handle, ns_s_an, i, &rr)) != 0) {
 			syslog(LOG_ERR, "ns_parserr failed: %s", 
 			    strerror(errno));
-			return -1;
+			retval = -1;
+			goto end;
 		}
 
 		switch (blacklisted->sa_family) {
@@ -167,11 +190,15 @@ dnsrbl_check_source(sa, source)
 			break;
 		}
 
-		if (memcmp(addr, rr.rdata, len) == 0)
-			return 1;
+		if (memcmp(addr, rr.rdata, len) == 0) {
+			retval = 1;
+			goto end;
+		}
 	}
 
-	return 0;
+end:
+	res_ndestroy(&res);
+	return retval;
 }
 
 

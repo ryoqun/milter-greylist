@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.171 2006/07/27 20:10:06 manu Exp $
+# $Id: configure.ac,v 1.172 2006/07/28 05:16:07 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -620,21 +620,24 @@ AC_RUN_IFELSE([AC_LANG_PROGRAM([
 AC_MSG_RESULT([$brokenpth])
 
 # Check is DNS resolver is re-entrant
-SAVEDCFLAGS=$CFLAGS
-CFLAGS=$CFLAGS" -Wall -Werror"
-AC_MSG_CHECKING([if DNS resolver is re-entrant])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
-		#include <netinet/in.h>
-		#include <arpa/inet.h>
-		#include <arpa/nameser.h>
-		#include <resolv.h>
-	],[
-		struct __res_state res;
+AC_ARG_WITH(thread-safe-resolver,
+	[  --with-thread-safe-resolver   Resolver is thread-safe],
+	[rdns=yes],[
+	SAVEDCFLAGS=$CFLAGS
+	CFLAGS=$CFLAGS" -Wall -Werror"
+	AC_MSG_CHECKING([if DNS resolver is re-entrant])
+	AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+			#include <netinet/in.h>
+			#include <arpa/inet.h>
+			#include <arpa/nameser.h>
+			#include <resolv.h>
+		],[
+			struct __res_state res;
 
-		res_ninit(&res);
-	])], [rdns=yes], [rdns=no])
-AC_MSG_RESULT([$rdns])
-CFLAGS=$SAVEDCFLAGS
+			res_ninit(&res);
+		])], [rdns=yes], [rdns=no])
+	AC_MSG_RESULT([$rdns])
+	CFLAGS=$SAVEDCFLAGS])
 
 # Check for DNSRBL
 AC_ARG_ENABLE(dnsrbl,
@@ -643,7 +646,8 @@ AC_ARG_ENABLE(dnsrbl,
 		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
 	 else
 		echo "--enable-dnsrbl used but DNS resolver is not thread safe";
-		echo "Try installing BIND9 and using --with-libbind";
+		echo "Try installing BIND9 and using --with-libbind, or if you
+		echo "know what you are doing, use --with-thread-safe-resolver";
 		exit 1;
 	 fi
 	])
