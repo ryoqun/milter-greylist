@@ -858,6 +858,7 @@ Optional Packages:
   --with-libspf2_10=DIR  Find libspf2 1.0 in DIR
   --with-libspf_alt=DIR  Find libspf_alt in DIR
   --with-libspf=DIR  Find libspf in DIR
+  --with-thread-safe-resolver   Resolver is thread-safe
   --with-user=USERNAME   The user that will run milter-greylist
   --with-conffile=PATH Location of config file
   --with-dumpfile=PATH   Location of dump file
@@ -8967,29 +8968,36 @@ echo "$as_me:$LINENO: result: $brokenpth" >&5
 echo "${ECHO_T}$brokenpth" >&6
 
 # Check is DNS resolver is re-entrant
-SAVEDCFLAGS=$CFLAGS
-CFLAGS=$CFLAGS" -Wall -Werror"
-echo "$as_me:$LINENO: checking if DNS resolver is re-entrant" >&5
+
+# Check whether --with-thread-safe-resolver or --without-thread-safe-resolver was given.
+if test "${with_thread_safe_resolver+set}" = set; then
+  withval="$with_thread_safe_resolver"
+  rdns=yes
+else
+
+		SAVEDCFLAGS=$CFLAGS
+		CFLAGS=$CFLAGS" -Wall -Werror"
+		echo "$as_me:$LINENO: checking if DNS resolver is re-entrant" >&5
 echo $ECHO_N "checking if DNS resolver is re-entrant... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
+		cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
-		#include <netinet/in.h>
-		#include <arpa/inet.h>
-		#include <arpa/nameser.h>
-		#include <resolv.h>
+				#include <netinet/in.h>
+				#include <arpa/inet.h>
+				#include <arpa/nameser.h>
+				#include <resolv.h>
 
 int
 main ()
 {
 
-		struct __res_state res;
+				struct __res_state res;
 
-		res_ninit(&res);
+				res_ninit(&res);
 
   ;
   return 0;
@@ -9025,9 +9033,11 @@ sed 's/^/| /' conftest.$ac_ext >&5
 rdns=no
 fi
 rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
-echo "$as_me:$LINENO: result: $rdns" >&5
+		echo "$as_me:$LINENO: result: $rdns" >&5
 echo "${ECHO_T}$rdns" >&6
-CFLAGS=$SAVEDCFLAGS
+		CFLAGS=$SAVEDCFLAGS
+
+fi;
 
 # Check for DNSRBL
 # Check whether --enable-dnsrbl or --disable-dnsrbl was given.
@@ -9037,7 +9047,8 @@ if test "${enable_dnsrbl+set}" = set; then
 		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
 	 else
 		echo "--enable-dnsrbl used but DNS resolver is not thread safe";
-		echo "Try installing BIND9 and using --with-libbind";
+		echo "Try installing BIND9 and using --with-libbind, or if you";
+		echo "know what you are doing, use --with-thread-safe-resolver";
 		exit 1;
 	 fi
 
