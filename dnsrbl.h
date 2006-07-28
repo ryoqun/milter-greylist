@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.h,v 1.4 2006/07/27 12:48:24 manu Exp $ */
+/* $Id: dnsrbl.h,v 1.5 2006/07/28 15:41:51 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -45,7 +45,7 @@ struct dnsrbl_entry {
 };
 
 void dnsrbl_init(void);
-int dnsrbl_check_source(struct sockaddr *, struct dnsrbl_entry *);
+int dnsrbl_check_source(struct sockaddr *, socklen_t, struct dnsrbl_entry *);
 void reverse_endian(struct sockaddr *, struct sockaddr *);
 void dnsrbl_source_add(char *, char *, struct sockaddr *);
 struct dnsrbl_entry *dnsrbl_byname(char *);

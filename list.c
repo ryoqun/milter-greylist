@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.3 2006/07/27 16:04:57 manu Exp $ */
+/* $Id: list.c,v 1.4 2006/07/28 15:41:51 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.3 2006/07/27 16:04:57 manu Exp $");
+__RCSID("$Id: list.c,v 1.4 2006/07/28 15:41:51 manu Exp $");
 #endif
 #endif
 
@@ -408,14 +408,15 @@ list_addr_filter(list, sa)
 
 #if USE_DNSRBL
 int
-list_dnsrbl_filter(list, sa)
+list_dnsrbl_filter(list,salen, sa)
 	struct all_list_entry *list;
+	socklen_t salen;
 	struct sockaddr *sa;
 {
 	struct list_entry *le;
 
 	LIST_FOREACH(le, &list->al_head, l_list) {
-		if (dnsrbl_check_source(sa, le->l_data.dnsrbl) != 0)
+		if (dnsrbl_check_source(sa, salen, le->l_data.dnsrbl) != 0)
 			break;
 	}
 

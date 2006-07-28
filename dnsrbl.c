@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.4 2006/07/28 05:16:07 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.5 2006/07/28 15:41:51 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.4 2006/07/28 05:16:07 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.5 2006/07/28 15:41:51 manu Exp $");
 #endif
 #endif
 
@@ -73,6 +73,7 @@ __RCSID("$Id: dnsrbl.c,v 1.4 2006/07/28 05:16:07 manu Exp $");
 #endif
 
 #include "milter-greylist.h"
+#include "pending.h"
 #include "dnsrbl.h"
 
 /* 
@@ -88,8 +89,9 @@ dnsrbl_init(void) {
 }
 
 int
-dnsrbl_check_source(sa, source)
+dnsrbl_check_source(sa, salen, source)
 	struct sockaddr *sa;
+	socklen_t salen;
         struct dnsrbl_entry *source;
 {
 #ifdef HAVE_RESN
@@ -99,7 +101,6 @@ dnsrbl_check_source(sa, source)
 	char req[NS_MAXDNAME + 1];
 	char ans[NS_MAXMSG + 1];
 	int anslen;
-	void *addr;
 	ns_msg handle;
 	ns_rr rr;
 	int i;
@@ -107,29 +108,14 @@ dnsrbl_check_source(sa, source)
 	struct sockaddr *blacklisted;
 	int retval = 0;
 
-	blacklisted = (struct sockaddr *)&source->d_blacklisted;
+	blacklisted = SA(&source->d_blacklisted);
 
 	res_ninit(&res);
 
-	reverse_endian((struct sockaddr *)&ss, sa);
+	reverse_endian(SA(&ss), sa);
 
-	switch (ss.ss_family) {
-	case AF_INET:
-		addr = &((struct sockaddr_in *)&ss)->sin_addr;
-		break;
-#ifdef AF_INET6
-	case AF_INET6:
-		addr = &((struct sockaddr_in6 *)&ss)->sin6_addr;
-		break;
-#endif
-	default:
-		syslog(LOG_ERR, "unexpected address family %d", ss.ss_family);
-		exit(EX_SOFTWARE);
-		break;
-	}
-
-	if ((inet_ntop(ss.ss_family, addr, req, NS_MAXDNAME)) == NULL){
-		syslog(LOG_ERR, "inet_ntop failed: %s", strerror(errno));
+	if ((iptostring(SA(&ss), salen, req, NS_MAXDNAME)) == NULL){
+		syslog(LOG_ERR, "iptostring failed: %s", strerror(errno));
 		retval = -1;
 		goto end;
 	}
@@ -165,7 +151,7 @@ dnsrbl_check_source(sa, source)
 			if (rr.type != T_A)
 				continue;
 
-			sin = (struct sockaddr_in *)blacklisted;
+			sin = SA4(blacklisted);
 			addr = (char *)&sin->sin_addr;
 			len = sizeof(sin->sin_addr);
 			break;
@@ -177,7 +163,7 @@ dnsrbl_check_source(sa, source)
 			if (rr.type != T_AAAA)
 				continue;
 
-			sin6 = (struct sockaddr_in6 *)blacklisted;
+			sin6 = SA6(blacklisted);
 			addr = (char *)&sin6->sin6_addr;
 			len = sizeof(sin6->sin6_addr);
 			break;
@@ -214,15 +200,15 @@ reverse_endian(dst, src)
 
 	switch (src->sa_family) {
 	case AF_INET:
-		src_start = (char *)&((struct sockaddr_in *)src)->sin_addr;
-		dst_start = (char *)&((struct sockaddr_in *)dst)->sin_addr;
-		len = sizeof(((struct sockaddr_in *)src)->sin_addr);
+		src_start = (char *)SADDR4(src);
+		dst_start = (char *)SADDR4(dst);
+		len = sizeof(*SADDR4(src));
 		break;
 #ifdef AF_INET6
 	case AF_INET6:
-		src_start = (char *)&((struct sockaddr_in6 *)src)->sin6_addr;
-		dst_start = (char *)&((struct sockaddr_in6 *)dst)->sin6_addr;
-		len = sizeof(((struct sockaddr_in6 *)src)->sin6_addr);
+		src_start = (char *)SADDR6(src);
+		dst_start = (char *)SADDR6(dst);
+		len = sizeof(*SADDR6(src));
 		break;
 #endif
 	default:
@@ -232,7 +218,9 @@ reverse_endian(dst, src)
 	}
 
 	dst->sa_family = src->sa_family;
+#ifdef HAVE_SA_LEN
 	dst->sa_len = src->sa_len;
+#endif
 
 	for (i = 0; i < len; i++)
 		dst_start[len - 1 - i] = src_start[i];
@@ -247,17 +235,35 @@ dnsrbl_source_add(name, domain, blacklisted) /* acllist must be write locked */
 	struct sockaddr *blacklisted;
 {
 	struct dnsrbl_entry *de;
+	socklen_t salen;
 
 	if ((de = malloc(sizeof(*de))) == NULL) {
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
+	switch(blacklisted->sa_family) {
+	case AF_INET:
+		salen = sizeof(struct sockaddr_in);
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		salen = sizeof(struct sockaddr_in6);
+		break;
+#endif
+	default:
+		syslog(LOG_ERR, "invalid address family %d",
+		    blacklisted->sa_family);
+		exit(EX_SOFTWARE);
+		break;
+	}
+		
+
 	strncpy(de->d_name, name, sizeof(de->d_name));
 	de->d_name[sizeof(de->d_name) - 1] = '\0';
 	strncpy(de->d_domain, domain, sizeof(de->d_domain));
 	de->d_domain[sizeof(de->d_domain) - 1] = '\0';
-	memcpy(&de->d_blacklisted, blacklisted, blacklisted->sa_len);
+	memcpy(&de->d_blacklisted, blacklisted, salen);
 
 	LIST_INSERT_HEAD(&dnsrbl_head, de, d_list);
 

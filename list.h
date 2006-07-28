@@ -1,4 +1,4 @@
-/* $Id: list.h,v 1.1 2006/07/27 12:42:42 manu Exp $ */
+/* $Id: list.h,v 1.2 2006/07/28 15:41:51 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -78,7 +78,7 @@ void glist_init(void);
 struct all_list_entry *all_list_byname(char *);
 
 int list_addr_filter(struct all_list_entry *, struct sockaddr *);
-int list_dnsrbl_filter(struct all_list_entry *, struct sockaddr *);
+int list_dnsrbl_filter(struct all_list_entry *, socklen_t, struct sockaddr *);
 int list_from_filter(struct all_list_entry *, char *);
 int list_rcpt_filter(struct all_list_entry *, char *);
 int list_domain_filter(struct all_list_entry *, char *);
