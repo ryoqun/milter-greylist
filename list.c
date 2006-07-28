@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.4 2006/07/28 15:41:51 manu Exp $ */
+/* $Id: list.c,v 1.5 2006/07/28 20:14:13 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.4 2006/07/28 15:41:51 manu Exp $");
+__RCSID("$Id: list.c,v 1.5 2006/07/28 20:14:13 manu Exp $");
 #endif
 #endif
 
@@ -98,11 +98,6 @@ all_list_get(type, name)
 {
 	struct all_list_entry *ale;
 
-	if (conf.c_debug || conf.c_acldebug) { 
-		printf("all_list_get(%d, \"%s\") called from line %d\n", 
-		    type, name, conf_line);
-	}
-
 	if ((ale = malloc(sizeof(*ale))) == NULL) {
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
@@ -114,11 +109,6 @@ all_list_get(type, name)
 	LIST_INIT(&ale->al_head);
 
 	LIST_INSERT_HEAD(&all_list_head, ale, al_list);
-
-	if (conf.c_debug || conf.c_acldebug) { 
-		printf("created type %d list \"%s\"\n", 
-		    ale->al_type, ale->al_name);
-	}
 
 	return ale;
 }
@@ -172,10 +162,8 @@ list_add(ale, type, data)
 {
 	struct list_entry *le;
 
-	if (conf.c_debug || conf.c_acldebug) { 
-		printf("list_add(%p, %d, %p) called from line %d\n", 
-		    ale, type, data, conf_line);
-	}
+	if (conf.c_debug || conf.c_acldebug)
+		printf("load list item %s\n", (char *)data);
 
 	if ((le = malloc(sizeof(*le))) == NULL) {
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
@@ -233,11 +221,6 @@ list_add(ale, type, data)
 	}
 
 	LIST_INSERT_HEAD(&ale->al_head, le, l_list);
-
-	if (conf.c_debug || conf.c_acldebug) { 
-		printf("inserted list item of type %d in list \"%s\"\n", 
-		    type, ale->al_name);
-	}
 }
 
 /* Lot of code duplicate with acl_add_netblock() ... */
@@ -254,6 +237,12 @@ list_add_netblock(ale, sa, salen, cidr)
 #ifdef AF_INET
 	int i;
 #endif
+	if (conf.c_debug || conf.c_acldebug) { 
+		char addrstr[IPADDRSTRLEN];
+
+		iptostring(SA(&sa), salen, addrstr, sizeof(addrstr));
+                printf("load list item %s/%d\n", addrstr, cidr);
+	}
 
 	if ((le = malloc(sizeof(*le))) == NULL) {
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
@@ -313,11 +302,6 @@ list_add_netblock(ale, sa, salen, cidr)
 
 	LIST_INSERT_HEAD(&ale->al_head, le, l_list);
 
-	if (conf.c_debug || conf.c_acldebug) { 
-		printf("inserted list item of type netblock in list \"%s\"\n", 
-		    ale->al_name);
-	}
-
 	return;
 }
 
@@ -327,6 +311,34 @@ all_list_settype(ale, type)
 	enum list_type type;
 {
 	ale->al_type = type;
+
+	if (conf.c_debug || conf.c_acldebug) { 
+		printf("load list type ");
+		switch(type) {
+		case LT_FROM:
+			printf("from ");
+			break;
+		case LT_RCPT:
+			printf("rcpt ");
+			break;
+		case LT_DOMAIN:
+			printf("domain ");
+			break;
+#ifdef USE_DNSRBL
+		case LT_DNSRBL:
+			printf("dnsrbl ");
+			break;
+#endif
+		case LT_ADDR:
+			printf("addr ");
+			break;
+		default:
+			syslog(LOG_ERR, "unexpected al_type %d\n", 
+			    type);
+			break;
+		}
+		printf("\n");
+	}
 
 #if USE_DNSRBL
 	/* Lookup the DNSRBL */
@@ -362,6 +374,10 @@ all_list_setname(ale, name)
 	struct all_list_entry *ale;
 	char *name;
 {
+	if (conf.c_debug || conf.c_acldebug) { 
+		printf("load list name \"%s\"\n", name);
+	}
+
 	strncpy(ale->al_name, name, sizeof(ale->al_name));
 	ale->al_name[sizeof(ale->al_name) - 1] = '\0';
 	return;
@@ -438,7 +454,8 @@ list_from_filter(list, from)
 				goto from_out;
 			break;
 		case L_REGEX:
-			if (regexec(le->l_data.regex, from, 0, NULL, 0) == 0)
+			if (regexec(le->l_data.regex, 
+			    from, 0, NULL, 0) == 0)
 				goto from_out;
 			break;
 		default:
@@ -465,7 +482,8 @@ list_rcpt_filter(list, rcpt)
 				goto rcpt_out;
 			break;
 		case L_REGEX:
-			if (regexec(le->l_data.regex, rcpt, 0, NULL, 0) == 0)
+			if (regexec(le->l_data.regex, 
+			    rcpt, 0, NULL, 0) == 0)
 				goto rcpt_out;
 			break;
 		default:
@@ -492,7 +510,8 @@ list_domain_filter(list, domain)
 				goto domain_out;
 			break;
 		case L_REGEX:
-			if (regexec(le->l_data.regex, domain, 0, NULL, 0) == 0)
+			if (regexec(le->l_data.regex, 
+			    domain, 0, NULL, 0) == 0)
 				goto domain_out;
 			break;
 		default:
@@ -504,3 +523,5 @@ list_domain_filter(list, domain)
 domain_out:
 	return (le != NULL);
 }
+
+
