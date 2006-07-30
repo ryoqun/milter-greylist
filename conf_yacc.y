@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.52 2006/07/28 16:44:17 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.53 2006/07/30 20:21:42 manu Exp $");
 #endif
 #endif
 
@@ -222,6 +222,7 @@ greylist:	GREYLIST TDELAY	{ if (C_NOTFORCED(C_DELAY))
 verbose:	VERBOSE	{ if (C_NOTFORCED(C_DEBUG)) conf.c_debug = 1; }
 	;
 dump_no_time_translation:	DUMP_NO_TIME_TRANSLATION	{ conf.c_dump_no_time_translation = 1; }
+	;
 logexpired:   LOGEXPIRED { conf.c_logexpired = 1; }
 	;
 quiet:		QUIET	{ if (C_NOTFORCED(C_QUIET)) conf.c_quiet = 1; }
@@ -501,8 +502,8 @@ list_clause:		LIST QSTRING {
 
 				acl_add_list(quotepath(path, $2, QSTRLEN));
 			}
-
-netblock_clause:	ADDR IPADDR CIDR{
+	;
+netblock_clause:	ADDR IPADDR CIDR {
 				acl_add_netblock(SA(&$2),
 			    sizeof(struct sockaddr_in), $3);
 			}
