@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.59 2006/07/24 22:49:43 manu Exp $ */
+/* $Id: sync.c,v 1.60 2006/07/30 19:52:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.59 2006/07/24 22:49:43 manu Exp $");
+__RCSID("$Id: sync.c,v 1.60 2006/07/30 19:52:51 manu Exp $");
 #endif
 #endif
 
@@ -252,7 +252,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	} else {
 		if (peer->p_vers >= 2) {
 			keyw = "del2";
-			snprintf(awstr, LINELEN, " aw %ld", autowhite);
+			snprintf(awstr, LINELEN, " aw %ld", (long)autowhite);
 		} else {
 			keyw = "del";
 			awstr[0] = '\0';
