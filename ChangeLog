@@ -1,6 +1,7 @@
 2.1.10
 	Multi-line statement
 	Fix crash when using -c and lists or acl
+	Build fixes
 2.1.9
 	Handle FreeBSD 5.2 DNS resolver for DNSRBL (Hajimu UMEMOTO)
 	Build fixes for Linux (Hajimu UMEMOTO)
