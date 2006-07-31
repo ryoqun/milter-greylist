@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.9 2006/07/31 12:18:20 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.10 2006/07/31 20:56:26 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.9 2006/07/31 12:18:20 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.10 2006/07/31 20:56:26 manu Exp $");
 #endif
 #endif
 
@@ -116,10 +116,33 @@ dnsrbl_check_source(sa, salen, source)
 
 	blacklisted = SA(&source->d_blacklisted);
 
+	switch (blacklisted->sa_family) {
+	case AF_INET:
+		qtype = T_A;
+		addr = (char *)SADDR4(blacklisted);
+		len = sizeof(*SADDR4(blacklisted));
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		/* No IPv6 DNSRBL exists right now */
+		retval = 1;
+		goto end;
+		break;
+#endif
+	default:
+		syslog(LOG_ERR, "unexpected address family %d",
+		    blacklisted->sa_family);
+		exit(EX_SOFTWARE);
+		break;
+	}
+
 #ifdef HAVE_RESN
 	bzero(&res, sizeof(res));
 #endif
-	res_ninit(&res);
+	if (res_ninit(&res) != 0) {
+		syslog(LOG_ERR, "res_ninit failed: %s", strerror(errno));
+		return -1;
+	}
 
 	reverse_endian(SA(&ss), sa);
 
@@ -131,26 +154,6 @@ dnsrbl_check_source(sa, salen, source)
 
 	(void)strncat(req, ".", NS_MAXDNAME);
 	(void)strncat(req, dnsrbl, NS_MAXDNAME);
-
-	switch (blacklisted->sa_family) {
-	case AF_INET:
-		qtype = T_A;
-		addr = (char *)SADDR4(blacklisted);
-		len = sizeof(*SADDR4(blacklisted));
-		break;
-#ifdef AF_INET6
-	case AF_INET6:
-		qtype = T_AAAA;
-		addr = (char *)SADDR6(blacklisted);
-		len = sizeof(*SADDR6(blacklisted));
-		break;
-#endif
-	default:
-		syslog(LOG_ERR, "unexpected address family %d",
-		    blacklisted->sa_family);
-		exit(EX_SOFTWARE);
-		break;
-	}
 
 	anslen = res_nquery(&res, req, C_IN, qtype, ans, sizeof(ans));
 	if (anslen == -1)
@@ -181,7 +184,14 @@ dnsrbl_check_source(sa, salen, source)
 				continue;
 			break;
 #endif
+		default:
+			syslog(LOG_ERR, "unexpected sa_family");
+			exit(EX_OSERR);
+			break;
 		}
+
+		if (rr.rdlength != len)
+			continue;
 
 		if (memcmp(addr, rr.rdata, len) == 0) {
 			retval = 1;
