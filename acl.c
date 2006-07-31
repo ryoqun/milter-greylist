@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.25 2006/07/28 16:44:17 manu Exp $ */
+/* $Id: acl.c,v 1.26 2006/07/31 17:09:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.25 2006/07/28 16:44:17 manu Exp $");
+__RCSID("$Id: acl.c,v 1.26 2006/07/31 17:09:41 manu Exp $");
 #endif
 #endif
 
@@ -968,13 +968,13 @@ acl_entry(acl)
 #endif
 	if (acl->a_delay != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
-		    "[delay %ld] ", acl->a_delay);
+		    "[delay %ld] ", (long)acl->a_delay);
 		strncat(entrystr, tempstr, sizeof(entrystr));
 	}
 
 	if (acl->a_autowhite != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
-		    "[aw %ld] ", acl->a_autowhite);
+		    "[aw %ld] ", (long)acl->a_autowhite);
 		strncat(entrystr, tempstr, sizeof(entrystr));
 	}
 
@@ -1021,7 +1021,7 @@ acl_add_delay(delay)
 	gacl.a_delay = delay;
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl delay %ld\n", delay);
+		printf("load acl delay %ld\n", (long)delay);
 
 	return;
 }
@@ -1039,7 +1039,7 @@ acl_add_autowhite(delay)
 	gacl.a_autowhite = delay;
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl delay %ld\n", delay);
+		printf("load acl delay %ld\n", (long)delay);
 
 	return;
 }
