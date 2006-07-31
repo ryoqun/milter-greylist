@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.7 2006/07/31 07:33:54 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.8 2006/07/31 09:16:46 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.7 2006/07/31 07:33:54 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.8 2006/07/31 09:16:46 manu Exp $");
 #endif
 #endif
 
@@ -114,7 +114,9 @@ dnsrbl_check_source(sa, salen, source)
 
 	blacklisted = SA(&source->d_blacklisted);
 
+#ifdef HAVE_RESN
 	bzero(&res, sizeof(res));
+#endif
 	res_ninit(&res);
 
 	reverse_endian(SA(&ss), sa);
