@@ -1,3 +1,5 @@
+2.1.11
+	IPv6 fixes (Hajimu UMEMOTO)
 2.1.10
 	Multi-line statement
 	Fix crash when using -c and lists or acl

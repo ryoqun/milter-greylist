@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.8 2006/07/31 09:16:46 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.9 2006/07/31 12:18:20 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.8 2006/07/31 09:16:46 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.9 2006/07/31 12:18:20 manu Exp $");
 #endif
 #endif
 
@@ -107,10 +107,12 @@ dnsrbl_check_source(sa, salen, source)
 	int anslen;
 	ns_msg handle;
 	ns_rr rr;
-	int i;
+	int qtype, i;
 	char *dnsrbl = source->d_domain;
 	struct sockaddr *blacklisted;
 	int retval = 0;
+	char *addr;
+	size_t len;
 
 	blacklisted = SA(&source->d_blacklisted);
 
@@ -130,7 +132,27 @@ dnsrbl_check_source(sa, salen, source)
 	(void)strncat(req, ".", NS_MAXDNAME);
 	(void)strncat(req, dnsrbl, NS_MAXDNAME);
 
-	anslen = res_nquery(&res, req, C_IN, T_A, ans, sizeof(ans));
+	switch (blacklisted->sa_family) {
+	case AF_INET:
+		qtype = T_A;
+		addr = (char *)SADDR4(blacklisted);
+		len = sizeof(*SADDR4(blacklisted));
+		break;
+#ifdef AF_INET6
+	case AF_INET6:
+		qtype = T_AAAA;
+		addr = (char *)SADDR6(blacklisted);
+		len = sizeof(*SADDR6(blacklisted));
+		break;
+#endif
+	default:
+		syslog(LOG_ERR, "unexpected address family %d",
+		    blacklisted->sa_family);
+		exit(EX_SOFTWARE);
+		break;
+	}
+
+	anslen = res_nquery(&res, req, C_IN, qtype, ans, sizeof(ans));
 	if (anslen == -1)
 		goto end;
 
@@ -141,9 +163,6 @@ dnsrbl_check_source(sa, salen, source)
 	}
 
 	for (i = 0; i < ns_msg_count(handle, ns_s_an); i++) {
-		char *addr;
-		size_t len;
-
 		if ((ns_parserr(&handle, ns_s_an, i, &rr)) != 0) {
 			syslog(LOG_ERR, "ns_parserr failed: %s", 
 			    strerror(errno));
@@ -152,35 +171,16 @@ dnsrbl_check_source(sa, salen, source)
 		}
 
 		switch (blacklisted->sa_family) {
-		case AF_INET: {
-			struct sockaddr_in *sin;
-
+		case AF_INET:
 			if (rr.type != T_A)
 				continue;
-
-			sin = SA4(blacklisted);
-			addr = (char *)&sin->sin_addr;
-			len = sizeof(sin->sin_addr);
 			break;
-		}
 #ifdef AF_INET6
-		case AF_INET6: {
-			struct sockaddr_in6 *sin6;
-
+		case AF_INET6:
 			if (rr.type != T_AAAA)
 				continue;
-
-			sin6 = SA6(blacklisted);
-			addr = (char *)&sin6->sin6_addr;
-			len = sizeof(sin6->sin6_addr);
 			break;
-		}
 #endif
-		default:
-			syslog(LOG_ERR, "unexpected address family %d", 
-			    blacklisted->sa_family);
-			exit(EX_SOFTWARE);
-			break;
 		}
 
 		if (memcmp(addr, rr.rdata, len) == 0) {
