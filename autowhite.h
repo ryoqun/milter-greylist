@@ -1,4 +1,4 @@
-/* $Id: autowhite.h,v 1.18 2006/07/24 22:49:43 manu Exp $ */
+/* $Id: autowhite.h,v 1.19 2006/08/01 14:55:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -75,5 +75,6 @@ void autowhite_add(struct sockaddr *, socklen_t, char *, char *, time_t *,
 int autowhite_check(struct sockaddr *, socklen_t, char *, char *, 
     char *, time_t, time_t);
 int autowhite_textdump(FILE *);
+void autowhite_del_addr(struct sockaddr *, socklen_t);
 
 #endif /* _AUTOWHITE_H_ */

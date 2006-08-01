@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.76 2006/07/27 08:16:19 manu Exp $ */
+/* $Id: pending.c,v 1.77 2006/08/01 14:55:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.76 2006/07/27 08:16:19 manu Exp $");
+__RCSID("$Id: pending.c,v 1.77 2006/08/01 14:55:20 manu Exp $");
 #endif
 #endif
 
@@ -637,4 +637,38 @@ ipfromstring(str, sa, salen, family)
 #endif
 	return 0;
 #endif
+}
+
+void
+pending_del_addr(sa, salen)
+	struct sockaddr *sa;
+	socklen_t salen;
+{
+	char addr[IPADDRSTRLEN];
+	struct pending *pending;
+	struct pending *next;
+	int sync_flush_done = 0;
+
+	if (!iptostring(sa, salen, addr, sizeof(addr)))
+		return;
+
+	PENDING_RDLOCK;
+	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
+		next = TAILQ_NEXT(pending, p_list);
+
+		if (strncmp(addr, pending->p_addr, sizeof(addr)) == 0) {
+			if (!sync_flush_done) {
+				peer_flush(pending);
+				sync_flush_done = 1;
+			}
+			pending_put(pending);
+		}
+
+	}
+	PENDING_UNLOCK;
+
+	/* And flush autowhite list as well... */
+	autowhite_del_addr(sa, salen);
+	
+	return;
 }

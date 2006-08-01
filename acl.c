@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.26 2006/07/31 17:09:41 manu Exp $ */
+/* $Id: acl.c,v 1.27 2006/08/01 14:55:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.26 2006/07/31 17:09:41 manu Exp $");
+__RCSID("$Id: acl.c,v 1.27 2006/08/01 14:55:20 manu Exp $");
 #endif
 #endif
 
@@ -94,6 +94,12 @@ acl_init(void) {
 	acl_init_entry();
 
 	return;
+}
+
+void
+acl_add_flushaddr(void) {
+	gacl.a_flags |= A_FLUSHADDR;
+	return;	
 }
 
 void
@@ -666,6 +672,9 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 		    (acl->a_autowhite != -1) ? 
 		    acl->a_autowhite : conf.c_autowhite_validity;
 
+		if (acl->a_flags & A_FLUSHADDR)
+			pending_del_addr(sa, salen);
+
 		if (conf.c_debug || conf.c_acldebug) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
 			syslog(LOG_DEBUG, "Mail from=%s, rcpt=%s, addr=%s[%s] "
@@ -975,6 +984,11 @@ acl_entry(acl)
 	if (acl->a_autowhite != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[aw %ld] ", (long)acl->a_autowhite);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+	}
+
+	if (acl->a_flags & A_FLUSHADDR) {
+		snprintf(tempstr, sizeof(tempstr), "[flushaddr] ");
 		strncat(entrystr, tempstr, sizeof(entrystr));
 	}
 

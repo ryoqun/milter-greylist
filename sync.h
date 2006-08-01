@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.16 2006/07/24 22:49:43 manu Exp $ */
+/* $Id: sync.h,v 1.17 2006/08/01 14:55:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -75,7 +75,7 @@ struct peer {
 
 #define P_LOCAL	1
 
-typedef enum { PS_CREATE, PS_DELETE, PS_DELETE2 } peer_sync_t;
+typedef enum { PS_CREATE, PS_DELETE, PS_DELETE2, PS_FLUSH } peer_sync_t;
 
 struct sync {
 	struct peer *s_peer;
@@ -91,6 +91,7 @@ void peer_add(char *);
 int peer_connect(struct peer *);
 void peer_create(struct pending *);
 void peer_delete(struct pending *, time_t);
+void peer_flush(struct pending *);
 
 int sync_send(struct peer *, peer_sync_t,  struct pending *, time_t);
 void sync_sender_start(void);
@@ -102,7 +103,6 @@ void sync_master_restart(void);
 void *sync_master(void *);
 void sync_server(void *);
 void sync_help(FILE *);
-void sync_vers(FILE *);
 int sync_waitdata(int);
 
 

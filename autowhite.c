@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.45 2006/07/24 22:49:43 manu Exp $ */
+/* $Id: autowhite.c,v 1.46 2006/08/01 14:55:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.45 2006/07/24 22:49:43 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.46 2006/08/01 14:55:20 manu Exp $");
 #endif
 #endif
 
@@ -210,7 +210,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 			continue;
 		}
 
-		/*
+	 	/*
 		 * Look for an already existing entry
 		 */
 		if (ip_match(sa, aw->a_sa, mask) &&
@@ -470,5 +470,36 @@ autowhite_put(aw)	/* autowhite list must be write-locked */
 	free(aw->a_rcpt);
 	free(aw);
 
+	return;
+}
+
+void
+autowhite_del_addr(sa, salen)
+	struct sockaddr *sa;
+	socklen_t salen;
+{
+	struct autowhite *aw;
+	struct autowhite *next_aw;
+	
+	AUTOWHITE_WRLOCK;
+	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
+		next_aw = TAILQ_NEXT(aw, a_list);
+		
+		if (memcmp(sa, aw->a_sa, salen) == 0) {
+			char buf[IPADDRLEN + 1];
+
+			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
+                      syslog(LOG_INFO, "(local): addr %s from %s rcpt %s: "
+			    "autowhitelisted entry expired",
+			    buf, aw->a_from, aw->a_rcpt);
+
+			autowhite_put(aw);
+
+			dump_dirty++;
+		}
+		break;
+	}
+	AUTOWHITE_UNLOCK;
+	
 	return;
 }

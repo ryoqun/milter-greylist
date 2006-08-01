@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.36 2006/07/28 16:44:17 manu Exp $
+.\" $Id: greylist.conf.5,v 1.37 2006/08/01 14:55:20 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -77,6 +77,9 @@ the 2 clauses
 .I delay\fR,
 and
 .I autowhite\fR.
+There is also a
+.I flushaddr
+flag, which can be used to flush the sender IP from the database.
 .TP
 .I addr
 This clause is used to specify a netblock of source IP 
@@ -143,6 +146,14 @@ entry. Example:
 .IP
   acl greylist rcpt JDoe@example.net greylist 15m autowhite 3d
   acl greylist rcpt root@example.net greylist 1h autowhite 3d
+.TP
+.I flushaddr
+If a message matches the rule, any entry in the greylist or autowhite
+databases matching the sender IP is removed. Used with a DNSRBL blacklist
+ACL, it is useful for freeing the database from entries set up by a 
+machine which is known to be a spamer. Example:
+.IP
+  acl blacklist dnsrbl "known-spamers" flushaddr
 .PP
 .I domain\fR,
 .I from\fR,

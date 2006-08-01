@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.60 2006/07/30 19:52:51 manu Exp $ */
+/* $Id: sync.c,v 1.61 2006/08/01 14:55:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.60 2006/07/30 19:52:51 manu Exp $");
+__RCSID("$Id: sync.c,v 1.61 2006/08/01 14:55:20 manu Exp $");
 #endif
 #endif
 
@@ -59,6 +59,8 @@ __RCSID("$Id: sync.c,v 1.60 2006/07/30 19:52:51 manu Exp $");
 #include "autowhite.h"
 #include "milter-greylist.h"
 
+#define SYNC_PROTO_CURRENT 3
+
 struct sync_master_sock {
 	int runs;
 	int sock;
@@ -75,6 +77,8 @@ static void sync_listen(char *, char *, struct sync_master_sock *);
 static int local_addr(const struct sockaddr *sa, const socklen_t salen);
 static int sync_queue_poke(struct peer *, struct sync *);
 static struct sync * sync_queue_peek(struct peer *);
+static int select_protocol(struct peer *, int, FILE *);
+static void sync_vers(FILE *, int);
 
 void
 peer_init(void) {
@@ -241,15 +245,24 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	char *cookie = NULL;
 	char *keyw;
 	char awstr[LINELEN + 1];
+	int bw;
 
 	if ((peer->p_stream == NULL) && (peer_connect(peer) != 0))
 		return -1;
 
 	*line = '\0';
-	if (type == PS_CREATE) {
-		keyw = "add";
-		awstr[0] = '\0';
-	} else {
+	switch(type) {
+	case PS_FLUSH:
+		bw = snprintf(line, LINELEN, "flush addr %s\r\n",
+		    pending->p_addr);
+		break;
+	case PS_CREATE:
+		bw = snprintf(line, LINELEN, "add addr %s from %s "
+		    "rcpt %s date %ld\r\n", pending->p_addr, 
+			pending->p_from, pending->p_rcpt, 
+			(long)pending->p_tv.tv_sec);
+		break;
+	default:
 		if (peer->p_vers >= 2) {
 			keyw = "del2";
 			snprintf(awstr, LINELEN, " aw %ld", (long)autowhite);
@@ -257,34 +270,34 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 			keyw = "del";
 			awstr[0] = '\0';
 		}
-	}
-
-	{
-		int bw;
 		bw = snprintf(line, LINELEN, "%s addr %s from %s "
 		    "rcpt %s date %ld%s\r\n", keyw, pending->p_addr, 
 			pending->p_from, pending->p_rcpt, 
 			(long)pending->p_tv.tv_sec, awstr);
-		if (bw > LINELEN) {
-			syslog(LOG_ERR, "closing connexion with peer %s: "
-			    "send buffer would overflow (%d entries queued)", 
-			    peer->p_name, peer->p_qlen);
-			fclose(peer->p_stream);
-			peer->p_stream = NULL;
-			return -1;
-		}
-		bw = fprintf(peer->p_stream, "%s", line);
-		if (bw != strlen(line)) {
-			syslog(LOG_ERR, "closing connexion with peer %s: "
-			    "%s (%d entries queued) - I was unable to send "
-			    "complete line \"%s\" - bytes written: %i", 
-			    peer->p_name, strerror(errno), peer->p_qlen, 
-			    line, bw);
-			fclose(peer->p_stream);
-			peer->p_stream = NULL;
-			return -1;
-		}
+		break;
 	}
+
+	if (bw > LINELEN) {
+		syslog(LOG_ERR, "closing connexion with peer %s: "
+		    "send buffer would overflow (%d entries queued)", 
+		    peer->p_name, peer->p_qlen);
+		fclose(peer->p_stream);
+		peer->p_stream = NULL;
+		return -1;
+	}
+
+	bw = fprintf(peer->p_stream, "%s", line);
+	if (bw != strlen(line)) {
+		syslog(LOG_ERR, "closing connexion with peer %s: "
+		    "%s (%d entries queued) - I was unable to send "
+		    "complete line \"%s\" - bytes written: %i", 
+		    peer->p_name, strerror(errno), peer->p_qlen, 
+		    line, bw);
+		fclose(peer->p_stream);
+		peer->p_stream = NULL;
+		return -1;
+	}
+
 	fflush(peer->p_stream);
 
 	/* 
@@ -559,41 +572,14 @@ peer_connect(peer)	/* peer list is read-locked */
 		goto bad;
 	}
 
-	fprintf(stream, "vers2\n");
-
-	sync_waitdata(s);	
-	if (fgets(line, LINELEN, stream) == NULL) {
-		syslog(LOG_ERR, "Lost connexion with peer %s: "
-		    "%s (%d entries queued)", 
-		    peer->p_name, strerror(errno), peer->p_qlen);
-		goto bad;
-	}
-
-	fflush(stream);
-
-	if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
-		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
-		    "closing connexion (%d entries queued)", 
-		    line, peer->p_name, peer->p_qlen);
-		goto bad;
-	}
-
-	replycode = atoi(replystr);
-	if (replycode != 802) {
-		syslog(LOG_DEBUG, "peer %s answered code %d to command vers2",
-		    peer->p_name, replycode);
-		peer->p_vers = 1;
-	} else {
-		peer->p_vers = 2;
-	}
-
-	fflush(stream);
-
+	if ((peer->p_vers = select_protocol(peer, s, stream)) == 0)
+		goto bad;	
 
 	syslog(LOG_INFO, "Connection to %s established, protocol version %d", 
 	    peer->p_name, peer->p_vers);
 	peer->p_stream = stream;
 	peer->p_socket = s;
+
 	return 0;
 
 bad:
@@ -937,7 +923,7 @@ sync_server(arg)
 		fflush(stream);
 
 		/*
-		 * Get the command { quit | help | add | del }
+		 * Get the command { quit | help | add | del | del2 | flush }
 		 */
 		cookie = NULL;
 		if ((cmd = strtok_r(line, sep, &cookie)) == NULL) {
@@ -951,8 +937,11 @@ sync_server(arg)
 		} else if ((strncmp(cmd, "help", CMDLEN)) == 0) {
 			sync_help(stream);
 			continue;
+		} else if ((strncmp(cmd, "vers3", CMDLEN)) == 0) {
+			sync_vers(stream, 3);
+			continue;
 		} else if ((strncmp(cmd, "vers2", CMDLEN)) == 0) {
-			sync_vers(stream);
+			sync_vers(stream, 2);
 			continue;
 		} else if ((strncmp(cmd, "add", CMDLEN)) == 0) {
 			action = PS_CREATE;
@@ -961,6 +950,8 @@ sync_server(arg)
 			aw = -1;
 		} else if ((strncmp(cmd, "del", CMDLEN)) == 0) {
 			action = PS_DELETE;
+		} else if ((strncmp(cmd, "flush", CMDLEN)) == 0) {
+			action = PS_FLUSH;
 		} else {
 			fprintf(stream, "102 Invalid command \"%s\"\n", cmd);
 			fflush(stream);
@@ -996,6 +987,13 @@ sync_server(arg)
 			fflush(stream);
 			continue;
 		}	
+
+		if (action == PS_FLUSH) {
+			from = NULL;
+			rcpt = NULL;
+			date = 0;
+			goto eol;
+		}
 
 		/*
 		 * get { "from" email_address }
@@ -1094,6 +1092,7 @@ sync_server(arg)
 		/* 
 		 * Check nothing remains
 		 */
+eol:
 		if ((keyword = strtok_r(NULL, sep, &cookie)) != NULL) {	
 			fprintf(stream, 
 			    "104 Unexpected keyword \"%s\"\n", keyword);
@@ -1115,6 +1114,10 @@ sync_server(arg)
 			autowhite_add(SA(&addr), addrlen, from, 
 			    rcpt, &aw, "(mxsync)");
 		}
+		if (action == PS_FLUSH) {
+			pending_del_addr(SA(&addr), addrlen);
+			autowhite_del_addr(SA(&addr), addrlen);
+		}
 
 		/* Flush modifications to disk */
 		dump_flush();
@@ -1127,11 +1130,18 @@ sync_server(arg)
 
 }
 
-void
-sync_vers(stream)
+static void
+sync_vers(stream, vers)
 	FILE *stream;
+	int vers;
 {
-	fprintf(stream, "802 Yes, I speak version 2, what do you think?\n");
+	if (vers <= SYNC_PROTO_CURRENT) {
+		fprintf(stream, 
+		    "%d Yes, I speak version %d, what do you think?\n",
+		    800 + vers, vers);
+	} else {
+		fprintf(stream, "108 Invalid vers%d command\n", vers);
+	}
 	fflush(stream);
 	return;
 }
@@ -1146,6 +1156,7 @@ sync_help(stream)
 	fprintf(stream, "203 help  -- displays this message\n");
 	fprintf(stream, "203 quit  -- terminate connexion\n");
 	fprintf(stream, "203 vers2 -- speak version 2 protocol\n");
+	fprintf(stream, "203 vers3 -- speak version 3 protocol\n");
 	fprintf(stream, 
 	    "203 add addr <ip> from <email> rcpt <email> date <time>  "
 	    "-- add en entry\n");
@@ -1156,6 +1167,9 @@ sync_help(stream)
 	    "203 del2 addr <ip> from <email> rcpt <email> date <time> "
 	    "aw <time> -- remove en entry, adding it to autowhite with "
 	    "given delay (version 2 only)\n");
+	fprintf(stream, 
+	    "203 flush addr <ip> -- remove anything about an ip "
+	    " (version 3 only)\n");
 	fflush(stream);
 
 	return;
@@ -1376,4 +1390,75 @@ local_addr(sa, salen)
 	close(sfd);
 
 	return islocal;
+}
+
+static int 
+select_protocol(peer, s, stream)
+	struct peer *peer;
+	int s;
+	FILE *stream;
+{
+	char line[LINELEN + 1];
+	int vers;
+	char *replystr;
+	int replycode;
+	char sep[] = " \n\t\r";
+	char *cookie = NULL;
+
+	for (vers = SYNC_PROTO_CURRENT; vers > 1; vers--) {
+		fprintf(stream, "vers%d\n", vers);
+
+		sync_waitdata(s);	
+		if (fgets(line, LINELEN, stream) == NULL) {
+			syslog(LOG_ERR, "Lost connexion with peer %s: "
+			    "%s (%d entries queued)", 
+			    peer->p_name, strerror(errno), peer->p_qlen);
+			return 0;
+		}
+
+		fflush(stream);
+
+		if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
+			syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
+			    "closing connexion (%d entries queued)", 
+			    line, peer->p_name, peer->p_qlen);
+			return 0;
+		}
+
+		fflush(stream);
+
+		replycode = atoi(replystr);
+		if (replycode != 800 + vers) {
+			syslog(LOG_DEBUG, 
+			    "peer %s answered code %d to command vers%d",
+			    peer->p_name, replycode, vers);
+		} else {
+			return vers;
+		}
+	}
+
+	return 1;
+}
+
+void
+peer_flush(pending)
+	struct pending *pending;
+{
+	struct peer *peer;
+
+	PEER_RDLOCK;
+	if (LIST_EMPTY(&peer_head))
+		goto out;
+
+	LIST_FOREACH(peer, &peer_head, p_list) {
+		/* Unsupported before verseion 3 */
+		if (peer->p_vers < 3)
+			continue;
+		sync_queue(peer, PS_FLUSH, pending, -1); /* -1: unused */
+	}
+
+out:
+	PEER_UNLOCK;
+	
+	return;
 }

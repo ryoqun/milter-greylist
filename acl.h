@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.9 2006/07/27 20:08:32 manu Exp $ */
+/* $Id: acl.h,v 1.10 2006/08/01 14:55:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -94,8 +94,12 @@ struct acl_entry {
 	struct all_list_entry *a_addrlist;
 	time_t a_delay;
 	time_t a_autowhite;
+	int a_flags;
 	TAILQ_ENTRY(acl_entry) a_list;
 };
+
+/* a_flags */
+#define A_FLUSHADDR	1
 
 extern int testmode;
 extern pthread_rwlock_t acl_lock;
@@ -112,6 +116,7 @@ void acl_add_rcpt_regex(char *);
 void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
 void acl_add_list(char *);
+void acl_add_flushaddr(void);
 #ifdef USE_DNSRBL
 void acl_add_dnsrbl(char *);
 #endif
