@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.10 2006/08/01 14:55:20 manu Exp $ */
+/* $Id: acl.h,v 1.11 2006/08/01 21:29:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -95,6 +95,9 @@ struct acl_entry {
 	time_t a_delay;
 	time_t a_autowhite;
 	int a_flags;
+	char *a_code;
+	char *a_ecode;
+	char *a_msg;
 	TAILQ_ENTRY(acl_entry) a_list;
 };
 
@@ -117,13 +120,15 @@ void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
 void acl_add_list(char *);
 void acl_add_flushaddr(void);
+void acl_add_code(char *);
+void acl_add_ecode(char *);
+void acl_add_msg(char *);
 #ifdef USE_DNSRBL
 void acl_add_dnsrbl(char *);
 #endif
 struct acl_entry *acl_register_entry_first (acl_type_t);
 struct acl_entry *acl_register_entry_last (acl_type_t);
-int acl_filter(struct sockaddr *, socklen_t, char *, char *, char *, char *,
-	time_t *, time_t *, int *);
+int acl_filter(struct mlfi_priv *, char *);
 char *acl_entry(struct acl_entry  *);
 void acl_dump(void);
 int emailcmp(char *, char *);        

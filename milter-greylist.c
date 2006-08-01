@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.125 2006/07/28 17:28:28 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.126 2006/08/01 21:29:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.125 2006/07/28 17:28:28 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.126 2006/08/01 21:29:36 manu Exp $");
 #endif
 #endif
 
@@ -88,8 +88,8 @@ static int check_drac(char *dotted_ip);
 static char *strncpy_rmsp(char *, char *, size_t);
 static char *gmtoffset(time_t *, char *, size_t);
 static void writepid(char *);
-static void log_and_report_greylisting(SMFICTX *ctx, 
-    struct mlfi_priv *priv, char *rcpt);
+static void log_and_report_greylisting(SMFICTX *, struct mlfi_priv *, char *);
+static void reset_acl_values(struct mlfi_priv *);
 
 struct smfiDesc smfilter =
 {
@@ -293,7 +293,6 @@ mlfi_envrcpt(ctx, envrcpt)
 	char *greylist;
 	char addrstr[IPADDRSTRLEN];
 	char rcpt[ADDRLEN + 1];
-	time_t delay, autowhite;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
@@ -370,10 +369,8 @@ mlfi_envrcpt(ctx, envrcpt)
 	/*
 	 * Check the ACL
 	 */
-	if ((priv->priv_whitelist = acl_filter(SA(&priv->priv_addr),
-	    priv->priv_addrlen, priv->priv_hostname, priv->priv_from,
-	    rcpt, priv->priv_queueid, &delay, 
-	    &autowhite, &priv->priv_acl_line)) & EXF_WHITELIST) {
+	reset_acl_values(priv);
+	if ((priv->priv_whitelist = acl_filter(priv, rcpt)) & EXF_WHITELIST) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -383,6 +380,9 @@ mlfi_envrcpt(ctx, envrcpt)
 	 */
 	if (priv->priv_whitelist & EXF_BLACKLIST) {
 		char aclstr[16];
+		char *code = "551";
+		char *ecode = "5.7.1";
+		char *msg = "Go away!";
 
 		if (priv->priv_acl_line != 0)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
@@ -393,7 +393,10 @@ mlfi_envrcpt(ctx, envrcpt)
 		    priv->priv_queueid, priv->priv_hostname, addrstr, 
 		    priv->priv_from, rcpt, aclstr);
 
-		(void)smfi_setreply(ctx, "551", "5.7.1", "Go away!");
+		code = (priv->priv_code) ? priv->priv_code : code;
+		ecode = (priv->priv_ecode) ? priv->priv_ecode : ecode;
+		msg = (priv->priv_msg) ? priv->priv_msg : msg;
+		(void)smfi_setreply(ctx, code, ecode, msg);
 
 		return SMFIS_REJECT;
 	}
@@ -404,7 +407,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	 */
 	if ((priv->priv_whitelist = autowhite_check(SA(&priv->priv_addr),
 	    priv->priv_addrlen, priv->priv_from, rcpt, priv->priv_queueid,
-	    delay, autowhite)) != EXF_NONE) {
+	    priv->priv_delay, priv->priv_autowhite)) != EXF_NONE) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -431,7 +434,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	 */
 	if (pending_check(SA(&priv->priv_addr), priv->priv_addrlen,
 	    priv->priv_from, rcpt, &remaining, &priv->priv_elapsed,
-	    priv->priv_queueid, delay, autowhite) != 0)
+	    priv->priv_queueid, priv->priv_delay, priv->priv_autowhite) != 0)
 		return SMFIS_CONTINUE;
 
 	priv->priv_remaining = remaining;
@@ -440,6 +443,8 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * The message has been added to the greylist and will be delayed.
 	 * If the sender address is null, this will be done after the DATA
 	 * phase, otherwise immediately.
+	 * Delayed reject with per-recipient delays or messages 
+	 * will use the last match.
 	 */
 	if ((conf.c_delayedreject == 1) && 
 	    (strcmp(priv->priv_from, "<>") == 0)) {
@@ -621,6 +626,12 @@ mlfi_close(ctx)
 	struct mlfi_priv *priv;
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) != NULL) {
+		if (priv->priv_code)
+			free(priv->priv_code);
+		if (priv->priv_ecode)
+			free(priv->priv_ecode);
+		if (priv->priv_msg)
+			free(priv->priv_msg);
 		free(priv);
 		smfi_setpriv(ctx, NULL);
 	}
@@ -1248,6 +1259,9 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	time_t remaining;
 	char *delayed_rj;
 	char aclstr[16];
+	char *code = "451";
+	char *ecode = "4.7.1";
+	char *msg = "Greylisting in action, please come back later";
 
 	/*
 	 * The message has been added to the greylist and will be delayed.
@@ -1279,15 +1293,19 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	    priv->priv_queueid, priv->priv_hostname, addrstr, 
 	    priv->priv_from, rcpt, delayed_rj, h, mn, s, aclstr);
 
+	code = (priv->priv_code) ? priv->priv_code : code;
+	ecode = (priv->priv_ecode) ? priv->priv_ecode : ecode;
+
 	if (conf.c_quiet) {
-		(void)smfi_setreply(ctx, "451", "4.7.1",
-		    "Greylisting in action, please come back later");
+		msg = (priv->priv_msg) ? priv->priv_msg : msg;
 	} else {
 		snprintf(hdr, HDRLEN,
 		    "Greylisting in action, please come "
 		    "back in %02d:%02d:%02d", h, mn, s);
-		(void)smfi_setreply(ctx, "451", "4.7.1", hdr);
+		msg = (priv->priv_msg) ? priv->priv_msg : hdr;
 	}
+
+	(void)smfi_setreply(ctx, code, ecode, msg);
 
 	return;
 }
@@ -1350,3 +1368,26 @@ check_drac(dotted_ip)
 	return 0;
 }
 #endif	/* USE_DRAC */
+
+static void 
+reset_acl_values(priv)
+	struct mlfi_priv *priv;
+{
+	priv->priv_delay = conf.c_delay;
+	priv->priv_autowhite = conf.c_autowhite_validity;
+
+	if (priv->priv_code != NULL) {
+		free(priv->priv_code);
+		priv->priv_code = NULL;
+	}
+	if (priv->priv_ecode != NULL) {
+		free(priv->priv_ecode);
+		priv->priv_ecode = NULL;
+	}
+	if (priv->priv_msg != NULL) {
+		free(priv->priv_msg);
+		priv->priv_msg = NULL;
+	}
+
+	return;
+}

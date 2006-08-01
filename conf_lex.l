@@ -63,6 +63,9 @@ logexpired    [Ll][Oo][Gg][Ee][Xx][Pp][Ii][Rr][Ee][Dd]
 dnsrbl		[Dd][Nn][Ss][Rr][Bb][Ll]
 list		[Ll][Ii][Ss][Tt]
 flushaddr	[Ff][Ll][Uu][Ss][Hh][Aa][Dd][Dd][Rr]
+code		[Cc][Oo][Dd][Ee]
+ecode		[Ee][Cc][Oo][Dd][Ee]
+msg		[Mm][Ss][Gg]
 openlist	"{"
 closelist	"}"
 nextln		"\\".*"\n"
@@ -78,7 +81,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.51 2006/08/01 14:55:20 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.52 2006/08/01 21:29:36 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -115,6 +118,9 @@ star		"*"
 {dnsrbl}  	{ return DNSRBL; }
 {list}  	{ return LIST; }
 {flushaddr}  	{ return FLUSHADDR; }
+{code}  	{ return CODE; }
+{ecode}  	{ return ECODE; }
+{msg}	  	{ return MSG; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.37 2006/08/01 14:55:20 manu Exp $
+.\" $Id: greylist.conf.5,v 1.38 2006/08/01 21:29:36 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -68,18 +68,6 @@ keyword, and by any set of the 5 clauses:
 and (if built with --enable-dnsrbl)
 .I dnsrbl\fR.
 A message will match an ACL entry when it complies with all of its clauses.
-.PP
-An 
-.I acl greylist
-entry can also carry the greylisting and autowhitelisiting delays
-that will be applied to messages matching the entry. This is done with 
-the 2 clauses
-.I delay\fR,
-and
-.I autowhite\fR.
-There is also a
-.I flushaddr
-flag, which can be used to flush the sender IP from the database.
 .TP
 .I addr
 This clause is used to specify a netblock of source IP 
@@ -127,6 +115,38 @@ This is used to select recipient addresses. Example:
 .I dnsrbl
 This is used to select a DNSRBL. See the section on that topic for
 more information.
+.PP
+The
+.I domain\fR,
+.I from\fR,
+and
+.I rcpt
+clauses may be used with regular expressions. The regular expressions must be
+enclosed by slashes (/). No escaping is available to provide a slash
+inside a regular expression, so just do not use it. Regular expressions
+follow the format described in 
+.B re_format(7)\fR.
+Here is an example:
+.PP
+  acl greylist rcpt /.*@example\.net/
+.PP
+When regular expressions are not used, 
+.I from\fR,
+and
+.I rcpt
+perform a case insensitive substring match with leading and trailing brackets,
+spaces and tabs stripped out. 
+.I domain
+performs a case insensitive suffix match.
+.PP
+An ACL entry can also hold various optional parameter used on match: 
+.I delay\fR,
+.I autowhite\fR,
+.I flushaddr\fR,
+.I code\fR,
+.I ecode\fR,
+and
+.I msg\fR
 .TP
 .I delay
 Specify the greylisting delay used before the message can be accepted.
@@ -154,28 +174,19 @@ ACL, it is useful for freeing the database from entries set up by a
 machine which is known to be a spamer. Example:
 .IP
   acl blacklist dnsrbl "known-spamers" flushaddr
-.PP
-.I domain\fR,
-.I from\fR,
-and
-.I rcpt
-may be used with regular expressions. The regular expressions must be
-enclosed by slashes (/). No escaping is available to provide a slash
-inside a regular expression, so just do not use it. Regular expressions
-follow the format described in 
-.B re_format(7)\fR.
-Here is an example:
-.PP
-  acl greylist rcpt /.*@example\.net/
-.PP
-When regular expressions are not used, 
-.I from\fR,
-and
-.I rcpt
-perform a case insensitive substring match with leading and trailing brackets,
-spaces and tabs stripped out. 
-.I domain
-performs a case insensitive suffix match.
+.TP
+.I code
+.TP
+.I ecode
+.TP
+.I msg
+These 3 values can be used to choose the SMTP code, extended code and
+reply message for temporary failures and rejects. Example:
+.IP
+  acl blacklist dnsrbl "spamstomp" msg "IP caught by spamstomp"
+  acl greylist default code "451" ecode "4.7.1"
+.TP
+None of the last 3 values makes sense for a whitelist entry. 
 .PP
 Entries in the access-list are evaluated sequentially, so order is
 very important. The first matching entry is used to decide if 

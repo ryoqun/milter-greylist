@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.28 2006/08/01 17:08:15 manu Exp $ */
+/* $Id: acl.c,v 1.29 2006/08/01 21:29:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.28 2006/08/01 17:08:15 manu Exp $");
+__RCSID("$Id: acl.c,v 1.29 2006/08/01 21:29:36 manu Exp $");
 #endif
 #endif
 
@@ -491,23 +491,27 @@ acl_register_entry_last(acl_type)	/* acllist must be write-locked */
 }
 
 int 
-acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
+acl_filter(priv, rcpt)
+	struct mlfi_priv *priv;
+	char *rcpt;
+{
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *hostname;
 	char *from;
-	char *rcpt;
 	char *queueid;
-	time_t *delay;
-	time_t *autowhite;
-	int *line;
-{
 	struct acl_entry *acl;
 	char addrstr[IPADDRSTRLEN];
 	char whystr[HDRLEN];
 	char tmpstr[HDRLEN];
 	int retval;
 	int testmode = conf.c_testmode;
+
+	sa = SA(&priv->priv_addr);
+	salen = priv->priv_addrlen;
+	hostname = priv->priv_hostname;
+	from = priv->priv_from;
+	queueid = priv->priv_queueid;
 
 	ACL_RDLOCK;
 
@@ -664,13 +668,36 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 			break;
 		}
 
-		*line = acl->a_line;
+		priv->priv_acl_line = acl->a_line;
 
-		*delay =
+		priv->priv_delay =
 		    (acl->a_delay != -1) ? acl->a_delay : conf.c_delay;
-		*autowhite = 
+		priv->priv_autowhite =
 		    (acl->a_autowhite != -1) ? 
 		    acl->a_autowhite : conf.c_autowhite_validity;
+
+		if (acl->a_code) {
+			if ((priv->priv_code = strdup(acl->a_code)) == NULL) {
+				syslog(LOG_ERR, "strdup failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+		}
+		if (acl->a_ecode) {
+			if ((priv->priv_ecode = strdup(acl->a_ecode)) == NULL) {
+				syslog(LOG_ERR, "strdup failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+		}
+		if (acl->a_msg) {
+			if ((priv->priv_msg = strdup(acl->a_msg)) == NULL) {
+				syslog(LOG_ERR, "strdup failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+		}
+			
 
 		if (acl->a_flags & A_FLUSHADDR)
 			pending_del_addr(sa, salen);
@@ -691,8 +718,8 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 			retval = EXF_GREYLIST;
 		retval |= EXF_DEFAULT;
 
-		*delay = conf.c_delay;
-		*autowhite = conf.c_autowhite_validity;
+		priv->priv_delay = conf.c_delay;
+		priv->priv_autowhite = conf.c_autowhite_validity;
 	}
 
 	if (retval & EXF_WHITELIST) {
@@ -858,6 +885,12 @@ acl_clear(void) {	/* acllist must be write locked */
 			regfree(acl->a_domain_re);
 		if (acl->a_domain_re_copy != NULL)
 			free(acl->a_domain_re_copy);
+		if (acl->a_code != NULL)
+			free(acl->a_code);
+		if (acl->a_ecode != NULL)
+			free(acl->a_ecode);
+		if (acl->a_msg != NULL)
+			free(acl->a_msg);
 		free(acl);
 	}
 
@@ -989,6 +1022,24 @@ acl_entry(acl)
 
 	if (acl->a_flags & A_FLUSHADDR) {
 		snprintf(tempstr, sizeof(tempstr), "[flushaddr] ");
+		strncat(entrystr, tempstr, sizeof(entrystr));
+	}
+
+	if (acl->a_code) {
+		snprintf(tempstr, sizeof(tempstr), 
+		    "[code \"%s\"] ", acl->a_code);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+	}
+
+	if (acl->a_ecode) {
+		snprintf(tempstr, sizeof(tempstr), 
+		    "[ecode \"%s\"] ", acl->a_ecode);
+		strncat(entrystr, tempstr, sizeof(entrystr));
+	}
+
+	if (acl->a_msg) {
+		snprintf(tempstr, sizeof(tempstr), 
+		    "[msg \"%s\"] ", acl->a_msg);
 		strncat(entrystr, tempstr, sizeof(entrystr));
 	}
 
@@ -1140,6 +1191,72 @@ acl_add_list(list)
 		
 	if (conf.c_debug || conf.c_acldebug)
 		printf("load acl list \"%s\"\n", list);
+
+	return;
+}
+
+void 
+acl_add_code(code)
+	char *code;
+{
+	if (gacl.a_code) {
+		fprintf (stderr,
+		    "code specified twice in ACL line %d\n", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	if ((gacl.a_code = strdup(code)) == NULL) {
+		fprintf (stderr,
+		    "malloc failed in ACL line %d\n", conf_line);
+		exit(EX_OSERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		printf("load acl code \"%s\"\n", code);
+
+	return;
+}
+
+void 
+acl_add_ecode(ecode)
+	char *ecode;
+{
+	if (gacl.a_ecode) {
+		fprintf (stderr,
+		    "ecode specified twice in ACL line %d\n", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	if ((gacl.a_ecode = strdup(ecode)) == NULL) {
+		fprintf (stderr,
+		    "malloc failed in ACL line %d\n", conf_line);
+		exit(EX_OSERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		printf("load acl ecode \"%s\"\n", ecode);
+
+	return;
+}
+
+void 
+acl_add_msg(msg)
+	char *msg;
+{
+	if (gacl.a_msg) {
+		fprintf (stderr,
+		    "msg specified twice in ACL line %d\n", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	if ((gacl.a_msg = strdup(msg)) == NULL) {
+		fprintf (stderr,
+		    "malloc failed in ACL line %d\n", conf_line);
+		exit(EX_OSERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		printf("load acl msg \"%s\"\n", msg);
 
 	return;
 }
