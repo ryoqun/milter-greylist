@@ -1,7 +1,8 @@
 2.1.11
 	IPv6 fixes (Hajimu UMEMOTO)
+	flushaddr flag for access lists, which flush an IP from the database
 2.1.10
-	Multi-line statement
+	Multi-line statement in the config file
 	Fix crash when using -c and lists or acl
 	Build fixes
 2.1.9
