@@ -1,3 +1,6 @@
+2.1.12
+	IPv6 fixes again (Hajimu UMEMOTO)
+	Build fix on FreeBSD
 2.1.11
 	IPv6 fixes (Hajimu UMEMOTO)
 	flushaddr flag for access lists, which flush an IP from the database

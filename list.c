@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.6 2006/07/28 20:43:41 manu Exp $ */
+/* $Id: list.c,v 1.7 2006/08/01 17:08:15 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.6 2006/07/28 20:43:41 manu Exp $");
+__RCSID("$Id: list.c,v 1.7 2006/08/01 17:08:15 manu Exp $");
 #endif
 #endif
 
@@ -44,6 +44,7 @@ __RCSID("$Id: list.c,v 1.6 2006/07/28 20:43:41 manu Exp $");
 #include <syslog.h>
 #include <errno.h>
 #include <sysexits.h>
+#include <sys/types.h>
 #include <regex.h>
 
 #ifdef HAVE_OLD_QUEUE_H 
@@ -51,7 +52,6 @@ __RCSID("$Id: list.c,v 1.6 2006/07/28 20:43:41 manu Exp $");
 #else 
 #include <sys/queue.h>
 #endif
-#include <sys/types.h>
 
 #include <netinet/in.h>
 
@@ -436,7 +436,7 @@ list_dnsrbl_filter(list,salen, sa)
 	struct list_entry *le;
 
 	LIST_FOREACH(le, &list->al_head, l_list) {
-		if (dnsrbl_check_source(sa, salen, le->l_data.dnsrbl) != 0)
+		if (dnsrbl_check_source(sa, salen, le->l_data.dnsrbl) == 1)
 			break;
 	}
 

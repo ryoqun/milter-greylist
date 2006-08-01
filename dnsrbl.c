@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.10 2006/07/31 20:56:26 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.11 2006/08/01 17:08:15 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.10 2006/07/31 20:56:26 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.11 2006/08/01 17:08:15 manu Exp $");
 #endif
 #endif
 
@@ -114,6 +114,10 @@ dnsrbl_check_source(sa, salen, source)
 	char *addr;
 	size_t len;
 
+	/* No IPv6 DNSRBL exists right now */
+	if (sa->sa_family != AF_INET)
+		return 0;
+
 	blacklisted = SA(&source->d_blacklisted);
 
 	switch (blacklisted->sa_family) {
@@ -124,9 +128,9 @@ dnsrbl_check_source(sa, salen, source)
 		break;
 #ifdef AF_INET6
 	case AF_INET6:
-		/* No IPv6 DNSRBL exists right now */
-		retval = 1;
-		goto end;
+		qtype = T_AAAA;
+		addr = (char *)SADDR6(blacklisted);
+		len = sizeof(*SADDR6(blacklisted));
 		break;
 #endif
 	default:

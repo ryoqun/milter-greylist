@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.27 2006/08/01 14:55:20 manu Exp $ */
+/* $Id: acl.c,v 1.28 2006/08/01 17:08:15 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.27 2006/08/01 14:55:20 manu Exp $");
+__RCSID("$Id: acl.c,v 1.28 2006/08/01 17:08:15 manu Exp $");
 #endif
 #endif
 
@@ -622,7 +622,7 @@ acl_filter(sa, salen, hostname, from, rcpt, queueid, delay, autowhite, line)
 
 		if (acl->a_dnsrbl != NULL) {
 			if (dnsrbl_check_source(sa, 
-			    salen, acl->a_dnsrbl) != 0) {
+			    salen, acl->a_dnsrbl) == 1) {
 				retval |= EXF_DNSRBL;
 				if (conf.c_debug) {
 					iptostring(sa, salen, 
