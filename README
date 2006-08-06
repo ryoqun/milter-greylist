@@ -1,9 +1,9 @@
-# $Id: README,v 1.40 2006/07/28 05:16:07 manu Exp $
+# $Id: README,v 1.41 2006/08/06 20:26:58 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2006/07/28 05:16:07 $
+		       $Date: 2006/08/06 20:26:58 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -292,11 +292,18 @@ This feature was introduced in milter-greylist 2.1.7 and may not be
 fully stable. You need the --enable-dnsrbl flag to configure to use 
 it. You must link milter-greylist with a thread-safe resolver, else 
 the milter will be unstable (see the explanation in the SPF section).
+
 If your resolver is not thread safe, install BIND9, and use 
 --with-libbind. If you know your resolver is thread-safe but 
-configure tells otherwise (becaue you lack the res_ninit() function),
+configure tells otherwise (because you lack the res_ninit() function),
 then use --with-thread-safe-resolver. 
 
+If you install BIND9, make sure it includes libbind.a, since this is
+what milter-greylist needs. libbind.a is not created in BIND9 default
+build setup, so you might not have it in a precompiled package. If you 
+cannot find a package that contains libbind.a, then you have to rebuild
+BIND9 from sources, using the --enable-libbind 
+flag to BIND9's configure.
 
 
  10 Building with SPF
