@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.179 2006/08/01 21:31:32 manu Exp $
+# $Id: configure.ac,v 1.180 2006/08/06 20:19:52 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -54,7 +54,7 @@ AC_ARG_WITH(libbind,
 	[  --with-libbind=DIR	Find libbind in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include/bind -I$withval/include"
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
-	    AC_CHECK_LIB([bind], [res_init], [LIBS="-lbind $LIBS"])
+	    LIBS="-lbind $LIBS"
 	 ])
 
 # Checks for header files.
