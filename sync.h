@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.17 2006/08/01 14:55:20 manu Exp $ */
+/* $Id: sync.h,v 1.18 2006/08/08 13:54:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -68,7 +68,7 @@ struct peer {
 	int p_socket;
 	struct synclist p_deferred;
 	LIST_ENTRY(peer) p_list;
-	size_t p_qlen;
+	unsigned int p_qlen;
 	int p_flags;
 	int p_vers;
 };
