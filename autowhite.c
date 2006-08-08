@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.46 2006/08/01 14:55:20 manu Exp $ */
+/* $Id: autowhite.c,v 1.47 2006/08/08 04:21:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.46 2006/08/01 14:55:20 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.47 2006/08/08 04:21:44 manu Exp $");
 #endif
 #endif
 
@@ -124,7 +124,7 @@ autowhite_timeout(void)
 		 * Expiration
 		 */
 		if (aw->a_tv.tv_sec < now.tv_sec) {
-			char buf[IPADDRLEN + 1];
+			char buf[IPADDRSTRLEN + 1];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
                       syslog(LOG_INFO, "(local): addr %s from %s rcpt %s: "
