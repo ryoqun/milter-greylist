@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.69 2006/08/06 20:21:34 manu Exp $
+# $Id: Makefile,v 1.70 2006/08/20 06:27:56 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
