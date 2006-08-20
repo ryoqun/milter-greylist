@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.11 2006/08/01 17:08:15 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.12 2006/08/20 06:38:43 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.11 2006/08/01 17:08:15 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.12 2006/08/20 06:38:43 manu Exp $");
 #endif
 #endif
 
@@ -156,8 +156,8 @@ dnsrbl_check_source(sa, salen, source)
 		goto end;
 	}
 
-	(void)strncat(req, ".", NS_MAXDNAME);
-	(void)strncat(req, dnsrbl, NS_MAXDNAME);
+	(void)mystrlcat(req, ".", NS_MAXDNAME);
+	(void)mystrlcat(req, dnsrbl, NS_MAXDNAME);
 
 	anslen = res_nquery(&res, req, C_IN, qtype, ans, sizeof(ans));
 	if (anslen == -1)

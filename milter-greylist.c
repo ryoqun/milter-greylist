@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.128 2006/08/20 05:53:26 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.129 2006/08/20 06:38:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.128 2006/08/20 05:53:26 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.129 2006/08/20 06:38:43 manu Exp $");
 #endif
 #endif
 
@@ -589,7 +589,7 @@ mlfi_eom(ctx)
 		if (priv->priv_whitelist != 0) {
 			syslog(LOG_ERR, "%s: unexpected priv_whitelist = %d",
 			    priv->priv_queueid, priv->priv_whitelist);
-			strncat (whystr, "Internal error ", HDRLEN);
+			mystrlcat (whystr, "Internal error ", HDRLEN);
 		}
 
 		snprintf(hdr, HDRLEN, "%s, not delayed by "
@@ -1391,3 +1391,31 @@ reset_acl_values(priv)
 
 	return;
 }
+
+
+#ifndef HAVE_STRLCAT
+size_t
+mystrlcat(dst, src, len)
+	char *dst;
+	const char *src;
+	size_t len;
+{
+	size_t srclen = strlen(src);
+	size_t dstlen;
+
+	for (dstlen = 0; dstlen != len && dst[dstlen]; ++dstlen)
+		;
+	if (dstlen == len) {
+#if 0
+		/* BSD's strlcat leaves the string not NUL-terminated. */
+		return dstlen + srclen;
+#else
+		/* This situation is a bug. We make core dump. */
+		abort();
+#endif
+	}
+	strncpy(dst + dstlen, src, len - dstlen - 1);
+	dst[len - 1] = '\0';
+	return dstlen + srclen;
+}
+#endif

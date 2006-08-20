@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.30 2006/08/20 05:52:20 manu Exp $ */
+/* $Id: acl.c,v 1.31 2006/08/20 06:38:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.30 2006/08/20 05:52:20 manu Exp $");
+__RCSID("$Id: acl.c,v 1.31 2006/08/20 06:38:43 manu Exp $");
 #endif
 #endif
 
@@ -914,13 +914,13 @@ acl_entry(acl)
 
 	switch (acl->a_type) {
 	case A_GREYLIST:
-		strncat(entrystr, "greylist ", sizeof(entrystr));
+		mystrlcat(entrystr, "greylist ", sizeof(entrystr));
 		break;
 	case A_WHITELIST:
-		strncat(entrystr, "whitelist ", sizeof(entrystr));
+		mystrlcat(entrystr, "whitelist ", sizeof(entrystr));
 		break;
 	case A_BLACKLIST:
-		strncat(entrystr, "blacklist ", sizeof(entrystr));
+		mystrlcat(entrystr, "blacklist ", sizeof(entrystr));
 		break;
 	default:
 		syslog(LOG_ERR, "corrupted acl list");
@@ -931,7 +931,7 @@ acl_entry(acl)
 	if (acl->a_addrlist != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "addr list \"%s\" ", 
 		    acl->a_addrlist->al_name);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_addr != NULL) {
@@ -940,111 +940,111 @@ acl_entry(acl)
 		inet_ntop(acl->a_addr->sa_family, acl->a_mask, maskstr,
 		    sizeof(maskstr));
 		snprintf(tempstr, sizeof(tempstr), "addr %s/%s ", addrstr, maskstr);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_fromlist != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "from list \"%s\" ", 
 		    acl->a_fromlist->al_name);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_from != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "from %s ", acl->a_from);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_from_re != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "from /%s/ ",
 		    acl->a_from_re_copy);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_rcptlist != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "rcpt list \"%s\" ", 
 		    acl->a_rcptlist->al_name);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_rcpt != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "rcpt %s ", acl->a_rcpt);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_rcpt_re != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "rcpt /%s/ ",
 		    acl->a_rcpt_re_copy);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_domainlist != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "domainlist \"%s\" ", 
 		    acl->a_domainlist->al_name);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_domain != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "domain %s ", acl->a_domain);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_domain_re != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "domain /%s/ ",
 		    acl->a_domain_re_copy);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 #if USE_DNSRBL
 	if (acl->a_dnsrbllist != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "dnsrbllist \"%s\" ", 
 		    acl->a_dnsrbllist->al_name);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 	if (acl->a_dnsrbl != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "dnsrbl \"%s\" ",
 		    acl->a_dnsrbl->d_name);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
 #endif
 	if (acl->a_delay != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[delay %ld] ", (long)acl->a_delay);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 	}
 
 	if (acl->a_autowhite != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[aw %ld] ", (long)acl->a_autowhite);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 	}
 
 	if (acl->a_flags & A_FLUSHADDR) {
 		snprintf(tempstr, sizeof(tempstr), "[flushaddr] ");
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 	}
 
 	if (acl->a_code) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[code \"%s\"] ", acl->a_code);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 	}
 
 	if (acl->a_ecode) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[ecode \"%s\"] ", acl->a_ecode);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 	}
 
 	if (acl->a_msg) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[msg \"%s\"] ", acl->a_msg);
-		strncat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 	}
 
 	if (def)
-		strncat(entrystr, "default", sizeof(entrystr));
+		mystrlcat(entrystr, "default", sizeof(entrystr));
 	return entrystr;
 }
 

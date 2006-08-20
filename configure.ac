@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.182 2006/08/20 06:27:56 manu Exp $
+# $Id: configure.ac,v 1.183 2006/08/20 06:38:43 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -73,7 +73,7 @@ AC_FUNC_MEMCMP
 AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
-AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket initgroups])
+AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket initgroups strlcat])
 
 # Try to configure for libspf2
 SAVEDLDFLAGS=$LDFLAGS

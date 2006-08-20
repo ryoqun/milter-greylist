@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.43 2006/08/01 21:29:36 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.44 2006/08/20 06:38:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -164,6 +164,13 @@ void unmappedaddr(struct sockaddr *, socklen_t *);
 void final_dump(void);
 int main(int, char **);
 
+#ifdef HAVE_STRLCAT
+/* #include <string.h> */
+#define mystrlcat strlcat
+#else
+size_t mystrlcat(char *, const char *src, size_t size);
+#endif
+
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT))
 #define MLFI_HELO mlfi_helo
 #else
@@ -253,8 +260,8 @@ int main(int, char **);
 #define ADD_REASON(whystr, reason)					\
 	{								\
 		if (whystr[0] != '\0')					\
-			strncat(whystr, ", ", sizeof(whystr));		\
-		strncat(whystr, reason, sizeof(whystr));		\
+			mystrlcat(whystr, ", ", sizeof(whystr));	\
+		mystrlcat(whystr, reason, sizeof(whystr));		\
 	}
 
 #endif /* _MILTER_GREYLIST_H_ */
