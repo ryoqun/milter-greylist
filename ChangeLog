@@ -2,6 +2,8 @@
 	Documentation fix about required sendmail macros
 	Missing bit in rc-redhat.sh (Jobst Schmalenbach)
 	Fix bugs that prevented IPv6 addresses resolution
+	Add more log output for blackist and flushaddr (Fabien Tassin)
+	Allow rejecting by tempfail on blacklist configuration (Fabien Tassin)
 3.0a1
 	Build fix
 2.1.12

@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.29 2006/08/01 21:29:36 manu Exp $ */
+/* $Id: acl.c,v 1.30 2006/08/20 05:52:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.29 2006/08/01 21:29:36 manu Exp $");
+__RCSID("$Id: acl.c,v 1.30 2006/08/20 05:52:20 manu Exp $");
 #endif
 #endif
 
@@ -700,7 +700,7 @@ acl_filter(priv, rcpt)
 			
 
 		if (acl->a_flags & A_FLUSHADDR)
-			pending_del_addr(sa, salen);
+			pending_del_addr(sa, salen, queueid, acl->a_line);
 
 		if (conf.c_debug || conf.c_acldebug) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
