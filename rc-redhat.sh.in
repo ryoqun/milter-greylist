@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: rc-redhat.sh.in,v 1.6 2006/08/20 05:20:15 manu Exp $
+# $Id: rc-redhat.sh.in,v 1.7 2006/08/20 05:20:51 manu Exp $
 #  init file for milter-greylist
 #
 # chkconfig: - 79 21
@@ -32,6 +32,7 @@ start() {
                 daemon --user=$user @BINDIR@/milter-greylist $OPTIONS
                 RETVAL=$?
                 [ $RETVAL -eq 0 ] && touch /var/lock/subsys/milter-greylist
+		[ $RETVAL -eq 0 ] && success || failure
         fi;
         echo 
         return $RETVAL
