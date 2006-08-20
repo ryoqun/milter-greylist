@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.127 2006/08/20 05:30:39 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.128 2006/08/20 05:53:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.127 2006/08/20 05:30:39 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.128 2006/08/20 05:53:26 manu Exp $");
 #endif
 #endif
 
@@ -389,7 +389,7 @@ mlfi_envrcpt(ctx, envrcpt)
 			    priv->priv_acl_line);
 
 		syslog(LOG_INFO, 
-		    "%s: addr %s[%s] from %s to %s %s",
+		    "%s: addr %s[%s] from %s to %s blacklisted%s",
 		    priv->priv_queueid, priv->priv_hostname, addrstr, 
 		    priv->priv_from, rcpt, aclstr);
 
@@ -398,7 +398,7 @@ mlfi_envrcpt(ctx, envrcpt)
 		msg = (priv->priv_msg) ? priv->priv_msg : msg;
 		(void)smfi_setreply(ctx, code, ecode, msg);
 
-		return SMFIS_REJECT;
+		return *code == '4' ? SMFIS_TEMPFAIL : SMFIS_REJECT;
 	}
 
 	/* 

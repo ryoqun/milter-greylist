@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.77 2006/08/01 14:55:20 manu Exp $ */
+/* $Id: pending.c,v 1.78 2006/08/20 05:53:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.77 2006/08/01 14:55:20 manu Exp $");
+__RCSID("$Id: pending.c,v 1.78 2006/08/20 05:53:26 manu Exp $");
 #endif
 #endif
 
@@ -640,14 +640,19 @@ ipfromstring(str, sa, salen, family)
 }
 
 void
-pending_del_addr(sa, salen)
+pending_del_addr(sa, salen, queueid, acl_line)
 	struct sockaddr *sa;
 	socklen_t salen;
+	char *queueid;
+	int acl_line;
 {
 	char addr[IPADDRSTRLEN];
 	struct pending *pending;
 	struct pending *next;
 	int sync_flush_done = 0;
+	int count_pending = 0;
+	int count_white = 0;
+        char aclstr[16];
 
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return;
@@ -662,13 +667,21 @@ pending_del_addr(sa, salen)
 				sync_flush_done = 1;
 			}
 			pending_put(pending);
+			count_pending++;
 		}
 
 	}
 	PENDING_UNLOCK;
 
 	/* And flush autowhite list as well... */
-	autowhite_del_addr(sa, salen);
+	count_white = autowhite_del_addr(sa, salen);
 	
+	if (queueid != NULL) {
+		*aclstr = '\0';
+        	if (acl_line != 0)
+			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", acl_line);
+		syslog(LOG_INFO, "%s: addr %s flushed, removed %d grey and %d autowhite%s",
+			queueid, addr, count_pending, count_white, aclstr);
+	}
 	return;
 }

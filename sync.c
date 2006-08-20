@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.61 2006/08/01 14:55:20 manu Exp $ */
+/* $Id: sync.c,v 1.62 2006/08/20 05:53:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.61 2006/08/01 14:55:20 manu Exp $");
+__RCSID("$Id: sync.c,v 1.62 2006/08/20 05:53:26 manu Exp $");
 #endif
 #endif
 
@@ -1115,7 +1115,7 @@ eol:
 			    rcpt, &aw, "(mxsync)");
 		}
 		if (action == PS_FLUSH) {
-			pending_del_addr(SA(&addr), addrlen);
+			pending_del_addr(SA(&addr), addrlen, NULL, 0);
 			autowhite_del_addr(SA(&addr), addrlen);
 		}
 

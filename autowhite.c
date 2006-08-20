@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.48 2006/08/20 05:30:39 manu Exp $ */
+/* $Id: autowhite.c,v 1.49 2006/08/20 05:53:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.48 2006/08/20 05:30:39 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.49 2006/08/20 05:53:25 manu Exp $");
 #endif
 #endif
 
@@ -473,13 +473,14 @@ autowhite_put(aw)	/* autowhite list must be write-locked */
 	return;
 }
 
-void
+int
 autowhite_del_addr(sa, salen)
 	struct sockaddr *sa;
 	socklen_t salen;
 {
 	struct autowhite *aw;
 	struct autowhite *next_aw;
+	int count = 0;
 	
 	AUTOWHITE_WRLOCK;
 	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
@@ -494,6 +495,7 @@ autowhite_del_addr(sa, salen)
 			    buf, aw->a_from, aw->a_rcpt);
 
 			autowhite_put(aw);
+			count++;
 
 			dump_dirty++;
 		}
@@ -501,5 +503,5 @@ autowhite_del_addr(sa, salen)
 	}
 	AUTOWHITE_UNLOCK;
 	
-	return;
+	return count;
 }
