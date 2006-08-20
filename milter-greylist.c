@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.126 2006/08/01 21:29:36 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.127 2006/08/20 05:30:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.126 2006/08/01 21:29:36 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.127 2006/08/20 05:30:39 manu Exp $");
 #endif
 #endif
 
@@ -264,7 +264,7 @@ mlfi_envfrom(ctx, envfrom)
 	if ((conf.c_nospf == 0) && 
 	    (SPF_CHECK(SA(&priv->priv_addr), priv->priv_addrlen,
 	    priv->priv_helo, *envfrom) != EXF_NONE)) {
-		char ipstr[IPADDRLEN + 1];
+		char ipstr[IPADDRSTRLEN];
 
 		if (iptostring(SA(&priv->priv_addr),
 		    priv->priv_addrlen, ipstr, sizeof(ipstr))) {

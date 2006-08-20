@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.55 2006/08/01 21:29:36 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.56 2006/08/20 05:30:39 manu Exp $");
 #endif
 #endif
 
@@ -168,7 +168,7 @@ domainregex:	DOMAIN REGEX	 {
 		}
 	;
 peeraddr:	PEER IPADDR	{
-			char addr[IPADDRLEN + 1];
+			char addr[IPADDRSTRLEN];
 
 			if (IP4TOSTRING($2, addr) == NULL) {
 				printf("invalid IPv4 address line %d\n",
@@ -179,7 +179,7 @@ peeraddr:	PEER IPADDR	{
 		}
 	|	PEER IP6ADDR	{
 #ifdef AF_INET6
-			char addr[IPADDRSTRLEN + 1];
+			char addr[IPADDRSTRLEN];
 
 			if (IP6TOSTRING($2, addr) == NULL) {
 				printf("invalid IPv6 address line %d\n",

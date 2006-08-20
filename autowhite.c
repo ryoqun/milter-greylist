@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.47 2006/08/08 04:21:44 manu Exp $ */
+/* $Id: autowhite.c,v 1.48 2006/08/20 05:30:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.47 2006/08/08 04:21:44 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.48 2006/08/20 05:30:39 manu Exp $");
 #endif
 #endif
 
@@ -124,7 +124,7 @@ autowhite_timeout(void)
 		 * Expiration
 		 */
 		if (aw->a_tv.tv_sec < now.tv_sec) {
-			char buf[IPADDRSTRLEN + 1];
+			char buf[IPADDRSTRLEN];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
                       syslog(LOG_INFO, "(local): addr %s from %s rcpt %s: "
@@ -196,7 +196,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 		 * Expiration (left this one in too until the list gets sorted)
 		 */
 		if (aw->a_tv.tv_sec < now.tv_sec) {
-			char buf[IPADDRLEN + 1];
+			char buf[IPADDRSTRLEN];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
                       syslog(LOG_INFO, "(local): addr %s from %s rcpt %s: "
@@ -486,7 +486,7 @@ autowhite_del_addr(sa, salen)
 		next_aw = TAILQ_NEXT(aw, a_list);
 		
 		if (memcmp(sa, aw->a_sa, salen) == 0) {
-			char buf[IPADDRLEN + 1];
+			char buf[IPADDRSTRLEN];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
                       syslog(LOG_INFO, "(local): addr %s from %s rcpt %s: "
