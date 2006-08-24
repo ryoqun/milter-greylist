@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.183 2006/08/20 06:38:43 manu Exp $
+# $Id: configure.ac,v 1.184 2006/08/24 20:49:29 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -327,7 +327,7 @@ CFLAGS=$SAVEDCFLAGS
 # Check for DRAC
 AC_ARG_ENABLE(drac,
 	[  --enable-drac	Enable DRAC support],
-	[CFLAGS=$CFLAGS" -DUSE_DRAC"])
+	[if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_DRAC"; fi])
 
 # Check for libpthread. On FreeBSD, the libc_r does the job.
 # On digitalUNIX, libpthreads (with a trailing s) is the library to use
@@ -645,7 +645,7 @@ AC_ARG_WITH(thread-safe-resolver,
 # Check for DNSRBL
 AC_ARG_ENABLE(dnsrbl,
 	[  --enable-dnsrbl	Enable DNSRBL support],
-	[if test $rdns = yes; then
+	[if test x$enableval = xyes -a $rdns = yes; then
 		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
 	 else
 		echo "--enable-dnsrbl used but DNS resolver is not thread safe";

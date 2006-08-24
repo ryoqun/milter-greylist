@@ -7386,7 +7386,7 @@ CFLAGS=$SAVEDCFLAGS
 # Check whether --enable-drac or --disable-drac was given.
 if test "${enable_drac+set}" = set; then
   enableval="$enable_drac"
-  CFLAGS=$CFLAGS" -DUSE_DRAC"
+  if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_DRAC"; fi
 fi;
 
 # Check for libpthread. On FreeBSD, the libc_r does the job.
@@ -8979,7 +8979,7 @@ fi;
 # Check whether --enable-dnsrbl or --disable-dnsrbl was given.
 if test "${enable_dnsrbl+set}" = set; then
   enableval="$enable_dnsrbl"
-  if test $rdns = yes; then
+  if test x$enableval = xyes -a $rdns = yes; then
 		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
 	 else
 		echo "--enable-dnsrbl used but DNS resolver is not thread safe";
