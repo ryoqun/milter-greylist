@@ -48,9 +48,6 @@
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
-/* <syslog.h> defines LOG_PERROR */
-#undef HAVE_MISSING_LOG_PERROR
-
 /* missing socklen_t definition */
 #undef HAVE_MISSING_SOCKLEN_T
 

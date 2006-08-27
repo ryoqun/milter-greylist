@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.38 2006/07/27 08:20:12 manu Exp $ */
+/* $Id: conf.c,v 1.39 2006/08/27 20:54:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.38 2006/07/27 08:20:12 manu Exp $");
+__RCSID("$Id: conf.c,v 1.39 2006/08/27 20:54:40 manu Exp $");
 #endif
 #endif
 
@@ -103,7 +103,7 @@ conf_init(void) {
 	int error;
 
 	if ((error = pthread_rwlock_init(&conf_lock, NULL)) != 0) {
-		syslog(LOG_ERR, 
+		mg_log(LOG_ERR, 
 		    "pthread_rwlock_init failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
@@ -123,18 +123,12 @@ conf_load(void)
 	 */
 	memcpy(&conf, &defconf, sizeof(conf));
 
-	if (!conf.c_cold)
-		(void)gettimeofday(&tv1, NULL);
+	(void)gettimeofday(&tv1, NULL);
 
 	if ((stream = fopen(conffile, "r")) == NULL) {
-		if (conf.c_cold) {
-			fprintf(stderr, "cannot open config file %s: %s\n", 
-			    conffile, strerror(errno));
-			fprintf(stderr, "continuing with no exception list\n");
-		} else {
-			syslog(LOG_ERR, "cannot open config file %s: %s", 
-			    conffile, strerror(errno));
-		}
+		mg_log(LOG_ERR, "cannot open config file %s: %s", 
+		    conffile, strerror(errno));
+		mg_log(LOG_ERR, "continuing with no exception list");
 	} else {
 
 		peer_clear();
@@ -152,18 +146,13 @@ conf_load(void)
 
 		fclose(stream);
 
-		if (!conf.c_cold) {
-			(void)gettimeofday(&tv2, NULL);
-			timersub(&tv2, &tv1, &tv3);
-			syslog(LOG_DEBUG, "%sloaded config file in %ld.%06lds", 
-			conf.c_cold ? "" : "re",
-			    tv3.tv_sec, tv3.tv_usec);
-		}
+		(void)gettimeofday(&tv2, NULL);
+		timersub(&tv2, &tv1, &tv3);
+		mg_log(LOG_DEBUG, "%sloaded config file in %ld.%06lds", 
+		    conf.c_cold ? "" : "re", tv3.tv_sec, tv3.tv_usec);
 	}
 
 	if (conf.c_cold) {
-		conf.c_cold = 0;
-		defconf.c_cold = 0;
 		(void)gettimeofday(&conffile_modified, NULL);
 	} else {
 		CONF_WRLOCK;
@@ -185,7 +174,7 @@ conf_update(void) {
 	int error;
 	
 	if (stat(conffile, &st) != 0) {
-		syslog(LOG_ERR, "config file \"%s\" unavailable", 
+		mg_log(LOG_ERR, "config file \"%s\" unavailable", 
 		    conffile);
 		return;
 	}
@@ -201,7 +190,7 @@ conf_update(void) {
 	conffile_modified.tv_sec = st.st_mtime;
 	CONF_UNLOCK;
 
-	syslog(LOG_INFO, "reloading \"%s\"", conffile);
+	mg_log(LOG_INFO, "reloading \"%s\"", conffile);
 
 	/*
 	 * On some platforms, the thread stack limit is too low and
@@ -217,33 +206,33 @@ conf_update(void) {
 	 * (launching a thread before a fork seems to be a problem)
 	 */
 	if ((error = pthread_attr_init(&attr)) != 0) {
-		syslog(LOG_ERR, "pthread_attr_init failed: %s", 
+		mg_log(LOG_ERR, "pthread_attr_init failed: %s", 
 		    strerror(error));
 		exit(EX_OSERR);
 	}
 
 	if ((error = pthread_attr_setstacksize(&attr, 
 	    2 * 1024 * 1024)) != 0) {
-		syslog(LOG_ERR, "pthread_attr_setstacksize failed: %s", 
+		mg_log(LOG_ERR, "pthread_attr_setstacksize failed: %s", 
 		    strerror(error));
 		exit(EX_OSERR);
 	}
 
 	if ((error = pthread_create(&tid, &attr, 
 	    (void *(*)(void *))conf_load, NULL)) != 0) {
-		syslog(LOG_ERR, "pthread_create failed: %s", 
+		mg_log(LOG_ERR, "pthread_create failed: %s", 
 		    strerror(error));
 		exit(EX_OSERR);
 	}
 
 	if ((error = pthread_detach(tid)) != 0) {
-		syslog(LOG_ERR, "pthread_detach failed: %s",
+		mg_log(LOG_ERR, "pthread_detach failed: %s",
 		    strerror(error));
 		exit(EX_OSERR);
 	}
 
 	if ((error = pthread_attr_destroy(&attr)) != 0) {
-		syslog(LOG_ERR, "pthread_attr_destroy failed: %s",
+		mg_log(LOG_ERR, "pthread_attr_destroy failed: %s",
 		    strerror(error));
 		exit(EX_OSERR);
 	}

@@ -83,7 +83,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.53 2006/08/27 16:02:25 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.54 2006/08/27 20:54:40 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -213,7 +213,7 @@ star		"*"
 		}
 {nextln}	{	conf_line++; }
 <*>.|\n		{ 
-			printf("unknown token \"%s\" line %d\n", 
+			mg_log(LOG_ERR, "unknown token \"%s\" line %d", 
 			    yytext, conf_line); 
 			exit(EX_DATAERR);
 		}
@@ -223,6 +223,7 @@ void
 yyerror(err)
 	char *err;
 {
-	fprintf(stderr, "config error at line %d: %s\n", conf_line, err);
+	mg_log(LOG_ERR, "config error at line %d: %s", conf_line, err);
+	exit(EX_DATAERR);
 	return;
 }

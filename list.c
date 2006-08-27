@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.8 2006/08/27 16:02:26 manu Exp $ */
+/* $Id: list.c,v 1.9 2006/08/27 20:54:41 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.8 2006/08/27 16:02:26 manu Exp $");
+__RCSID("$Id: list.c,v 1.9 2006/08/27 20:54:41 manu Exp $");
 #endif
 #endif
 
@@ -61,6 +61,7 @@ __RCSID("$Id: list.c,v 1.8 2006/08/27 16:02:26 manu Exp $");
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
 #endif
+#include "macro.h"
 #include "list.h"
 
 struct all_list all_list_head;
@@ -103,7 +104,7 @@ all_list_get(type, name)
 	struct all_list_entry *ale;
 
 	if ((ale = malloc(sizeof(*ale))) == NULL) {
-		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
@@ -147,7 +148,7 @@ all_list_put(ale)
 			free(le->l_data.netblock.nb_mask);
 			break;
 		default:
-			syslog(LOG_ERR, "unexpected type %d", ale->al_type);
+			mg_log(LOG_ERR, "unexpected type %d", ale->al_type);
 			exit(EX_SOFTWARE);
 			break;
 		}
@@ -167,10 +168,10 @@ list_add(ale, type, data)
 	struct list_entry *le;
 
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load list item %s\n", (char *)data);
+		mg_log(LOG_DEBUG, "load list item %s", (char *)data);
 
 	if ((le = malloc(sizeof(*le))) == NULL) {
-		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
@@ -179,7 +180,7 @@ list_add(ale, type, data)
 	switch(type) {
 	case L_STRING:
 		if ((le->l_data.string = strdup(data)) == NULL) {
-			syslog(LOG_ERR, "strdup failed: %s", strerror(errno));
+			mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
 			exit(EX_OSERR);
 		}
 		break;
@@ -200,14 +201,14 @@ list_add(ale, type, data)
 		str++;
 
 		if ((re = malloc(sizeof(*re))) == NULL) {
-			syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+			mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 			exit(EX_OSERR);
 		}
 
 		extended = (conf.c_extendedregex ? REG_EXTENDED : 0);
 		if ((error = regcomp(re, str, extended | REG_ICASE)) != 0) {
 			regerror(error, re, errstr, ERRLEN);
-			syslog(LOG_ERR, "bad regular expression \"%s\": %s\n",
+			mg_log(LOG_ERR, "bad regular expression \"%s\": %s",
 			    str, errstr);
 			exit(EX_DATAERR);
 		}
@@ -220,7 +221,7 @@ list_add(ale, type, data)
 		/* Not done here */
 		/* FALLTHROUGH */
 	default:
-		syslog(LOG_ERR, "unexpected l_type %d", type);
+		mg_log(LOG_ERR, "unexpected l_type %d", type);
 		exit(EX_OSERR);
 	}
 
@@ -245,11 +246,11 @@ list_add_netblock(ale, sa, salen, cidr)
 		char addrstr[IPADDRSTRLEN];
 
 		iptostring(SA(&sa), salen, addrstr, sizeof(addrstr));
-                printf("load list item %s/%d\n", addrstr, cidr);
+                mg_log(LOG_DEBUG, "load list item %s/%d", addrstr, cidr);
 	}
 
 	if ((le = malloc(sizeof(*le))) == NULL) {
-		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
@@ -267,13 +268,13 @@ list_add_netblock(ale, sa, salen, cidr)
 		break;
 #endif
 	default:
-		syslog(LOG_ERR, "bad address family line %d", conf_line);
+		mg_log(LOG_ERR, "bad address family line %d", conf_line);
 		exit(EX_DATAERR);
 		break;
 	}
 
 	if (cidr > maxcidr || cidr < 0) {
-		syslog(LOG_ERR, "bad mask in acl list line %d", conf_line);
+		mg_log(LOG_ERR, "bad mask in acl list line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 	
@@ -296,7 +297,7 @@ list_add_netblock(ale, sa, salen, cidr)
 
 	if (((le->l_data.netblock.nb_addr = malloc(salen)) == NULL) ||
 	    ((le->l_data.netblock.nb_mask = malloc(masklen)) == NULL)) {
-		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
@@ -309,6 +310,7 @@ list_add_netblock(ale, sa, salen, cidr)
 	return;
 }
 
+#define DEBUGSTR 1024
 void
 all_list_settype(ale, type)
 	struct all_list_entry *ale;
@@ -317,31 +319,33 @@ all_list_settype(ale, type)
 	ale->al_type = type;
 
 	if (conf.c_debug || conf.c_acldebug) { 
-		printf("load list type ");
+		char debugstr[DEBUGSTR + 1];
+
+		snprintf(debugstr, DEBUGSTR, "load list type ");
 		switch(type) {
 		case LT_FROM:
-			printf("from ");
+			strncat(debugstr, "from ", DEBUGSTR);
 			break;
 		case LT_RCPT:
-			printf("rcpt ");
+			strncat(debugstr, "rcpt ", DEBUGSTR);
 			break;
 		case LT_DOMAIN:
-			printf("domain ");
+			strncat(debugstr, "domain ", DEBUGSTR);
 			break;
 #ifdef USE_DNSRBL
 		case LT_DNSRBL:
-			printf("dnsrbl ");
+			strncat(debugstr, "dnsrbl ", DEBUGSTR);
 			break;
 #endif
 		case LT_ADDR:
-			printf("addr ");
+			strncat(debugstr, "addr ", DEBUGSTR);
 			break;
 		default:
-			syslog(LOG_ERR, "unexpected al_type %d\n", 
+			mg_log(LOG_ERR, "unexpected al_type %d", 
 			    type);
 			break;
 		}
-		printf("\n");
+		mg_log(LOG_DEBUG, debugstr);
 	}
 
 #if USE_DNSRBL
@@ -353,13 +357,13 @@ all_list_settype(ale, type)
 			struct dnsrbl_entry *de;
 
 			if (le->l_type != L_STRING) {
-				syslog(LOG_ERR, "inconsistent list line %d",
+				mg_log(LOG_ERR, "inconsistent list line %d",
 				    conf_line);
 				exit(EX_SOFTWARE);
 			}
 
 			if ((de = dnsrbl_byname(le->l_data.string)) == NULL) {
-				syslog(LOG_ERR, "Inexistent DNSRBL \"%s\" "
+				mg_log(LOG_ERR, "Inexistent DNSRBL \"%s\" "
 				    "at line %d", le->l_data.string, conf_line);
 				exit(EX_DATAERR);
 			}
@@ -378,9 +382,8 @@ all_list_setname(ale, name)
 	struct all_list_entry *ale;
 	char *name;
 {
-	if (conf.c_debug || conf.c_acldebug) { 
-		printf("load list name \"%s\"\n", name);
-	}
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load list name \"%s\"", name);
 
 	strncpy(ale->al_name, name, sizeof(ale->al_name));
 	ale->al_name[sizeof(ale->al_name) - 1] = '\0';
@@ -478,7 +481,7 @@ list_from_filter(list, from)
 				goto from_out;
 			break;
 		default:
-			syslog(LOG_ERR, "corrupted list");
+			mg_log(LOG_ERR, "corrupted list");
 			exit(EX_SOFTWARE);
 			break;
 		}
@@ -506,7 +509,7 @@ list_rcpt_filter(list, rcpt)
 				goto rcpt_out;
 			break;
 		default:
-			syslog(LOG_ERR, "corrupted list");
+			mg_log(LOG_ERR, "corrupted list");
 			exit(EX_SOFTWARE);
 			break;
 		}
@@ -534,7 +537,7 @@ list_domain_filter(list, domain)
 				goto domain_out;
 			break;
 		default:
-			syslog(LOG_ERR, "corrupted list");
+			mg_log(LOG_ERR, "corrupted list");
 			exit(EX_SOFTWARE);
 			break;
 		}

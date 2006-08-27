@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.49 2006/08/20 05:53:25 manu Exp $ */
+/* $Id: autowhite.c,v 1.50 2006/08/27 20:54:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.49 2006/08/20 05:53:25 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.50 2006/08/27 20:54:40 manu Exp $");
 #endif
 #endif
 
@@ -77,7 +77,7 @@ autowhite_init(void) {
 	TAILQ_INIT(&autowhite_head);
 	if ((autowhite_buckets = calloc(AUTOWHITE_BUCKETS, 
 	    sizeof(struct autowhite_bucket))) == NULL) {
-		syslog(LOG_ERR, 
+		mg_log(LOG_ERR, 
 		    "Unable to allocate autowhite list buckets: %s", 
 		    strerror(errno));
 		exit(EX_OSERR);
@@ -85,7 +85,7 @@ autowhite_init(void) {
 	
 	if ((error = pthread_rwlock_init(&autowhite_lock, NULL)) != 0 ||
 	    (error = pthread_mutex_init(&autowhite_change_lock, NULL)) != 0) {
-		syslog(LOG_ERR, "pthread_rwlock_init failed: %s",
+		mg_log(LOG_ERR, "pthread_rwlock_init failed: %s",
 		    strerror(error));
 		    exit(EX_OSERR);
 	}	
@@ -96,7 +96,7 @@ autowhite_init(void) {
 		if ((error = 
 		    pthread_mutex_init(&autowhite_buckets[i].bucket_mtx, 
 		    NULL)) != 0) {
-			syslog(LOG_ERR, 
+			mg_log(LOG_ERR, 
 			    "pthread_mutex_init failed: %s", strerror(error));
 			exit(EX_OSERR);
 		}
@@ -127,7 +127,7 @@ autowhite_timeout(void)
 			char buf[IPADDRSTRLEN];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
-                      syslog(LOG_INFO, "(local): addr %s from %s rcpt %s: "
+                      mg_log(LOG_INFO, "(local): addr %s from %s rcpt %s: "
 			    "autowhitelisted entry expired",
 			    buf, aw->a_from, aw->a_rcpt);
 
@@ -199,7 +199,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 			char buf[IPADDRSTRLEN];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
-                      syslog(LOG_INFO, "(local): addr %s from %s rcpt %s: "
+                      mg_log(LOG_INFO, "(local): addr %s from %s rcpt %s: "
 			    "autowhitelisted entry expired",
 			    buf, aw->a_from, aw->a_rcpt);
 
@@ -227,7 +227,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 
 			dirty++;
 
-			syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
+			mg_log(LOG_INFO, "%s: addr %s from %s rcpt %s: "
 				"autowhitelisted for more %02d:%02d:%02d",
 				queueid, addr, from, rcpt, h, mn, s);
 			break;
@@ -242,7 +242,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 
 		dirty++;
 
-		syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
+		mg_log(LOG_INFO, "%s: addr %s from %s rcpt %s: "
 		    "autowhitelisted for %02d:%02d:%02d", 
 		    queueid, addr, from, rcpt, h, mn, s);
 	}
@@ -318,7 +318,7 @@ autowhite_check(sa, salen, from, rcpt, queueid, gldelay, autowhite)
 			char buf[IPADDRSTRLEN];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
-                      syslog(LOG_INFO, "(local): addr %s from %s rcpt %s: "
+                      mg_log(LOG_INFO, "(local): addr %s from %s rcpt %s: "
 			    "autowhitelisted entry expired",
 			    buf, aw->a_from, aw->a_rcpt);
 
@@ -359,7 +359,7 @@ autowhite_check(sa, salen, from, rcpt, queueid, gldelay, autowhite)
 	if (aw == NULL) 
 		return EXF_NONE;
 
-	syslog(LOG_INFO, "%s: addr %s from %s rcpt %s: "
+	mg_log(LOG_INFO, "%s: addr %s from %s rcpt %s: "
 		"autowhitelisted for more %02d:%02d:%02d",
 		queueid, addr, from, rcpt, h, mn, s);
 	/*
@@ -429,7 +429,7 @@ autowhite_get(sa, salen, from, rcpt, date) /* autowhite list must be locked */
 	struct autowhite *aw;
 
 	if ((aw = malloc(sizeof(*aw))) == NULL) {
-		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
@@ -438,7 +438,7 @@ autowhite_get(sa, salen, from, rcpt, date) /* autowhite list must be locked */
 	if ((aw->a_sa = malloc(salen)) == NULL ||
 	    (aw->a_from = strdup(from)) == NULL ||
 	    (aw->a_rcpt = strdup(rcpt)) == NULL) {
-		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	aw->a_tv.tv_sec = date;
@@ -490,7 +490,7 @@ autowhite_del_addr(sa, salen)
 			char buf[IPADDRSTRLEN];
 
 			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
-                      syslog(LOG_INFO, "(local): addr %s from %s rcpt %s: "
+                      mg_log(LOG_INFO, "(local): addr %s from %s rcpt %s: "
 			    "autowhitelisted entry expired",
 			    buf, aw->a_from, aw->a_rcpt);
 

@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.22 2006/07/27 12:48:24 manu Exp $ */
+/* $Id: spf.c,v 1.23 2006/08/27 20:54:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.22 2006/07/27 12:48:24 manu Exp $");
+__RCSID("$Id: spf.c,v 1.23 2006/08/27 20:54:41 manu Exp $");
 #endif
 #endif
 
@@ -82,7 +82,7 @@ spf_check(sa, salen, helo, from)
 
 	if ((p = SPF_init("milter-greylist", addr, 
 	    NULL, NULL, NULL, SPF_FALSE, SPF_FALSE)) == NULL) {
-		syslog(LOG_ERR, "SPF_Init failed");
+		mg_log(LOG_ERR, "SPF_Init failed");
 		goto out1;
 	}
 	SPF_smtp_helo(p, helo);
@@ -90,7 +90,7 @@ spf_check(sa, salen, helo, from)
 	p->RES = SPF_policy_main(p);
 
 	if (conf.c_debug)
-		syslog(LOG_DEBUG, "SPF return code %d", p->RES);
+		mg_log(LOG_DEBUG, "SPF return code %d", p->RES);
 
 	if (p->RES == SPF_PASS)
 		result = EXF_SPF;
@@ -101,7 +101,7 @@ out1:
 	if (conf.c_debug) {
 		gettimeofday(&tv2, NULL);
 		timersub(&tv2, &tv1, &tv3);
-		syslog(LOG_DEBUG, "SPF lookup performed in %ld.%06lds",  
+		mg_log(LOG_DEBUG, "SPF lookup performed in %ld.%06lds",  
 		    tv3.tv_sec, tv3.tv_usec);
 	}
 	
@@ -150,12 +150,12 @@ spf_alt_check(sa, salen, helo, fromp)
 		gettimeofday(&tv1, NULL);
 
 	if ((spfconf = SPF_create_config()) == NULL) {
-		syslog(LOG_ERR, "SPF_create_config failed");
+		mg_log(LOG_ERR, "SPF_create_config failed");
 		goto out1;
 	}
 
 	if ((dnsconf = SPF_dns_create_config_resolv(NULL, 0)) == NULL) {
-		syslog(LOG_ERR, "SPF_dns_create_config_resolv faile");
+		mg_log(LOG_ERR, "SPF_dns_create_config_resolv faile");
 		goto out2;
 	}
 
@@ -163,17 +163,17 @@ spf_alt_check(sa, salen, helo, fromp)
 	 * Get the IP address
 	 */
 	if (!iptostring(sa, salen, addr, sizeof(addr))) {
-		syslog(LOG_ERR, "SPF_set_ip_str failed");
+		mg_log(LOG_ERR, "SPF_set_ip_str failed");
 		goto out3;
 	}
 	if (SPF_set_ip_str(spfconf, addr) != 0) {
-		syslog(LOG_ERR, "SPF_set_ip_str failed");
+		mg_log(LOG_ERR, "SPF_set_ip_str failed");
 		goto out3;
 	}
 
 	/* HELO string */
 	if (SPF_set_helo_dom(spfconf, helo) != 0) {
-		syslog(LOG_ERR, "SPF_set_helo failed");
+		mg_log(LOG_ERR, "SPF_set_helo failed");
 		goto out3;
 	}
 
@@ -189,7 +189,7 @@ spf_alt_check(sa, salen, helo, fromp)
 		from[len - 1] = '\0'; /* strip trailing > */
 
 	if (SPF_set_env_from(spfconf, from) != 0) {
-		syslog(LOG_ERR, "SPF_set_env_from failed");
+		mg_log(LOG_ERR, "SPF_set_env_from failed");
 		goto out3;
 	}
 
@@ -206,7 +206,7 @@ spf_alt_check(sa, salen, helo, fromp)
 		result = EXF_SPF;
 
 	if (conf.c_debug)
-		syslog(LOG_DEBUG, "SPF return code %d", out.result);
+		mg_log(LOG_DEBUG, "SPF return code %d", out.result);
 
 	SPF_free_output(&out);
 out3:
@@ -217,7 +217,7 @@ out1:
 	if (conf.c_debug) {
 		gettimeofday(&tv2, NULL);
 		timersub(&tv2, &tv1, &tv3);
-		syslog(LOG_DEBUG, "SPF lookup performed in %ld.%06lds",  
+		mg_log(LOG_DEBUG, "SPF lookup performed in %ld.%06lds",  
 		    tv3.tv_sec, tv3.tv_usec);
 	}
 
@@ -248,12 +248,12 @@ spf2_check(sa, salen, helo, fromp)
 		gettimeofday(&tv1, NULL);
 
 	if ((spf_server = SPF_server_new(SPF_DNS_CACHE, 0)) == NULL) {
-		syslog(LOG_ERR, "SPF_server_new failed");
+		mg_log(LOG_ERR, "SPF_server_new failed");
 		goto out1;
 	}
 
 	if ((spf_request = SPF_request_new(spf_server)) == NULL) {
-		syslog(LOG_ERR, "SPF_request_new failed");
+		mg_log(LOG_ERR, "SPF_request_new failed");
 		goto out2;
 	}
 
@@ -270,17 +270,17 @@ spf2_check(sa, salen, helo, fromp)
 		break;
 #endif
 	default:
-		syslog(LOG_ERR, "unknown address family %d", sa->sa_family);
+		mg_log(LOG_ERR, "unknown address family %d", sa->sa_family);
 		goto out3;
 	}
 	if (res != 0) {
-		syslog(LOG_ERR, "SPF_request_set_ip_str failed");
+		mg_log(LOG_ERR, "SPF_request_set_ip_str failed");
 		goto out3;
 	}
 
 	/* HELO string */
 	if (SPF_request_set_helo_dom(spf_request, helo) != 0) {
-		syslog(LOG_ERR, "SPF_request_set_helo_dom failed");
+		mg_log(LOG_ERR, "SPF_request_set_helo_dom failed");
 		goto out3;
 	}
 
@@ -296,7 +296,7 @@ spf2_check(sa, salen, helo, fromp)
 		from[len - 1] = '\0'; /* strip trailing > */
 
 	if (SPF_request_set_env_from(spf_request, from) != 0) {
-		syslog(LOG_ERR, "SPF_request_set_env_from failed");
+		mg_log(LOG_ERR, "SPF_request_set_env_from failed");
 		goto out3;
 	}
 
@@ -308,7 +308,7 @@ spf2_check(sa, salen, helo, fromp)
 		result = EXF_SPF;
 
 	if (conf.c_debug)
-		syslog(LOG_DEBUG, "SPF return code %d", res);
+		mg_log(LOG_DEBUG, "SPF return code %d", res);
 
 	SPF_response_free(spf_response);
 out3:
@@ -319,7 +319,7 @@ out1:
 	if (conf.c_debug) {
 		gettimeofday(&tv2, NULL);
 		timersub(&tv2, &tv1, &tv3);
-		syslog(LOG_DEBUG, "SPF lookup performed in %ld.%06lds",
+		mg_log(LOG_DEBUG, "SPF lookup performed in %ld.%06lds",
 		    tv3.tv_sec, tv3.tv_usec);
 	}
 

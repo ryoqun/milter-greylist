@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.78 2006/08/20 05:53:26 manu Exp $ */
+/* $Id: pending.c,v 1.79 2006/08/27 20:54:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.78 2006/08/20 05:53:26 manu Exp $");
+__RCSID("$Id: pending.c,v 1.79 2006/08/27 20:54:41 manu Exp $");
 #endif
 #endif
 
@@ -90,7 +90,7 @@ pending_init(void) {
 	TAILQ_INIT(&pending_head);
 	if ((pending_buckets = calloc(PENDING_BUCKETS, 
 	    sizeof(struct pending_bucket))) == NULL) {
-		syslog(LOG_ERR, 
+		mg_log(LOG_ERR, 
 		    "Unable to allocate pending list buckets: %s", 
 		    strerror(errno));
 		exit(EX_OSERR);
@@ -99,7 +99,7 @@ pending_init(void) {
 	if ((error = pthread_rwlock_init(&pending_lock, NULL)) != 0 ||
 	    (error = pthread_rwlock_init(&refcnt_lock, NULL)) != 0 ||
 	    (error = pthread_mutex_init(&pending_change_lock, NULL)) != 0) {
-		syslog(LOG_ERR, 
+		mg_log(LOG_ERR, 
 		    "pthread_rwlock_init failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
@@ -109,7 +109,7 @@ pending_init(void) {
 		
 		if ((error = pthread_mutex_init(&pending_buckets[i].bucket_mtx,
 		    NULL)) != 0) {
-			syslog(LOG_ERR, 
+			mg_log(LOG_ERR, 
 			    "pthread_mutex_init failed: %s", strerror(error));
 			exit(EX_OSERR);
 		}
@@ -180,7 +180,7 @@ pending_get(sa, salen, from, rcpt, date)
 	(void)gettimeofday(&tv, NULL);
 
 	if (conf.c_debug) {
-		syslog(LOG_DEBUG, "created: %s from %s to %s delayed for %lds",
+		mg_log(LOG_DEBUG, "created: %s from %s to %s delayed for %lds",
 		    pending->p_addr, pending->p_from, pending->p_rcpt, 
 		    pending->p_tv.tv_sec - tv.tv_sec);
 	}
@@ -195,7 +195,7 @@ pending_put(pending)
 	struct pending *pending;
 {
 	if (conf.c_debug) {
-		syslog(LOG_DEBUG, "removed: %s from %s to %s",
+		mg_log(LOG_DEBUG, "removed: %s from %s to %s",
 		    pending->p_addr, pending->p_from, pending->p_rcpt);
 	}
 
@@ -231,7 +231,7 @@ pending_timeout(void)
 		 */
 		if (now.tv_sec - pending->p_tv.tv_sec > conf.c_timeout) {
 			if (conf.c_debug || conf.c_logexpired) {
-				syslog(LOG_DEBUG,
+				mg_log(LOG_DEBUG,
 				    "(local): %s from %s to %s: greylisted "
 				    "entry timed out",
 				    pending->p_addr, pending->p_from,
@@ -680,7 +680,7 @@ pending_del_addr(sa, salen, queueid, acl_line)
 		*aclstr = '\0';
         	if (acl_line != 0)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", acl_line);
-		syslog(LOG_INFO, "%s: addr %s flushed, removed %d grey and %d autowhite%s",
+		mg_log(LOG_INFO, "%s: addr %s flushed, removed %d grey and %d autowhite%s",
 			queueid, addr, count_pending, count_white, aclstr);
 	}
 	return;

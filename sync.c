@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.62 2006/08/20 05:53:26 manu Exp $ */
+/* $Id: sync.c,v 1.63 2006/08/27 20:54:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.62 2006/08/20 05:53:26 manu Exp $");
+__RCSID("$Id: sync.c,v 1.63 2006/08/27 20:54:41 manu Exp $");
 #endif
 #endif
 
@@ -86,19 +86,19 @@ peer_init(void) {
 
 	LIST_INIT(&peer_head);
 	if ((error = pthread_rwlock_init(&peer_lock, NULL)) != 0) {
-		syslog(LOG_ERR, 
+		mg_log(LOG_ERR, 
 		    "pthread_rwlock_init failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
 
 	if ((error = pthread_rwlock_init(&sync_lock, NULL)) != 0) {
-		syslog(LOG_ERR, 
+		mg_log(LOG_ERR, 
 		    "pthread_rwlock_init failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
 
 	if ((error = pthread_cond_init(&sync_sleepflag, NULL)) != 0) {
-		syslog(LOG_ERR, 
+		mg_log(LOG_ERR, 
 		    "pthread_cond_init failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
@@ -140,7 +140,7 @@ peer_add(peername)
 
 	if ((peer = malloc(sizeof(*peer))) == NULL ||
 	    (peer->p_name = strdup(peername)) == NULL) {
-		syslog(LOG_ERR, "cannot add peer: %s", strerror(errno));
+		mg_log(LOG_ERR, "cannot add peer: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
@@ -154,7 +154,7 @@ peer_add(peername)
 	PEER_UNLOCK;
 
 	if (conf.c_debug)
-		printf("load peer %s\n", peer->p_name);
+		mg_log(LOG_DEBUG, "load peer %s", peer->p_name);
 
 	return;
 }
@@ -278,7 +278,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	}
 
 	if (bw > LINELEN) {
-		syslog(LOG_ERR, "closing connexion with peer %s: "
+		mg_log(LOG_ERR, "closing connexion with peer %s: "
 		    "send buffer would overflow (%d entries queued)", 
 		    peer->p_name, peer->p_qlen);
 		fclose(peer->p_stream);
@@ -288,7 +288,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 
 	bw = fprintf(peer->p_stream, "%s", line);
 	if (bw != strlen(line)) {
-		syslog(LOG_ERR, "closing connexion with peer %s: "
+		mg_log(LOG_ERR, "closing connexion with peer %s: "
 		    "%s (%d entries queued) - I was unable to send "
 		    "complete line \"%s\" - bytes written: %i", 
 		    peer->p_name, strerror(errno), peer->p_qlen, 
@@ -308,7 +308,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	if (fgets(line, LINELEN, peer->p_stream) == NULL) {
 		if (errno == EAGAIN) 
 			goto get_more;
-		syslog(LOG_ERR, "lost connexion with peer %s: "
+		mg_log(LOG_ERR, "lost connexion with peer %s: "
 		    "%s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);
 		fclose(peer->p_stream);
@@ -324,7 +324,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	fflush(peer->p_stream);
 
 	if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
-		syslog(LOG_ERR, "Unexpected reply \"%s\" from %s, "
+		mg_log(LOG_ERR, "Unexpected reply \"%s\" from %s, "
 		    "closing connexion (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
 		fclose(peer->p_stream);
@@ -334,7 +334,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 
 	replycode = atoi(replystr);
 	if (replycode != 201) {
-		syslog(LOG_ERR, "Unexpected reply \"%s\" from %s, "
+		mg_log(LOG_ERR, "Unexpected reply \"%s\" from %s, "
 		    "closing connexion (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
 		fclose(peer->p_stream);
@@ -343,7 +343,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	}
 
 	if (conf.c_debug)
-		syslog(LOG_DEBUG, "sync one entry with %s", peer->p_name);
+		mg_log(LOG_DEBUG, "sync one entry with %s", peer->p_name);
 
 	return 0;
 }
@@ -376,7 +376,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	char *cookie = NULL;
 
 	if (peer->p_stream != NULL)
-		syslog(LOG_ERR, "peer_connect called and peer->p_stream != 0");
+		mg_log(LOG_ERR, "peer_connect called and peer->p_stream != 0");
 
 	if (conf.c_syncport != NULL) {
 		service = htons(atoi(conf.c_syncport));
@@ -392,7 +392,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	if ((err = getaddrinfo(peer->p_name, "0", &hints, &res0)) != 0) {
-		syslog(LOG_ERR, "cannot sync with peer %s, "
+		mg_log(LOG_ERR, "cannot sync with peer %s, "
 		    "getaddrinfo failed: %s (%d entries queued)",
 		    peer->p_name, gai_strerror(err), peer->p_qlen);
 		return -1;
@@ -433,7 +433,7 @@ peer_connect(peer)	/* peer list is read-locked */
 			break;
 #endif
 		default:
-			syslog(LOG_ERR, "cannot sync, unknown address family");
+			mg_log(LOG_ERR, "cannot sync, unknown address family");
 			close(s);
 			s = -1;
 			continue;
@@ -449,7 +449,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	}
 	freeaddrinfo(res0);
 	if (s < 0) {
-		syslog(LOG_ERR,
+		mg_log(LOG_ERR,
 		    "cannot sync with peer %s: %s (%d entries queued)",
 		    peer->p_name, strerror(errno), peer->p_qlen);
 		return -1;
@@ -458,7 +458,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	raddrlen = sizeof(raddr);
 	if (ipfromstring(peer->p_name, SA(&raddr), &raddrlen,
 	    AF_UNSPEC) != 1) {
-		syslog(LOG_ERR, "cannot sync, invalid address");
+		mg_log(LOG_ERR, "cannot sync, invalid address");
 		return -1;
 	}
 
@@ -483,7 +483,7 @@ peer_connect(peer)	/* peer list is read-locked */
 		break;
 #endif
 	default:
-		syslog(LOG_ERR, "cannot sync, unknown address family");
+		mg_log(LOG_ERR, "cannot sync, unknown address family");
 		return -1;
 	}
 
@@ -493,7 +493,7 @@ peer_connect(peer)	/* peer list is read-locked */
 		proto = pe->p_proto;
 
 	if ((s = socket(SA(&raddr)->sa_family, SOCK_STREAM, proto)) == -1) {
-		syslog(LOG_ERR, "cannot sync with peer %s, "
+		mg_log(LOG_ERR, "cannot sync with peer %s, "
 		    "socket failed: %s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);
 		return -1;
@@ -502,13 +502,13 @@ peer_connect(peer)	/* peer list is read-locked */
 	laddrlen = sizeof(laddr);
 	if (ipfromstring(laddrstr, SA(&laddr), &laddrlen,
 	    SA(&raddr)->sa_family) != 1) {
-		syslog(LOG_ERR, "cannot sync, invalid address");
+		mg_log(LOG_ERR, "cannot sync, invalid address");
 		close(s);
 		return -1;
 	}
 
 	if (bind(s, SA(&laddr), laddrlen) != 0) {
-		syslog(LOG_ERR, "cannot sync with peer %s, "
+		mg_log(LOG_ERR, "cannot sync with peer %s, "
 		    "bind failed: %s (%d entries queued)",
 		    peer->p_name, strerror(errno), peer->p_qlen);
 		close(s);
@@ -516,7 +516,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	}
 
 	if (connect(s, SA(&raddr), raddrlen) != 0) {
-		syslog(LOG_ERR, "cannot sync with peer %s, "
+		mg_log(LOG_ERR, "cannot sync with peer %s, "
 		    "connect failed: %s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);
 		close(s);
@@ -526,12 +526,12 @@ peer_connect(peer)	/* peer list is read-locked */
 
 	param = O_NONBLOCK;
 	if (fcntl(s, F_SETFL, &param) != 0) {
-		syslog(LOG_ERR, "cannot set non blocking I/O with %s: %s",
+		mg_log(LOG_ERR, "cannot set non blocking I/O with %s: %s",
 		    peer->p_name, strerror(errno));
 	}
 
 	if ((stream = fdopen(s, "w+")) == NULL) {
-		syslog(LOG_ERR, "cannot sync with peer %s, "
+		mg_log(LOG_ERR, "cannot sync with peer %s, "
 		    "fdopen failed: %s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);
 		close(s);
@@ -539,12 +539,12 @@ peer_connect(peer)	/* peer list is read-locked */
 	}
 
 	if (setvbuf(stream, NULL, _IOLBF, 0) != 0)
-		syslog(LOG_ERR, "cannot set line buffering with peer %s: %s", 
+		mg_log(LOG_ERR, "cannot set line buffering with peer %s: %s", 
 		    peer->p_name, strerror(errno));
 
 	sync_waitdata(s);	
 	if (fgets(line, LINELEN, stream) == NULL) {
-		syslog(LOG_ERR, "Lost connexion with peer %s: "
+		mg_log(LOG_ERR, "Lost connexion with peer %s: "
 		    "%s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);
 		goto bad;
@@ -558,7 +558,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	fflush(stream);
 
 	if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
-		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
+		mg_log(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
 		    "closing connexion (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
 		goto bad;
@@ -566,7 +566,7 @@ peer_connect(peer)	/* peer list is read-locked */
 
 	replycode = atoi(replystr);
 	if (replycode != 200) {
-		syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
+		mg_log(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
 		    "closing connexion (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
 		goto bad;
@@ -575,7 +575,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	if ((peer->p_vers = select_protocol(peer, s, stream)) == 0)
 		goto bad;	
 
-	syslog(LOG_INFO, "Connection to %s established, protocol version %d", 
+	mg_log(LOG_INFO, "Connection to %s established, protocol version %d", 
 	    peer->p_name, peer->p_vers);
 	peer->p_stream = stream;
 	peer->p_socket = s;
@@ -619,21 +619,21 @@ sync_master_restart(void) {
 
 
 	if (!sync_master4.runs && !sync_master6.runs) {
-		syslog(LOG_ERR, "cannot start MX sync, socket failed: %s",
+		mg_log(LOG_ERR, "cannot start MX sync, socket failed: %s",
 		    strerror(errno));
 		exit(EX_OSERR);
 	}
 	if (sync_master6.runs) {
 		if ((error = pthread_create(&tid, NULL, sync_master,
 		    (void *)&sync_master6)) != 0) {
-			syslog(LOG_ERR, 
-			    "Cannot run MX sync thread for IPv6: %s\n",
+			mg_log(LOG_ERR, 
+			    "Cannot run MX sync thread for IPv6: %s",
 			    strerror(error));
 			exit(EX_OSERR);
 		}
 		if ((error = pthread_detach(tid)) != 0) {
-			syslog(LOG_ERR, 
-			    "pthread_detach failed for IPv6 MX sync: %s\n",
+			mg_log(LOG_ERR, 
+			    "pthread_detach failed for IPv6 MX sync: %s",
 			    strerror(error));
 			exit(EX_OSERR);
 		}
@@ -641,14 +641,14 @@ sync_master_restart(void) {
 	if (sync_master4.runs) {
 		if ((error = pthread_create(&tid, NULL, sync_master,
 		    (void *)&sync_master4)) != 0) {
-			syslog(LOG_ERR, 
-			    "Cannot run MX sync thread for IPv4: %s\n",
+			mg_log(LOG_ERR, 
+			    "Cannot run MX sync thread for IPv4: %s",
 			    strerror(error));
 			exit(EX_OSERR);
 		}
 		if ((error = pthread_detach(tid)) != 0) {
-			syslog(LOG_ERR, 
-			    "pthread_detach failed for IPv4 MX sync: %s\n",
+			mg_log(LOG_ERR, 
+			    "pthread_detach failed for IPv4 MX sync: %s",
 			    strerror(error));
 			exit(EX_OSERR);
 		}
@@ -674,8 +674,8 @@ sync_master(arg)
 		bzero((void *)&raddr, sizeof(raddr));
 		raddrlen = sizeof(raddr);
 		if ((fd = accept(sms->sock, SA(&raddr), &raddrlen)) == -1) {
-			syslog(LOG_ERR, "incoming connexion "
-			    "failed: %s\n", strerror(errno));
+			mg_log(LOG_ERR, "incoming connexion "
+			    "failed: %s", strerror(errno));
 
 			if (errno != ECONNABORTED)
 				exit(EX_OSERR);
@@ -684,11 +684,11 @@ sync_master(arg)
 		unmappedaddr(SA(&raddr), &raddrlen);
 
 		iptostring(SA(&raddr), raddrlen, peerstr, sizeof(peerstr));
-		syslog(LOG_INFO, "Incoming MX sync connexion from %s", 
+		mg_log(LOG_INFO, "Incoming MX sync connexion from %s", 
 		    peerstr);
 
 		if ((stream = fdopen(fd, "w+")) == NULL) {
-			syslog(LOG_ERR, 
+			mg_log(LOG_ERR, 
 			    "incoming connexion from %s failed, "
 			    "fdopen fail: %s", peerstr, strerror(errno));
 			close(fd);
@@ -696,7 +696,7 @@ sync_master(arg)
 		}
 
 		if (setvbuf(stream, NULL, _IOLBF, 0) != 0)
-			syslog(LOG_ERR, "cannot set line buffering: %s\n", 
+			mg_log(LOG_ERR, "cannot set line buffering: %s", 
 			    strerror(errno));	
 		
 		/*
@@ -727,7 +727,7 @@ sync_master(arg)
 			hints.ai_socktype = SOCK_STREAM;
 			err = getaddrinfo(peer->p_name, "0", &hints, &res0);
 			if (err != 0) {
-				syslog(LOG_ERR, "cannot resolve %s: %s",
+				mg_log(LOG_ERR, "cannot resolve %s: %s",
 				    peer->p_name, gai_strerror(err));
 				continue;
 			}
@@ -747,7 +747,7 @@ sync_master(arg)
 			addrlen = sizeof(addr);
 			if (ipfromstring(peer->p_name, SA(&addr), &addrlen,
 			     AF_UNSPEC) != 1) {
-				syslog(LOG_ERR, "cannot resolve %s",
+				mg_log(LOG_ERR, "cannot resolve %s",
 				    peer->p_name);
 				continue;
 			}
@@ -759,7 +759,7 @@ sync_master(arg)
 		PEER_UNLOCK;
 
 		if (peer == NULL) {
-			syslog(LOG_INFO, "Remote host %s is not a peer MX", 
+			mg_log(LOG_INFO, "Remote host %s is not a peer MX", 
 			    peerstr);
 			fprintf(stream, 
 			    "106 You have no permission to talk, go away!\n");
@@ -769,14 +769,14 @@ sync_master(arg)
 
 		if ((error = pthread_create(&tid, NULL, 
 		    (void *(*)(void *))sync_server, (void *)stream)) != 0) {
-			syslog(LOG_ERR, "incoming connexion from %s failed, "
+			mg_log(LOG_ERR, "incoming connexion from %s failed, "
 			    "pthread_create failed: %s", 
 			    peerstr, strerror(error));
 			fclose(stream);
 			continue;
 		}
 		if ((error = pthread_detach(tid)) != 0) {
-			syslog(LOG_ERR, "incoming connexion from %s failed, "
+			mg_log(LOG_ERR, "incoming connexion from %s failed, "
 			    "pthread_detach failed: %s",
 			    peerstr, strerror(error));
 			exit(EX_OSERR);
@@ -784,7 +784,7 @@ sync_master(arg)
 	}
 
 	/* NOTREACHED */
-	syslog(LOG_ERR, "sync_master quitted unexpectedly");
+	mg_log(LOG_ERR, "sync_master quitted unexpectedly");
 	return NULL;
 }
 
@@ -845,14 +845,14 @@ sync_listen(addr, port, sms)
 	optval = 1;
 	if ((setsockopt(s, SOL_SOCKET, SO_REUSEADDR,
 	    &optval, sizeof(optval))) != 0) {
-		syslog(LOG_ERR, "cannot set SO_REUSEADDR: %s",
+		mg_log(LOG_ERR, "cannot set SO_REUSEADDR: %s",
 		    strerror(errno));
 	}
 
 	optval = 1;
 	if ((setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
 	    &optval, sizeof(optval))) != 0) {
-		syslog(LOG_ERR, "cannot set SO_KEEPALIVE: %s",
+		mg_log(LOG_ERR, "cannot set SO_KEEPALIVE: %s",
 		    strerror(errno));
 	}
 
@@ -861,14 +861,14 @@ sync_listen(addr, port, sms)
 		optval = 1;
 		if ((setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY,
 		    &optval, sizeof(optval))) != 0) {
-			syslog(LOG_ERR, "cannot set IPV6_V6ONLY: %s",
+			mg_log(LOG_ERR, "cannot set IPV6_V6ONLY: %s",
 			    strerror(errno));
 		}
 	}
 #endif
 
 	if (bind(s, SA(&laddr), laddrlen) != 0) {
-		syslog(LOG_ERR, "cannot start MX sync, bind failed: %s",
+		mg_log(LOG_ERR, "cannot start MX sync, bind failed: %s",
 		    strerror(errno));
 		sms->runs = 0;
 		close(s);
@@ -876,7 +876,7 @@ sync_listen(addr, port, sms)
 	}
 
 	if (listen(s, MXGLSYNC_BACKLOG) != 0) {
-		syslog(LOG_ERR, "cannot start MX sync, listen failed: %s",
+		mg_log(LOG_ERR, "cannot start MX sync, listen failed: %s",
 		    strerror(errno));
 		sms->runs = 0;
 		close(s);
@@ -1213,7 +1213,7 @@ sync_queue(peer, type, pending, autowhite)/* peer list must be read-locked */
 		return;
 
 	if ((sync = malloc(sizeof(*sync))) == NULL) {
-		syslog(LOG_ERR, "cannot allocate memory: %s", 
+		mg_log(LOG_ERR, "cannot allocate memory: %s", 
 		    strerror(errno)); 
 		exit(EX_OSERR);
 	}
@@ -1228,13 +1228,13 @@ sync_queue(peer, type, pending, autowhite)/* peer list must be read-locked */
 	 * void it, but do not accept new entries anymore.
 	 */
 	if (!sync_queue_poke(peer, sync)) {
-		syslog(LOG_ERR, "peer %s queue overflow (%d entries), "
+		mg_log(LOG_ERR, "peer %s queue overflow (%d entries), "
 		    "discarding new entry", peer->p_name, peer->p_qlen);
 		sync_free(sync);
 	}
 
 	if ((error = pthread_cond_signal(&sync_sleepflag)) != 0) {
-		syslog(LOG_ERR, 
+		mg_log(LOG_ERR, 
 		    "cannot wakeup sync_sender: %s", strerror(error));
 		exit(EX_SOFTWARE);
 	}
@@ -1256,11 +1256,11 @@ sync_sender_start(void) {
 
 	if ((error = pthread_create(&tid, NULL, 
 	    (void *(*)(void *))sync_sender, NULL)) != 0) {
-		syslog(LOG_ERR, "pthread_create failed: %s", strerror(error));
+		mg_log(LOG_ERR, "pthread_create failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
 	if ((error = pthread_detach(tid)) != 0) {
-		syslog(LOG_ERR, "pthread_detach failed: %s", strerror(error));
+		mg_log(LOG_ERR, "pthread_detach failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
 	return;
@@ -1279,23 +1279,23 @@ sync_sender(dontcare)
 	int error;
 
 	if ((error = pthread_mutex_init(&mutex, NULL)) != 0) {
-		syslog(LOG_ERR, "pthread_mutex_init failed: %s", 
+		mg_log(LOG_ERR, "pthread_mutex_init failed: %s", 
 		    strerror(error));
 		exit(EX_OSERR);
 	}
 
 	if ((error = pthread_mutex_lock(&mutex)) != 0) {
-		syslog(LOG_ERR, "pthread_mutex_lock failed: %s", 
+		mg_log(LOG_ERR, "pthread_mutex_lock failed: %s", 
 		    strerror(error));
 		exit(EX_OSERR);
 	}
 
 	for (;;) {
 		if ((error = pthread_cond_wait(&sync_sleepflag, &mutex)) != 0)
-			syslog(LOG_ERR, "pthread_cond_wait failed: %s\n", 
+			mg_log(LOG_ERR, "pthread_cond_wait failed: %s", 
 			    strerror(error));
 		if (conf.c_debug) {
-			syslog(LOG_DEBUG, "sync_sender running");
+			mg_log(LOG_DEBUG, "sync_sender running");
 			gettimeofday(&tv1, NULL);
 		}
 		done = 0;
@@ -1330,7 +1330,7 @@ out:
 		if (conf.c_debug) {
 			gettimeofday(&tv2, NULL);
 			timersub(&tv2, &tv1, &tv3);
-			syslog(LOG_DEBUG, "sync_sender sleeping, "
+			mg_log(LOG_DEBUG, "sync_sender sleeping, "
 			    "done %d entries in %ld.%06lds", done,
 			    tv3.tv_sec, tv3.tv_usec);
 		}
@@ -1359,14 +1359,14 @@ local_addr(sa, salen)
 #endif
 
 	default:
-		syslog(LOG_ERR, "local_addr: unsupported AF %d\n",
+		mg_log(LOG_ERR, "local_addr: unsupported AF %d",
 		    sa->sa_family);
 		return -1;
 		break;
 	}
 
 	if ((sfd = socket(sa->sa_family, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
-		syslog(LOG_ERR, "local_addr: socket failed: %s\n",
+		mg_log(LOG_ERR, "local_addr: socket failed: %s",
 		    strerror(errno));
 		return -1;
 	}
@@ -1377,7 +1377,7 @@ local_addr(sa, salen)
 		    errno != EINVAL &&
 #endif
 		    1) {
-			syslog(LOG_ERR, "local_addr: bind failed: %s\n",
+			mg_log(LOG_ERR, "local_addr: bind failed: %s",
 			    strerror(errno));
 			islocal = -1;
 		} else {
@@ -1410,7 +1410,7 @@ select_protocol(peer, s, stream)
 
 		sync_waitdata(s);	
 		if (fgets(line, LINELEN, stream) == NULL) {
-			syslog(LOG_ERR, "Lost connexion with peer %s: "
+			mg_log(LOG_ERR, "Lost connexion with peer %s: "
 			    "%s (%d entries queued)", 
 			    peer->p_name, strerror(errno), peer->p_qlen);
 			return 0;
@@ -1419,7 +1419,7 @@ select_protocol(peer, s, stream)
 		fflush(stream);
 
 		if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
-			syslog(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
+			mg_log(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
 			    "closing connexion (%d entries queued)", 
 			    line, peer->p_name, peer->p_qlen);
 			return 0;
@@ -1429,7 +1429,7 @@ select_protocol(peer, s, stream)
 
 		replycode = atoi(replystr);
 		if (replycode != 800 + vers) {
-			syslog(LOG_DEBUG, 
+			mg_log(LOG_DEBUG, 
 			    "peer %s answered code %d to command vers%d",
 			    peer->p_name, replycode, vers);
 		} else {

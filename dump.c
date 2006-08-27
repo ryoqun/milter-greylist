@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.25 2006/01/08 00:38:25 manu Exp $ */
+/* $Id: dump.c,v 1.26 2006/08/27 20:54:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.25 2006/01/08 00:38:25 manu Exp $");
+__RCSID("$Id: dump.c,v 1.26 2006/08/27 20:54:41 manu Exp $");
 #endif
 #endif
 
@@ -79,7 +79,7 @@ dump_init(void) {
 	int error;
 
 	if ((error = pthread_cond_init(&dump_sleepflag, NULL)) != 0) {
-		syslog(LOG_ERR, 
+		mg_log(LOG_ERR, 
 		    "pthread_cond_init failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
@@ -93,7 +93,7 @@ dumper_start(void) {
 	int error;
 
 	if ((error = pthread_create(&tid, NULL, dumper, NULL)) != 0) {
-		syslog(LOG_ERR,
+		mg_log(LOG_ERR,
 		    "cannot start dumper thread: %s", strerror(error));
 		exit(EX_OSERR);
 	}
@@ -109,13 +109,13 @@ dumper(dontcare)
 	pthread_mutex_t mutex;
 
 	if ((error = pthread_mutex_init(&mutex, NULL)) != 0) {
-		syslog(LOG_ERR, "pthread_mutex_init failed: %s\n",
+		mg_log(LOG_ERR, "pthread_mutex_init failed: %s",
 		    strerror(error));
 		exit(EX_OSERR);
 	}
 
 	if ((error = pthread_mutex_lock(&mutex)) != 0) {
-		syslog(LOG_ERR, "pthread_mutex_lock failed: %s\n", 
+		mg_log(LOG_ERR, "pthread_mutex_lock failed: %s", 
 		    strerror(error));
 		exit(EX_OSERR);
 	}
@@ -130,7 +130,7 @@ dumper(dontcare)
 		case 0:
 			if ((error = pthread_cond_wait(&dump_sleepflag, 
 			    &mutex)) != 0)
-			    syslog(LOG_ERR, "pthread_cond_wait failed: %s\n",
+			    mg_log(LOG_ERR, "pthread_cond_wait failed: %s",
 				strerror(error));
 			break;
 
@@ -149,7 +149,7 @@ dumper(dontcare)
 	}
 
 	/* NOTREACHED */
-	syslog(LOG_ERR, "dumper unexpectedly exitted");
+	mg_log(LOG_ERR, "dumper unexpectedly exitted");
 	exit(EX_SOFTWARE);
 
 	return NULL;
@@ -168,7 +168,7 @@ dump_perform(void) {
 
 	if (conf.c_debug) {
 		(void)gettimeofday(&tv1, NULL);
-		syslog(LOG_DEBUG, "dumping %d modifications", 
+		mg_log(LOG_DEBUG, "dumping %d modifications", 
 		    dump_dirty);
 	}
 
@@ -191,13 +191,13 @@ dump_perform(void) {
 	    "%s-XXXXXXXX", conf.c_dumpfile);
 
 	if ((dumpfd = mkstemp(newdumpfile)) == -1) {
-		syslog(LOG_ERR, "mkstemp(\"%s\") failed: %s", 
+		mg_log(LOG_ERR, "mkstemp(\"%s\") failed: %s", 
 		    newdumpfile, strerror(errno));
 		exit(EX_OSERR);
 	}
 
 	if ((dump = fdopen(dumpfd, "w")) == NULL) {
-		syslog(LOG_ERR, "cannot write dumpfile \"%s\": %s", 
+		mg_log(LOG_ERR, "cannot write dumpfile \"%s\": %s", 
 		    newdumpfile, strerror(errno));
 		exit(EX_OSERR);
 	}
@@ -205,7 +205,7 @@ dump_perform(void) {
 #define BIG_BUFFER	(10 * 1024 * 1024)
 	/* XXX TODO: make this configurable */
 	if ((s_buffer = calloc(1, BIG_BUFFER + 1)) == NULL) { 
-		syslog(LOG_ERR, "Unable to allocate big buffer for \"%s\": %s "
+		mg_log(LOG_ERR, "Unable to allocate big buffer for \"%s\": %s "
 		    "- continuing with sys default", 
 		    newdumpfile, strerror(errno));
 	} else {
@@ -225,7 +225,7 @@ dump_perform(void) {
 		free(s_buffer);
 
 	if (rename(newdumpfile, conf.c_dumpfile) != 0) {
-		syslog(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
+		mg_log(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
 		    conf.c_dumpfile, newdumpfile, strerror(errno));
 		exit(EX_OSERR);
 	}
@@ -233,7 +233,7 @@ dump_perform(void) {
 	if (conf.c_debug) {
 		(void)gettimeofday(&tv2, NULL);
 		timersub(&tv2, &tv1, &tv3);
-		syslog(LOG_DEBUG, "dumping %d records in %ld.%06lds",
+		mg_log(LOG_DEBUG, "dumping %d records in %ld.%06lds",
 		    done, tv3.tv_sec, tv3.tv_usec);
 	}
 
@@ -249,8 +249,8 @@ dump_reload(void) {
 	 * Re-import a saved greylist
 	 */
 	if ((dump = fopen(conf.c_dumpfile, "r")) == NULL) {
-		syslog(LOG_ERR, "cannot read dumpfile \"%s\"", conf.c_dumpfile);
-		syslog(LOG_ERR, "starting with an empty greylist");
+		mg_log(LOG_ERR, "cannot read dumpfile \"%s\"", conf.c_dumpfile);
+		mg_log(LOG_ERR, "starting with an empty greylist");
 	} else {
 		dump_in = dump;
 		PENDING_WRLOCK;
@@ -276,7 +276,7 @@ dump_flush(void) {
 	int error;
 
 	if ((error = pthread_cond_signal(&dump_sleepflag)) != 0) {
-		syslog(LOG_ERR, "cannot wakeup dumper: %s", strerror(error));
+		mg_log(LOG_ERR, "cannot wakeup dumper: %s", strerror(error));
 		exit(EX_SOFTWARE);
 	}
 

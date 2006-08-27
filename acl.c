@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.32 2006/08/27 16:02:25 manu Exp $ */
+/* $Id: acl.c,v 1.33 2006/08/27 20:54:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.32 2006/08/27 16:02:25 manu Exp $");
+__RCSID("$Id: acl.c,v 1.33 2006/08/27 20:54:40 manu Exp $");
 #endif
 #endif
 
@@ -88,7 +88,7 @@ acl_init(void) {
 
 	TAILQ_INIT(&acl_head);
 	if ((error = pthread_rwlock_init(&acl_lock, NULL)) != 0) {
-		syslog(LOG_ERR, "pthread_rwlock_init failed: %s", 
+		mg_log(LOG_ERR, "pthread_rwlock_init failed: %s", 
 		    strerror(error));
 		exit(EX_OSERR);
 	}
@@ -118,8 +118,8 @@ acl_add_netblock(sa, salen, cidr)
 #endif
 
 	if (gacl.a_addr != NULL) {
-		fprintf (stderr,
-		    "addr specified twice in ACL line %d\n",
+		mg_log(LOG_ERR,
+		    "addr specified twice in ACL line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
@@ -135,13 +135,13 @@ acl_add_netblock(sa, salen, cidr)
 		break;
 #endif
 	default:
-		fprintf(stderr,
-		    "bad address family in acl list line %d\n",
+		mg_log(LOG_ERR,
+		    "bad address family in acl list line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
 	if (cidr > maxcidr || cidr < 0) {
-		fprintf(stderr, "bad mask in acl list line %d\n", 
+		mg_log(LOG_ERR, "bad mask in acl list line %d", 
 		    conf_line);
 		exit(EX_DATAERR);
 	}
@@ -163,7 +163,7 @@ acl_add_netblock(sa, salen, cidr)
 
 	if ((gacl.a_addr = malloc(salen)) == NULL ||
 	    (gacl.a_mask = malloc(masklen)) == NULL) {
-		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
@@ -176,7 +176,7 @@ acl_add_netblock(sa, salen, cidr)
 		    sizeof(addrstr));
 		inet_ntop(gacl.a_addr->sa_family, gacl.a_mask, maskstr,
 		    sizeof(maskstr));
-		printf("load acl net %s/%s\n", addrstr, maskstr);
+		mg_log(LOG_DEBUG, "load acl net %s/%s", addrstr, maskstr);
 	}
 
 	return;
@@ -189,18 +189,18 @@ acl_add_from(email)
 	if (gacl.a_from != NULL || 
 	    gacl.a_from_re != NULL ||
 	    gacl.a_fromlist != NULL ) {
-		fprintf (stderr,
-		    "from specified twice in ACL line %d\n",
+		mg_log(LOG_ERR,
+		    "from specified twice in ACL line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
 	if ((gacl.a_from = strdup(email)) == NULL) {
-		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl from %s\n", email);
+		mg_log(LOG_DEBUG, "load acl from %s", email);
 
 	return;
 }
@@ -212,18 +212,18 @@ acl_add_dnsrbl(dnsrbl)
 {
 	if (gacl.a_dnsrbl != NULL ||
 	    gacl.a_dnsrbllist != NULL) {
-		fprintf (stderr,
-		    "dnsrbl specified twice in ACL line %d\n",
+		mg_log(LOG_ERR,
+		    "dnsrbl specified twice in ACL line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
 	if ((gacl.a_dnsrbl = dnsrbl_byname(dnsrbl)) == NULL) {
-		syslog(LOG_ERR, "unknown DNSRBL \"%s\"", dnsrbl);
+		mg_log(LOG_ERR, "unknown DNSRBL \"%s\"", dnsrbl);
 		exit(EX_DATAERR);
 	}
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl dnsrbl %s\n", dnsrbl);
+		mg_log(LOG_DEBUG, "load acl dnsrbl %s", dnsrbl);
 
 	return;
 }
@@ -235,18 +235,18 @@ acl_add_macro(macro)
 {
 	if (gacl.a_macro != NULL ||
 	    gacl.a_macrolist != NULL) {
-		fprintf (stderr,
-		    "sm_macro specified twice in ACL line %d\n",
+		mg_log(LOG_ERR,
+		    "sm_macro specified twice in ACL line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
 	if ((gacl.a_macro = macro_byname(macro)) == NULL) {
-		syslog(LOG_ERR, "unknown sm_macro \"%s\"", macro);
+		mg_log(LOG_ERR, "unknown sm_macro \"%s\"", macro);
 		exit(EX_DATAERR);
 	}
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl sm_macro %s\n", macro);
+		mg_log(LOG_DEBUG, "load acl sm_macro %s", macro);
 
 	return;
 }
@@ -258,18 +258,18 @@ acl_add_rcpt(email)
 	if (gacl.a_rcpt != NULL || 
 	    gacl.a_rcpt_re != NULL ||
 	    gacl.a_rcptlist != NULL) {
-		fprintf (stderr,
-		    "rcpt specified twice in ACL line %d\n",
+		mg_log(LOG_ERR,
+		    "rcpt specified twice in ACL line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
 	if ((gacl.a_rcpt = strdup(email)) == NULL) {
-		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl rcpt %s\n", email);
+		mg_log(LOG_DEBUG, "load acl rcpt %s", email);
 
 	return;
 }
@@ -281,18 +281,18 @@ acl_add_domain(domain)
 	if (gacl.a_domain != NULL || 
 	    gacl.a_domain_re != NULL ||
 	    gacl.a_domainlist != NULL) {
-		fprintf (stderr,
-		    "domain specified twice in ACL line %d\n",
+		mg_log(LOG_ERR,
+		    "domain specified twice in ACL line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
 	if ((gacl.a_domain = strdup(domain)) == NULL) {
-		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl domain %s\n", domain);
+		mg_log(LOG_DEBUG, "load acl domain %s", domain);
 
 	return;
 }
@@ -309,8 +309,8 @@ acl_add_from_regex(regexstr)
 	if (gacl.a_from != NULL || 
 	    gacl.a_from_re != NULL ||
 	    gacl.a_fromlist != NULL) {
-		fprintf (stderr,
-		    "from specified twice in ACL line %d\n",
+		mg_log(LOG_ERR,
+		    "from specified twice in ACL line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
@@ -323,24 +323,24 @@ acl_add_from_regex(regexstr)
 	regexstr++;
 
 	if ((gacl.a_from_re = malloc(sizeof(*gacl.a_from_re))) == NULL) {
-		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	if ((error = regcomp(gacl.a_from_re, regexstr, 
 	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
 		regerror(error, gacl.a_from_re, errstr, ERRLEN);
-		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
+		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
 		    regexstr, errstr);
 		exit(EX_OSERR);
 	}
 
 	if ((gacl.a_from_re_copy = strdup(regexstr)) == NULL) {
-		syslog(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl from regex %s\n", regexstr);
+		mg_log(LOG_DEBUG, "load acl from regex %s", regexstr);
 
 	return;
 }
@@ -356,8 +356,8 @@ acl_add_rcpt_regex(regexstr)
 	if (gacl.a_rcpt != NULL || 
 	    gacl.a_rcpt_re != NULL ||
 	    gacl.a_rcptlist != NULL) {
-		fprintf (stderr,
-		    "rcpt specified twice in ACL line %d\n",
+		mg_log(LOG_ERR,
+		    "rcpt specified twice in ACL line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
@@ -370,24 +370,24 @@ acl_add_rcpt_regex(regexstr)
 	regexstr++;
 
 	if ((gacl.a_rcpt_re = malloc(sizeof(*gacl.a_rcpt_re))) == NULL) {
-		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	if ((error = regcomp(gacl.a_rcpt_re, regexstr,
 	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
 		regerror(error, gacl.a_rcpt_re, errstr, ERRLEN);
-		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
+		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
 		    regexstr, errstr);
 		exit(EX_OSERR);
 	}
 
 	if ((gacl.a_rcpt_re_copy = strdup(regexstr)) == NULL) {
-		syslog(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl rcpt regex %s\n", regexstr);
+		mg_log(LOG_DEBUG, "load acl rcpt regex %s", regexstr);
 
 	return;
 }
@@ -403,8 +403,8 @@ acl_add_domain_regex(regexstr)
 	if (gacl.a_domain != NULL || 
 	    gacl.a_domain_re != NULL ||
 	    gacl.a_domainlist != NULL) {
-		fprintf (stderr,
-		    "domain specified twice in ACL line %d\n",
+		mg_log(LOG_ERR,
+		    "domain specified twice in ACL line %d",
 		    conf_line);
 		exit(EX_DATAERR);
 	}
@@ -417,24 +417,24 @@ acl_add_domain_regex(regexstr)
 	regexstr++;
 
 	if ((gacl.a_domain_re = malloc(sizeof(*gacl.a_domain_re))) == NULL) {
-		syslog(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	if ((error = regcomp(gacl.a_domain_re, regexstr,
 	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
 		regerror(error, gacl.a_domain_re, errstr, ERRLEN);
-		fprintf(stderr, "bad regular expression \"%s\": %s\n", 
+		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
 		    regexstr, errstr);
 		exit(EX_OSERR);
 	}
 
 	if ((gacl.a_domain_re_copy = strdup(regexstr)) == NULL) {
-		syslog(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl domain regex %s\n", regexstr);
+		mg_log(LOG_DEBUG, "load acl domain regex %s", regexstr);
 
 	return;
 }
@@ -446,7 +446,7 @@ acl_register_entry_first(acl_type)	/* acllist must be write-locked */
 	struct acl_entry *acl;
 
 	if ((acl = malloc(sizeof(*acl))) == NULL) {
-		syslog(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	*acl = gacl;
@@ -458,16 +458,16 @@ acl_register_entry_first(acl_type)	/* acllist must be write-locked */
 	if (conf.c_debug || conf.c_acldebug) {
 		switch(acl_type) {
 		case A_GREYLIST:
-			printf("register acl first GREYLIST\n");
+			mg_log(LOG_DEBUG, "register acl first GREYLIST");
 			break;
 		case A_WHITELIST:
-			printf("register acl first WHITELIST\n");
+			mg_log(LOG_DEBUG, "register acl first WHITELIST");
 			break;
 		case A_BLACKLIST:
-			printf("register acl first BLACKLIST\n");
+			mg_log(LOG_DEBUG, "register acl first BLACKLIST");
 			break;
 		default:
-			syslog(LOG_ERR, "unecpected acl_type %d", acl_type);
+			mg_log(LOG_ERR, "unecpected acl_type %d", acl_type);
 			exit(EX_SOFTWARE);
 			break;
 		}
@@ -483,7 +483,7 @@ acl_register_entry_last(acl_type)	/* acllist must be write-locked */
 	struct acl_entry *acl;
 
 	if ((acl = malloc(sizeof(*acl))) == NULL) {
-		syslog(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	*acl = gacl;
@@ -495,16 +495,16 @@ acl_register_entry_last(acl_type)	/* acllist must be write-locked */
 	if (conf.c_debug || conf.c_acldebug) {
 		switch(acl_type) {
 		case A_GREYLIST:
-			printf("register acl last GREYLIST\n");
+			mg_log(LOG_DEBUG, "register acl last GREYLIST");
 			break;
 		case A_WHITELIST:
-			printf("register acl last WHITELIST\n");
+			mg_log(LOG_DEBUG, "register acl last WHITELIST");
 			break;
 		case A_BLACKLIST:
-			printf("register acl last BLACKLIST\n");
+			mg_log(LOG_DEBUG, "register acl last BLACKLIST");
 			break;
 		default:
-			syslog(LOG_ERR, "unecpected acl_type %d", acl_type);
+			mg_log(LOG_ERR, "unecpected acl_type %d", acl_type);
 			exit(EX_SOFTWARE);
 			break;
 		}
@@ -636,7 +636,7 @@ acl_filter(priv, rcpt)
 				if (conf.c_debug) {
 					iptostring(sa, salen, 
 					    addrstr, sizeof(addrstr));
-					syslog(LOG_DEBUG, 
+					mg_log(LOG_DEBUG, 
 					    "Mail from addr=%s[%s] exists in "
 					    "DNSRBL \"%s\"", 
 			    		    hostname, addrstr, 
@@ -654,7 +654,7 @@ acl_filter(priv, rcpt)
 				if (conf.c_debug) {
 					iptostring(sa, salen, 
 					    addrstr, sizeof(addrstr));
-					syslog(LOG_DEBUG, 
+					mg_log(LOG_DEBUG, 
 					    "Mail from addr=%s[%s] exists in "
 					    "DNSRBL \"%s\"", 
 			    		    hostname, addrstr, 
@@ -686,7 +686,7 @@ acl_filter(priv, rcpt)
 			retval |= EXF_BLACKLIST;
 			break;
 		default:
-			syslog(LOG_ERR, "corrupted acl list");
+			mg_log(LOG_ERR, "corrupted acl list");
 			exit(EX_SOFTWARE);
 			break;
 		}
@@ -701,21 +701,21 @@ acl_filter(priv, rcpt)
 
 		if (acl->a_code) {
 			if ((priv->priv_code = strdup(acl->a_code)) == NULL) {
-				syslog(LOG_ERR, "strdup failed: %s", 
+				mg_log(LOG_ERR, "strdup failed: %s", 
 				    strerror(errno));
 				exit(EX_OSERR);
 			}
 		}
 		if (acl->a_ecode) {
 			if ((priv->priv_ecode = strdup(acl->a_ecode)) == NULL) {
-				syslog(LOG_ERR, "strdup failed: %s", 
+				mg_log(LOG_ERR, "strdup failed: %s", 
 				    strerror(errno));
 				exit(EX_OSERR);
 			}
 		}
 		if (acl->a_msg) {
 			if ((priv->priv_msg = strdup(acl->a_msg)) == NULL) {
-				syslog(LOG_ERR, "strdup failed: %s", 
+				mg_log(LOG_ERR, "strdup failed: %s", 
 				    strerror(errno));
 				exit(EX_OSERR);
 			}
@@ -727,7 +727,7 @@ acl_filter(priv, rcpt)
 
 		if (conf.c_debug || conf.c_acldebug) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
-			syslog(LOG_DEBUG, "Mail from=%s, rcpt=%s, addr=%s[%s] "
+			mg_log(LOG_DEBUG, "Mail from=%s, rcpt=%s, addr=%s[%s] "
 			    "is matched by entry %s", from, rcpt, 
 			    hostname, addrstr, acl_entry(acl));
 		}
@@ -782,7 +782,7 @@ acl_filter(priv, rcpt)
 		    "(from=%s, rcpt=%s, addr=%s[%s])", from, rcpt, hostname, addrstr);
 		ADD_REASON(whystr, tmpstr);
 
-		syslog(LOG_INFO, "%s: skipping greylist because %s",
+		mg_log(LOG_INFO, "%s: skipping greylist because %s",
 		    queueid, whystr);
 	}
 	ACL_UNLOCK;
@@ -833,14 +833,14 @@ emailcmp(big, little)
 	char *oclittle;
 
 	if ((cbig = malloc(strlen(big) + 1)) == NULL) {
-		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	ocbig = cbig;
 	strcpy(cbig, big);
 
 	if ((clittle = malloc(strlen(little) + 1)) == NULL) {
-		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	oclittle = clittle;
@@ -946,7 +946,7 @@ acl_entry(acl)
 		mystrlcat(entrystr, "blacklist ", sizeof(entrystr));
 		break;
 	default:
-		syslog(LOG_ERR, "corrupted acl list");
+		mg_log(LOG_ERR, "corrupted acl list");
 		exit(EX_SOFTWARE);
 		break;
 	}
@@ -1096,12 +1096,12 @@ acl_dump (void) {	/* acllist must be write locked */
 	 */
 	debug = fopen("/tmp/access-list.debug", "w");
 	ACL_RDLOCK;
-	syslog(LOG_INFO, "Access list dump:\n");
+	mg_log(LOG_INFO, "Access list dump:");
 	TAILQ_FOREACH(acl, &acl_head, a_list) {
 		entry = acl_entry(acl);
-		syslog(LOG_INFO, "%s\n", entry);
+		mg_log(LOG_INFO, "%s", entry);
 		if (debug != NULL)
-			fprintf (debug, "%s\n", entry);
+			fprintf(debug, "%s", entry);
 	}
 	ACL_UNLOCK;
 	if (debug != NULL)
@@ -1113,15 +1113,15 @@ acl_add_delay(delay)
 	time_t delay;
 {
 	if (gacl.a_delay != -1) {
-		fprintf (stderr,
-		    "delay specified twice in ACL line %d\n", conf_line);
+		mg_log(LOG_ERR,
+		    "delay specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
 	gacl.a_delay = delay;
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl delay %ld\n", (long)delay);
+		mg_log(LOG_DEBUG, "load acl delay %ld", (long)delay);
 
 	return;
 }
@@ -1131,15 +1131,15 @@ acl_add_autowhite(delay)
 	time_t delay;
 {
 	if (gacl.a_autowhite != -1) {
-		fprintf (stderr,
-		    "autowhite specified twice in ACL line %d\n", conf_line);
+		mg_log(LOG_ERR,
+		    "autowhite specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
 	gacl.a_autowhite = delay;
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl delay %ld\n", (long)delay);
+		mg_log(LOG_DEBUG, "load acl delay %ld", (long)delay);
 
 	return;
 }
@@ -1151,7 +1151,7 @@ acl_add_list(list)
 	struct all_list_entry *ale;
 
 	if ((ale = all_list_byname(list)) == NULL) {
-		syslog(LOG_ERR, "inexistent list \"%s\" line %d",
+		mg_log(LOG_ERR, "inexistent list \"%s\" line %d",
 		    list, conf_line);
 		exit(EX_DATAERR);
 	}
@@ -1161,7 +1161,7 @@ acl_add_list(list)
 		if (gacl.a_from != NULL || 
 		    gacl.a_from_re != NULL ||
 		    gacl.a_fromlist != NULL) {
-			fprintf (stderr,
+			mg_log(LOG_ERR,
 			    "muliple from statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
@@ -1173,7 +1173,7 @@ acl_add_list(list)
 		if (gacl.a_rcpt != NULL ||
 		    gacl.a_rcpt_re != NULL ||
 		    gacl.a_rcptlist != NULL) {
-			fprintf (stderr,
+			mg_log(LOG_ERR,
 			    "muliple rcpt statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
@@ -1185,7 +1185,7 @@ acl_add_list(list)
 		if (gacl.a_domain != NULL ||
 		    gacl.a_domain_re != NULL ||
 		    gacl.a_domainlist != NULL) {
-			fprintf (stderr,
+			mg_log(LOG_ERR,
 			    "muliple domain statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
@@ -1197,7 +1197,7 @@ acl_add_list(list)
 	case LT_DNSRBL:
 		if (gacl.a_dnsrbl != NULL ||
 		    gacl.a_dnsrbllist != NULL) {
-			fprintf (stderr,
+			mg_log(LOG_ERR,
 			    "muliple dnsrbl statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
@@ -1208,7 +1208,7 @@ acl_add_list(list)
 	case LT_MACRO:
 		if (gacl.a_macro != NULL ||
 		    gacl.a_macrolist != NULL) {
-			fprintf (stderr,
+			mg_log(LOG_ERR,
 			    "muliple sm_macro statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
@@ -1219,7 +1219,7 @@ acl_add_list(list)
 	case LT_ADDR:
 		if (gacl.a_addr != NULL ||
 		    gacl.a_addrlist != NULL) {
-			fprintf (stderr,
+			mg_log(LOG_ERR,
 			    "muliple addr statement (list \"%s\", line %d)",
 			    list, conf_line);
 			exit(EX_DATAERR);
@@ -1228,14 +1228,14 @@ acl_add_list(list)
 		break;
 
 	default:
-		syslog(LOG_ERR, "unexpected al_type %d line %d", 
+		mg_log(LOG_ERR, "unexpected al_type %d line %d", 
 		    ale->al_type, conf_line);
 		exit(EX_DATAERR);
 		break;
 	}
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl list \"%s\"\n", list);
+		mg_log(LOG_DEBUG, "load acl list \"%s\"", list);
 
 	return;
 }
@@ -1245,19 +1245,19 @@ acl_add_code(code)
 	char *code;
 {
 	if (gacl.a_code) {
-		fprintf (stderr,
-		    "code specified twice in ACL line %d\n", conf_line);
+		mg_log(LOG_ERR,
+		    "code specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
 	if ((gacl.a_code = strdup(code)) == NULL) {
-		fprintf (stderr,
-		    "malloc failed in ACL line %d\n", conf_line);
+		mg_log(LOG_ERR,
+		    "malloc failed in ACL line %d", conf_line);
 		exit(EX_OSERR);
 	}
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl code \"%s\"\n", code);
+		mg_log(LOG_DEBUG, "load acl code \"%s\"", code);
 
 	return;
 }
@@ -1267,19 +1267,19 @@ acl_add_ecode(ecode)
 	char *ecode;
 {
 	if (gacl.a_ecode) {
-		fprintf (stderr,
-		    "ecode specified twice in ACL line %d\n", conf_line);
+		mg_log(LOG_ERR,
+		    "ecode specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
 	if ((gacl.a_ecode = strdup(ecode)) == NULL) {
-		fprintf (stderr,
-		    "malloc failed in ACL line %d\n", conf_line);
+		mg_log(LOG_ERR,
+		    "malloc failed in ACL line %d", conf_line);
 		exit(EX_OSERR);
 	}
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl ecode \"%s\"\n", ecode);
+		mg_log(LOG_DEBUG, "load acl ecode \"%s\"", ecode);
 
 	return;
 }
@@ -1289,19 +1289,19 @@ acl_add_msg(msg)
 	char *msg;
 {
 	if (gacl.a_msg) {
-		fprintf (stderr,
-		    "msg specified twice in ACL line %d\n", conf_line);
+		mg_log(LOG_ERR,
+		    "msg specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
 	if ((gacl.a_msg = strdup(msg)) == NULL) {
-		fprintf (stderr,
-		    "malloc failed in ACL line %d\n", conf_line);
+		mg_log(LOG_ERR,
+		    "malloc failed in ACL line %d", conf_line);
 		exit(EX_OSERR);
 	}
 		
 	if (conf.c_debug || conf.c_acldebug)
-		printf("load acl msg \"%s\"\n", msg);
+		mg_log(LOG_DEBUG, "load acl msg \"%s\"", msg);
 
 	return;
 }

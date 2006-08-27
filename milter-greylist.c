@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.129 2006/08/20 06:38:43 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.130 2006/08/27 20:54:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.129 2006/08/20 06:38:43 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.130 2006/08/27 20:54:41 manu Exp $");
 #endif
 #endif
 
@@ -50,6 +50,7 @@ __RCSID("$Id: milter-greylist.c,v 1.129 2006/08/20 06:38:43 manu Exp $");
 #include <pwd.h>
 #include <grp.h>
 #include <unistd.h>
+#include <stdarg.h>
 
 /* On IRIX, <unistd.h> defines a EX_OK that clashes with <sysexits.h> */
 #ifdef EX_OK
@@ -195,7 +196,7 @@ mlfi_envfrom(ctx, envfrom)
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval failed for {i}");
+		mg_log(LOG_DEBUG, "smfi_getsymval failed for {i}");
 		priv->priv_queueid = "(unknown id)";
 	}
 
@@ -233,7 +234,7 @@ mlfi_envfrom(ctx, envfrom)
 	 */
 	if ((conf.c_noauth == 0) &&
 	    ((auth_authen = smfi_getsymval(ctx, "{auth_authen}")) != NULL)) {
-		syslog(LOG_DEBUG, 
+		mg_log(LOG_DEBUG, 
 		    "User %s authenticated, bypassing greylisting", 
 		    auth_authen);
 		priv->priv_elapsed = 0;
@@ -249,7 +250,7 @@ mlfi_envfrom(ctx, envfrom)
 	    ((verify = smfi_getsymval(ctx, "{verify}")) != NULL) &&
 	    (strcmp(verify, "OK") == 0) &&
 	    ((cert_subject = smfi_getsymval(ctx, "{cert_subject}")) != NULL)) {
-		syslog(LOG_DEBUG, 
+		mg_log(LOG_DEBUG, 
 		    "STARTTLS succeeded for DN=\"%s\", bypassing greylisting", 
 		    cert_subject);
 		priv->priv_elapsed = 0;
@@ -269,7 +270,7 @@ mlfi_envfrom(ctx, envfrom)
 		if (iptostring(SA(&priv->priv_addr),
 		    priv->priv_addrlen, ipstr, sizeof(ipstr))) {
 
-			syslog(LOG_DEBUG, 
+			mg_log(LOG_DEBUG, 
 			    "Sender IP %s and address %s are SPF-compliant, "
 			    "bypassing greylist", ipstr, *envfrom);
 		}
@@ -301,7 +302,7 @@ mlfi_envrcpt(ctx, envrcpt)
 		return SMFIS_CONTINUE;
 
 	if (conf.c_debug)
-		syslog(LOG_DEBUG, "%s: addr = %s[%s], from = %s, rcpt = %s", 
+		mg_log(LOG_DEBUG, "%s: addr = %s[%s], from = %s, rcpt = %s", 
 		    priv->priv_queueid, priv->priv_hostname, addrstr, priv->priv_from, *envrcpt);
 
 	/*
@@ -332,7 +333,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	if ((SA(&priv->priv_addr)->sa_family == AF_INET) && 
 	    (conf.c_nodrac == 0) &&
 	    check_drac(addrstr)) {
-		syslog(LOG_DEBUG, "whitelisted by DRAC");
+		mg_log(LOG_DEBUG, "whitelisted by DRAC");
 		priv->priv_elapsed = 0;
 		priv->priv_whitelist = EXF_DRAC;
 
@@ -347,7 +348,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	if ((conf.c_noaccessdb == 0) &&
 	    ((greylist = smfi_getsymval(ctx, "{greylist}")) != NULL) &&
 	    (strcmp(greylist, "WHITE") == 0)) {
-		syslog(LOG_DEBUG, 
+		mg_log(LOG_DEBUG, 
 		    "whitelisted by {greylist}");
 		priv->priv_elapsed = 0;
 		priv->priv_whitelist = EXF_ACCESSDB;
@@ -388,7 +389,7 @@ mlfi_envrcpt(ctx, envrcpt)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
 			    priv->priv_acl_line);
 
-		syslog(LOG_INFO, 
+		mg_log(LOG_INFO, 
 		    "%s: addr %s[%s] from %s to %s blacklisted%s",
 		    priv->priv_queueid, priv->priv_hostname, addrstr, 
 		    priv->priv_from, rcpt, aclstr);
@@ -488,7 +489,7 @@ mlfi_eom(ctx)
 	}
 
 	if ((fqdn = smfi_getsymval(ctx, "{j}")) == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval failed for {j}");
+		mg_log(LOG_DEBUG, "smfi_getsymval failed for {j}");
 		gethostname(host, ADDRLEN);
 		fqdn = host;
 	}
@@ -509,7 +510,7 @@ mlfi_eom(ctx)
 	}
 #endif
 	if (ip == NULL) {
-		syslog(LOG_DEBUG, "smfi_getsymval failed for {if_addr}");
+		mg_log(LOG_DEBUG, "smfi_getsymval failed for {if_addr}");
 		ip = "0.0.0.0";
 	}
 
@@ -587,7 +588,7 @@ mlfi_eom(ctx)
 		}
 		priv->priv_whitelist &= ~(EXF_GREYLIST | EXF_WHITELIST);
 		if (priv->priv_whitelist != 0) {
-			syslog(LOG_ERR, "%s: unexpected priv_whitelist = %d",
+			mg_log(LOG_ERR, "%s: unexpected priv_whitelist = %d",
 			    priv->priv_queueid, priv->priv_whitelist);
 			mystrlcat (whystr, "Internal error ", HDRLEN);
 		}
@@ -671,7 +672,7 @@ main(argc, argv)
 
 		case 'a':
 			if (optarg == NULL) {
-				fprintf(stderr, "%s: -a needs an argument\n",
+				mg_log(LOG_ERR, "%s: -a needs an argument",
 				    argv[0]);
 				usage(argv[0]);
 			}
@@ -694,7 +695,7 @@ main(argc, argv)
 			break;
 
 		case 'r':
-			printf("milter-greylist-%s %s\n", 
+			mg_log(LOG_INFO, "milter-greylist-%s %s", 
 			    PACKAGE_VERSION, BUILD_ENV);
 			exit(EX_OK);
 			break;
@@ -706,14 +707,14 @@ main(argc, argv)
 
 		case 'u': {
 			if (geteuid() != 0) {
-				fprintf(stderr, "%s: only root can use -u\n", 
+				mg_log(LOG_ERR, "%s: only root can use -u", 
 				    argv[0]);
 				exit(EX_USAGE);
 			}
 
 			if (optarg == NULL) {
-				fprintf(stderr, 
-				    "%s: -u needs a valid user as argument\n",
+				mg_log(LOG_ERR,
+				    "%s: -u needs a valid user as argument",
 				    argv[0]);
 				usage(argv[0]);
 			}
@@ -730,8 +731,8 @@ main(argc, argv)
 		case 'w':
 			if ((optarg == NULL) || 
 			    ((defconf.c_delay = humanized_atoi(optarg)) == 0)) {
-				fprintf(stderr, 
-				    "%s: -w needs a positive argument\n",
+				mg_log(LOG_ERR,
+				    "%s: -w needs a positive argument",
 				    argv[0]);
 				usage(argv[0]);
 			}
@@ -740,7 +741,7 @@ main(argc, argv)
 
 		case 'f':
 			if (optarg == NULL) {
-				fprintf(stderr, "%s: -f needs an argument\n",
+				mg_log(LOG_ERR, "%s: -f needs an argument",
 				    argv[0]);
 				usage(argv[0]);
 			}
@@ -749,7 +750,7 @@ main(argc, argv)
 
 		case 'd':
 			if (optarg == NULL) {
-				fprintf(stderr, "%s: -d needs an argument\n",
+				mg_log(LOG_ERR, "%s: -d needs an argument",
 				    argv[0]);
 				usage(argv[0]);
 			}
@@ -759,7 +760,7 @@ main(argc, argv)
 				
 		case 'P':
 			if (optarg == NULL) {
-				fprintf(stderr, "%s: -P needs an argument\n",
+				mg_log(LOG_ERR, "%s: -P needs an argument",
 				    argv[0]);
 				usage(argv[0]);
 			}
@@ -769,7 +770,7 @@ main(argc, argv)
 
 		case 'p':
 			if (optarg == NULL) {
-				fprintf(stderr, "%s: -p needs an argument\n",
+				mg_log(LOG_ERR, "%s: -p needs an argument",
 				    argv[0]);
 				usage(argv[0]);
 			}
@@ -782,23 +783,24 @@ main(argc, argv)
 			char maskstr[IPADDRLEN + 1];
 
 		  	if (optarg == NULL) {
-				fprintf(stderr, 
-				    "%s: -L requires a CIDR mask\n", argv[0]);
+				mg_log(LOG_ERR,
+				    "%s: -L requires a CIDR mask", argv[0]);
 				usage(argv[0]);
 			}
 
 			cidr = atoi(optarg);
 			if ((cidr > 32) || (cidr < 0)) {
-				fprintf(stderr, 
-				    "%s: -L requires a CIDR mask\n", argv[0]);
+				mg_log(LOG_ERR,
+				    "%s: -L requires a CIDR mask", argv[0]);
 				usage(argv[0]);
 			}
 			prefix2mask4(cidr, &defconf.c_match_mask);
 			defconf.c_forced |= C_MATCHMASK;
 
 			if (defconf.c_debug)
-				printf("match mask: %s\n", inet_ntop(AF_INET, 
-				    &defconf.c_match_mask, maskstr, IPADDRLEN));
+				mg_log(LOG_DEBUG, "match mask: %s", 
+				    inet_ntop(AF_INET, &defconf.c_match_mask, 
+				    maskstr, IPADDRLEN));
 
 			break;
 		}
@@ -810,16 +812,16 @@ main(argc, argv)
 #endif
 
 		  	if (optarg == NULL) {
-				fprintf(stderr,
-				    "%s: -M requires a prefix length\n",
+				mg_log(LOG_ERR,
+				    "%s: -M requires a prefix length",
 				    argv[0]);
 				usage(argv[0]);
 			}
 
 			plen = atoi(optarg);
 			if ((plen > 128) || (plen < 0)) {
-				fprintf(stderr,
-				    "%s: -M requires a prefix length\n",
+				mg_log(LOG_ERR,
+				    "%s: -M requires a prefix length",
 				    argv[0]);
 				usage(argv[0]);
 			}
@@ -828,9 +830,9 @@ main(argc, argv)
 			defconf.c_forced |= C_MATCHMASK6;
 
 			if (defconf.c_debug)
-				printf("match mask: %s\n", inet_ntop(AF_INET6,
-				    &defconf.c_match_mask6, maskstr,
-				    INET6_ADDRSTRLEN));
+				mg_log(LOG_DEBUG, "match mask: %s", 
+				    inet_ntop(AF_INET6, &defconf.c_match_mask6,
+				    maskstr, INET6_ADDRSTRLEN));
 
 #endif
 			break;
@@ -864,7 +866,7 @@ main(argc, argv)
 	 * Register our callbacks 
 	 */
 	if (smfi_register(smfilter) == MI_FAILURE) {
-		fprintf(stderr, "%s: smfi_register failed\n", argv[0]);
+		mg_log(LOG_ERR, "%s: smfi_register failed", argv[0]);
 		exit(EX_UNAVAILABLE);
 	}
 
@@ -890,14 +892,14 @@ main(argc, argv)
 	 */
 	conf_load();
 
-	if (conf.c_nodetach != 0)
-		openlog("milter-greylist", LOG_PERROR, LOG_MAIL);
-	else
-		openlog("milter-greylist", 0, LOG_MAIL);
+	openlog("milter-greylist", 0, LOG_MAIL);
+
+	conf.c_cold = 0;
+	defconf.c_cold = 0;
 
 	
 	if (conf.c_socket == NULL) {
-		fprintf(stderr, "%s: No socket provided, exiting\n", argv[0]);
+		mg_log(LOG_ERR, "%s: No socket provided, exiting", argv[0]);
 		usage(argv[0]);
 	}
 	cleanup_sock(conf.c_socket);
@@ -922,14 +924,14 @@ main(argc, argv)
 		(void)open("/dev/null", O_WRONLY, 0);
 
 		if (chdir("/") != 0) {
-			fprintf(stderr, "%s: cannot chdir to root: %s\n",
+			mg_log(LOG_ERR, "%s: cannot chdir to root: %s",
 			    argv[0], strerror(errno));
 			exit(EX_OSERR);
 		}
 
 		switch (fork()) {
 		case -1:
-			fprintf(stderr, "%s: cannot fork: %s\n",
+			mg_log(LOG_ERR, "%s: cannot fork: %s",
 			    argv[0], strerror(errno));
 			exit(EX_OSERR);
 			break;
@@ -943,7 +945,7 @@ main(argc, argv)
 		}
 
 		if (setsid() == -1) {
-			syslog(LOG_ERR, "%s: setsid failed: %s\n",
+			mg_log(LOG_ERR, "%s: setsid failed: %s",
 			    argv[0], strerror(errno));
 			exit(EX_OSERR);
 		}
@@ -962,15 +964,15 @@ main(argc, argv)
 		struct passwd *pw = NULL;
 
 		if ((pw = getpwnam(conf.c_user)) == NULL) {
-			syslog(LOG_ERR, "%s: cannot get user %s data: %s\n",
+			mg_log(LOG_ERR, "%s: cannot get user %s data: %s",
 			    argv[0], conf.c_user, strerror(errno));
 			exit(EX_OSERR);
 		}
 
 #ifdef HAVE_INITGROUPS
 		if (initgroups(conf.c_user, pw->pw_gid) != 0) {
-		        syslog(LOG_ERR, "%s: cannot change "
-			    "supplementary groups: %s\n",
+		        mg_log(LOG_ERR, "%s: cannot change "
+			    "supplementary groups: %s",
 			    argv[0], strerror(errno));
 			exit(EX_OSERR);
 		}
@@ -978,7 +980,7 @@ main(argc, argv)
 
 		if (setgid(pw->pw_gid) != 0 ||
 		    setegid(pw->pw_gid) != 0) {
-			syslog(LOG_ERR, "%s: cannot change GID: %s\n",
+			mg_log(LOG_ERR, "%s: cannot change GID: %s",
 			    argv[0], strerror(errno));
 			exit(EX_OSERR);
 		}
@@ -986,7 +988,7 @@ main(argc, argv)
 
 		if ((setuid(pw->pw_uid) != 0) ||
 		    (seteuid(pw->pw_uid) != 0)) {
-			syslog(LOG_ERR, "%s: cannot change UID: %s\n",
+			mg_log(LOG_ERR, "%s: cannot change UID: %s",
 			    argv[0], strerror(errno));
 			exit(EX_OSERR);
 		}
@@ -1008,7 +1010,7 @@ main(argc, argv)
 	 * a dump when milter-greylist exits.
 	 */
 	if (atexit(*final_dump) != 0) {
-		syslog(LOG_ERR, "atexit() failed: %s", strerror(errno));
+		mg_log(LOG_ERR, "atexit() failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}	
 
@@ -1028,12 +1030,15 @@ void
 usage(progname)
 	char *progname;
 {
-	fprintf(stderr, 
-	    "usage: %s [-A] [-a autowhite_delay] [-c] [-D] [-d dumpfile]\n"
-	    "       [-f configfile] [-h] [-l] [-q] [-r] [-S] [-T]\n"
-	    "       [-u username] [-v] [-w greylist_delay] [-L cidrmask]\n"
-	    "       [-M prefixlen] [-P pidfile] -p socket\n", 
+	mg_log(LOG_ERR,
+	    "usage: %s [-A] [-a autowhite_delay] [-c] [-D] [-d dumpfile]",
 	    progname);
+	mg_log(LOG_ERR,
+	    "       [-f configfile] [-h] [-l] [-q] [-r] [-S] [-T]");
+	mg_log(LOG_ERR,
+	    "       [-u username] [-v] [-w greylist_delay] [-L cidrmask]");
+	mg_log(LOG_ERR,
+	    "       [-M prefixlen] [-P pidfile] -p socket");
 	exit(EX_USAGE);
 }
 
@@ -1165,7 +1170,7 @@ writepid(pidfile)
 	FILE *stream;
 
 	if ((stream = fopen(pidfile, "w")) == NULL) {
-		syslog(LOG_ERR, "Cannot open pidfile \"%s\" for writing: %s", 
+		mg_log(LOG_ERR, "Cannot open pidfile \"%s\" for writing: %s", 
 		    pidfile, strerror(errno));
 		return;
 	}
@@ -1288,7 +1293,7 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	else
 		aclstr[0] = '\0';
 
-	syslog(LOG_INFO, 
+	mg_log(LOG_INFO, 
 	    "%s: addr %s[%s] from %s to %s delayed%s for %02d:%02d:%02d%s",
 	    priv->priv_queueid, priv->priv_hostname, addrstr, 
 	    priv->priv_from, rcpt, delayed_rj, h, mn, s, aclstr);
@@ -1314,13 +1319,13 @@ void
 final_dump(void) {
 
 	if (dump_dirty != 0) {
-		syslog(LOG_INFO, "Final database dump");
+		mg_log(LOG_INFO, "Final database dump");
 		dump_perform();
 	} else {
-		syslog(LOG_INFO, "Final database dump: no change to dump");
+		mg_log(LOG_INFO, "Final database dump: no change to dump");
 	}
 
-	syslog(LOG_INFO, "Exiting");
+	mg_log(LOG_INFO, "Exiting");
 	return;
 }
 
@@ -1336,7 +1341,7 @@ check_drac(dotted_ip)
 
 	ddb = dbopen(conf.c_dracdb, O_RDONLY | O_SHLOCK, 0666, DB_BTREE, NULL);
 	if (ddb == NULL) {
-		syslog(LOG_DEBUG, "dbopen \"%s\" failed", conf.c_dracdb);
+		mg_log(LOG_DEBUG, "dbopen \"%s\" failed", conf.c_dracdb);
 		return 0;
 	}
 
@@ -1348,7 +1353,7 @@ check_drac(dotted_ip)
 	switch (rc) {
 	case 0:
 #ifdef TEST
-		syslog(LOG_DEBUG, "key.data=%.*s (len=%d) "
+		mg_log(LOG_DEBUG, "key.data=%.*s (len=%d) "
 		    "data.data=%.*s (len=%d)",
 		    key.size, key.data, key.size,
 		    data.size, data.data, data.size);
@@ -1361,7 +1366,7 @@ check_drac(dotted_ip)
 		break;
 
 	default:
-		syslog(LOG_ERR, "check_drack: errno=%d", errno);
+		mg_log(LOG_ERR, "check_drack: errno=%d", errno);
 		break;
 	}
 
@@ -1419,3 +1424,22 @@ mystrlcat(dst, src, len)
 	return dstlen + srclen;
 }
 #endif
+
+/* VARARGS */
+void
+mg_log(int level, char *fmt, ...) {
+	va_list ap;
+
+	va_start(ap, fmt);
+
+	if (conf.c_cold || conf.c_nodetach) {
+		vfprintf(stderr, fmt, ap);
+		printf("\n");
+	}
+
+	if (!conf.c_cold)
+		vsyslog(level, fmt, ap);
+
+	va_end(ap);
+	return;
+}

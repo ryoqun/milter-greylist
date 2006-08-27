@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.44 2006/08/20 06:38:43 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.45 2006/08/27 20:54:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -163,6 +163,7 @@ void cleanup_sock(char *);
 void unmappedaddr(struct sockaddr *, socklen_t *);
 void final_dump(void);
 int main(int, char **);
+void mg_log(int, char *, ...);
 
 #ifdef HAVE_STRLCAT
 /* #include <string.h> */
@@ -226,14 +227,6 @@ size_t mystrlcat(char *, const char *src, size_t size);
 		    "%s (ignored)", __FILE__, __LINE__, strerror(err));	  \
 	}								  \
 }
-#endif
-
-/*
- * Some systems don't know about LOG_PERROR. By defining it
- * to zero, we make it nilpotent
- */
-#ifdef HAVE_MISSING_LOG_PERROR
-#define LOG_PERROR 0
 #endif
 
 #ifdef HAVE_MISSING_TIMERADD

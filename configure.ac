@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.184 2006/08/24 20:49:29 manu Exp $
+# $Id: configure.ac,v 1.185 2006/08/27 20:54:41 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -245,19 +245,6 @@ fi])
 
 IPv6_CHECK_FUNC(getaddrinfo)
 IPv6_CHECK_FUNC(getnameinfo)
-
-# Check if <syslog.h> defines LOG_PERROR
-AC_MSG_CHECKING([if <syslog.h> defines LOG_PERROR])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
-		#include <syslog.h>
-	],[
-		#ifndef LOG_PERROR
-		error: LOG_PERROR undefined
-		#endif
-	])], [logperror=yes], 
-	[AC_DEFINE([HAVE_MISSING_LOG_PERROR], 
-	    [], [<syslog.h> defines LOG_PERROR]) logperror=no])
-AC_MSG_RESULT([$logperror])
 
 # Check if <time.h> defines timeradd (and timersub)
 AC_MSG_CHECKING([if <time.h> defines timeradd])

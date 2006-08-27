@@ -6,12 +6,13 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.57 2006/08/27 16:02:26 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.58 2006/08/27 20:54:40 manu Exp $");
 #endif
 #endif
 
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <sysexits.h>
 #include "conf.h"
 #include "acl.h"
@@ -117,7 +118,8 @@ netblock:	ADDR IPADDR CIDR{
 			    sizeof(struct sockaddr_in6), $3);
 			acl_register_entry_first(A_WHITELIST);
 #else
-			printf("IPv6 is not supported, ignore line %d\n",
+			mg_log(LOG_INFO,
+			    "IPv6 is not supported, ignore line %d",
 			    conf_line);
 #endif
 		}
@@ -127,7 +129,8 @@ netblock:	ADDR IPADDR CIDR{
 			    sizeof(struct sockaddr_in6), 128);
 			acl_register_entry_first(A_WHITELIST);
 #else
-			printf("IPv6 is not supported, ignore line %d\n",
+			mg_log(LOG_INFO,
+			    "IPv6 is not supported, ignore line %d",
 			    conf_line);
 #endif
 		}
@@ -173,7 +176,8 @@ peeraddr:	PEER IPADDR	{
 			char addr[IPADDRSTRLEN];
 
 			if (IP4TOSTRING($2, addr) == NULL) {
-				printf("invalid IPv4 address line %d\n",
+				mg_log(LOG_ERR,
+				    "invalid IPv4 address line %d",
 				    conf_line);
 				exit(EX_DATAERR);
 			}
@@ -184,13 +188,15 @@ peeraddr:	PEER IPADDR	{
 			char addr[IPADDRSTRLEN];
 
 			if (IP6TOSTRING($2, addr) == NULL) {
-				printf("invalid IPv6 address line %d\n",
+				mg_log(LOG_ERR, 
+				    "invalid IPv6 address line %d",
 				    conf_line);
 				exit(EX_DATAERR);
 			}
 			peer_add(addr);
 #else
-			printf("IPv6 is not supported, ignore line %d\n",
+			mg_log(LOG_INFO,
+			    "IPv6 is not supported, ignore line %d",
 			    conf_line);
 #endif
 		}
@@ -198,8 +204,9 @@ peeraddr:	PEER IPADDR	{
 #ifdef HAVE_GETADDRINFO
 			peer_add($2);
 #else
-			printf("FQDN in peer is not supported, "
-			    "ignore line %d\n", conf_line);
+			mg_log(LOG_INFO,
+			    "FQDN in peer is not supported, "
+			    "ignore line %d", conf_line);
 #endif
 		}
 	;
@@ -264,8 +271,8 @@ subnetmatch6:	SUBNETMATCH6 CIDR{
 				if (C_NOTFORCED(C_MATCHMASK6))
 					prefix2mask6($2, &conf.c_match_mask6);
 #else
-				printf("IPv6 is not supported, "
-				    "ignore line %d\n", conf_line);
+				mg_log(LOG_INFO, "IPv6 is not supported, "
+				    "ignore line %d", conf_line);
 #endif
 				}
 	;
@@ -304,8 +311,8 @@ syncaddr:	SYNCADDR STAR	{
 				}
 	|	SYNCADDR IPADDR	{
 				if (IP4TOSTRING($2, c_syncaddr) == NULL) {
-					printf("invalid IPv4 address "
-					    "line %d\n", conf_line);
+					mg_log(LOG_ERR, "invalid IPv4 address "
+					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
 				conf.c_syncaddr = c_syncaddr;
@@ -314,15 +321,15 @@ syncaddr:	SYNCADDR STAR	{
 	|	SYNCADDR IP6ADDR {
 #ifdef AF_INET6
 				if (IP6TOSTRING($2, c_syncaddr) == NULL) {
-					printf("invalid IPv6 address "
-					    "line %d\n", conf_line);
+					mg_log(LOG_ERR, "invalid IPv6 address "
+					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
 				conf.c_syncaddr = c_syncaddr;
 				conf.c_syncport = NULL;
 #else /* AF_INET6 */
-				printf("IPv6 is not supported, "
-				    "ignore line %d\n", conf_line);
+				mg_log(LOG_INFO, "IPv6 is not supported, "
+				    "ignore line %d", conf_line);
 #endif /* AF_INET6 */
 				}
 	|	SYNCADDR STAR PORT TNUMBER {
@@ -333,8 +340,8 @@ syncaddr:	SYNCADDR STAR	{
 				}
 	|	SYNCADDR IPADDR PORT TNUMBER {
 				if (IP4TOSTRING($2, c_syncaddr) == NULL) {
-					printf("invalid IPv4 address "
-					    "line %d\n", conf_line);
+					mg_log(LOG_ERR, "invalid IPv4 address "
+					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
 				conf.c_syncaddr = c_syncaddr;
@@ -345,8 +352,8 @@ syncaddr:	SYNCADDR STAR	{
 	|	SYNCADDR IP6ADDR PORT TNUMBER {
 #ifdef AF_INET6
 				if (IP6TOSTRING($2, c_syncaddr) == NULL) {
-					printf("invalid IPv6 address "
-					    "line %d\n", conf_line);
+					mg_log(LOG_ERR, "invalid IPv6 address "
+					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
 				conf.c_syncaddr = c_syncaddr;
@@ -354,8 +361,8 @@ syncaddr:	SYNCADDR STAR	{
 				strncpy(conf.c_syncport, $4, NUMLEN);
 				conf.c_syncport[NUMLEN] = '\0';
 #else /* AF_INET6 */
-				printf("IPv6 is not supported, "
-				    "ignore line %d\n", conf_line);
+				mg_log(LOG_INFO, "IPv6 is not supported, "
+				    "ignore line %d", conf_line);
 #endif /* AF_INET6 */
 				}
 	;
@@ -366,8 +373,8 @@ syncsrcaddr:	SYNCSRCADDR STAR	{
 				}
 	|	SYNCSRCADDR IPADDR	{
 				if (IP4TOSTRING($2, c_syncsrcaddr) == NULL) {
-					printf("invalid IPv4 address "
-					    "line %d\n", conf_line);
+					mg_log(LOG_ERR, "invalid IPv4 address "
+					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
 				conf.c_syncsrcaddr = c_syncsrcaddr;
@@ -376,15 +383,15 @@ syncsrcaddr:	SYNCSRCADDR STAR	{
 	|	SYNCSRCADDR IP6ADDR {
 #ifdef AF_INET6
 				if (IP6TOSTRING($2, c_syncsrcaddr) == NULL) {
-					printf("invalid IPv6 address "
-					    "line %d\n", conf_line);
+					mg_log(LOG_ERR, "invalid IPv6 address "
+					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
 				conf.c_syncsrcaddr = c_syncsrcaddr;
 				conf.c_syncsrcport = NULL;
 #else /* AF_INET6 */
-				printf("IPv6 is not supported, "
-				    "ignore line %d\n", conf_line);
+				mg_log(LOG_INFO, "IPv6 is not supported, "
+				    "ignore line %d", conf_line);
 #endif /* AF_INET6 */
 				}
 	|	SYNCSRCADDR STAR PORT TNUMBER {
@@ -395,8 +402,8 @@ syncsrcaddr:	SYNCSRCADDR STAR	{
 				}
 	|	SYNCSRCADDR IPADDR PORT TNUMBER {
 				if (IP4TOSTRING($2, c_syncsrcaddr) == NULL) {
-					printf("invalid IPv4 address "
-					    "line %d\n", conf_line);
+					mg_log(LOG_ERR, "invalid IPv4 address "
+					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
 				conf.c_syncsrcaddr = c_syncsrcaddr;
@@ -407,8 +414,8 @@ syncsrcaddr:	SYNCSRCADDR STAR	{
 	|	SYNCSRCADDR IP6ADDR PORT TNUMBER {
 #ifdef AF_INET6
 				if (IP6TOSTRING($2, c_syncsrcaddr) == NULL) {
-					printf("invalid IPv6 address "
-					    "line %d\n", conf_line);
+					mg_log(LOG_ERR, "invalid IPv6 address "
+					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
 				conf.c_syncsrcaddr = c_syncsrcaddr;
@@ -416,8 +423,8 @@ syncsrcaddr:	SYNCSRCADDR STAR	{
 				strncpy(conf.c_syncsrcport, $4, NUMLEN);
 				conf.c_syncsrcport[NUMLEN] = '\0';
 #else /* AF_INET6 */
-				printf("IPv6 is not supported, "
-				    "ignore line %d\n", conf_line);
+				mg_log(LOG_INFO, "IPv6 is not supported, "
+				    "ignore line %d", conf_line);
 #endif /* AF_INET6 */
 				}
 	;
@@ -517,7 +524,8 @@ dnsrbl_clause:		DNSRBL QSTRING {
 
 			acl_add_dnsrbl(quotepath(path, $2, QSTRLEN));
 #else
-			printf("DNSRBL support not compiled in line %d\n", 
+			mg_log(LOG_INFO, 
+			    "DNSRBL support not compiled in line %d", 
 			    conf_line);
 #endif
 			}
@@ -549,7 +557,8 @@ netblock_clause:	ADDR IPADDR CIDR {
 				acl_add_netblock(SA(&$2),
 				    sizeof(struct sockaddr_in6), $3);
 #else
-				printf("IPv6 is not supported, ignore line %d\n",
+				mg_log(LOG_INFO, 
+				    "IPv6 is not supported, ignore line %d",
 				    conf_line);
 #endif
 			}
@@ -558,8 +567,8 @@ netblock_clause:	ADDR IPADDR CIDR {
 				acl_add_netblock(SA(&$2),
 				    sizeof(struct sockaddr_in6), 128);
 #else
-				printf("IPv6 is not supported, "
-				     "ignore line %d\n", conf_line);
+				mg_log(LOG_INFO, "IPv6 is not supported, "
+				     "ignore line %d", conf_line);
 #endif
 		}
 	;
@@ -569,8 +578,8 @@ dracdb:			DRAC DB QSTRING	{
 				conf.c_dracdb = 
 					    quotepath(c_dracdb, $3, QSTRLEN);
 #else
-				printf("DRAC support not compiled "
-				    "in line %d\n", conf_line);
+				mg_log(LOG_INFO, "DRAC support not compiled "
+				    "in line %d", conf_line);
 #endif
 		}
 	;
@@ -585,7 +594,8 @@ dnsrbldef:	DNSRBL QSTRING DOMAINNAME IPADDR {
 			dnsrbl_source_add(quotepath(path, $2, QSTRLEN), 
 			    $3, SA(&$4));
 #else
-			printf("DNSRBL support not compiled in line %d\n", 
+			mg_log(LOG_INFO, 
+			    "DNSRBL support not compiled in line %d", 
 			    conf_line);
 #endif
 		}
@@ -689,7 +699,8 @@ addr_item: 	IPADDR CIDR {
 			list_add_netblock(glist, SA(&$1), 
 			    sizeof(struct sockaddr_in6), $2);
 #else
-			printf("IPv6 is not supported, ignore line %d\n",
+			mg_log(LOG_INFO,
+			    "IPv6 is not supported, ignore line %d",
 			    conf_line);
 #endif
 		}
@@ -698,7 +709,8 @@ addr_item: 	IPADDR CIDR {
 			list_add_netblock(glist, SA(&$1), 
 			    sizeof(struct sockaddr_in6), 128);
 #else
-			printf("IPv6 is not supported, ignore line %d\n",
+			mg_log(LOG_ERR, 
+			    "IPv6 is not supported, ignore line %d",
 			    conf_line);
 #endif
 		}
