@@ -1,5 +1,6 @@
 3.0a3
 	Fix --disable-drac and --disable-dnsrbl (Fabien Tassin)
+	Add support to use Sendmail macros in the ACL
 3.0a2
 	Documentation fix about required sendmail macros
 	Missing bit in rc-redhat.sh (Jobst Schmalenbach)

@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.31 2006/08/20 06:38:43 manu Exp $ */
+/* $Id: acl.c,v 1.32 2006/08/27 16:02:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.31 2006/08/20 06:38:43 manu Exp $");
+__RCSID("$Id: acl.c,v 1.32 2006/08/27 16:02:25 manu Exp $");
 #endif
 #endif
 
@@ -67,6 +67,7 @@ __RCSID("$Id: acl.c,v 1.31 2006/08/20 06:38:43 manu Exp $");
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
 #endif
+#include "macro.h"
 #include "milter-greylist.h"
 
 struct acllist acl_head;
@@ -227,6 +228,28 @@ acl_add_dnsrbl(dnsrbl)
 	return;
 }
 #endif
+
+void
+acl_add_macro(macro)
+	char *macro;
+{
+	if (gacl.a_macro != NULL ||
+	    gacl.a_macrolist != NULL) {
+		fprintf (stderr,
+		    "sm_macro specified twice in ACL line %d\n",
+		    conf_line);
+		exit(EX_DATAERR);
+	}
+	if ((gacl.a_macro = macro_byname(macro)) == NULL) {
+		syslog(LOG_ERR, "unknown sm_macro \"%s\"", macro);
+		exit(EX_DATAERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		printf("load acl sm_macro %s\n", macro);
+
+	return;
+}
 
 void
 acl_add_rcpt(email)
@@ -1008,6 +1031,18 @@ acl_entry(acl)
 		def = 0;
 	}
 #endif
+	if (acl->a_macrolist != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "sm_macrolist \"%s\" ", 
+		    acl->a_macrolist->al_name);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_macro != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "sm_macro \"%s\" ",
+		    acl->a_macro->m_name);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
 	if (acl->a_delay != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[delay %ld] ", (long)acl->a_delay);
@@ -1170,6 +1205,16 @@ acl_add_list(list)
 		gacl.a_dnsrbllist = ale;
 		break;
 #endif
+	case LT_MACRO:
+		if (gacl.a_macro != NULL ||
+		    gacl.a_macrolist != NULL) {
+			fprintf (stderr,
+			    "muliple sm_macro statement (list \"%s\", line %d)",
+			    list, conf_line);
+			exit(EX_DATAERR);
+		}
+		gacl.a_macrolist = ale;
+		break;
 
 	case LT_ADDR:
 		if (gacl.a_addr != NULL ||

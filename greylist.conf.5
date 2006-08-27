@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.41 2006/08/24 20:58:36 manu Exp $
+.\" $Id: greylist.conf.5,v 1.42 2006/08/27 16:02:26 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -60,11 +60,12 @@ keyword followed by the
 .I whitelist\fR,
 or
 .I blacklist
-keyword, and by any set of the 5 clauses: 
+keyword, and by any set of the 6 clauses: 
 .I addr\fR,
 .I domain\fR,
 .I from\fR,
 .I rcpt\fR,
+.I sm_macro\fR,
 and (if built with --enable-dnsrbl)
 .I dnsrbl\fR.
 A message will match an ACL entry when it complies with all of its clauses.
@@ -111,6 +112,10 @@ Example:
 This is used to select recipient addresses. Example:
 .IP
   acl greylist rcpt John.Doe@example.net
+.TP
+.I sm_macro 
+This is used to select a Sendmail macro value. See the section on that
+topic for more information.
 .TP
 .I dnsrbl
 This is used to select a DNSRBL. See the section on that topic for
@@ -370,6 +375,33 @@ will cope much better with sender callback systems.
 This has a minor drawback (and this is why it is not enabled by default): 
 for a multi recipient DSN, whitelisted recipient will not be honoured: 
 the message will be delayed for everyone. 
+.SH SENDMAIL MACROS
+Any sendmail macro can be used as a clause in the access list. You need to 
+define a (macro, value) pair using the 
+.I sm_macro
+keyword before using it.  Here is an example that uses the 
+.I {client_resolve}
+macro to apply a larger greylisting delay to hosts that have a bogus 
+reverse DNS:
+.IP
+  sm_macro "maybe_forged" "{client_resolve}" "FORGED"
+
+  acl greylist sm_macro "maybe_forged" delay 1h
+  acl greylist default 15m
+.PP
+A regular expression can be used as the macro value. 
+It must be surrounded with slashes and not by quotes.
+The special value 
+.I unset
+can also be used to match an unset macro:
+.IP
+  sm_macro "not_foo" "{foo}" unset
+.PP
+Note that any Sendmail macro that is not exported using the
+.I Milter.macros.envrcpt 
+setting of 
+.I sendmail.cf
+will be seen as unset from milter-greylist.
 .SH DNSRBL
 DNS Reverse Black List can be used to toggle an ACL. They must be defined
 and named before they can be used. Here is an example which uses 

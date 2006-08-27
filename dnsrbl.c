@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.12 2006/08/20 06:38:43 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.13 2006/08/27 16:02:26 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.12 2006/08/20 06:38:43 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.13 2006/08/27 16:02:26 manu Exp $");
 #endif
 #endif
 
@@ -78,6 +78,7 @@ __RCSID("$Id: dnsrbl.c,v 1.12 2006/08/20 06:38:43 manu Exp $");
 
 #include "milter-greylist.h"
 #include "pending.h"
+#include "conf.h"
 #include "dnsrbl.h"
 
 /* 
@@ -257,6 +258,7 @@ dnsrbl_source_add(name, domain, blacklisted) /* acllist must be write locked */
 {
 	struct dnsrbl_entry *de;
 	socklen_t salen;
+	char addrstr[IPADDRSTRLEN];
 
 	if ((de = malloc(sizeof(*de))) == NULL) {
 		syslog(LOG_ERR, "malloc failed: %s", strerror(errno));
@@ -287,6 +289,15 @@ dnsrbl_source_add(name, domain, blacklisted) /* acllist must be write locked */
 	memcpy(&de->d_blacklisted, blacklisted, salen);
 
 	LIST_INSERT_HEAD(&dnsrbl_head, de, d_list);
+
+	if (conf.c_debug || conf.c_acldebug) {
+		struct sockaddr *sa = (struct sockaddr *)&de->d_blacklisted;
+
+		inet_ntop(sa->sa_family, sa->sa_data,
+		    addrstr, sizeof(addrstr)); 
+		printf("load DNSRBL \"%s\" \"%s\" %s\n", 
+		    de->d_name, de->d_domain, addrstr);
+	}
 
 	return;
 }

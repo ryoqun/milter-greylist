@@ -61,6 +61,8 @@ nodrac		[Nn][Oo][Dd][Rr][Aa][Cc]
 dump_no_time_translation [Dd][Uu][Mm][Pp]_[Nn][Oo]_[Tt][Ii][Mm][Ee]_[Tt][Rr][Aa][Nn][Ss][Ll][Aa][Tt][Ii][Oo][Nn]
 logexpired    [Ll][Oo][Gg][Ee][Xx][Pp][Ii][Rr][Ee][Dd]
 dnsrbl		[Dd][Nn][Ss][Rr][Bb][Ll]
+sm_macro	[Ss][Mm]_[Mm][Aa][Cc][Rr][Oo]
+unset		[Uu][Nn][Ss][Ee][Tt]
 list		[Ll][Ii][Ss][Tt]
 flushaddr	[Ff][Ll][Uu][Ss][Hh][Aa][Dd][Dd][Rr]
 code		[Cc][Oo][Dd][Ee]
@@ -81,7 +83,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.52 2006/08/01 21:29:36 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.53 2006/08/27 16:02:25 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -116,6 +118,8 @@ star		"*"
 {dump_no_time_translation}	{ return DUMP_NO_TIME_TRANSLATION; }
 {logexpired}  { return LOGEXPIRED; }
 {dnsrbl}  	{ return DNSRBL; }
+{sm_macro}  	{ BEGIN(S_REGEX); return SM_MACRO; }
+{unset}  	{ return UNSET; }
 {list}  	{ return LIST; }
 {flushaddr}  	{ return FLUSHADDR; }
 {code}  	{ return CODE; }

@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.11 2006/08/01 21:29:36 manu Exp $ */
+/* $Id: acl.h,v 1.12 2006/08/27 16:02:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -87,10 +87,12 @@ struct acl_entry {
 #ifdef USE_DNSRBL
 	struct dnsrbl_entry *a_dnsrbl; 
 #endif
+	struct macro_entry *a_macro;
 	struct all_list_entry *a_fromlist;
 	struct all_list_entry *a_rcptlist;
 	struct all_list_entry *a_domainlist;
 	struct all_list_entry *a_dnsrbllist;
+	struct all_list_entry *a_macrolist;
 	struct all_list_entry *a_addrlist;
 	time_t a_delay;
 	time_t a_autowhite;
@@ -126,6 +128,7 @@ void acl_add_msg(char *);
 #ifdef USE_DNSRBL
 void acl_add_dnsrbl(char *);
 #endif
+void acl_add_macro(char *);
 struct acl_entry *acl_register_entry_first (acl_type_t);
 struct acl_entry *acl_register_entry_last (acl_type_t);
 int acl_filter(struct mlfi_priv *, char *);

@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.56 2006/08/20 05:30:39 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.57 2006/08/27 16:02:26 manu Exp $");
 #endif
 #endif
 
@@ -17,6 +17,7 @@ __RCSID("$Id: conf_yacc.y,v 1.56 2006/08/20 05:30:39 manu Exp $");
 #include "acl.h"
 #include "sync.h"
 #include "list.h"
+#include "macro.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
 #endif
@@ -95,6 +96,7 @@ lines	:	lines netblock '\n'
 	|	lines nodrac '\n'
 	|       lines logexpired '\n'
 	|	lines dnsrbldef '\n'
+	|	lines macrodef '\n'
 	|	lines listdef '\n'
 	|	lines '\n'
 	|
@@ -449,6 +451,7 @@ acl_clause:	fromaddr_clause
 	|	domainregex_clause
 	|	netblock_clause
 	|	dnsrbl_clause
+	|	macro_clause
 	|	list_clause
 	;
 
@@ -518,7 +521,13 @@ dnsrbl_clause:		DNSRBL QSTRING {
 			    conf_line);
 #endif
 			}
-			
+	;
+
+macro_clause:		SM_MACRO QSTRING {
+				char qstring[QSTRLEN + 1];
+
+				acl_add_macro(quotepath(qstring, $2, QSTRLEN));
+			}
 	;
 
 list_clause:		LIST QSTRING { 
@@ -582,6 +591,37 @@ dnsrbldef:	DNSRBL QSTRING DOMAINNAME IPADDR {
 		}
 	;
 
+macrodef:	macrodef_string | macrodef_regex | macrodef_unset;
+
+macrodef_string:	SM_MACRO QSTRING QSTRING QSTRING { 
+				char name[QSTRLEN + 1];
+				char macro[QSTRLEN + 1];
+				char value[QSTRLEN + 1];
+
+				macro_add_string(quotepath(name, $2, QSTRLEN), 
+				    quotepath(macro, $3, QSTRLEN),
+				    quotepath(value, $4, QSTRLEN));
+			}
+	;
+
+macrodef_regex:		SM_MACRO QSTRING QSTRING REGEX {
+				char name[QSTRLEN + 1];
+				char macro[QSTRLEN + 1];
+
+				macro_add_regex(quotepath(name, $2, QSTRLEN),
+				    quotepath(macro, $3, QSTRLEN), $4); 
+			}
+	;
+
+macrodef_unset:		SM_MACRO QSTRING QSTRING UNSET {
+				char name[QSTRLEN + 1];
+				char macro[QSTRLEN + 1];
+
+				macro_add_unset(quotepath(name, $2, QSTRLEN),
+				    quotepath(macro, $3, QSTRLEN));
+			}
+	;
+
 listdef:	LIST QSTRING list_clause {
 			char path[QSTRLEN + 1];
 
@@ -598,6 +638,8 @@ list_clause:	FROM OPENLIST email_list CLOSELIST
 			{ all_list_settype(glist, LT_DOMAIN); }
 	|	DNSRBL OPENLIST qstring_list CLOSELIST
 			{ all_list_settype(glist, LT_DNSRBL); }
+	|	SM_MACRO OPENLIST qstring_list CLOSELIST
+			{ all_list_settype(glist, LT_MACRO); }
 	|	ADDR OPENLIST addr_list CLOSELIST
 			{ all_list_settype(glist, LT_ADDR); }
 	;
