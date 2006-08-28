@@ -1,3 +1,5 @@
+3.0a4
+	IPv6 and build fixes (Hajimu UMEMOTO)
 3.0a3
 	Fix --disable-drac and --disable-dnsrbl (Fabien Tassin)
 	Add support to use Sendmail macros in the ACL
