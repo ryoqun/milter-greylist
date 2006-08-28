@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.130 2006/08/27 20:54:41 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.131 2006/08/28 06:09:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.130 2006/08/27 20:54:41 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.131 2006/08/28 06:09:38 manu Exp $");
 #endif
 #endif
 
@@ -85,6 +85,7 @@ static int check_drac(char *dotted_ip);
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
 #endif
+#include "macro.h"
 
 static char *strncpy_rmsp(char *, char *, size_t);
 static char *gmtoffset(time_t *, char *, size_t);
@@ -855,21 +856,6 @@ main(argc, argv)
 		}
 	}
 	
-	if (checkonly) {
-		conf_init();
-		all_list_init();
-		acl_init ();
-		conf_load();
-		exit(0);
-	}
-	/* 
-	 * Register our callbacks 
-	 */
-	if (smfi_register(smfilter) == MI_FAILURE) {
-		mg_log(LOG_ERR, "%s: smfi_register failed", argv[0]);
-		exit(EX_UNAVAILABLE);
-	}
-
 	/*
 	 * Various init
 	 */
@@ -883,6 +869,7 @@ main(argc, argv)
 #ifdef USE_DNSRBL
 	dnsrbl_init();
 #endif
+	macro_init();
 
 	/*
 	 * Load config file
@@ -891,6 +878,11 @@ main(argc, argv)
 	 * can access the list yet.
 	 */
 	conf_load();
+
+	if (checkonly) {
+		mg_log(LOG_INFO, "config file \"%s\" is okay", conffile);
+		exit(EX_OK);
+	}
 
 	openlog("milter-greylist", 0, LOG_MAIL);
 
@@ -910,6 +902,14 @@ main(argc, argv)
 	 * No lock needed here either.
 	 */
 	dump_reload();
+
+	/* 
+	 * Register our callbacks 
+	 */
+	if (smfi_register(smfilter) == MI_FAILURE) {
+		mg_log(LOG_ERR, "%s: smfi_register failed", argv[0]);
+		exit(EX_UNAVAILABLE);
+	}
 
 	/*
 	 * Turn into a daemon

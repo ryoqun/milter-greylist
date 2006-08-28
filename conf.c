@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.39 2006/08/27 20:54:40 manu Exp $ */
+/* $Id: conf.c,v 1.40 2006/08/28 06:09:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.39 2006/08/27 20:54:40 manu Exp $");
+__RCSID("$Id: conf.c,v 1.40 2006/08/28 06:09:38 manu Exp $");
 #endif
 #endif
 
@@ -125,6 +125,10 @@ conf_load(void)
 
 	(void)gettimeofday(&tv1, NULL);
 
+	if (!conf.c_cold || conf.c_debug)
+		mg_log(LOG_INFO, "%sloading config file \"%s\"", 
+		    conf.c_cold ? "" : "re", conffile);
+
 	if ((stream = fopen(conffile, "r")) == NULL) {
 		mg_log(LOG_ERR, "cannot open config file %s: %s", 
 		    conffile, strerror(errno));
@@ -146,10 +150,14 @@ conf_load(void)
 
 		fclose(stream);
 
-		(void)gettimeofday(&tv2, NULL);
-		timersub(&tv2, &tv1, &tv3);
-		mg_log(LOG_DEBUG, "%sloaded config file in %ld.%06lds", 
-		    conf.c_cold ? "" : "re", tv3.tv_sec, tv3.tv_usec);
+		if (!conf.c_cold || conf.c_debug) {
+			(void)gettimeofday(&tv2, NULL);
+			timersub(&tv2, &tv1, &tv3);
+			mg_log(LOG_INFO,
+			    "%sloaded config file \"%s\" in %ld.%06lds", 
+			    conf.c_cold ? "" : "re", conffile, 
+			    tv3.tv_sec, tv3.tv_usec);
+		}
 	}
 
 	if (conf.c_cold) {
@@ -189,8 +197,6 @@ conf_update(void) {
 	}
 	conffile_modified.tv_sec = st.st_mtime;
 	CONF_UNLOCK;
-
-	mg_log(LOG_INFO, "reloading \"%s\"", conffile);
 
 	/*
 	 * On some platforms, the thread stack limit is too low and
