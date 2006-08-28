@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.73 2006/08/27 16:02:25 manu Exp $
+# $Id: Makefile,v 1.74 2006/08/28 07:26:34 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,7 +29,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-CFLAGS= 	-g -O2 -Wall -DUSE_DNSRBL -D_BSD_SOURCE
+CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE
 LDFLAGS=	
 LIBS= 		 -lresolv -lpthread -lmilter
 prefix=		/usr/local
@@ -55,7 +55,7 @@ TRUE=		true
 OBJ= 		milter-greylist.o pending.o sync.o dnsrbl.o list.o macro.o \
 		conf_yacc.o dump_yacc.o conf.o autowhite.o dump.o spf.o acl.o
 SRC= 		milter-greylist.c pending.c sync.c conf.c macro.c \
-		autowhite.c dump.c spf.c acl.c dnsrbl.c list.c 
+		autowhite.c dump.c spf.c acl.c dnsrbl.c list.c
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c 
 
 all:		milter-greylist rc-bsd.sh rc-redhat.sh \

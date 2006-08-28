@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.131 2006/08/28 06:09:38 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.132 2006/08/28 07:26:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.131 2006/08/28 06:09:38 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.132 2006/08/28 07:26:34 manu Exp $");
 #endif
 #endif
 
@@ -660,6 +660,7 @@ main(argc, argv)
 	 * Load configuration defaults
 	 */
 	conf_defaults(&defconf);
+	memcpy(&conf, &defconf, sizeof(conf));
 
 	/* 
 	 * Process command line options 
@@ -1434,7 +1435,7 @@ mg_log(int level, char *fmt, ...) {
 
 	if (conf.c_cold || conf.c_nodetach) {
 		vfprintf(stderr, fmt, ap);
-		printf("\n");
+		fprintf(stderr, "\n");
 	}
 
 	if (!conf.c_cold)

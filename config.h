@@ -2,7 +2,7 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
-#define BUILD_ENV "manu@plan:/wd1a/home/manu/milter-greylist Thu Aug 24 22:48:16 CEST 2006"
+#define BUILD_ENV "manu@plan:/wd1a/home/manu/milter-greylist Mon Aug 28 09:18:50 CEST 2006"
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define HAVE_ARPA_INET_H 1
@@ -48,9 +48,6 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
-
-/* <syslog.h> defines LOG_PERROR */
-/* #undef HAVE_MISSING_LOG_PERROR */
 
 /* missing socklen_t definition */
 /* #undef HAVE_MISSING_SOCKLEN_T */
