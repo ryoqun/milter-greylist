@@ -83,7 +83,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.54 2006/08/27 20:54:40 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.55 2006/08/30 04:57:58 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -226,4 +226,9 @@ yyerror(err)
 	mg_log(LOG_ERR, "config error at line %d: %s", conf_line, err);
 	exit(EX_DATAERR);
 	return;
+}
+
+void
+conf_dispose_input_file(void) {
+	YY_FLUSH_BUFFER;
 }

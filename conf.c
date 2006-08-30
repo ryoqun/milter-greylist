@@ -1,4 +1,5 @@
-/* $Id: conf.c,v 1.40 2006/08/28 06:09:38 manu Exp $ */
+/* $Id: conf.c,v 1.41 2006/08/30 04:57:58 manu Exp $ */
+/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +35,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.40 2006/08/28 06:09:38 manu Exp $");
+__RCSID("$Id: conf.c,v 1.41 2006/08/30 04:57:58 manu Exp $");
 #endif
 #endif
 
@@ -57,6 +58,9 @@ __RCSID("$Id: conf.c,v 1.40 2006/08/28 06:09:38 manu Exp $");
 #include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <assert.h>
+#include <time.h>
+#include <sys/time.h>
 
 #include "acl.h"
 #ifdef USE_DNSRBL
@@ -69,71 +73,94 @@ __RCSID("$Id: conf.c,v 1.40 2006/08/28 06:09:38 manu Exp $");
 #include "dump.h"
 #include "milter-greylist.h"
 
+/* #define CONF_DEBUG */
+
 /* Default configuration */
-struct conf defconf;
-
-struct conf conf;
-
-char c_pidfile[QSTRLEN + 1];
-char c_dumpfile[QSTRLEN + 1];
-char c_socket[QSTRLEN + 1];
-char c_user[QSTRLEN + 1];
-char c_syncaddr[IPADDRSTRLEN + 1];
-char c_syncport[NUMLEN + 1];
-char c_syncsrcaddr[IPADDRSTRLEN + 1];
-char c_syncsrcport[NUMLEN + 1];
-char c_dracdb[QSTRLEN + 1];
-
+struct conf_rec defconf;
+pthread_key_t conf_key;
 char *conffile = CONFFILE;
-struct timeval conffile_modified;
-int numb_of_conf_update_threads;
+int conf_cold = 1;
 
-#define MAX_NUMB_OF_CONF_UPDATE_THREADS 1
-/*
- * this lock does not protect conf_update any more,
- * only conffile_modified and numb_of_conf_update_threads.
- * there are lot of non-auto variables above to protect as well,
- * so it is safer to limit the maximum number of configuration loading
- * processes to one for the time being.
- */
-pthread_rwlock_t conf_lock;
+#define CONF_LOCK pthread_mutex_lock(&conf_lock);
+#define CONF_UNLOCK pthread_mutex_unlock(&conf_lock);
+static pthread_mutex_t conf_lock = PTHREAD_MUTEX_INITIALIZER;
+static struct conf_list conf_list_head;
+static pthread_cond_t conf_update_cond = PTHREAD_COND_INITIALIZER;
+static int conf_updating;
 
 void
 conf_init(void) {
 	int error;
 
-	if ((error = pthread_rwlock_init(&conf_lock, NULL)) != 0) {
+	TAILQ_INIT(&conf_list_head);
+
+	if ((error = pthread_key_create(&conf_key, 0)) != 0) {
 		mg_log(LOG_ERR, 
-		    "pthread_rwlock_init failed: %s", strerror(error));
+		    "pthread_key_create failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
 
 	return;
 }
 
-void
-conf_load(void)
+#ifdef CONF_DEBUG
+static void
+conf_dump(void) {
+	struct conf_rec *c;
+
+	TAILQ_FOREACH_REVERSE(c, &conf_list_head, conf_list, c_chain) {
+		char textdate[DATELEN];
+		struct tm tm;
+
+		localtime_r(&c->c_timestamp, &tm);
+		strftime(textdate, sizeof textdate, "%Y-%m-%d %T",  &tm);
+		mg_log(LOG_DEBUG, "conf_dump: stamp %s ref %d",
+			   textdate, c->c_refcount);
+	}
+}
+#endif /* CONF_DEBUG */
+
+static void *
+conf_load_internal(timestamp)
+	void *timestamp;
 {
 	FILE *stream;
 	struct timeval tv1, tv2, tv3;
+	struct conf_rec *currconf, *threadconf, *newconf;
+
+	CONF_LOCK;
+	currconf = TAILQ_FIRST(&conf_list_head);
+	CONF_UNLOCK;
+	assert(conf_cold ? (currconf == NULL) : (currconf != NULL));
+	threadconf = GET_CONF();
+
+	if (!(newconf = (struct conf_rec *)malloc(sizeof *newconf))) {
+		mg_log(LOG_ERR, "conf malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
 
 	/*
 	 * Reset the configuration to its default 
 	 * (This includes command line flags)
 	 */
-	memcpy(&conf, &defconf, sizeof(conf));
+	memcpy(newconf, &defconf, sizeof *newconf);
+	newconf->c_refcount = 1;
+	newconf->c_timestamp = *(time_t *)timestamp;
 
 	(void)gettimeofday(&tv1, NULL);
 
-	if (!conf.c_cold || conf.c_debug)
+	if (!conf_cold || newconf->c_debug)
 		mg_log(LOG_INFO, "%sloading config file \"%s\"", 
-		    conf.c_cold ? "" : "re", conffile);
+		    conf_cold ? "" : "re", conffile);
 
 	if ((stream = fopen(conffile, "r")) == NULL) {
-		mg_log(LOG_ERR, "cannot open config file %s: %s", 
-		    conffile, strerror(errno));
-		mg_log(LOG_ERR, "continuing with no exception list");
+		if (conf_cold) {
+			mg_log(LOG_ERR, "cannot open config file %s: %s", 
+			    conffile, strerror(errno));
+			mg_log(LOG_ERR, "continuing with no exception list");
+		}
 	} else {
+		TSS_SET(conf_key, newconf);
 
 		peer_clear();
 		ACL_WRLOCK;
@@ -146,32 +173,53 @@ conf_load(void)
 		conf_line = 1;
 
 		conf_parse();
+		conf_dispose_input_file();
 		ACL_UNLOCK;
+
+		TSS_SET(conf_key, threadconf);
 
 		fclose(stream);
 
-		if (!conf.c_cold || conf.c_debug) {
+		if (!conf_cold || newconf->c_debug) {
 			(void)gettimeofday(&tv2, NULL);
 			timersub(&tv2, &tv1, &tv3);
 			mg_log(LOG_INFO,
 			    "%sloaded config file \"%s\" in %ld.%06lds", 
-			    conf.c_cold ? "" : "re", conffile, 
+			    conf_cold ? "" : "re", conffile, 
 			    tv3.tv_sec, tv3.tv_usec);
 		}
 	}
 
-	if (conf.c_cold) {
-		(void)gettimeofday(&conffile_modified, NULL);
-	} else {
-		CONF_WRLOCK;
-		--numb_of_conf_update_threads;
-		CONF_UNLOCK;
-	}
-
-	if (conf.c_debug || conf.c_acldebug)
+	/*
+	 * Dump the ACL for debugging purposes
+	 */
+	if (newconf->c_debug || newconf->c_acldebug)
 		acl_dump();
 
-	return;
+	CONF_LOCK;
+	assert(TAILQ_FIRST(&conf_list_head) == currconf);
+	if (currconf && --currconf->c_refcount == 0) {
+		TAILQ_REMOVE(&conf_list_head, currconf, c_chain);
+		free(currconf);
+	}
+	TAILQ_INSERT_HEAD(&conf_list_head, newconf, c_chain);
+	CONF_UNLOCK;
+
+#ifdef CONF_DEBUG
+	conf_dump();
+#endif
+	dump_conf_changed();
+	return NULL;
+}
+
+/* Functions other than main() must not invoke this */
+void
+conf_load(void) {
+	struct stat st;
+
+	if (stat(conffile, &st))
+		st.st_mtime = (time_t)0;
+	conf_load_internal(&st.st_mtime);
 }
 
 void
@@ -180,6 +228,7 @@ conf_update(void) {
 	pthread_t tid;
 	pthread_attr_t attr;
 	int error;
+	int need_update;
 	
 	if (stat(conffile, &st) != 0) {
 		mg_log(LOG_ERR, "config file \"%s\" unavailable", 
@@ -187,16 +236,15 @@ conf_update(void) {
 		return;
 	}
 
-	CONF_WRLOCK;
-	numb_of_conf_update_threads++;
-	if (st.st_mtime <= conffile_modified.tv_sec ||
-		numb_of_conf_update_threads > MAX_NUMB_OF_CONF_UPDATE_THREADS) {
-		--numb_of_conf_update_threads;
-		CONF_UNLOCK;
-		return;
-	}
-	conffile_modified.tv_sec = st.st_mtime;
+	CONF_LOCK;
+	while (conf_updating)
+		pthread_cond_wait(&conf_update_cond, &conf_lock);
+	conf_updating = need_update =
+		st.st_mtime > TAILQ_FIRST(&conf_list_head)->c_timestamp;
 	CONF_UNLOCK;
+
+	if (!need_update)
+		return;
 
 	/*
 	 * On some platforms, the thread stack limit is too low and
@@ -225,14 +273,8 @@ conf_update(void) {
 	}
 
 	if ((error = pthread_create(&tid, &attr, 
-	    (void *(*)(void *))conf_load, NULL)) != 0) {
+	    conf_load_internal, &st.st_mtime)) != 0) {
 		mg_log(LOG_ERR, "pthread_create failed: %s", 
-		    strerror(error));
-		exit(EX_OSERR);
-	}
-
-	if ((error = pthread_detach(tid)) != 0) {
-		mg_log(LOG_ERR, "pthread_detach failed: %s",
 		    strerror(error));
 		exit(EX_OSERR);
 	}
@@ -243,7 +285,83 @@ conf_update(void) {
 		exit(EX_OSERR);
 	}
 
+	if ((error = pthread_join(tid, NULL)) != 0) {
+		mg_log(LOG_ERR, "pthread_join failed: %s",
+		    strerror(error));
+		exit(EX_OSERR);
+	}
+
+	CONF_LOCK;
+	conf_updating = 0;
+	CONF_UNLOCK;
+	if ((error = pthread_cond_broadcast(&conf_update_cond)) != 0) {
+		mg_log(LOG_ERR, "pthread_cond_broadcast failed: %s", 
+		       strerror(error));
+		abort();
+	}
+
 	return;
+}
+
+void
+conf_retain(void) {
+	struct conf_rec *c;
+
+	if (GET_CONF()) {
+		mg_log(LOG_ERR, "%s:%d BUG: conf_retain called twice?",
+				__FILE__, __LINE__);
+		assert(0);
+	}
+
+	CONF_LOCK;
+	c = TAILQ_FIRST(&conf_list_head);
+#ifdef CONF_DEBUG
+	{
+		char textdate[DATELEN];
+		struct tm tm;
+		
+		localtime_r(&c->c_timestamp, &tm);
+		strftime(textdate, sizeof textdate, "%Y-%m-%d %T",  &tm);
+		mg_log(LOG_DEBUG, "conf_retain: stamp %s ref %d -> %d",
+		       textdate, c->c_refcount, c->c_refcount + 1);
+	}
+#endif
+	++c->c_refcount;
+	CONF_UNLOCK;
+
+	TSS_SET(conf_key, c);
+}
+
+void
+conf_release(void) {
+	struct conf_rec *c = GET_CONF();
+
+	if (!c) {
+		mg_log(LOG_ERR, "%s:%d BUG: conf_release before conf_retain",
+				__FILE__, __LINE__);
+		assert(0);
+		return;
+	}
+
+	CONF_LOCK;
+#ifdef CONF_DEBUG
+	{
+		char textdate[DATELEN];
+		struct tm tm;
+		
+		localtime_r(&c->c_timestamp, &tm);
+		strftime(textdate, sizeof textdate, "%Y-%m-%d %T",  &tm);
+		mg_log(LOG_DEBUG, "conf_release: stamp %s ref %d -> %d",
+		       textdate, c->c_refcount, c->c_refcount - 1);
+	}
+#endif
+	if (--c->c_refcount == 0) {
+		TAILQ_REMOVE(&conf_list_head, c, c_chain);
+		free(c);
+	}
+	CONF_UNLOCK;
+
+	TSS_SET(conf_key, NULL);
 }
 
 /*
@@ -268,9 +386,11 @@ quotepath(dst, path, len)
 
 void
 conf_defaults(c)
-	struct conf *c;
+	struct conf_rec *c;
 {
-	c->c_cold = 1;
+	c->c_refcount = -1;
+	c->c_timestamp = (time_t)0;
+
 	c->c_forced = C_GLNONE;
 	c->c_debug = 0;
 	c->c_acldebug = 0;

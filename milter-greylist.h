@@ -1,4 +1,5 @@
-/* $Id: milter-greylist.h,v 1.45 2006/08/27 20:54:41 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.46 2006/08/30 04:57:58 manu Exp $ */
+/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -201,6 +202,16 @@ size_t mystrlcat(char *, const char *src, size_t size);
 		exit(EX_SOFTWARE);					  \
 	}								  \
 }
+
+#define TSS_SET(key, val) do {						  \
+	int err;							  \
+									  \
+	if ((err = pthread_setspecific(key, val)) != 0) {		  \
+		mg_log(LOG_ERR, "%s:%d pthread_setspecific failed: %s",	  \
+		    __FILE__, __LINE__, strerror(err));			  \
+		exit(EX_SOFTWARE);					  \
+	}								  \
+} while (/*CONSTCOND*/ 0)
 
 /*
  * There is a bug in GNU pth-2.0.0 that will cause a spurious EPERM

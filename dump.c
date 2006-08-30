@@ -1,4 +1,5 @@
-/* $Id: dump.c,v 1.26 2006/08/27 20:54:41 manu Exp $ */
+/* $Id: dump.c,v 1.27 2006/08/30 04:57:58 manu Exp $ */
+/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +35,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.26 2006/08/27 20:54:41 manu Exp $");
+__RCSID("$Id: dump.c,v 1.27 2006/08/30 04:57:58 manu Exp $");
 #endif
 #endif
 
@@ -69,10 +70,27 @@ __RCSID("$Id: dump.c,v 1.26 2006/08/27 20:54:41 manu Exp $");
 #include "autowhite.h"
 #include "milter-greylist.h"
 
-pthread_cond_t dump_sleepflag;
+/*
+ * The dump_dirty indicates number of changes from the last dump, but
+ * inaccurately. This is something like a condition variable. If someone
+ * increments dump_dirty, it is ensured that the dumper updates the dump
+ * file in future, but not always immediately. Dumping might also occur
+ * even though unnecessary.
+ */
+
+static pthread_mutex_t dump_todo_lock = PTHREAD_MUTEX_INITIALIZER;
+static int dump_todo = 0;
+static pthread_cond_t dump_sleepflag;
+#define DUMP_TODO_CONF_UPDATE 0x1
+#define DUMP_TODO_FLUSH 0x2
+#define DUMP_TODO_TERMINATE 0x4
 
 int dump_parse(void);
-int dump_dirty = 0;
+void dump_dispose_input_file(void);
+static pthread_mutex_t dump_dirty_lock = PTHREAD_MUTEX_INITIALIZER;
+static int dump_dirty = 0;
+
+static pthread_t dumper_tid;
 
 void
 dump_init(void) {
@@ -89,10 +107,9 @@ dump_init(void) {
 
 void
 dumper_start(void) {
-	pthread_t tid;
 	int error;
 
-	if ((error = pthread_create(&tid, NULL, dumper, NULL)) != 0) {
+	if ((error = pthread_create(&dumper_tid, NULL, dumper, NULL)) != 0) {
 		mg_log(LOG_ERR,
 		    "cannot start dumper thread: %s", strerror(error));
 		exit(EX_OSERR);
@@ -105,58 +122,87 @@ void *
 dumper(dontcare) 
 	void *dontcare;
 {
-	int error;
-	pthread_mutex_t mutex;
+	struct conf_rec *confp;
+	struct timeval start;
 
-	if ((error = pthread_mutex_init(&mutex, NULL)) != 0) {
-		mg_log(LOG_ERR, "pthread_mutex_init failed: %s",
-		    strerror(error));
-		exit(EX_OSERR);
-	}
-
-	if ((error = pthread_mutex_lock(&mutex)) != 0) {
-		mg_log(LOG_ERR, "pthread_mutex_lock failed: %s", 
-		    strerror(error));
-		exit(EX_OSERR);
-	}
-
+	conf_retain();
+	confp = GET_CONF();
+	gettimeofday(&start, NULL);
 	for (;;) {
-		/* XXX Not really dynamically adjustable */
-		switch (conf.c_dumpfreq) {
-		case -1:
-			sleep(DUMPFREQ);
-			break;
+		int error;
+		int todo;
+		
+		pthread_mutex_lock(&dump_todo_lock);
+		while (dump_todo == 0 ||
+		       (confp->c_dumpfreq != 0 &&
+			dump_todo == DUMP_TODO_FLUSH)) {
+			if (confp->c_dumpfreq > 0) {
+				struct timeval now;
+				struct timespec timeout;
 
-		case 0:
-			if ((error = pthread_cond_wait(&dump_sleepflag, 
-			    &mutex)) != 0)
-			    mg_log(LOG_ERR, "pthread_cond_wait failed: %s",
-				strerror(error));
-			break;
-
-		default:
-			sleep(conf.c_dumpfreq);
-			break;
+				gettimeofday(&now, NULL);
+				timeout.tv_sec = now.tv_sec +
+					confp->c_dumpfreq - start.tv_sec;
+				timeout.tv_nsec =
+					(now.tv_usec - start.tv_usec) * 1000;
+				if (timeout.tv_nsec < 0) {
+					--timeout.tv_sec;
+					timeout.tv_nsec += 1000000000;
+				}
+				if (timeout.tv_sec < 0)
+					break;
+				error = pthread_cond_timedwait(&dump_sleepflag,
+							       &dump_todo_lock,
+							       &timeout);
+			} else {
+				error = pthread_cond_wait(&dump_sleepflag,
+							  &dump_todo_lock);
+			}
+			if (error != 0 && error != ETIMEDOUT) {
+				mg_log(LOG_ERR,
+				       "pthread_cond_(timed)wait failed: %s",
+				       strerror(error));
+				abort();
+			}
 		}
+		todo = (dump_todo & DUMP_TODO_CONF_UPDATE) ?
+			DUMP_TODO_CONF_UPDATE :
+			(dump_todo & DUMP_TODO_TERMINATE) ?
+			(DUMP_TODO_FLUSH | DUMP_TODO_TERMINATE):
+			DUMP_TODO_FLUSH;
+		dump_todo &= ~todo;
+		pthread_mutex_unlock(&dump_todo_lock);
 
 		/*
-		 * If there is no change to dump, go back to sleep
+		 * Since following operations require locking, so we do
+		 * them outside the above loop.
 		 */
-		if ((conf.c_dumpfreq == -1) || (dump_dirty == 0))
-			continue;
-
-		dump_perform();
+		switch (todo) {
+			case DUMP_TODO_CONF_UPDATE:
+				conf_release();
+				conf_retain();
+				confp = GET_CONF();
+				break;
+			case DUMP_TODO_FLUSH | DUMP_TODO_TERMINATE:
+				dump_perform(1);
+				break;
+			case DUMP_TODO_FLUSH:
+				dump_perform(0);
+				gettimeofday(&start, NULL);
+				break;
+		}
+		if (todo & DUMP_TODO_TERMINATE)
+			break;
 	}
-
-	/* NOTREACHED */
-	mg_log(LOG_ERR, "dumper unexpectedly exitted");
-	exit(EX_SOFTWARE);
+	conf_release();
 
 	return NULL;
 }
 
 void
-dump_perform(void) {
+dump_perform(final)
+	int final;
+{
 	FILE *dump;
 	int dumpfd;
 	struct timeval tv1, tv2, tv3;
@@ -165,20 +211,29 @@ dump_perform(void) {
 	int greylisted_count;
 	int whitelisted_count;
 	char *s_buffer = NULL;
+	int dirty;
+
+	pthread_mutex_lock(&dump_dirty_lock);
+	dirty = dump_dirty;
+	dump_dirty = 0;
+	pthread_mutex_unlock(&dump_dirty_lock);
+
+	if (final)
+		mg_log(LOG_INFO,
+		       dirty ? "Final database dump" :
+			       "Final database dump: no change to dump");
+
+	/*
+	 * If there is no change to dump, go back to sleep
+	 */
+	if (!dirty)
+		return;
 
 	if (conf.c_debug) {
 		(void)gettimeofday(&tv1, NULL);
 		mg_log(LOG_DEBUG, "dumping %d modifications", 
-		    dump_dirty);
+		    dirty);
 	}
-
-	/* 
-	 * dump_dirty is not protected by a lock,
-	 * hence it could be modified between the 
-	 * display and the actual dump. This debug
-	 * message does not give an accurate information
-	 */
-	dump_dirty = 0;
 
 	/* 
 	 * Dump the database in a temporary file and 
@@ -253,19 +308,23 @@ dump_reload(void) {
 		mg_log(LOG_ERR, "starting with an empty greylist");
 	} else {
 		dump_in = dump;
-		PENDING_WRLOCK;
-		AUTOWHITE_WRLOCK;
+		PENDING_LOCK;
+		AUTOWHITE_LOCK;
+
 		dump_parse();
+		dump_dispose_input_file();
+
+		AUTOWHITE_UNLOCK;
+		PENDING_UNLOCK;
+		fclose(dump);
 
 		/* 
 		 * dump_dirty has been bumped on each pending_get call,
 		 * whereas there is nothing to flush. Fix that.
 		 */
+		pthread_mutex_lock(&dump_dirty_lock);
 		dump_dirty = 0;
-
-		AUTOWHITE_UNLOCK;
-		PENDING_UNLOCK;
-		fclose(dump);
+		pthread_mutex_unlock(&dump_dirty_lock);
 	}
 
 	return;
@@ -275,6 +334,9 @@ void
 dump_flush(void) {
 	int error;
 
+	pthread_mutex_lock(&dump_todo_lock);
+	dump_todo |= DUMP_TODO_FLUSH;
+	pthread_mutex_unlock(&dump_todo_lock);
 	if ((error = pthread_cond_signal(&dump_sleepflag)) != 0) {
 		mg_log(LOG_ERR, "cannot wakeup dumper: %s", strerror(error));
 		exit(EX_SOFTWARE);
@@ -300,6 +362,47 @@ dump_header(stream)
 	    PACKAGE_VERSION, textdate);
 	fprintf(stream, "# DO NOT EDIT while milter-greylist is running, "
 	    "changes will be overwritten.\n#\n");
+
+	return;
+}
+
+void
+dump_touch(n_modifications)
+	int n_modifications;
+{
+	if (n_modifications) {
+		pthread_mutex_lock(&dump_dirty_lock);
+		dump_dirty += n_modifications;
+		pthread_mutex_unlock(&dump_dirty_lock);
+	}
+
+	return;
+}
+
+void
+dump_conf_changed(void) {
+	pthread_mutex_lock(&dump_todo_lock);
+	dump_todo |= DUMP_TODO_CONF_UPDATE;
+	pthread_mutex_unlock(&dump_todo_lock);
+	pthread_cond_signal(&dump_sleepflag);
+
+	return;
+}
+
+void
+dumper_stop(void) {
+	int error;
+
+	pthread_mutex_lock(&dump_todo_lock);
+	dump_todo |= DUMP_TODO_TERMINATE;
+	pthread_mutex_unlock(&dump_todo_lock);
+	pthread_cond_signal(&dump_sleepflag);
+
+	if ((error = pthread_join(dumper_tid, NULL)) != 0) {
+		mg_log(LOG_ERR, "pthread_join failed: %s",
+		    strerror(error));
+		exit(EX_OSERR);
+	}
 
 	return;
 }

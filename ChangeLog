@@ -1,5 +1,6 @@
 3.0a5
 	Build fix on Tru64, fix MX sync (Attila Bruncsak)
+	Fix various race conditions (AIDA Shinra)
 3.0a4
 	IPv6 and build fixes (Hajimu UMEMOTO)
 3.0a3

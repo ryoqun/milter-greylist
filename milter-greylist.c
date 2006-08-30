@@ -1,4 +1,5 @@
-/* $Id: milter-greylist.c,v 1.133 2006/08/28 22:28:35 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.134 2006/08/30 04:57:58 manu Exp $ */
+/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +35,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.133 2006/08/28 22:28:35 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.134 2006/08/30 04:57:58 manu Exp $");
 #endif
 #endif
 
@@ -93,6 +94,13 @@ static void writepid(char *);
 static void log_and_report_greylisting(SMFICTX *, struct mlfi_priv *, char *);
 static void reset_acl_values(struct mlfi_priv *);
 
+static sfsistat real_connect(SMFICTX *, char *, _SOCK_ADDR *);
+static sfsistat real_helo(SMFICTX *, char *);
+static sfsistat real_envfrom(SMFICTX *, char **);
+static sfsistat real_envrcpt(SMFICTX *, char **);
+static sfsistat real_eom(SMFICTX *);
+static sfsistat real_close(SMFICTX *);
+
 struct smfiDesc smfilter =
 {
 	"greylist",	/* filter name */
@@ -110,8 +118,91 @@ struct smfiDesc smfilter =
 	mlfi_close,	/* connection cleanup */
 };
 
+static int nodetach = 0;
+
 sfsistat
 mlfi_connect(ctx, hostname, addr)
+	SMFICTX *ctx;
+	char *hostname;
+	_SOCK_ADDR *addr;
+{
+	sfsistat r;
+
+	conf_retain();
+	r = real_connect(ctx, hostname, addr);
+	conf_release();
+	return r;
+}
+
+sfsistat
+mlfi_helo(ctx, helostr)
+	SMFICTX *ctx;
+	char *helostr;
+{
+	sfsistat r;
+
+	conf_retain();
+	r = real_helo(ctx, helostr);
+	conf_release();
+	return r;
+}
+
+sfsistat
+mlfi_envfrom(ctx, envfrom)
+	SMFICTX *ctx;
+	char **envfrom;
+{
+	sfsistat r;
+
+	/*
+	 * Reload the config file if it has been touched
+	 */
+	conf_update();
+	conf_retain();
+	r = real_envfrom(ctx, envfrom);
+	conf_release();
+	return r;
+}
+
+sfsistat
+mlfi_envrcpt(ctx, envrcpt)
+	SMFICTX *ctx;
+	char **envrcpt;
+{
+	sfsistat r;
+
+	conf_retain();
+	r = real_envrcpt(ctx, envrcpt);
+	conf_release();
+	return r;
+}
+
+sfsistat
+mlfi_eom(ctx)
+	SMFICTX *ctx;
+{
+	sfsistat r;
+
+	conf_retain();
+	r = real_eom(ctx);
+	conf_release();
+	return r;
+}
+
+sfsistat
+mlfi_close(ctx)
+	SMFICTX *ctx;
+{
+	sfsistat r;
+
+	conf_retain();
+	r = real_close(ctx);
+	conf_release();
+	return r;
+}
+
+static sfsistat
+real_connect(ctx, hostname, addr)
 	SMFICTX *ctx;
 	char *hostname;
 	_SOCK_ADDR *addr;
@@ -163,8 +254,8 @@ mlfi_connect(ctx, hostname, addr)
 	return SMFIS_CONTINUE;
 }
 
-sfsistat
-mlfi_helo(ctx, helostr)
+static sfsistat
+real_helo(ctx, helostr)
 	SMFICTX *ctx;
 	char *helostr;
 {
@@ -182,8 +273,8 @@ mlfi_helo(ctx, helostr)
 }
 
 
-sfsistat
-mlfi_envfrom(ctx, envfrom)
+static sfsistat
+real_envfrom(ctx, envfrom)
 	SMFICTX *ctx;
 	char **envfrom;
 {
@@ -218,11 +309,6 @@ mlfi_envfrom(ctx, envfrom)
 
 	strncpy(priv->priv_from, idx, ADDRLEN);
 	priv->priv_from[ADDRLEN] = '\0';
-
-	/*
-	 * Reload the config file if it has been touched
-	 */
-	conf_update();
 
 	/*
 	 * Is the sender non-IP?
@@ -285,8 +371,8 @@ mlfi_envfrom(ctx, envfrom)
 	return SMFIS_CONTINUE;
 }
 
-sfsistat
-mlfi_envrcpt(ctx, envrcpt)
+static sfsistat
+real_envrcpt(ctx, envrcpt)
 	SMFICTX *ctx;
 	char **envrcpt;
 {
@@ -465,8 +551,8 @@ mlfi_envrcpt(ctx, envrcpt)
 	return SMFIS_TEMPFAIL;
 }
 
-sfsistat
-mlfi_eom(ctx)
+static sfsistat
+real_eom(ctx)
 	SMFICTX *ctx;
 {
 	struct mlfi_priv *priv;
@@ -621,8 +707,8 @@ mlfi_eom(ctx)
 	return SMFIS_CONTINUE;
 }
 
-sfsistat
-mlfi_close(ctx)
+static sfsistat
+real_close(ctx)
 	SMFICTX *ctx;
 {
 	struct mlfi_priv *priv;
@@ -641,8 +727,7 @@ mlfi_close(ctx)
 	/*
 	 * If we need to dump on each change and something changed, dump
 	 */
-	if ((dump_dirty != 0) && (conf.c_dumpfreq == 0))
-		dump_flush();
+	dump_flush();
 
 	return SMFIS_CONTINUE;
 }
@@ -656,11 +741,14 @@ main(argc, argv)
 {
 	int ch;
 	int checkonly = 0;
+	int exitval;
+
+	openlog("milter-greylist", LOG_PERROR, LOG_MAIL);
+
 	/*
 	 * Load configuration defaults
 	 */
 	conf_defaults(&defconf);
-	memcpy(&conf, &defconf, sizeof(conf));
 
 	/* 
 	 * Process command line options 
@@ -879,17 +967,15 @@ main(argc, argv)
 	 * can access the list yet.
 	 */
 	conf_load();
-
 	if (checkonly) {
 		mg_log(LOG_INFO, "config file \"%s\" is okay", conffile);
 		exit(EX_OK);
 	}
+	conf_retain();
+	nodetach = conf.c_nodetach;
 
 	openlog("milter-greylist", 0, LOG_MAIL);
-
-	conf.c_cold = 0;
-	defconf.c_cold = 0;
-
+	conf_cold = 0;
 	
 	if (conf.c_socket == NULL) {
 		mg_log(LOG_ERR, "%s: No socket provided, exiting", argv[0]);
@@ -1007,24 +1093,14 @@ main(argc, argv)
 	sync_sender_start();
 
 	/*
-	 * Install an atexit() callback to perform
-	 * a dump when milter-greylist exits.
-	 */
-	if (atexit(*final_dump) != 0) {
-		mg_log(LOG_ERR, "atexit() failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}	
-
-	/*
-	 * Dump the ACL for debugging purposes
-	 */
-	if (conf.c_debug || conf.c_acldebug)
-		acl_dump();
-
-	/*
 	 * Here we go!
 	 */
-	return smfi_main();
+	conf_release();
+	exitval = smfi_main();
+	mg_log(LOG_ERR, "smfi_main() returned %d", exitval);
+	
+	dumper_stop();
+	return exitval;
 }
 
 void
@@ -1316,20 +1392,6 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	return;
 }
 
-void
-final_dump(void) {
-
-	if (dump_dirty != 0) {
-		mg_log(LOG_INFO, "Final database dump");
-		dump_perform();
-	} else {
-		mg_log(LOG_INFO, "Final database dump: no change to dump");
-	}
-
-	mg_log(LOG_INFO, "Exiting");
-	return;
-}
-
 #ifdef	USE_DRAC
 static int
 check_drac(dotted_ip)
@@ -1450,12 +1512,12 @@ mg_log(int level, char *fmt, ...) {
 
 	va_start(ap, fmt);
 
-	if (conf.c_cold || conf.c_nodetach) {
+	if (conf_cold || nodetach) {
 		vfprintf(stderr, fmt, ap);
 		fprintf(stderr, "\n");
 	}
 
-	if (!conf.c_cold)
+	if (!conf_cold)
 		vsyslog(level, fmt, ap);
 
 	va_end(ap);

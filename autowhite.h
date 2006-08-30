@@ -1,4 +1,5 @@
-/* $Id: autowhite.h,v 1.20 2006/08/20 05:53:26 manu Exp $ */
+/* $Id: autowhite.h,v 1.21 2006/08/30 04:57:58 manu Exp $ */
+/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -42,10 +43,6 @@
 #define AUTOWHITE_BUCKETS 512
 #endif
 
-#define AUTOWHITE_WRLOCK WRLOCK(autowhite_lock) 
-#define AUTOWHITE_RDLOCK RDLOCK(autowhite_lock) 
-#define AUTOWHITE_UNLOCK UNLOCK(autowhite_lock)
-
 TAILQ_HEAD(autowhitelist, autowhite);
 
 struct autowhite {
@@ -59,12 +56,12 @@ struct autowhite {
 };
 
 struct autowhite_bucket {
-	pthread_mutex_t	bucket_mtx;
 	TAILQ_HEAD(, autowhite) b_autowhite_head;
 };
 
-extern pthread_rwlock_t autowhite_lock;
-extern pthread_mutex_t autowhite_change_lock;
+#define AUTOWHITE_LOCK pthread_mutex_lock(&autowhite_lock)
+#define AUTOWHITE_UNLOCK pthread_mutex_unlock(&autowhite_lock)
+extern pthread_mutex_t autowhite_lock;
 
 void autowhite_init(void);
 struct autowhite *autowhite_get(struct sockaddr *, socklen_t, char *, char *,
