@@ -1,5 +1,4 @@
-/* $Id: dump.c,v 1.27 2006/08/30 04:57:58 manu Exp $ */
-/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
+/* $Id: dump.c,v 1.28 2006/08/30 20:50:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -35,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.27 2006/08/30 04:57:58 manu Exp $");
+__RCSID("$Id: dump.c,v 1.28 2006/08/30 20:50:42 manu Exp $");
 #endif
 #endif
 

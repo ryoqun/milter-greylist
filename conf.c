@@ -1,5 +1,4 @@
-/* $Id: conf.c,v 1.41 2006/08/30 04:57:58 manu Exp $ */
-/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
+/* $Id: conf.c,v 1.42 2006/08/30 20:50:42 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -35,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.41 2006/08/30 04:57:58 manu Exp $");
+__RCSID("$Id: conf.c,v 1.42 2006/08/30 20:50:42 manu Exp $");
 #endif
 #endif
 
@@ -71,6 +70,8 @@ __RCSID("$Id: conf.c,v 1.41 2006/08/30 04:57:58 manu Exp $");
 #include "sync.h"
 #include "pending.h"
 #include "dump.h"
+#include "list.h"
+#include "macro.h"
 #include "milter-greylist.h"
 
 /* #define CONF_DEBUG */
@@ -154,11 +155,11 @@ conf_load_internal(timestamp)
 		    conf_cold ? "" : "re", conffile);
 
 	if ((stream = fopen(conffile, "r")) == NULL) {
-		if (conf_cold) {
-			mg_log(LOG_ERR, "cannot open config file %s: %s", 
-			    conffile, strerror(errno));
-			mg_log(LOG_ERR, "continuing with no exception list");
-		}
+		mg_log(LOG_ERR, "cannot open config file %s: %s", 
+		    conffile, strerror(errno));
+
+		if (conf_cold)
+			exit(EX_OSERR);
 	} else {
 		TSS_SET(conf_key, newconf);
 
@@ -167,6 +168,8 @@ conf_load_internal(timestamp)
 #ifdef USE_DNSRBL
 		dnsrbl_clear();
 #endif
+		all_list_clear();
+		macro_clear();
 		acl_clear();
 
 		conf_in = stream;
