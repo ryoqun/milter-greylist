@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.136 2006/08/31 09:34:12 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.137 2006/08/31 13:51:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.136 2006/08/31 09:34:12 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.137 2006/08/31 13:51:17 manu Exp $");
 #endif
 #endif
 
@@ -741,8 +741,6 @@ main(argc, argv)
 	int ch;
 	int checkonly = 0;
 	int exitval;
-
-	openlog("milter-greylist", LOG_PERROR, LOG_MAIL);
 
 	/*
 	 * Load configuration defaults
