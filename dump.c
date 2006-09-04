@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.28 2006/08/30 20:50:42 manu Exp $ */
+/* $Id: dump.c,v 1.29 2006/09/04 21:28:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.28 2006/08/30 20:50:42 manu Exp $");
+__RCSID("$Id: dump.c,v 1.29 2006/09/04 21:28:18 manu Exp $");
 #endif
 #endif
 
@@ -136,20 +136,11 @@ dumper(dontcare)
 		       (confp->c_dumpfreq != 0 &&
 			dump_todo == DUMP_TODO_FLUSH)) {
 			if (confp->c_dumpfreq > 0) {
-				struct timeval now;
 				struct timespec timeout;
 
-				gettimeofday(&now, NULL);
-				timeout.tv_sec = now.tv_sec +
-					confp->c_dumpfreq - start.tv_sec;
-				timeout.tv_nsec =
-					(now.tv_usec - start.tv_usec) * 1000;
-				if (timeout.tv_nsec < 0) {
-					--timeout.tv_sec;
-					timeout.tv_nsec += 1000000000;
-				}
-				if (timeout.tv_sec < 0)
-					break;
+				timeout.tv_sec = start.tv_sec +
+					confp->c_dumpfreq;
+				timeout.tv_nsec = start.tv_usec * 1000;
 				error = pthread_cond_timedwait(&dump_sleepflag,
 							       &dump_todo_lock,
 							       &timeout);
@@ -157,7 +148,9 @@ dumper(dontcare)
 				error = pthread_cond_wait(&dump_sleepflag,
 							  &dump_todo_lock);
 			}
-			if (error != 0 && error != ETIMEDOUT) {
+			if (error == ETIMEDOUT) {
+				break;
+			} else if (error != 0) {
 				mg_log(LOG_ERR,
 				       "pthread_cond_(timed)wait failed: %s",
 				       strerror(error));
@@ -182,9 +175,11 @@ dumper(dontcare)
 				conf_retain();
 				confp = GET_CONF();
 				break;
+#ifndef WORKAROUND_LIBMILTER_RACE_CONDITION
 			case DUMP_TODO_FLUSH | DUMP_TODO_TERMINATE:
 				dump_perform(1);
 				break;
+#endif
 			case DUMP_TODO_FLUSH:
 				dump_perform(0);
 				gettimeofday(&start, NULL);

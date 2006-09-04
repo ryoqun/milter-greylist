@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.33 2006/08/27 20:54:40 manu Exp $ */
+/* $Id: acl.c,v 1.34 2006/09/04 21:28:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.33 2006/08/27 20:54:40 manu Exp $");
+__RCSID("$Id: acl.c,v 1.34 2006/09/04 21:28:18 manu Exp $");
 #endif
 #endif
 
@@ -514,7 +514,8 @@ acl_register_entry_last(acl_type)	/* acllist must be write-locked */
 }
 
 int 
-acl_filter(priv, rcpt)
+acl_filter(ctx, priv, rcpt)
+	SMFICTX *ctx;
 	struct mlfi_priv *priv;
 	char *rcpt;
 {
@@ -665,6 +666,20 @@ acl_filter(priv, rcpt)
 			}
 		}
 #endif
+		if (acl->a_macrolist != NULL) {
+			if (list_macro_filter(acl->a_macrolist, ctx)) {
+				retval |= EXF_MACRO;
+			} else {
+				continue;
+			}
+		}
+		if (acl->a_macro != NULL) {
+			if (macro_check(ctx, acl->a_macro) == 0) {
+				retval |= EXF_MACRO;
+			} else {
+				continue;
+			}
+		}
 		/*
 		 * We found an entry that matches, exit the evaluation
 		 * loop
@@ -772,6 +787,11 @@ acl_filter(priv, rcpt)
 		if (retval & EXF_RCPT) {
 			snprintf(tmpstr, sizeof(tmpstr),
 			     "recipient %s is whitelisted", rcpt);
+			ADD_REASON(whystr, tmpstr);
+		}
+		if (retval & EXF_MACRO) {
+			snprintf(tmpstr, sizeof(tmpstr),
+			     "macro rule is satisfied");
 			ADD_REASON(whystr, tmpstr);
 		}
 		if (retval & EXF_DEFAULT) {

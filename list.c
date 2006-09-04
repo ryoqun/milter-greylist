@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.9 2006/08/27 20:54:41 manu Exp $ */
+/* $Id: list.c,v 1.10 2006/09/04 21:28:18 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.9 2006/08/27 20:54:41 manu Exp $");
+__RCSID("$Id: list.c,v 1.10 2006/09/04 21:28:18 manu Exp $");
 #endif
 #endif
 
@@ -455,7 +455,7 @@ list_macro_filter(list, ctx)
 	struct list_entry *le;
 
 	LIST_FOREACH(le, &list->al_head, l_list) {
-		if (macro_check(ctx, le->l_data.macro) == 1)
+		if (macro_check(ctx, le->l_data.macro) == 0)
 			break;
 	}
 

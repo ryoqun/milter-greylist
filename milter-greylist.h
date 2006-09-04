@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.46 2006/08/30 04:57:58 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.47 2006/09/04 21:28:18 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
@@ -267,6 +267,18 @@ size_t mystrlcat(char *, const char *src, size_t size);
 			mystrlcat(whystr, ", ", sizeof(whystr));	\
 		mystrlcat(whystr, reason, sizeof(whystr));		\
 	}
+
+/*
+ * Due to race conditions in the libmilter shipped with sendmail <= 8.13.8,
+ * the whole process may die after receiving a signal.
+ * It makes impossible the final dump. Apply the following patch ASAP:
+ * http://www.j10n.org/files/libmilter-8.13.8-signal.patch
+ *
+ * If you don't want to apply it, the following knob enables an uncertain
+ * effort to workaround the bug. Do not ask me about this.
+ * 
+ */
+/* #define WORKAROUND_LIBMILTER_RACE_CONDITION */
 
 #endif /* _MILTER_GREYLIST_H_ */
 

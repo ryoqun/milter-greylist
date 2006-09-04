@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.12 2006/08/27 16:02:25 manu Exp $ */
+/* $Id: acl.h,v 1.13 2006/09/04 21:28:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -131,7 +131,7 @@ void acl_add_dnsrbl(char *);
 void acl_add_macro(char *);
 struct acl_entry *acl_register_entry_first (acl_type_t);
 struct acl_entry *acl_register_entry_last (acl_type_t);
-int acl_filter(struct mlfi_priv *, char *);
+int acl_filter(SMFICTX *, struct mlfi_priv *, char *);
 char *acl_entry(struct acl_entry  *);
 void acl_dump(void);
 int emailcmp(char *, char *);        
@@ -157,4 +157,5 @@ int domaincmp(char *, char *);
 #define EXF_DRAC	(1 << 14)
 #define EXF_DNSRBL	(1 << 15)
 #define EXF_BLACKLIST	(1 << 16)
+#define EXF_MACRO	(1 << 17)
 #endif /* _ACL_H_ */

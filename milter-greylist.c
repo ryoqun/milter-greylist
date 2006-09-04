@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.137 2006/08/31 13:51:17 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.138 2006/09/04 21:28:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.137 2006/08/31 13:51:17 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.138 2006/09/04 21:28:18 manu Exp $");
 #endif
 #endif
 
@@ -51,6 +51,7 @@ __RCSID("$Id: milter-greylist.c,v 1.137 2006/08/31 13:51:17 manu Exp $");
 #include <grp.h>
 #include <unistd.h>
 #include <stdarg.h>
+#include <signal.h>
 
 /* On IRIX, <unistd.h> defines a EX_OK that clashes with <sysexits.h> */
 #ifdef EX_OK
@@ -412,6 +413,7 @@ real_envrcpt(ctx, envrcpt)
 	    (priv->priv_whitelist & EXF_NONIP) ||
 	    (priv->priv_whitelist & EXF_DRAC) ||
 	    (priv->priv_whitelist & EXF_ACCESSDB) ||
+	    (priv->priv_whitelist & EXF_MACRO) ||
 	    (priv->priv_whitelist & EXF_STARTTLS))
 		return SMFIS_CONTINUE;
 
@@ -457,7 +459,7 @@ real_envrcpt(ctx, envrcpt)
 	 * Check the ACL
 	 */
 	reset_acl_values(priv);
-	if ((priv->priv_whitelist = acl_filter(priv, rcpt)) & EXF_WHITELIST) {
+	if ((priv->priv_whitelist = acl_filter(ctx, priv, rcpt)) & EXF_WHITELIST) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -741,6 +743,7 @@ main(argc, argv)
 	int ch;
 	int checkonly = 0;
 	int exitval;
+	sigset_t set;
 
 	/*
 	 * Load configuration defaults
@@ -1079,6 +1082,16 @@ main(argc, argv)
 	}
 
 	/*
+	 * Block signals before all other threads start.
+	 * The libmilter watches them and returns from smfi_main() if got.
+	 */
+	sigemptyset(&set);
+	sigaddset(&set, SIGHUP);
+	sigaddset(&set, SIGTERM);
+	sigaddset(&set, SIGINT);
+	pthread_sigmask(SIG_BLOCK, &set, NULL);
+
+	/*
 	 * Start the dumper thread
 	 */
 	dumper_start();
@@ -1096,7 +1109,16 @@ main(argc, argv)
 	exitval = smfi_main();
 	mg_log(LOG_ERR, "smfi_main() returned %d", exitval);
 	
+#ifdef WORKAROUND_LIBMILTER_RACE_CONDITION
+	signal(SIGSEGV, SIG_IGN);
+	signal(SIGBUS, SIG_IGN);
+	signal(SIGABRT, SIG_IGN);
+	conf_retain();
+	dump_perform(1);
+	conf_release();
+#else
 	dumper_stop();
+#endif
 	return exitval;
 }
 

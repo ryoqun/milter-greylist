@@ -1,4 +1,6 @@
-3.0a6
+3.1.1
+	Fix various race conditions (AIDA Shinra)
+	Fix big bugs in macro support (AIDA Shinra)
 	Fix build warning on Tru64
 	Build fix on Solaris
 3.0a5
