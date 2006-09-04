@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.59 2006/08/30 04:57:58 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.59.2.1 2006/09/04 22:05:58 manu Exp $");
 #endif
 #endif
 
@@ -248,18 +248,18 @@ delayedreject:	DELAYEDREJECT	{ conf.c_delayedreject = 1; }
 	;
 testmode:	TESTMODE{ if (C_NOTFORCED(C_TESTMODE)) conf.c_testmode = 1; }
 	;
-nodetach:	NODETACH{ if (C_NOTFORCED(C_NODETACH)) conf.c_nodetach = 1; }
+nodetach:	NODETACH{ if (C_NOTFORCED(C_NODETACH)) conf_nodetach = 1; }
 	;
 lazyaw:		LAZYAW	{ if (C_NOTFORCED(C_LAZYAW)) conf.c_lazyaw = 1; }
 	;
 pidfile:	PIDFILE QSTRING	{ if (C_NOTFORCED(C_PIDFILE)) 
 					conf.c_pidfile = 
-					    quotepath(conf.c_pidfile_storage, $2, QSTRLEN);
+					    quotepath(c_pidfile, $2, QSTRLEN);
 				}
 	;
 dumpfile:	GLDUMPFILE QSTRING{ if (C_NOTFORCED(C_DUMPFILE)) 
 					conf.c_dumpfile = 
-					    quotepath(conf.c_dumpfile_storage, $2, QSTRLEN);
+					    quotepath(c_dumpfile, $2, QSTRLEN);
 				}
 	;
 subnetmatch:	SUBNETMATCH CIDR{ if (C_NOTFORCED(C_MATCHMASK))
@@ -278,12 +278,12 @@ subnetmatch6:	SUBNETMATCH6 CIDR{
 	;
 socket:		SOCKET QSTRING	{ if (C_NOTFORCED(C_SOCKET)) 
 					conf.c_socket = 
-					    quotepath(conf.c_socket_storage, $2, QSTRLEN);
+					    quotepath(c_socket, $2, QSTRLEN);
 				}
 	;
 user:		USER QSTRING	{ if (C_NOTFORCED(C_USER))
 					conf.c_user =
-					    quotepath(conf.c_user_storage, $2, QSTRLEN);
+					    quotepath(c_user, $2, QSTRLEN);
 				}
 	;	
 report:		REPORT NONE	{ conf.c_report = C_GLNONE; }
@@ -310,22 +310,22 @@ syncaddr:	SYNCADDR STAR	{
 				   conf.c_syncport = NULL;
 				}
 	|	SYNCADDR IPADDR	{
-				if (IP4TOSTRING($2, conf.c_syncaddr_storage) == NULL) {
+				if (IP4TOSTRING($2, c_syncaddr) == NULL) {
 					mg_log(LOG_ERR, "invalid IPv4 address "
 					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
-				conf.c_syncaddr = conf.c_syncaddr_storage;
+				conf.c_syncaddr = c_syncaddr;
 				conf.c_syncport = NULL;
 	                        }
 	|	SYNCADDR IP6ADDR {
 #ifdef AF_INET6
-				if (IP6TOSTRING($2, conf.c_syncaddr_storage) == NULL) {
+				if (IP6TOSTRING($2, c_syncaddr) == NULL) {
 					mg_log(LOG_ERR, "invalid IPv6 address "
 					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
-				conf.c_syncaddr = conf.c_syncaddr_storage;
+				conf.c_syncaddr = c_syncaddr;
 				conf.c_syncport = NULL;
 #else /* AF_INET6 */
 				mg_log(LOG_INFO, "IPv6 is not supported, "
@@ -334,30 +334,30 @@ syncaddr:	SYNCADDR STAR	{
 				}
 	|	SYNCADDR STAR PORT TNUMBER {
 				conf.c_syncaddr = NULL;
-				conf.c_syncport = conf.c_syncport_storage;
+				conf.c_syncport = c_syncport;
 				strncpy(conf.c_syncport, $4, NUMLEN);
 				conf.c_syncport[NUMLEN] = '\0';
 				}
 	|	SYNCADDR IPADDR PORT TNUMBER {
-				if (IP4TOSTRING($2, conf.c_syncaddr_storage) == NULL) {
+				if (IP4TOSTRING($2, c_syncaddr) == NULL) {
 					mg_log(LOG_ERR, "invalid IPv4 address "
 					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
-				conf.c_syncaddr = conf.c_syncaddr_storage;
-				conf.c_syncport = conf.c_syncport_storage;
+				conf.c_syncaddr = c_syncaddr;
+				conf.c_syncport = c_syncport;
 				strncpy(conf.c_syncport, $4, NUMLEN);
 				conf.c_syncport[NUMLEN] = '\0';
 				}
 	|	SYNCADDR IP6ADDR PORT TNUMBER {
 #ifdef AF_INET6
-				if (IP6TOSTRING($2, conf.c_syncaddr_storage) == NULL) {
+				if (IP6TOSTRING($2, c_syncaddr) == NULL) {
 					mg_log(LOG_ERR, "invalid IPv6 address "
 					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
-				conf.c_syncaddr = conf.c_syncaddr_storage;
-				conf.c_syncport = conf.c_syncport_storage;
+				conf.c_syncaddr = c_syncaddr;
+				conf.c_syncport = c_syncport;
 				strncpy(conf.c_syncport, $4, NUMLEN);
 				conf.c_syncport[NUMLEN] = '\0';
 #else /* AF_INET6 */
@@ -372,22 +372,22 @@ syncsrcaddr:	SYNCSRCADDR STAR	{
 				   conf.c_syncsrcport = NULL;
 				}
 	|	SYNCSRCADDR IPADDR	{
-				if (IP4TOSTRING($2, conf.c_syncsrcaddr_storage) == NULL) {
+				if (IP4TOSTRING($2, c_syncsrcaddr) == NULL) {
 					mg_log(LOG_ERR, "invalid IPv4 address "
 					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
-				conf.c_syncsrcaddr = conf.c_syncsrcaddr_storage;
+				conf.c_syncsrcaddr = c_syncsrcaddr;
 				conf.c_syncsrcport = NULL;
 	                        }
 	|	SYNCSRCADDR IP6ADDR {
 #ifdef AF_INET6
-				if (IP6TOSTRING($2, conf.c_syncsrcaddr_storage) == NULL) {
+				if (IP6TOSTRING($2, c_syncsrcaddr) == NULL) {
 					mg_log(LOG_ERR, "invalid IPv6 address "
 					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
-				conf.c_syncsrcaddr = conf.c_syncsrcaddr_storage;
+				conf.c_syncsrcaddr = c_syncsrcaddr;
 				conf.c_syncsrcport = NULL;
 #else /* AF_INET6 */
 				mg_log(LOG_INFO, "IPv6 is not supported, "
@@ -396,30 +396,30 @@ syncsrcaddr:	SYNCSRCADDR STAR	{
 				}
 	|	SYNCSRCADDR STAR PORT TNUMBER {
 				conf.c_syncsrcaddr = NULL;
-				conf.c_syncsrcport = conf.c_syncsrcport_storage;
+				conf.c_syncsrcport = c_syncsrcport;
 				strncpy(conf.c_syncsrcport, $4, NUMLEN);
 				conf.c_syncsrcport[NUMLEN] = '\0';
 				}
 	|	SYNCSRCADDR IPADDR PORT TNUMBER {
-				if (IP4TOSTRING($2, conf.c_syncsrcaddr_storage) == NULL) {
+				if (IP4TOSTRING($2, c_syncsrcaddr) == NULL) {
 					mg_log(LOG_ERR, "invalid IPv4 address "
 					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
-				conf.c_syncsrcaddr = conf.c_syncsrcaddr_storage;
-				conf.c_syncsrcport = conf.c_syncsrcport_storage;
+				conf.c_syncsrcaddr = c_syncsrcaddr;
+				conf.c_syncsrcport = c_syncsrcport;
 				strncpy(conf.c_syncsrcport, $4, NUMLEN);
 				conf.c_syncsrcport[NUMLEN] = '\0';
 				}
 	|	SYNCSRCADDR IP6ADDR PORT TNUMBER {
 #ifdef AF_INET6
-				if (IP6TOSTRING($2, conf.c_syncsrcaddr_storage) == NULL) {
+				if (IP6TOSTRING($2, c_syncsrcaddr) == NULL) {
 					mg_log(LOG_ERR, "invalid IPv6 address "
 					    "line %d", conf_line);
 					exit(EX_DATAERR);
 				}
-				conf.c_syncsrcaddr = conf.c_syncsrcaddr_storage;
-				conf.c_syncsrcport = conf.c_syncsrcport_storage;
+				conf.c_syncsrcaddr = c_syncsrcaddr;
+				conf.c_syncsrcport = c_syncsrcport;
 				strncpy(conf.c_syncsrcport, $4, NUMLEN);
 				conf.c_syncsrcport[NUMLEN] = '\0';
 #else /* AF_INET6 */
@@ -576,7 +576,7 @@ netblock_clause:	ADDR IPADDR CIDR {
 dracdb:			DRAC DB QSTRING	{ 
 #ifdef USE_DRAC
 				conf.c_dracdb = 
-					    quotepath(conf.c_dracdb_storage, $3, QSTRLEN);
+					    quotepath(c_dracdb, $3, QSTRLEN);
 #else
 				mg_log(LOG_INFO, "DRAC support not compiled "
 				    "in line %d", conf_line);

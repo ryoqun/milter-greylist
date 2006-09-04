@@ -1,5 +1,4 @@
-/* $Id: milter-greylist.h,v 1.47 2006/09/04 21:28:18 manu Exp $ */
-/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
+/* $Id: milter-greylist.h,v 1.46.2.1 2006/09/04 22:05:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -203,16 +202,6 @@ size_t mystrlcat(char *, const char *src, size_t size);
 	}								  \
 }
 
-#define TSS_SET(key, val) do {						  \
-	int err;							  \
-									  \
-	if ((err = pthread_setspecific(key, val)) != 0) {		  \
-		mg_log(LOG_ERR, "%s:%d pthread_setspecific failed: %s",	  \
-		    __FILE__, __LINE__, strerror(err));			  \
-		exit(EX_SOFTWARE);					  \
-	}								  \
-} while (/*CONSTCOND*/ 0)
-
 /*
  * There is a bug in GNU pth-2.0.0 that will cause a spurious EPERM
  * error when a thread releases a read lock that has been shared by
@@ -267,18 +256,6 @@ size_t mystrlcat(char *, const char *src, size_t size);
 			mystrlcat(whystr, ", ", sizeof(whystr));	\
 		mystrlcat(whystr, reason, sizeof(whystr));		\
 	}
-
-/*
- * Due to race conditions in the libmilter shipped with sendmail <= 8.13.8,
- * the whole process may die after receiving a signal.
- * It makes impossible the final dump. Apply the following patch ASAP:
- * http://www.j10n.org/files/libmilter-8.13.8-signal.patch
- *
- * If you don't want to apply it, the following knob enables an uncertain
- * effort to workaround the bug. Do not ask me about this.
- * 
- */
-/* #define WORKAROUND_LIBMILTER_RACE_CONDITION */
 
 #endif /* _MILTER_GREYLIST_H_ */
 

@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.81 2006/08/30 20:50:42 manu Exp $ */
+/* $Id: pending.c,v 1.81.2.1 2006/09/04 22:05:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.81 2006/08/30 20:50:42 manu Exp $");
+__RCSID("$Id: pending.c,v 1.81.2.1 2006/09/04 22:05:59 manu Exp $");
 #endif
 #endif
 
@@ -70,23 +70,21 @@ __RCSID("$Id: pending.c,v 1.81 2006/08/30 20:50:42 manu Exp $");
 #include "autowhite.h"
 #include "milter-greylist.h"
 
-static void pending_insert_to_queue(struct pending *);
-
-struct pending_bucket *pending_buckets;
 struct pendinglist pending_head;
-/* protects pending_head and pending_buckets */
-pthread_mutex_t pending_lock = PTHREAD_MUTEX_INITIALIZER;
-
+struct pending_bucket *pending_buckets;
+pthread_rwlock_t pending_lock; 	/* protects pending_head and dump_dirty */
+pthread_mutex_t pending_change_lock;
 /*
  * protects pending->p_refcnt
  * since we hold many pending entries, requied memory for the lock
  * object is considerably large to have it in each pending entry.  so,
  * we use just one lock object for all pending entries.
  */
-static pthread_mutex_t refcnt_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_rwlock_t refcnt_lock;
 
 void
 pending_init(void) {
+	int error;
 	int i;
 
 	TAILQ_INIT(&pending_head);
@@ -98,43 +96,30 @@ pending_init(void) {
 		exit(EX_OSERR);
 	}
 	
+	if ((error = pthread_rwlock_init(&pending_lock, NULL)) != 0 ||
+	    (error = pthread_rwlock_init(&refcnt_lock, NULL)) != 0 ||
+	    (error = pthread_mutex_init(&pending_change_lock, NULL)) != 0) {
+		mg_log(LOG_ERR, 
+		    "pthread_rwlock_init failed: %s", strerror(error));
+		exit(EX_OSERR);
+	}
+	
 	for(i = 0; i < PENDING_BUCKETS; i++) {
 		TAILQ_INIT(&pending_buckets[i].b_pending_head);
+		
+		if ((error = pthread_mutex_init(&pending_buckets[i].bucket_mtx,
+		    NULL)) != 0) {
+			mg_log(LOG_ERR, 
+			    "pthread_mutex_init failed: %s", strerror(error));
+			exit(EX_OSERR);
+		}
+		
 	}
 
 	return;
 }
 
-/*
- * A new entry is inserted to the back of the queue in most cases,
- * but it is not true in these situations:
- * - The conf.c_delay was shortened
- * - System clock was turned to the past
- *
- * To ensure that the queue is sorted by expiration times (p_tv),
- * we need to find the right position where to insert a new entry.
- */
-
-/* pending_lock must be locked */
-static void
-pending_insert_to_queue(newentry)
-	struct pending *newentry;
-{
-	struct pending *p;
-	
-	TAILQ_FOREACH_REVERSE(p, &pending_head, pendinglist, p_list) {
-		if (p->p_tv.tv_sec < newentry->p_tv.tv_sec ||
-		    (p->p_tv.tv_sec == newentry->p_tv.tv_sec &&
-		     p->p_tv.tv_usec < newentry->p_tv.tv_usec))
-			break;
-	}
-	if (p)
-		TAILQ_INSERT_AFTER(&pending_head, p, newentry, p_list);
-	else
-		TAILQ_INSERT_HEAD(&pending_head, newentry, p_list);
-}
-
-/* pending_lock must be locked */
+/* pending_lock must be write-locked & bucket must be locked */
 struct pending *
 pending_get(sa, salen, from, rcpt, date)  
 	struct sockaddr *sa;
@@ -185,9 +170,12 @@ pending_get(sa, salen, from, rcpt, date)
 
 	pending->p_refcnt = 1;
 
-	pending_insert_to_queue(pending);
+	pthread_mutex_lock(&pending_change_lock);
+	TAILQ_INSERT_TAIL(&pending_head, pending, p_list); 
 	TAILQ_INSERT_TAIL(&pending_buckets[BUCKET_HASH(pending->p_sa, 
 	    from, rcpt, PENDING_BUCKETS)].b_pending_head, pending, pb_list); 
+
+	dump_dirty++;
 
 	(void)gettimeofday(&tv, NULL);
 
@@ -196,12 +184,12 @@ pending_get(sa, salen, from, rcpt, date)
 		    pending->p_addr, pending->p_from, pending->p_rcpt, 
 		    pending->p_tv.tv_sec - tv.tv_sec);
 	}
-
+	pthread_mutex_unlock(&pending_change_lock);
 out:
 	return pending;
 }
 
-/* pending_lock must be locked */
+/* pending list should be write-locked & bucket must be locked */
 void
 pending_put(pending) 
 	struct pending *pending;
@@ -211,12 +199,16 @@ pending_put(pending)
 		    pending->p_addr, pending->p_from, pending->p_rcpt);
 	}
 
-	TAILQ_REMOVE(&pending_head, pending, p_list);
+	pthread_mutex_lock(&pending_change_lock);
+	TAILQ_REMOVE(&pending_head, pending, p_list);	
 	TAILQ_REMOVE(&pending_buckets[BUCKET_HASH(pending->p_sa, 
 	    pending->p_from, pending->p_rcpt, PENDING_BUCKETS)].b_pending_head,
 	    pending, pb_list); 
 	
 	pending_free(pending);
+
+	dump_dirty++;
+	pthread_mutex_unlock(&pending_change_lock);
 
 	return;
 }
@@ -231,7 +223,7 @@ pending_timeout(void)
 	
 	gettimeofday(&now, NULL);
 	
-	PENDING_LOCK;
+	PENDING_WRLOCK;
 	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
 		next = TAILQ_NEXT(pending, p_list);
 		/*
@@ -245,7 +237,7 @@ pending_timeout(void)
 				    pending->p_addr, pending->p_from,
 				    pending->p_rcpt);
 			}
-			++dirty;
+			dirty = 1;
 			pending_put(pending);
 			continue;
 		}
@@ -269,14 +261,14 @@ pending_del(sa, salen, from, rcpt, time)
 	struct pending *next;
 	struct timeval tv;
 	struct pending_bucket *b;
-	int dirty = 0;
 
 	gettimeofday(&tv, NULL);
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return;
 
+	PENDING_RDLOCK;
 	b = &pending_buckets[BUCKET_HASH(sa, from, rcpt, PENDING_BUCKETS)];
-	PENDING_LOCK;
+	pthread_mutex_lock(&b->bucket_mtx);
 	for (pending = TAILQ_FIRST(&b->b_pending_head); 
 	    pending; pending = next) {
 		next = TAILQ_NEXT(pending, pb_list);
@@ -289,15 +281,14 @@ pending_del(sa, salen, from, rcpt, time)
 		    (strcmp(rcpt, pending->p_rcpt) == 0) &&
 		    (pending->p_tv.tv_sec == time)) {
 			pending_put(pending);
-			++dirty;
 			break;
 		}
 
 	}
+	pthread_mutex_unlock(&b->bucket_mtx);
 	PENDING_UNLOCK;
 	
-	dirty += pending_timeout();
-	dump_touch(dirty);
+	pending_timeout();
 	
 	return;
 }
@@ -331,8 +322,9 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 
 	dirty = pending_timeout();
 	
+	PENDING_RDLOCK;
 	b = &pending_buckets[BUCKET_HASH(sa, from, rcpt, PENDING_BUCKETS)];
-	PENDING_LOCK;
+	pthread_mutex_lock(&b->bucket_mtx);
 	for (pending = TAILQ_FIRST(&b->b_pending_head); 
 	    pending; pending = next) {
 		next = TAILQ_NEXT(pending, pb_list);
@@ -367,7 +359,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 				autowhite_add(sa, salen, from, rcpt, 
 				    &date, queueid);
 				rest = 0;
-				++dirty;
+				dirty = 1;
 			}
 
 			goto out;
@@ -380,13 +372,12 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	 */
 	date = now + delay;
 	pending = pending_get(sa, salen, from, rcpt, date);
-	if (pending) {
-		++dirty;
-		peer_create(pending);
-		rest = pending->p_tv.tv_sec - now;
-	} /* otherwise return 1 and accept the mail */
+	peer_create(pending); /* XXXmanu if pending == NULL? */
+	rest = pending->p_tv.tv_sec - now;
+	dirty = 1;
 
 out:
+	pthread_mutex_unlock(&b->bucket_mtx);
 	PENDING_UNLOCK;
 
 	if (remaining != NULL)
@@ -395,10 +386,8 @@ out:
 	if (elapsed != NULL)
 		*elapsed = now - (accepted - delay);
 
-	if (dirty) {
-		dump_touch(dirty);
+	if (dirty)
 		dump_flush();
-	}
 
 	if (rest <= 0)
 		return 1;
@@ -419,7 +408,8 @@ pending_textdump(stream)
 	fprintf(stream, "# Sender IP\t%s\t%s\tTime accepted\n", 
 	    "Sender e-mail", "Recipient e-mail");
 
-	PENDING_LOCK;
+	PENDING_RDLOCK;
+	pthread_mutex_lock(&pending_change_lock);
 	TAILQ_FOREACH(pending, &pending_head, p_list) {
 		if (conf.c_dump_no_time_translation) {
 			fprintf(stream, "%s\t%s\t%s\t%ld\n", 
@@ -437,6 +427,7 @@ pending_textdump(stream)
 		
 		done++;
 	}
+	pthread_mutex_unlock(&pending_change_lock);
 	PENDING_UNLOCK;
 
 	return done;
@@ -446,9 +437,9 @@ struct pending *
 pending_ref(pending)
 	struct pending *pending;
 {
-	pthread_mutex_lock(&refcnt_lock);
+	WRLOCK(refcnt_lock);
 	pending->p_refcnt++;
-	pthread_mutex_unlock(&refcnt_lock);
+	UNLOCK(refcnt_lock);
 	return pending;
 }
 
@@ -456,13 +447,13 @@ void
 pending_free(pending)
 	struct pending *pending;
 {
-	pthread_mutex_lock(&refcnt_lock);
+	WRLOCK(refcnt_lock);
 	pending->p_refcnt--;
 	if (pending->p_refcnt > 0) {
-		pthread_mutex_unlock(&refcnt_lock);
+		UNLOCK(refcnt_lock);
 		return;
 	}
-	pthread_mutex_unlock(&refcnt_lock);
+	UNLOCK(refcnt_lock);
 	free(pending->p_sa);
 	free(pending->p_addr);
 	free(pending->p_from);
@@ -666,7 +657,7 @@ pending_del_addr(sa, salen, queueid, acl_line)
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return;
 
-	PENDING_LOCK;
+	PENDING_RDLOCK;
 	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
 		next = TAILQ_NEXT(pending, p_list);
 
@@ -681,7 +672,6 @@ pending_del_addr(sa, salen, queueid, acl_line)
 
 	}
 	PENDING_UNLOCK;
-	dump_touch(count_pending);
 
 	/* And flush autowhite list as well... */
 	count_white = autowhite_del_addr(sa, salen);

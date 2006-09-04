@@ -24,7 +24,7 @@ auto		[Aa][Uu][Tt][Oo]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.17 2006/08/30 04:57:58 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.17.2.1 2006/09/04 22:05:59 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -87,9 +87,4 @@ yyerror(err)
 {
 	mg_log(LOG_DEBUG, "dump error at line %d: %s\n", dump_line, err);
 	return;
-}
-
-void
-dump_dispose_input_file(void) {
-	YY_FLUSH_BUFFER;
 }

@@ -1,5 +1,4 @@
-/* $Id: sync.h,v 1.19 2006/08/30 04:57:58 manu Exp $ */
-/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
+/* $Id: sync.h,v 1.19.2.1 2006/09/04 22:05:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -56,6 +55,10 @@ typedef unsigned int socklen_t;
 #define PEER_RDLOCK RDLOCK(peer_lock);
 #define PEER_UNLOCK UNLOCK(peer_lock);
 
+#define SYNC_WRLOCK WRLOCK(sync_lock);
+#define SYNC_RDLOCK RDLOCK(sync_lock);
+#define SYNC_UNLOCK UNLOCK(sync_lock);
+
 LIST_HEAD(peerlist, peer);
 TAILQ_HEAD(synclist, sync);
 
@@ -63,9 +66,6 @@ struct peer {
 	char *p_name;
 	FILE *p_stream;
 	int p_socket;
-	/* p_mtx protects p_deferred and p_qlen.
-	 * peer list must be read or rw locked before. */
-	pthread_mutex_t p_mtx;
 	struct synclist p_deferred;
 	LIST_ENTRY(peer) p_list;
 	unsigned int p_qlen;

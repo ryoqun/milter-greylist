@@ -1,5 +1,4 @@
-/* $Id: pending.h,v 1.37 2006/08/30 04:57:58 manu Exp $ */
-/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
+/* $Id: pending.h,v 1.37.2.1 2006/09/04 22:05:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -60,6 +59,10 @@
 
 #include "milter-greylist.h"
 
+#define PENDING_WRLOCK WRLOCK(pending_lock)
+#define PENDING_RDLOCK RDLOCK(pending_lock)
+#define PENDING_UNLOCK UNLOCK(pending_lock)
+
 TAILQ_HEAD(pendinglist, pending);
 
 struct pending {
@@ -75,12 +78,12 @@ struct pending {
 };
 
 struct pending_bucket {
+	pthread_mutex_t	bucket_mtx;
 	TAILQ_HEAD(, pending) b_pending_head;
 };
 
-#define PENDING_LOCK pthread_mutex_lock(&pending_lock);
-#define PENDING_UNLOCK pthread_mutex_unlock(&pending_lock);
-extern pthread_mutex_t pending_lock;
+extern pthread_rwlock_t pending_lock;
+extern pthread_mutex_t pending_change_lock;
 
 void pending_init(void);
 struct pending *pending_get(struct sockaddr *, socklen_t, char *, char *,

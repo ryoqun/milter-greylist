@@ -1,4 +1,4 @@
-/* $Id: dump.h,v 1.13 2006/08/30 04:57:58 manu Exp $ */
+/* $Id: dump.h,v 1.13.2.1 2006/09/04 22:05:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -67,8 +67,10 @@
 #include "milter-greylist.h"
 
 extern FILE *dump_in;
+extern int dump_dirty;
 extern int dump_line;
 extern char *dumpfile;
+extern int dump_dirty;
 
 void dump_init(void);
 void *dumper(void *);
@@ -76,9 +78,6 @@ void dumper_start(void);
 void dump_flush(void);
 void dump_reload(void);
 void dump_header(FILE *);
-void dump_perform(int);
-void dump_touch(int);
-void dump_conf_changed(void);
-void dumper_stop(void);
+void dump_perform(void);
 
 #endif /* _DUMP_H_ */

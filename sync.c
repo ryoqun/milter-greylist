@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.66 2006/08/30 20:50:42 manu Exp $ */
+/* $Id: sync.c,v 1.66.2.1 2006/09/04 22:05:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.66 2006/08/30 20:50:42 manu Exp $");
+__RCSID("$Id: sync.c,v 1.66.2.1 2006/09/04 22:05:59 manu Exp $");
 #endif
 #endif
 
@@ -66,16 +66,12 @@ struct sync_master_sock {
 	int sock;
 };
 
-static pthread_mutex_t sync_master_lock = PTHREAD_MUTEX_INITIALIZER;
 struct sync_master_sock sync_master4 = { 0, -1 };
 struct sync_master_sock sync_master6 = { 0, -1 };
-
 struct peerlist peer_head;
 pthread_rwlock_t peer_lock; /* For the peer list */
-
-static pthread_mutex_t sync_dirty_lock = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t sync_sleepflag = PTHREAD_COND_INITIALIZER;
-static int sync_dirty = 0;
+pthread_rwlock_t sync_lock; /* For all peer's sync queue */
+pthread_cond_t sync_sleepflag;
 
 static void sync_listen(char *, char *, struct sync_master_sock *);
 static int local_addr(const struct sockaddr *sa, const socklen_t salen);
@@ -92,6 +88,18 @@ peer_init(void) {
 	if ((error = pthread_rwlock_init(&peer_lock, NULL)) != 0) {
 		mg_log(LOG_ERR, 
 		    "pthread_rwlock_init failed: %s", strerror(error));
+		exit(EX_OSERR);
+	}
+
+	if ((error = pthread_rwlock_init(&sync_lock, NULL)) != 0) {
+		mg_log(LOG_ERR, 
+		    "pthread_rwlock_init failed: %s", strerror(error));
+		exit(EX_OSERR);
+	}
+
+	if ((error = pthread_cond_init(&sync_sleepflag, NULL)) != 0) {
+		mg_log(LOG_ERR, 
+		    "pthread_cond_init failed: %s", strerror(error));
 		exit(EX_OSERR);
 	}
 
@@ -115,7 +123,6 @@ peer_clear(void) {
 			fclose(peer->p_stream);
 
 		LIST_REMOVE(peer, p_list);
-		pthread_mutex_destroy(&peer->p_mtx);
 		free(peer->p_name);
 		free(peer);
 	}
@@ -141,7 +148,6 @@ peer_add(peername)
 	peer->p_stream = NULL;
 	peer->p_flags = 0;
 	TAILQ_INIT(&peer->p_deferred);
-	pthread_mutex_init(&peer->p_mtx, NULL);
 
 	PEER_WRLOCK;
 	LIST_INSERT_HEAD(&peer_head, peer, p_list);
@@ -197,16 +203,16 @@ sync_queue_poke(peer, sync)
 	struct peer *peer;
 	struct sync *sync;
 {
-	int r = 0;
-
-	pthread_mutex_lock(&peer->p_mtx);
+	SYNC_WRLOCK;
 	if (peer->p_qlen < SYNC_MAXQLEN) {
 		TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
 		peer->p_qlen++;
-		r = 1;
+		SYNC_UNLOCK;
+		return 1;
+	} else {
+		SYNC_UNLOCK;
+		return 0;
 	}
-	pthread_mutex_unlock(&peer->p_mtx);
-	return r;
 }
 
 static struct sync *
@@ -215,13 +221,13 @@ sync_queue_peek(peer)
 {
 	struct sync *sync;
 
-	pthread_mutex_lock(&peer->p_mtx);
+	SYNC_WRLOCK;
 	sync = TAILQ_FIRST(&peer->p_deferred);
 	if (!TAILQ_EMPTY(&peer->p_deferred)) {
 		TAILQ_REMOVE(&peer->p_deferred, sync, s_list);
 		peer->p_qlen--;
 	}
-	pthread_mutex_unlock(&peer->p_mtx);
+	SYNC_UNLOCK;
 	return sync;
 }
 
@@ -593,9 +599,8 @@ sync_master_restart(void) {
 	empty = LIST_EMPTY(&peer_head);
 	PEER_UNLOCK;
 
-	pthread_mutex_lock(&sync_master_lock);
 	if (empty || sync_master4.runs || sync_master6.runs)
-		goto last;
+		return;
 
 	if (conf.c_syncaddr != NULL) {
 		if (strchr(conf.c_syncaddr, ':'))
@@ -648,8 +653,6 @@ sync_master_restart(void) {
 			exit(EX_OSERR);
 		}
 	}
-last:
-	pthread_mutex_unlock(&sync_master_lock);
 }
 
 void *
@@ -658,7 +661,6 @@ sync_master(arg)
 {
 	struct sync_master_sock *sms = arg;
 
-	conf_retain();
 	for (;;) {
 		sockaddr_t raddr;
 		socklen_t raddrlen;
@@ -668,17 +670,10 @@ sync_master(arg)
 		struct peer *peer;
 		char peerstr[IPADDRSTRLEN];
 		int error;
-		int sock;
 
-		pthread_mutex_lock(&sync_master_lock);
-		sock = sms->sock;
-		pthread_mutex_unlock(&sync_master_lock);
-
-		/* TODO: accept connections in nonblocking mode
-		 * in order to watch conf change */
 		bzero((void *)&raddr, sizeof(raddr));
 		raddrlen = sizeof(raddr);
-		if ((fd = accept(sock, SA(&raddr), &raddrlen)) == -1) {
+		if ((fd = accept(sms->sock, SA(&raddr), &raddrlen)) == -1) {
 			mg_log(LOG_ERR, "incoming connexion "
 			    "failed: %s", strerror(errno));
 
@@ -687,9 +682,6 @@ sync_master(arg)
 			continue;
 		}
 		unmappedaddr(SA(&raddr), &raddrlen);
-
-		conf_release();
-		conf_retain();
 
 		iptostring(SA(&raddr), raddrlen, peerstr, sizeof(peerstr));
 		mg_log(LOG_INFO, "Incoming MX sync connexion from %s", 
@@ -717,12 +709,9 @@ sync_master(arg)
 
 			PEER_UNLOCK;
 			fclose(stream);
-			pthread_mutex_lock(&sync_master_lock);
 			close(sms->sock);
 			sms->sock = -1;
 			sms->runs = 0;
-			pthread_mutex_unlock(&sync_master_lock);
-			conf_release();
 			return NULL;
 		}
 			
@@ -799,7 +788,6 @@ sync_master(arg)
 	return NULL;
 }
 
-/* sync_master_lock must be locked */
 static void
 sync_listen(addr, port, sms)
         char *addr, *port;
@@ -918,11 +906,8 @@ sync_server(arg)
 	sockaddr_t addr;
 	socklen_t addrlen;
 	time_t date;
-	time_t aw;
-	
-	conf_retain();
+	time_t aw = time(NULL) + conf.c_autowhite_validity;
 
-	aw = time(NULL) + conf.c_autowhite_validity;
 	fprintf(stream, "200 Yeah, what do you want?\n");
 	fflush(stream);
 
@@ -1119,13 +1104,10 @@ eol:
 		fflush(stream);
 
 		if (action == PS_CREATE) {
-			int dirty = 0;
-			PENDING_LOCK;
+			PENDING_WRLOCK;
 			/* delay = -1 means unused: we supply the date */
-			if (pending_get(SA(&addr), addrlen, from, rcpt, date))
-				++dirty;
+			pending_get(SA(&addr), addrlen, from, rcpt, date);
 			PENDING_UNLOCK;
-			dump_touch(dirty);
 		}
 		if (action == PS_DELETE) {
 			pending_del(SA(&addr), addrlen, from, rcpt, date);
@@ -1143,8 +1125,6 @@ eol:
 
 	fprintf(stream, "202 Good bye\n");
 	fclose(stream);
-
-	conf_release();
 
 	return;
 
@@ -1253,9 +1233,6 @@ sync_queue(peer, type, pending, autowhite)/* peer list must be read-locked */
 		sync_free(sync);
 	}
 
-	pthread_mutex_lock(&sync_dirty_lock);
-	sync_dirty = 1;
-	pthread_mutex_unlock(&sync_dirty_lock);
 	if ((error = pthread_cond_signal(&sync_sleepflag)) != 0) {
 		mg_log(LOG_ERR, 
 		    "cannot wakeup sync_sender: %s", strerror(error));
@@ -1314,14 +1291,9 @@ sync_sender(dontcare)
 	}
 
 	for (;;) {
-		pthread_mutex_lock(&sync_dirty_lock);
-		while (!sync_dirty)
-			pthread_cond_wait(&sync_sleepflag, &sync_dirty_lock);
-		sync_dirty = 0;
-		pthread_mutex_unlock(&sync_dirty_lock);
-
-		conf_retain();
-
+		if ((error = pthread_cond_wait(&sync_sleepflag, &mutex)) != 0)
+			mg_log(LOG_ERR, "pthread_cond_wait failed: %s", 
+			    strerror(error));
 		if (conf.c_debug) {
 			mg_log(LOG_DEBUG, "sync_sender running");
 			gettimeofday(&tv1, NULL);
@@ -1362,8 +1334,6 @@ out:
 			    "done %d entries in %ld.%06lds", done,
 			    tv3.tv_sec, tv3.tv_usec);
 		}
-
-		conf_release();
 	}
 }
 
@@ -1438,8 +1408,6 @@ select_protocol(peer, s, stream)
 	for (vers = SYNC_PROTO_CURRENT; vers > 1; vers--) {
 		fprintf(stream, "vers%d\n", vers);
 
-		fflush(stream);
-
 		sync_waitdata(s);	
 		if (fgets(line, LINELEN, stream) == NULL) {
 			mg_log(LOG_ERR, "Lost connexion with peer %s: "
@@ -1447,6 +1415,8 @@ select_protocol(peer, s, stream)
 			    peer->p_name, strerror(errno), peer->p_qlen);
 			return 0;
 		}
+
+		fflush(stream);
 
 		if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
 			mg_log(LOG_ERR, "Unexpected reply \"%s\" from peer %s "

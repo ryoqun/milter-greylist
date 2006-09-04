@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.37 2006/08/30 04:57:58 manu Exp $ */
+/* $Id: conf.h,v 1.37.2.1 2006/09/04 22:05:58 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -42,6 +42,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
@@ -55,12 +56,14 @@
 #define DRACDB "/usr/local/etc/dracdb.db"
 #endif
 
-TAILQ_HEAD(conf_list, conf_rec);
-struct conf_rec {
-	int c_refcount;
-	time_t c_timestamp;
-	TAILQ_ENTRY(conf_rec) c_chain;
+#define CONF_WRLOCK WRLOCK(conf_lock) 
+#define CONF_RDLOCK RDLOCK(conf_lock) 
+#define CONF_UNLOCK UNLOCK(conf_lock)
 
+extern int conf_cold;
+extern int conf_nodetach;
+
+struct conf {
 	int c_forced;
 	int c_debug;
 	int c_acldebug;
@@ -84,7 +87,6 @@ struct conf_rec {
 	char *c_syncport;
 	char *c_syncsrcaddr;
 	char *c_syncsrcport;
-	int c_nodetach;
 	int c_report;
 	int c_lazyaw;
 	int c_dumpfreq;
@@ -93,16 +95,7 @@ struct conf_rec {
 	char *c_dracdb;
 	int c_nodrac;
 	int c_dump_no_time_translation;
-	int c_logexpired;
-	char c_pidfile_storage[QSTRLEN + 1];
-	char c_dumpfile_storage[QSTRLEN + 1];
-	char c_socket_storage[QSTRLEN + 1];
-	char c_user_storage[QSTRLEN + 1];
-	char c_syncaddr_storage[IPADDRSTRLEN + 1];
-	char c_syncport_storage[NUMLEN + 1];
-	char c_syncsrcaddr_storage[IPADDRSTRLEN + 1];
-	char c_syncsrcport_storage[NUMLEN + 1];
-	char c_dracdb_storage[QSTRLEN + 1];
+      int c_logexpired;
 };
 
 /* c_forced flags */
@@ -131,26 +124,29 @@ struct conf_rec {
 #define C_NODELAYS	0x2
 #define C_ALL		0x3
 
-extern struct conf_rec defconf;
-extern pthread_key_t conf_key;
-#define GET_CONF() ((struct conf_rec *)pthread_getspecific(conf_key))
-#define conf (*GET_CONF())
+extern struct conf defconf;
+extern struct conf conf;
 extern char *conffile;
-extern int conf_cold;
+extern char c_pidfile[QSTRLEN + 1];
+extern char c_dumpfile[QSTRLEN + 1];
+extern char c_socket[QSTRLEN + 1];
+extern char c_user[QSTRLEN + 1];
+extern char c_syncaddr[IPADDRSTRLEN + 1];
+extern char c_syncport[NUMLEN + 1];
+extern char c_syncsrcaddr[IPADDRSTRLEN + 1];
+extern char c_syncsrcport[NUMLEN + 1];
+extern char c_dracdb[QSTRLEN + 1];
+
+extern pthread_rwlock_t conf_lock;
 
 void conf_init(void);
 void conf_load(void);
 void conf_update(void);
-void conf_retain(void);
-void conf_release(void);
 
 extern FILE *conf_in;
 extern int conf_line;
-
 int conf_parse(void);
-void conf_dispose_input_file(void);
 char *quotepath(char *, char *, size_t);
-char *quotepath_alloc(const char *);
-void conf_defaults(struct conf_rec *);
+void conf_defaults(struct conf *);
 
 #endif /* _CONF_H_ */
