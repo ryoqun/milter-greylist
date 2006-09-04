@@ -1,4 +1,4 @@
-/* $Id: macro.c,v 1.2 2006/09/04 21:28:18 manu Exp $ */
+/* $Id: macro.c,v 1.1.2.1 2006/09/04 22:25:29 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: macro.c,v 1.2 2006/09/04 21:28:18 manu Exp $");
+__RCSID("$Id: macro.c,v 1.1.2.1 2006/09/04 22:25:29 manu Exp $");
 #endif
 #endif
 
@@ -109,7 +109,6 @@ macro_check(ctx, me)
 	}
 
 	if (conf.c_debug) {
-		mg_log(LOG_DEBUG, "sm_macro \"%s\" match", me->m_name);
 		mg_log(LOG_DEBUG, "sm_macro \"%s\" %s=%s %s", me->m_name,
 		    me->m_macro, value ? value : "(null)",
 		    retval ? "nomatch" : "match");
