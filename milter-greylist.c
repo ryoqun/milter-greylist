@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.137.2.1 2006/09/04 22:05:59 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.137.2.2 2006/09/04 22:07:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.137.2.1 2006/09/04 22:05:59 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.137.2.2 2006/09/04 22:07:21 manu Exp $");
 #endif
 #endif
 
@@ -327,6 +327,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	    (priv->priv_whitelist & EXF_NONIP) ||
 	    (priv->priv_whitelist & EXF_DRAC) ||
 	    (priv->priv_whitelist & EXF_ACCESSDB) ||
+	    (priv->priv_whitelist & EXF_MACRO) ||
 	    (priv->priv_whitelist & EXF_STARTTLS))
 		return SMFIS_CONTINUE;
 
@@ -372,7 +373,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	 * Check the ACL
 	 */
 	reset_acl_values(priv);
-	if ((priv->priv_whitelist = acl_filter(priv, rcpt)) & EXF_WHITELIST) {
+	if ((priv->priv_whitelist = acl_filter(ctx, priv, rcpt)) & EXF_WHITELIST) {
 		priv->priv_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}

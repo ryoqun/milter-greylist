@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.13 2006/09/04 21:28:18 manu Exp $ */
+/* $Id: acl.h,v 1.12.2.1 2006/09/04 22:07:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
