@@ -3,6 +3,7 @@
 	Fix big bugs in macro support (AIDA Shinra)
 	Fix build warning on Tru64
 	Build fix on Solaris
+	Documentation fix
 3.0a5
 	Build fix on Tru64, fix MX sync (Attila Bruncsak)
 	Fix various race conditions (AIDA Shinra)

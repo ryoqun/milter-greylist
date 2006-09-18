@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.43 2006/08/30 20:50:42 manu Exp $
+.\" $Id: greylist.conf.5,v 1.44 2006/09/18 11:54:39 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -169,8 +169,8 @@ global setting, and it only makes sense on an
 .I acl greylist
 entry. Example:
 .IP
-  acl greylist rcpt JDoe@example.net greylist 15m autowhite 3d
-  acl greylist rcpt root@example.net greylist 1h autowhite 3d
+  acl greylist rcpt JDoe@example.net delay 15m autowhite 3d
+  acl greylist rcpt root@example.net delay 1h autowhite 3d
 .TP
 .I flushaddr
 If a message matches the rule, any entry in the greylist or autowhite
