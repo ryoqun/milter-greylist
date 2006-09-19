@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.137.2.2 2006/09/04 22:07:21 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.137.2.3 2006/09/19 13:31:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.137.2.2 2006/09/04 22:07:21 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.137.2.3 2006/09/19 13:31:26 manu Exp $");
 #endif
 #endif
 
@@ -887,6 +887,8 @@ main(argc, argv)
 	}
 
 	openlog("milter-greylist", 0, LOG_MAIL);
+
+	conf_cold = 0;
 
 	if (conf.c_socket == NULL) {
 		mg_log(LOG_ERR, "%s: No socket provided, exiting", argv[0]);

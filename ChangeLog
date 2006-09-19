@@ -1,5 +1,6 @@
 3.0rc1
 	Small documentation fix (Leena Heino)
+	Fix automatic config reload
 3.0a6
 	Fix serious bugs in macro handling (AIDA Shinra)
 	Back out race conditions fixes (too intrusive, will be back in 3.1.x)
