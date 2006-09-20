@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.66.2.1 2006/09/04 22:05:59 manu Exp $ */
+/* $Id: sync.c,v 1.66.2.2 2006/09/20 09:05:56 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.66.2.1 2006/09/04 22:05:59 manu Exp $");
+__RCSID("$Id: sync.c,v 1.66.2.2 2006/09/20 09:05:56 manu Exp $");
 #endif
 #endif
 
@@ -1408,6 +1408,8 @@ select_protocol(peer, s, stream)
 	for (vers = SYNC_PROTO_CURRENT; vers > 1; vers--) {
 		fprintf(stream, "vers%d\n", vers);
 
+		fflush(stream);
+
 		sync_waitdata(s);	
 		if (fgets(line, LINELEN, stream) == NULL) {
 			mg_log(LOG_ERR, "Lost connexion with peer %s: "
@@ -1415,8 +1417,6 @@ select_protocol(peer, s, stream)
 			    peer->p_name, strerror(errno), peer->p_qlen);
 			return 0;
 		}
-
-		fflush(stream);
 
 		if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
 			mg_log(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
