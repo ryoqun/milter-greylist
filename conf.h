@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.37.2.1 2006/09/04 22:05:58 manu Exp $ */
+/* $Id: conf.h,v 1.37.2.2 2006/09/20 07:38:24 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -145,6 +145,7 @@ void conf_update(void);
 
 extern FILE *conf_in;
 extern int conf_line;
+extern int conf_acl_end;
 int conf_parse(void);
 char *quotepath(char *, char *, size_t);
 void conf_defaults(struct conf *);

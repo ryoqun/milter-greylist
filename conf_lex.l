@@ -83,7 +83,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.55.2.1 2006/09/04 22:05:58 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.55.2.2 2006/09/20 07:38:24 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -95,6 +95,7 @@ star		"*"
 	#define YY_NO_UNPUT
 
 	int conf_line;
+	int conf_acl_end;
 %}
 
 %%
