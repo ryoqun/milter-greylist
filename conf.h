@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.37 2006/08/30 04:57:58 manu Exp $ */
+/* $Id: conf.h,v 1.38 2006/09/20 07:50:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -146,6 +146,7 @@ void conf_release(void);
 
 extern FILE *conf_in;
 extern int conf_line;
+extern int conf_acl_end;
 
 int conf_parse(void);
 void conf_dispose_input_file(void);

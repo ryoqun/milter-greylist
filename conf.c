@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.42 2006/08/30 20:50:42 manu Exp $ */
+/* $Id: conf.c,v 1.43 2006/09/20 07:50:09 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.42 2006/08/30 20:50:42 manu Exp $");
+__RCSID("$Id: conf.c,v 1.43 2006/09/20 07:50:09 manu Exp $");
 #endif
 #endif
 
@@ -174,6 +174,7 @@ conf_load_internal(timestamp)
 
 		conf_in = stream;
 		conf_line = 1;
+		conf_acl_end = 0;
 
 		conf_parse();
 		conf_dispose_input_file();

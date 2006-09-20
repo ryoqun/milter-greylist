@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.59 2006/08/30 04:57:58 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.60 2006/09/20 07:50:09 manu Exp $");
 #endif
 #endif
 
@@ -440,11 +440,17 @@ access_list:	ACL GREYLIST  acl_entry {
 		}
 	;
 
-acl_entry:	DEFAULT acl_values
-	|	acl_clauses acl_values
-	|	DEFAULT
-	|	acl_clauses
+acl_entry:	acl_default_entry 	{ conf_acl_end = 1; }
+	| 	acl_plain_entry	{
+			if (conf_acl_end != 0)
+				mg_log(LOG_WARNING, 
+				    "ignored acl entry after acl "
+				    "default rule at line %d", conf_line);
+		}
 	;
+
+acl_default_entry: DEFAULT acl_values |	DEFAULT	;
+acl_plain_entry: acl_clauses acl_values | acl_clauses;
 
 acl_clauses:	acl_clause
 	|	acl_clauses acl_clause
