@@ -1,3 +1,5 @@
+3.0rc3
+	Silly build fix for platforms that lack vsyslog()
 3.0rc2
 	Honour LINE_MAX for syslog (Attila Bruncsak)
 	fix MX sync again on Tru64 (Attila Bruncsak)
