@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.139 2006/09/20 11:41:25 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.140 2006/09/27 11:53:31 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.139 2006/09/20 11:41:25 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.140 2006/09/27 11:53:31 manu Exp $");
 #endif
 #endif
 
@@ -1521,7 +1521,7 @@ vsyslog(level, fmt, ap)
 
 	vsnprintf(messagebuf, sizeof(messagebuf), fmt, ap);
 	messagebuf[sizeof(messagebuf) - 1] = '\0';
-	syslog(level, messagebug);
+	syslog(level, "%s", messagebuf);
 
 	return;
 }
