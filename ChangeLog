@@ -1,3 +1,5 @@
+3.0rc4
+	Fix MX sync between Tru64 and Linux (Attila Bruncsak)
 3.0rc3
 	Silly build fix for platforms that lack vsyslog()
 3.0rc2

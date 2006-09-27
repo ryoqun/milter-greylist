@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.66.2.2 2006/09/20 09:05:56 manu Exp $ */
+/* $Id: sync.c,v 1.66.2.3 2006/09/27 11:54:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.66.2.2 2006/09/20 09:05:56 manu Exp $");
+__RCSID("$Id: sync.c,v 1.66.2.3 2006/09/27 11:54:47 manu Exp $");
 #endif
 #endif
 
@@ -306,8 +306,17 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	get_more:
 	sync_waitdata(peer->p_socket);
 	if (fgets(line, LINELEN, peer->p_stream) == NULL) {
-		if (errno == EAGAIN) 
+		if (errno == EAGAIN) {
+			if ( feof(peer->p_stream) ) {
+				mg_log(LOG_ERR, "lost connexion with peer %s: "
+		  		  "%s (%d entries queued)", 
+				    peer->p_name, strerror(errno), peer->p_qlen);
+				fclose(peer->p_stream);
+				peer->p_stream = NULL;
+				return -1;
+			}
 			goto get_more;
+		}
 		mg_log(LOG_ERR, "lost connexion with peer %s: "
 		    "%s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);
