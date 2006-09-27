@@ -1,4 +1,5 @@
 3.1.1
+	Fix MX sync between Tru64 and Linux (Attila Bruncsak)
 	Silly build fix for platforms that lack vsyslog()
 	Honour LINE_MAX for syslog (Attila Bruncsak)
 	Warn about ignored ACL lines after acl default rule
