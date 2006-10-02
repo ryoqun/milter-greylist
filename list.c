@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.9.2.1 2006/09/04 22:07:21 manu Exp $ */
+/* $Id: list.c,v 1.9.2.2 2006/10/02 17:02:42 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.9.2.1 2006/09/04 22:07:21 manu Exp $");
+__RCSID("$Id: list.c,v 1.9.2.2 2006/10/02 17:02:42 manu Exp $");
 #endif
 #endif
 
@@ -245,7 +245,7 @@ list_add_netblock(ale, sa, salen, cidr)
 	if (conf.c_debug || conf.c_acldebug) { 
 		char addrstr[IPADDRSTRLEN];
 
-		iptostring(SA(&sa), salen, addrstr, sizeof(addrstr));
+		iptostring(sa, salen, addrstr, sizeof(addrstr));
                 mg_log(LOG_DEBUG, "load list item %s/%d", addrstr, cidr);
 	}
 
