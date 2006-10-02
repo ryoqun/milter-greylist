@@ -1,4 +1,5 @@
 3.1.1
+	Fix display bug in log messages (AIDA Shinra)
 	Updated the list of broken MTA
 	Fix MX sync between Tru64 and Linux (Attila Bruncsak)
 	Silly build fix for platforms that lack vsyslog()

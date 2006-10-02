@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.189 2006/08/28 22:32:35 manu Exp $
+# $Id: configure.ac,v 1.190 2006/10/02 17:03:57 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -24,7 +24,8 @@ AC_MSG_CHECKING([if compiler accepts -Wall])
 SAVEDCFLAGS=$CFLAGS
 CFLAGS=$CFLAGS" -Wall"
 wall="no"
-AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], [wall="yes"; SAVEDCFLAGS=$CFLAGS])
+AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], 
+    [wall="yes"; SAVEDCFLAGS=$CFLAGS; efl=$efl" -Wall"])
 AC_MSG_RESULT([$wall])
 CFLAGS=$SAVEDCFLAGS
 
@@ -266,7 +267,7 @@ AC_MSG_RESULT([$timeradd])
 
 # Check if -D_REENTRANT is needed for localtime_r, gmtime_r
 SAVEDCFLAGS=$CFLAGS
-CFLAGS=$CFLAGS" -ansi -Wall -Werror"
+CFLAGS=$CFLAGS$efl
 AC_MSG_CHECKING([if -D_REENTRANT is needed to use localtime_r])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
                #include <time.h>
@@ -288,7 +289,7 @@ CFLAGS=$SAVEDCFLAGS
 
 # Check if -D__EXTENSIONS__ is needed for snprintf, getopt, seteuid...
 SAVEDCFLAGS=$CFLAGS
-CFLAGS=$CFLAGS" -ansi -Wall -Werror"
+CFLAGS=$CFLAGS$efl
 AC_MSG_CHECKING([if -D__EXTENSIONS__ is needed to use snprintf])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <stdio.h>
@@ -417,39 +418,6 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		pthread_rwlock_t lock;
 	])], [xopen=no], [CFLAGS="$CFLAGS -D_XOPEN_SOURCE=500"; xopen=yes])
 AC_MSG_RESULT([$xopen])
-
-# IRIX requires -D_SGI_SOURCE to use <stdio.h> and -ansi
-AC_MSG_CHECKING([whether you need -D_SGI_SOURCE to use <stdio.h> with -ansi])
-SAVEDCFLAGS=$CFLAGS
-CFLAGS=$CFLAGS" -ansi"
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
-		#include <stdio.h>
-	],[
-		FILE *f;
-
-		f = fdopen(0, "w+");
-	])], [xstdio=no], 
-	[SAVEDCFLAGS=$SAVEDCFLAGS" -D_SGI_SOURCE"; 
-	 xstdio=yes])
-CFLAGS=$SAVEDCFLAGS
-AC_MSG_RESULT([$xstdio])
-
-# IRIX may also require -D_XOPEN_SOURCE=500 to use <stdio.h> and -ansi
-AC_MSG_CHECKING([whether you need -D_XOPEN_SOURCE to use <stdio.h> with -ansi])
-SAVEDCFLAGS=$CFLAGS
-CFLAGS=$CFLAGS" -ansi"
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
-		#include <stdio.h>
-	],[
-		FILE *f;
-
-		f = fdopen(0, "w+");
-	])], [xstdio=no], 
-	[SAVEDCFLAGS=$SAVEDCFLAGS" -D_XOPEN_SOURCE=500"; 
-	 xstdio=yes])
-CFLAGS=$SAVEDCFLAGS
-AC_MSG_RESULT([$xstdio])
-
 
 # Tru64 Unix needs -D_OSF_SOURCE for IPV6 support
 SAVEDCFLAGS=$CFLAGS
@@ -611,7 +579,7 @@ AC_ARG_WITH(thread-safe-resolver,
 	[  --with-thread-safe-resolver   Resolver is thread-safe],
 	[rdns=yes],[
 		SAVEDCFLAGS=$CFLAGS
-		CFLAGS=$CFLAGS" -Wall -Werror"
+		CFLAGS=$CFLAGS$efl
 		AC_MSG_CHECKING([if DNS resolver is re-entrant])
 		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 				#define _BSD_SOURCE
