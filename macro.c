@@ -1,4 +1,4 @@
-/* $Id: macro.c,v 1.2 2006/09/04 21:28:18 manu Exp $ */
+/* $Id: macro.c,v 1.3 2006/10/05 20:05:56 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,10 +34,11 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: macro.c,v 1.2 2006/09/04 21:28:18 manu Exp $");
+__RCSID("$Id: macro.c,v 1.3 2006/10/05 20:05:56 manu Exp $");
 #endif
 #endif
 
+#include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -51,7 +52,6 @@ __RCSID("$Id: macro.c,v 1.2 2006/09/04 21:28:18 manu Exp $");
 #else 
 #include <sys/queue.h>
 #endif
-#include <sys/types.h>
 
 #include "milter-greylist.h"
 #include "pending.h"

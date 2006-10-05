@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.47 2006/09/04 21:28:18 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.48 2006/10/05 20:05:56 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
@@ -34,8 +34,8 @@
 #define _MILTER_GREYLIST_H_
 
 #include <sys/socket.h>
-#include <arpa/inet.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 
 #include <libmilter/mfapi.h>
