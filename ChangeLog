@@ -1,3 +1,5 @@
+3.0rc5
+	FreeBSD build fixes (Hajimu UMEMOTO)
 3.0rc4
 	Updated the list of broken MTA
 	Fix MX sync between Tru64 and Linux (Attila Bruncsak)
