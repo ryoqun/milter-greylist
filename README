@@ -1,9 +1,9 @@
-# $Id: README,v 1.42 2006/08/20 04:46:09 manu Exp $
+# $Id: README,v 1.42.2.1 2006/10/06 09:14:39 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2006/08/20 04:46:09 $
+		       $Date: 2006/10/06 09:14:39 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -355,16 +355,18 @@ default with BIND 8, which causes troubles. BIND 9 is fine.
  11 Using DRAC
  =============
 
-milter-greylist can be built with DRAC support, by giving the
---enable-drac flag to configure. Location of the DRAC DB file can 
-be chosen at build time with --with-dracdb=PATH, and at runtime
-with the drac db "PATH" configuration file option.
+milter-greylist can be built with DRAC (Dynamic Relay Authorization
+Control) support, by giving the --enable-drac flag to configure.
+Location of the DRAC DB file can be chosen at build time with
+--with-dracdb=PATH, and at runtime with the drac db "PATH"
+configuration file option.
 
-If built-in, DRAC can be disabled by the nodrac configuration file 
+If built-in, DRAC can be disabled by the nodrac configuration file
 option.
 
-
- 12 Packaging
+More information on DRAC can be obtained at 
+http://mail.cc.umanitoba.ca/drac/
+ksh: q: not found
  ============
 
 milter-greylist is available from NetBSD pkgsrc and FreeBSD ports.

@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.52 2006/08/27 16:02:25 manu Exp $
+# $Id: Makefile.in,v 1.52.2.1 2006/10/06 09:14:39 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -98,10 +98,11 @@ install-man:
 	${INSTALL} -m 644 greylist.conf.5 ${DESTDIR}${MANDIR}/man5
 
 install-conf:
-	${INSTALL} -d -m 755 ${DESTDIR}/etc/mail
-	${TEST} -f ${DESTDIR}/etc/mail/greylist.conf -o -f ${DESTDIR}/etc/mail/greylist.except || \
-	     ${INSTALL} -m 644 greylist.conf ${DESTDIR}/etc/mail
-	@${TEST} -f ${DESTDIR}/etc/mail/greylist.except && (		 	   \
+	${INSTALL} -d -m 755 ${DESTDIR}${SYSCONFDIR}/mail
+	${TEST} -f ${DESTDIR}${SYSCONFDIR}/mail/greylist.conf -o 	\
+		-f ${DESTDIR}${SYSCONFDIR}/mail/greylist.except || 	\
+	     ${INSTALL} -m 644 greylist.conf ${DESTDIR}${SYSCONFDIR}/mail
+	@${TEST} -f ${DESTDIR}/etc/mail/greylist.except && (	 	   \
 		echo "	================================================"; \
 		echo "	 WARNING: the config file name has changed,     "; \
 		echo "	 Please rename /etc/mail/greylist.except, the   "; \
@@ -110,8 +111,9 @@ install-conf:
 	) || ${TRUE}
 
 install-db:
-	${INSTALL} -d -m 755 -o ${USER} ${DESTDIR}/var/milter-greylist
-	@${TEST} -f ${DESTDIR}/var/db/greylist.db && (			 	   \
+	${INSTALL} -d -m 755 -o ${USER} \
+		${DESTDIR}${LOCALSTATEDIR}/milter-greylist
+	@${TEST} -f ${DESTDIR}/var/db/greylist.db && (		 	   \
 		echo "	================================================"; \
 		echo "	  WARNING: the dump file location has changed,  "; \
 		echo "	  Please move /var/db/greylist.db, the default  "; \
