@@ -1,6 +1,7 @@
 3.1.1
 	Pointer to DRAC documentation (Matthias Scheler)
 	FreeBSD build fixes (Hajimu UMEMOTO)
+	Remove the /tmp/access-list.debug for security sake (AIDA Shinra)
 	Fix display bug in log messages (AIDA Shinra)
 	Updated the list of broken MTA
 	Fix MX sync between Tru64 and Linux (Attila Bruncsak)
