@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.33.2.2 2006/10/02 17:02:42 manu Exp $ */
+/* $Id: acl.c,v 1.33.2.3 2006/10/08 13:21:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.33.2.2 2006/10/02 17:02:42 manu Exp $");
+__RCSID("$Id: acl.c,v 1.33.2.3 2006/10/08 13:21:13 manu Exp $");
 #endif
 #endif
 
@@ -1089,14 +1089,20 @@ void
 acl_dump (void) {	/* acllist must be write locked */
 	struct acl_entry *acl;
 	char *entry;
-	FILE *debug;
+	FILE *debug = NULL;
 
 	/*
 	 * We log the ACL to syslogd
-	 * We also write the ACL in a file because syslogd seems to lose
+	 * We can also write the ACL in a file because syslogd seems to lose
 	 * some debugging messages on FreeBSD 4.10 :-(
+	 * XXX This is disabled by default (#if 0 above) since it creates
+	 * security hazards: /tmp/access-list.debug could already exist and
+	 * be a link to some system file which would be overwritten.
+	 * Enable it if you need it, but you may be better changing the path
 	 */
+#if 0
 	debug = fopen("/tmp/access-list.debug", "w");
+#endif
 	ACL_RDLOCK;
 	mg_log(LOG_INFO, "Access list dump:");
 	TAILQ_FOREACH(acl, &acl_head, a_list) {
