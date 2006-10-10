@@ -2,6 +2,7 @@
 	Pointer to DRAC documentation (Matthias Scheler)
 	FreeBSD build fixes (Hajimu UMEMOTO)
 	Remove the /tmp/access-list.debug for security sake (AIDA Shinra)
+	Correctly enable non blocking I/O fox MX sync (Attila Bruncsak)
 3.0rc4
 	Updated the list of broken MTA
 	Fix MX sync between Tru64 and Linux (Attila Bruncsak)
