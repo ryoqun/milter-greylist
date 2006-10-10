@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.67 2006/09/27 11:54:07 manu Exp $ */
+/* $Id: sync.c,v 1.68 2006/10/10 20:28:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.67 2006/09/27 11:54:07 manu Exp $");
+__RCSID("$Id: sync.c,v 1.68 2006/10/10 20:28:43 manu Exp $");
 #endif
 #endif
 
@@ -528,7 +528,7 @@ peer_connect(peer)	/* peer list is read-locked */
 #endif
 
 	param = O_NONBLOCK;
-	if (fcntl(s, F_SETFL, &param) != 0) {
+	if (fcntl(s, F_SETFL, param) != 0) {
 		mg_log(LOG_ERR, "cannot set non blocking I/O with %s: %s",
 		    peer->p_name, strerror(errno));
 	}
