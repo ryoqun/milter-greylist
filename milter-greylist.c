@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.140 2006/09/27 11:53:31 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.141 2006/10/26 20:58:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.140 2006/09/27 11:53:31 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.141 2006/10/26 20:58:03 manu Exp $");
 #endif
 #endif
 
@@ -68,7 +68,11 @@ __RCSID("$Id: milter-greylist.c,v 1.140 2006/09/27 11:53:31 manu Exp $");
 #include <sys/stat.h>
 
 #ifdef USE_DRAC
+#ifdef USE_DB185_EMULATION
+#include <db_185.h>
+#else
 #include <db.h>
+#endif
 static int check_drac(char *dotted_ip);
 #endif
 

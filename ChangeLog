@@ -1,4 +1,9 @@
 3.1.1
+	Check for -lc_r before others, for FreeBSD (AIDA Shinra)
+	Fix configure for libspf2 (AIDA Shinra)
+	Fix FreeBSD build (AIDA Shinra)
+	Avoid buffer overflow in DNSRBL code (AIDA Shinra)
+	Fix build problem with newer BerkeleyDB (AIDA Shinra)
 	Check if -lbind requires -lpthread, for Linux 
 	Correctly enable non blocking I/O fox MX sync (Attila Bruncsak)
 	Pointer to DRAC documentation (Matthias Scheler)

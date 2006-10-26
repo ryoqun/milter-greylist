@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.16 2006/10/02 17:03:57 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.17 2006/10/26 20:58:03 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.16 2006/10/02 17:03:57 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.17 2006/10/26 20:58:03 manu Exp $");
 #endif
 #endif
 
@@ -104,7 +104,7 @@ dnsrbl_check_source(sa, salen, source)
 #endif
 	sockaddr_t ss;
 	char req[NS_MAXDNAME + 1];
-	char ans[NS_MAXMSG + 1];
+	char *ans = NULL;
 	int anslen;
 	ns_msg handle;
 	ns_rr rr;
@@ -160,7 +160,11 @@ dnsrbl_check_source(sa, salen, source)
 	(void)mystrlcat(req, ".", NS_MAXDNAME);
 	(void)mystrlcat(req, dnsrbl, NS_MAXDNAME);
 
-	anslen = res_nquery(&res, req, C_IN, qtype, ans, sizeof(ans));
+	if ((ans = malloc(NS_MAXMSG + 1)) == NULL) {
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
+		goto end;
+	}
+	anslen = res_nquery(&res, req, C_IN, qtype, ans, NS_MAXMSG + 1);
 	if (anslen == -1)
 		goto end;
 
@@ -212,6 +216,7 @@ end:
 		mg_log(LOG_DEBUG, "Host %s exists in DNSRBL \"%s\"", 
 				addrstr, source->d_name);
 	}
+	free(ans);
 	res_ndestroy(&res);
 	return retval;
 }
