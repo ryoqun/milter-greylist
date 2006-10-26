@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.189.2.6 2006/10/26 20:53:43 manu Exp $
+# $Id: configure.ac,v 1.189.2.7 2006/10/26 21:01:08 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -97,6 +97,20 @@ AC_FUNC_STAT
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket initgroups strlcat vsyslog])
 
 
+# Check for libpthread. On FreeBSD, the libc_r does the job.
+# On digitalUNIX, libpthreads (with a trailing s) is the library to use
+# FIXME: FreeBSD 4.x wants -pthread
+AC_CHECK_LIB([pthread], [pthread_create], 
+    [LIBS="$LIBS -lpthread"],
+    [AC_CHECK_LIB([c_r], [pthread_create], 
+        [LIBS="$LIBS -lc_r"],
+	[AC_CHECK_LIB([pthreads -lpthread], [pthread_create],
+            [LIBS="$LIBS -lpthreads -lpthread"],
+                [echo "Required libpthread not found. Use --with-libpthread"; 
+                 exit 1;])
+	])
+     ])
+
 # Try to configure for libspf2
 SAVEDLDFLAGS=$LDFLAGS
 SAVEDCFLAGS=$CFLAGS
@@ -107,12 +121,12 @@ AC_ARG_WITH(libspf2,
            AC_CHECK_LIB(spf2, SPF_server_new, [
                SAVEDLDFLAGS=$LDFLAGS
                SAVEDCFLAGS=$CFLAGS
-               LIBS=$LIBS"-lspf2"
+               LIBS=$LIBS" -lspf2"
                AC_DEFINE([HAVE_SPF2], [], [we use libspf2])
                ],[AC_CHECK_LIB([spf2 -lintl],  SPF_server_new, [
                        SAVEDLDFLAGS=$LDFLAGS
                        SAVEDCFLAGS=$CFLAGS
-                       LIBS=$LIBS"-lspf2 -lintl"
+                       LIBS=$LIBS" -lspf2 -lintl"
                        AC_DEFINE([HAVE_SPF2], [], [we use libspf2])
                ], [echo "libspf2 not found, check config.log for details"
                    echo "Remove --with-libspf2 to build without SPF support"
@@ -132,12 +146,12 @@ AC_ARG_WITH(libspf2_10,
            AC_CHECK_LIB(spf2, SPF_create_config, [
                SAVEDLDFLAGS=$LDFLAGS
                SAVEDCFLAGS=$CFLAGS
-               LIBS=$LIBS"-lspf2"
+               LIBS=$LIBS" -lspf2"
                AC_DEFINE([HAVE_SPF2_10], [], [we use libspf2 1.0])
                ],[AC_CHECK_LIB([spf2 -lintl],  SPF_create_config, [
                        SAVEDLDFLAGS=$LDFLAGS
                        SAVEDCFLAGS=$CFLAGS
-                       LIBS=$LIBS"-lspf2 -lintl"
+                       LIBS=$LIBS" -lspf2 -lintl"
                        AC_DEFINE([HAVE_SPF2_10], [], [we use libspf2 1.0])
                ], [echo "libspf2 1.0 not found, check config.log for details"
                    echo "Remove --with-libspf2_10 to build without SPF support"
@@ -157,12 +171,12 @@ AC_ARG_WITH(libspf_alt,
 	    AC_CHECK_LIB(spf_alt, SPF_create_config, [
 		SAVEDLDFLAGS=$LDFLAGS
 		SAVEDCFLAGS=$CFLAGS
-		LIBS=$LIBS"-lspf_alt"
+		LIBS=$LIBS" -lspf_alt"
 		AC_DEFINE([HAVE_SPF_ALT], [], [we use libspf_alt])
 		],[AC_CHECK_LIB([spf_alt -lintl],  SPF_create_config, [
 			SAVEDLDFLAGS=$LDFLAGS
 			SAVEDCFLAGS=$CFLAGS
-			LIBS=$LIBS"-lspf_alt -lintl"
+			LIBS=$LIBS" -lspf_alt -lintl"
 			AC_DEFINE([HAVE_SPF_ALT], [], [we use libspf_alt])
 		], [echo "libspf_alt not found, check config.log for details"
 		    echo "Remove --with-libspf_alt to build without SPF support"
@@ -182,7 +196,7 @@ AC_ARG_WITH(libspf,
 	    AC_CHECK_LIB(spf, SPF_init, [
 		SAVEDLDFLAGS=$LDFLAGS
 		SAVEDCFLAGS=$CFLAGS
-		LIBS=$LIBS"-lspf"
+		LIBS=$LIBS" -lspf"
 		AC_DEFINE([HAVE_SPF], [], [we use libspf])
 		], [echo "libspf not found, check config.log for details"
 		    echo "Remove --with-libspf to build without SPF support"
@@ -337,19 +351,6 @@ CFLAGS=$SAVEDCFLAGS
 AC_ARG_ENABLE(drac,
 	[  --enable-drac	Enable DRAC support],
 	[if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_DRAC"; fi])
-
-# Check for libpthread. On FreeBSD, the libc_r does the job.
-# On digitalUNIX, libpthreads (with a trailing s) is the library to use
-AC_CHECK_LIB([pthread], [pthread_create], 
-    [LIBS="$LIBS -lpthread"],
-    [AC_CHECK_LIB([c_r], [pthread_create], 
-        [LIBS="$LIBS -lc_r"],
-	[AC_CHECK_LIB([pthreads -lpthread], [pthread_create],
-            [LIBS="$LIBS -lpthreads -lpthread"],
-                [echo "Required libpthread not found. Use --with-libpthread"; 
-                 exit 1;])
-	])
-     ])
 
 # Check for libmilter. For sendmail-8.12.1, -lsm is required too.
 # This uses a gross hack on the second AC_CHECK_LIB first argument, but using 
@@ -638,6 +639,7 @@ AC_ARG_WITH(thread-safe-resolver,
 		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 				#define _BSD_SOURCE
 
+				#include <sys/types.h>
 				#include <netinet/in.h>
 				#include <arpa/inet.h>
 				#include <arpa/nameser.h>

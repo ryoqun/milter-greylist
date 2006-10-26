@@ -5450,6 +5450,221 @@ done
 
 
 
+# Check for libpthread. On FreeBSD, the libc_r does the job.
+# On digitalUNIX, libpthreads (with a trailing s) is the library to use
+# FIXME: FreeBSD 4.x wants -pthread
+echo "$as_me:$LINENO: checking for pthread_create in -lpthread" >&5
+echo $ECHO_N "checking for pthread_create in -lpthread... $ECHO_C" >&6
+if test "${ac_cv_lib_pthread_pthread_create+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpthread  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char pthread_create ();
+int
+main ()
+{
+pthread_create ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_pthread_pthread_create=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_pthread_pthread_create=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_pthread_pthread_create" >&5
+echo "${ECHO_T}$ac_cv_lib_pthread_pthread_create" >&6
+if test $ac_cv_lib_pthread_pthread_create = yes; then
+  LIBS="$LIBS -lpthread"
+else
+  echo "$as_me:$LINENO: checking for pthread_create in -lc_r" >&5
+echo $ECHO_N "checking for pthread_create in -lc_r... $ECHO_C" >&6
+if test "${ac_cv_lib_c_r_pthread_create+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lc_r  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char pthread_create ();
+int
+main ()
+{
+pthread_create ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_c_r_pthread_create=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_c_r_pthread_create=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_c_r_pthread_create" >&5
+echo "${ECHO_T}$ac_cv_lib_c_r_pthread_create" >&6
+if test $ac_cv_lib_c_r_pthread_create = yes; then
+  LIBS="$LIBS -lc_r"
+else
+  echo "$as_me:$LINENO: checking for pthread_create in -lpthreads -lpthread" >&5
+echo $ECHO_N "checking for pthread_create in -lpthreads -lpthread... $ECHO_C" >&6
+if test "${ac_cv_lib_pthreads__lpthread_pthread_create+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lpthreads -lpthread  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char pthread_create ();
+int
+main ()
+{
+pthread_create ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_pthreads__lpthread_pthread_create=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_pthreads__lpthread_pthread_create=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_pthreads__lpthread_pthread_create" >&5
+echo "${ECHO_T}$ac_cv_lib_pthreads__lpthread_pthread_create" >&6
+if test $ac_cv_lib_pthreads__lpthread_pthread_create = yes; then
+  LIBS="$LIBS -lpthreads -lpthread"
+else
+  echo "Required libpthread not found. Use --with-libpthread";
+                 exit 1;
+fi
+
+
+fi
+
+
+fi
+
+
 # Try to configure for libspf2
 SAVEDLDFLAGS=$LDFLAGS
 SAVEDCFLAGS=$CFLAGS
@@ -5527,7 +5742,7 @@ if test $ac_cv_lib_spf2_SPF_server_new = yes; then
 
                SAVEDLDFLAGS=$LDFLAGS
                SAVEDCFLAGS=$CFLAGS
-               LIBS=$LIBS"-lspf2"
+               LIBS=$LIBS" -lspf2"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SPF2
@@ -5603,7 +5818,7 @@ if test $ac_cv_lib_spf2__lintl_SPF_server_new = yes; then
 
                        SAVEDLDFLAGS=$LDFLAGS
                        SAVEDCFLAGS=$CFLAGS
-                       LIBS=$LIBS"-lspf2 -lintl"
+                       LIBS=$LIBS" -lspf2 -lintl"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SPF2
@@ -5701,7 +5916,7 @@ if test $ac_cv_lib_spf2_SPF_create_config = yes; then
 
                SAVEDLDFLAGS=$LDFLAGS
                SAVEDCFLAGS=$CFLAGS
-               LIBS=$LIBS"-lspf2"
+               LIBS=$LIBS" -lspf2"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SPF2_10
@@ -5777,7 +5992,7 @@ if test $ac_cv_lib_spf2__lintl_SPF_create_config = yes; then
 
                        SAVEDLDFLAGS=$LDFLAGS
                        SAVEDCFLAGS=$CFLAGS
-                       LIBS=$LIBS"-lspf2 -lintl"
+                       LIBS=$LIBS" -lspf2 -lintl"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SPF2_10
@@ -5875,7 +6090,7 @@ if test $ac_cv_lib_spf_alt_SPF_create_config = yes; then
 
 		SAVEDLDFLAGS=$LDFLAGS
 		SAVEDCFLAGS=$CFLAGS
-		LIBS=$LIBS"-lspf_alt"
+		LIBS=$LIBS" -lspf_alt"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SPF_ALT
@@ -5951,7 +6166,7 @@ if test $ac_cv_lib_spf_alt__lintl_SPF_create_config = yes; then
 
 			SAVEDLDFLAGS=$LDFLAGS
 			SAVEDCFLAGS=$CFLAGS
-			LIBS=$LIBS"-lspf_alt -lintl"
+			LIBS=$LIBS" -lspf_alt -lintl"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SPF_ALT
@@ -6049,7 +6264,7 @@ if test $ac_cv_lib_spf_SPF_init = yes; then
 
 		SAVEDLDFLAGS=$LDFLAGS
 		SAVEDCFLAGS=$CFLAGS
-		LIBS=$LIBS"-lspf"
+		LIBS=$LIBS" -lspf"
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_SPF
@@ -7439,220 +7654,6 @@ if test "${enable_drac+set}" = set; then
   if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_DRAC"; fi
 fi;
 
-# Check for libpthread. On FreeBSD, the libc_r does the job.
-# On digitalUNIX, libpthreads (with a trailing s) is the library to use
-echo "$as_me:$LINENO: checking for pthread_create in -lpthread" >&5
-echo $ECHO_N "checking for pthread_create in -lpthread... $ECHO_C" >&6
-if test "${ac_cv_lib_pthread_pthread_create+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthread  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char pthread_create ();
-int
-main ()
-{
-pthread_create ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_pthread_pthread_create=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_cv_lib_pthread_pthread_create=no
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_pthread_pthread_create" >&5
-echo "${ECHO_T}$ac_cv_lib_pthread_pthread_create" >&6
-if test $ac_cv_lib_pthread_pthread_create = yes; then
-  LIBS="$LIBS -lpthread"
-else
-  echo "$as_me:$LINENO: checking for pthread_create in -lc_r" >&5
-echo $ECHO_N "checking for pthread_create in -lc_r... $ECHO_C" >&6
-if test "${ac_cv_lib_c_r_pthread_create+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lc_r  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char pthread_create ();
-int
-main ()
-{
-pthread_create ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_c_r_pthread_create=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_cv_lib_c_r_pthread_create=no
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_c_r_pthread_create" >&5
-echo "${ECHO_T}$ac_cv_lib_c_r_pthread_create" >&6
-if test $ac_cv_lib_c_r_pthread_create = yes; then
-  LIBS="$LIBS -lc_r"
-else
-  echo "$as_me:$LINENO: checking for pthread_create in -lpthreads -lpthread" >&5
-echo $ECHO_N "checking for pthread_create in -lpthreads -lpthread... $ECHO_C" >&6
-if test "${ac_cv_lib_pthreads__lpthread_pthread_create+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  ac_check_lib_save_LIBS=$LIBS
-LIBS="-lpthreads -lpthread  $LIBS"
-cat >conftest.$ac_ext <<_ACEOF
-/* confdefs.h.  */
-_ACEOF
-cat confdefs.h >>conftest.$ac_ext
-cat >>conftest.$ac_ext <<_ACEOF
-/* end confdefs.h.  */
-
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char pthread_create ();
-int
-main ()
-{
-pthread_create ();
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>conftest.er1
-  ac_status=$?
-  grep -v '^ *+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-	 { ac_try='test -z "$ac_c_werror_flag"
-			 || test ! -s conftest.err'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; } &&
-	 { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_lib_pthreads__lpthread_pthread_create=yes
-else
-  echo "$as_me: failed program was:" >&5
-sed 's/^/| /' conftest.$ac_ext >&5
-
-ac_cv_lib_pthreads__lpthread_pthread_create=no
-fi
-rm -f conftest.err conftest.$ac_objext \
-      conftest$ac_exeext conftest.$ac_ext
-LIBS=$ac_check_lib_save_LIBS
-fi
-echo "$as_me:$LINENO: result: $ac_cv_lib_pthreads__lpthread_pthread_create" >&5
-echo "${ECHO_T}$ac_cv_lib_pthreads__lpthread_pthread_create" >&6
-if test $ac_cv_lib_pthreads__lpthread_pthread_create = yes; then
-  LIBS="$LIBS -lpthreads -lpthread"
-else
-  echo "Required libpthread not found. Use --with-libpthread";
-                 exit 1;
-fi
-
-
-fi
-
-
-fi
-
-
 # Check for libmilter. For sendmail-8.12.1, -lsm is required too.
 # This uses a gross hack on the second AC_CHECK_LIB first argument, but using
 # [-lsm] in the optionnal 5th argument does not seems to help at all.
@@ -8972,6 +8973,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 
 				#define _BSD_SOURCE
 
+				#include <sys/types.h>
 				#include <netinet/in.h>
 				#include <arpa/inet.h>
 				#include <arpa/nameser.h>
