@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.190 2006/10/02 17:03:57 manu Exp $
+# $Id: configure.ac,v 1.191 2006/10/26 20:53:30 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -51,11 +51,13 @@ AC_ARG_WITH(libpthread,
 	[  --with-libpthread=DIR  Find libpthread in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include" 
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
+use_libbind=no
 AC_ARG_WITH(libbind, 
 	[  --with-libbind=DIR	Find libbind in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include/bind -I$withval/include"
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
 	    LIBS="-lbind $LIBS"
+	    use_libbind=yes
 	 ])
 
 # Checks for header files.
@@ -67,6 +69,25 @@ AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_HEADER_TIME
 
+# Do we need -lpthread with -lbind?
+if test $use_libbind = yes ; then
+	AC_MSG_CHECKING([if -lbind needs -lpthread to link])
+	lbind_needs_lpthread=no
+	SAVEDLIBS=$LIBS
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], 
+	    [],
+	    [
+		LIBS="-lpthread $LIBS"
+		AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])],
+		    [lbind_needs_lpthread=yes]);
+	    ]);
+	if test $lbind_needs_lpthread = yes ; then
+		SAVEDLIBS=$LIBS
+	fi
+	AC_MSG_RESULT($lbind_needs_lpthread)
+	LIBS=$SAVEDLIBS
+fi
+
 # Checks for library functions.
 AC_FUNC_FORK
 AC_FUNC_STRFTIME
@@ -75,6 +96,7 @@ AC_FUNC_SELECT_ARGTYPES
 AC_FUNC_SETVBUF_REVERSED
 AC_FUNC_STAT
 AC_CHECK_FUNCS([bzero gettimeofday malloc inet_ntoa strerror select socket initgroups strlcat vsyslog])
+
 
 # Try to configure for libspf2
 SAVEDLDFLAGS=$LDFLAGS

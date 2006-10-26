@@ -1,4 +1,5 @@
 3.1.1
+	Check if -lbind requires -lpthread, for Linux 
 	Correctly enable non blocking I/O fox MX sync (Attila Bruncsak)
 	Pointer to DRAC documentation (Matthias Scheler)
 	FreeBSD build fixes (Hajimu UMEMOTO)
