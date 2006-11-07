@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.48 2006/10/05 20:05:56 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.49 2006/11/07 05:12:01 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
@@ -165,6 +165,7 @@ void unmappedaddr(struct sockaddr *, socklen_t *);
 void final_dump(void);
 int main(int, char **);
 void mg_log(int, char *, ...);
+char *strncpy_rmsp(char *, char *, size_t);
 
 #ifdef HAVE_STRLCAT
 /* #include <string.h> */

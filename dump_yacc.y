@@ -1,4 +1,4 @@
-%token IPADDR IP6ADDR EMAIL TIME AUTO
+%token IPADDR IP6ADDR EMAIL TIME AUTO GARBAGE
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.18 2006/07/24 22:49:43 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.19 2006/11/07 05:12:01 manu Exp $");
 #endif
 #endif
 
@@ -53,7 +53,7 @@ greyentry :	IPADDR EMAIL EMAIL TIME	{
 			    $3, $4);
 #else
 			printf("IPv6 is not supported, ignore line %d\n",
-			    conf_line);
+			    dump_line);
 #endif
 		}
 	;
@@ -67,7 +67,7 @@ autoentry :	IPADDR EMAIL EMAIL TIME AUTO {
 			    $3, $4);
 #else
 			printf("IPv6 is not supported, ignore line %d\n",
-			    conf_line);
+			    dump_line);
 #endif
 		}
 	;
