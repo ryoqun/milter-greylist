@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.66.2.4 2006/10/10 20:28:15 manu Exp $ */
+/* $Id: sync.c,v 1.66.2.5 2006/11/07 05:12:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.66.2.4 2006/10/10 20:28:15 manu Exp $");
+__RCSID("$Id: sync.c,v 1.66.2.5 2006/11/07 05:12:12 manu Exp $");
 #endif
 #endif
 
@@ -907,6 +907,8 @@ sync_server(arg)
 	char *addrstr;
 	char *from;
 	char *rcpt;
+	char from_clean[ADDRLEN + 1];
+	char rcpt_clean[ADDRLEN + 1];
 	char *datestr;
 	char *awstr;
 	char *cookie;
@@ -1025,6 +1027,8 @@ sync_server(arg)
 			fflush(stream);
 			continue;
 		}
+		(void)strncpy_rmsp(from_clean, from, ADDRLEN);
+		from = from_clean;
 
 		/*
 		 * get { "rcpt" email_address }
@@ -1047,6 +1051,8 @@ sync_server(arg)
 			fflush(stream);
 			continue;
 		}
+		(void)strncpy_rmsp(rcpt_clean, rcpt, ADDRLEN);
+		rcpt = rcpt_clean;
 
 		/*
 		 * get { "date" valid_date }

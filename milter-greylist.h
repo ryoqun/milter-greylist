@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.46.2.2 2006/10/05 20:05:17 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.46.2.3 2006/11/07 05:12:12 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -164,6 +164,7 @@ void unmappedaddr(struct sockaddr *, socklen_t *);
 void final_dump(void);
 int main(int, char **);
 void mg_log(int, char *, ...);
+char *strncpy_rmsp(char *, char *, size_t);
 
 #ifdef HAVE_STRLCAT
 /* #include <string.h> */

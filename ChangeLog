@@ -1,3 +1,6 @@
+3.0rc7
+	Fix crashes during dump reloads (AIDA Shinra)
+	Fix DoS in MX sync protocol (AIDA Shinra)
 3.0rc6
 	Check for -lc_r before others, for FreeBSD (AIDA Shinra)
 	Fix configure for libspf2 (AIDA Shinra)

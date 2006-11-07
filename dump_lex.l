@@ -24,7 +24,7 @@ auto		[Aa][Uu][Tt][Oo]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.17.2.1 2006/09/04 22:05:59 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.17.2.2 2006/11/07 05:12:11 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -78,6 +78,7 @@ auto		[Aa][Uu][Tt][Oo]
 			mg_log(LOG_DEBUG, 
 			    "unknown token \"%s\" line %d, skipping\n", 
 			    yytext, dump_line); 
+			return GARBAGE;
 		}
 %%
 

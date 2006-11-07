@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.137.2.6 2006/10/26 21:01:08 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.137.2.7 2006/11/07 05:12:11 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.137.2.6 2006/10/26 21:01:08 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.137.2.7 2006/11/07 05:12:11 manu Exp $");
 #endif
 #endif
 
@@ -91,7 +91,6 @@ static int check_drac(char *dotted_ip);
 #endif
 #include "macro.h"
 
-static char *strncpy_rmsp(char *, char *, size_t);
 static char *gmtoffset(time_t *, char *, size_t);
 static void writepid(char *);
 static void log_and_report_greylisting(SMFICTX *, struct mlfi_priv *, char *);
@@ -1065,7 +1064,7 @@ cleanup_sock(path)
 	return;
 }
 
-static char *
+char *
 strncpy_rmsp(dst, src, len)
 	char *dst;
 	char *src;
@@ -1074,7 +1073,7 @@ strncpy_rmsp(dst, src, len)
 	unsigned int i;
 
 	for (i = 0; src[i] && (i < len); i++) {
-		if (isgraph((int)src[i]))
+		if (isgraph((int)(unsigned char)src[i]))
 			dst[i] = src[i];
 		else
 			dst[i] = '_';
