@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.80 2006/10/02 17:03:57 manu Exp $
+# $Id: Makefile,v 1.81 2006/11/20 20:54:32 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -31,7 +31,7 @@
 
 CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE
 LDFLAGS=	
-LIBS= 		 -lresolv -lpthread -lmilter
+LIBS= 		 -lpthread -lresolv -lmilter
 prefix=		/usr/local
 exec_prefix=	${prefix}
 SYSCONFDIR=	${prefix}/etc
