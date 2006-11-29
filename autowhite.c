@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.51 2006/08/30 04:57:58 manu Exp $ */
+/* $Id: autowhite.c,v 1.52 2006/11/29 21:08:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.51 2006/08/30 04:57:58 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.52 2006/11/29 21:08:54 manu Exp $");
 #endif
 #endif
 
@@ -333,7 +333,10 @@ autowhite_textdump(stream)
 			    textaddr, aw->a_from, aw->a_rcpt, 
 			    (long)aw->a_tv.tv_sec);
 		} else {
-			localtime_r((time_t *)&aw->a_tv.tv_sec, &tm);
+			time_t ti;
+
+			ti = aw->a_tv.tv_sec;
+			localtime_r(&ti, &tm);
 			strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
 	
 			fprintf(stream, 

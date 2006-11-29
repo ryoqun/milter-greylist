@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.81 2006/08/30 20:50:42 manu Exp $ */
+/* $Id: pending.c,v 1.82 2006/11/29 21:08:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.81 2006/08/30 20:50:42 manu Exp $");
+__RCSID("$Id: pending.c,v 1.82 2006/11/29 21:08:55 manu Exp $");
 #endif
 #endif
 
@@ -426,7 +426,10 @@ pending_textdump(stream)
 			    pending->p_addr, pending->p_from, 
 			    pending->p_rcpt, (long)pending->p_tv.tv_sec);
 		} else {
-			localtime_r((time_t *)&pending->p_tv.tv_sec, &tm);
+			time_t ti;
+
+			ti = pending->p_tv.tv_sec;
+			localtime_r(&ti, &tm);
 			strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
 		
 			fprintf(stream, "%s\t%s\t%s\t%ld # %s\n", 
