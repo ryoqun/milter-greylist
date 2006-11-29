@@ -1,3 +1,5 @@
+3.0.1
+	Fix timespamp on sparc64 (Gert Doering)
 3.0
 	Fix crashes during dump reloads (AIDA Shinra)
 	Fix DoS in MX sync protocol (AIDA Shinra)
