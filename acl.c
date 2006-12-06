@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.36 2006/10/08 13:21:09 manu Exp $ */
+/* $Id: acl.c,v 1.37 2006/12/06 15:02:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.36 2006/10/08 13:21:09 manu Exp $");
+__RCSID("$Id: acl.c,v 1.37 2006/12/06 15:02:41 manu Exp $");
 #endif
 #endif
 
@@ -66,6 +66,9 @@ __RCSID("$Id: acl.c,v 1.36 2006/10/08 13:21:09 manu Exp $");
 #include "list.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
+#endif
+#ifdef USE_CURL
+#include "urlcheck.h"
 #endif
 #include "macro.h"
 #include "milter-greylist.h"
@@ -224,6 +227,30 @@ acl_add_dnsrbl(dnsrbl)
 		
 	if (conf.c_debug || conf.c_acldebug)
 		mg_log(LOG_DEBUG, "load acl dnsrbl %s", dnsrbl);
+
+	return;
+}
+#endif
+
+#ifdef USE_CURL
+void
+acl_add_urlcheck(urlcheck)
+	char *urlcheck;
+{
+	if (gacl.a_urlcheck != NULL ||
+	    gacl.a_urlchecklist != NULL) {
+		mg_log(LOG_ERR,
+		    "urlcheck specified twice in ACL line %d",
+		    conf_line);
+		exit(EX_DATAERR);
+	}
+	if ((gacl.a_urlcheck = urlcheck_byname(urlcheck)) == NULL) {
+		mg_log(LOG_ERR, "unknown URL check \"%s\"", urlcheck);
+		exit(EX_DATAERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl urlcheck %s", urlcheck);
 
 	return;
 }
@@ -530,6 +557,7 @@ acl_filter(ctx, priv, rcpt)
 	char tmpstr[HDRLEN];
 	int retval;
 	int testmode = conf.c_testmode;
+	struct acl_param ap;
 
 	sa = SA(&priv->priv_addr);
 	salen = priv->priv_addrlen;
@@ -541,6 +569,14 @@ acl_filter(ctx, priv, rcpt)
 
 	TAILQ_FOREACH(acl, &acl_head, a_list) {
 		retval = 0;
+
+		ap.ap_type = acl->a_type;
+		ap.ap_delay = acl->a_delay;
+		ap.ap_autowhite = acl->a_autowhite;
+		ap.ap_flags = acl->a_flags;
+		ap.ap_code = acl->a_code;
+		ap.ap_ecode = acl->a_ecode;
+		ap.ap_msg = acl->a_msg;
 
 		if (acl->a_addrlist != NULL) {
 			if (list_addr_filter(acl->a_addrlist, sa)) {
@@ -648,6 +684,25 @@ acl_filter(ctx, priv, rcpt)
 			}
 		}
 #endif
+#ifdef USE_CURL
+		if (acl->a_urlchecklist != NULL) {
+			if (list_urlcheck_filter(acl->a_urlchecklist, 
+			    priv, rcpt, &ap)) {
+				retval |= EXF_URLCHECK;
+			} else {
+				continue;
+			}
+		}
+
+		if (acl->a_urlcheck != NULL) {
+			if (urlcheck_validate(priv, rcpt, 
+			    acl->a_urlcheck, &ap) == 1) {
+				retval |= EXF_URLCHECK;
+			} else {
+				continue;
+			}
+		}
+#endif
 		if (acl->a_macrolist != NULL) {
 			if (list_macro_filter(acl->a_macrolist, ctx)) {
 				retval |= EXF_MACRO;
@@ -672,7 +727,7 @@ acl_filter(ctx, priv, rcpt)
 	if (acl) {
 		if (retval == 0)
 			retval = EXF_DEFAULT;
-		switch (acl->a_type) {
+		switch (ap.ap_type) {
 		case A_GREYLIST:
 			retval |= EXF_GREYLIST;
 			break;
@@ -691,35 +746,42 @@ acl_filter(ctx, priv, rcpt)
 		priv->priv_acl_line = acl->a_line;
 
 		priv->priv_delay =
-		    (acl->a_delay != -1) ? acl->a_delay : conf.c_delay;
+		    (ap.ap_delay != -1) ? ap.ap_delay : conf.c_delay;
 		priv->priv_autowhite =
-		    (acl->a_autowhite != -1) ? 
-		    acl->a_autowhite : conf.c_autowhite_validity;
+		    (ap.ap_autowhite != -1) ? 
+		    ap.ap_autowhite : conf.c_autowhite_validity;
 
-		if (acl->a_code) {
-			if ((priv->priv_code = strdup(acl->a_code)) == NULL) {
+		if (ap.ap_code) {
+			if ((priv->priv_code = strdup(ap.ap_code)) == NULL) {
 				mg_log(LOG_ERR, "strdup failed: %s", 
 				    strerror(errno));
 				exit(EX_OSERR);
 			}
 		}
-		if (acl->a_ecode) {
-			if ((priv->priv_ecode = strdup(acl->a_ecode)) == NULL) {
+		if (ap.ap_ecode) {
+			if ((priv->priv_ecode = strdup(ap.ap_ecode)) == NULL) {
 				mg_log(LOG_ERR, "strdup failed: %s", 
 				    strerror(errno));
 				exit(EX_OSERR);
 			}
 		}
-		if (acl->a_msg) {
-			if ((priv->priv_msg = strdup(acl->a_msg)) == NULL) {
+		if (ap.ap_msg) {
+			if ((priv->priv_msg = strdup(ap.ap_msg)) == NULL) {
 				mg_log(LOG_ERR, "strdup failed: %s", 
 				    strerror(errno));
 				exit(EX_OSERR);
 			}
 		}
 			
+		/* Free temporary memory if nescessary */
+		if (ap.ap_flags & A_FREE_CODE)
+			free(ap.ap_code);
+		if (ap.ap_flags & A_FREE_ECODE)
+			free(ap.ap_ecode);
+		if (ap.ap_flags & A_FREE_MSG)
+			free(ap.ap_msg);
 
-		if (acl->a_flags & A_FLUSHADDR)
+		if (ap.ap_flags & A_FLUSHADDR)
 			pending_del_addr(sa, salen, queueid, acl->a_line);
 
 		if (conf.c_debug || conf.c_acldebug) {
@@ -754,6 +816,12 @@ acl_filter(ctx, priv, rcpt)
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
 			snprintf(tmpstr, sizeof(tmpstr),
 			    "address %s is whitelisted by DNSRBL", addrstr);
+			ADD_REASON(whystr, tmpstr);
+		}
+		if (retval & EXF_URLCHECK) {
+			iptostring(sa, salen, addrstr, sizeof(addrstr));
+			snprintf(tmpstr, sizeof(tmpstr),
+			    "URL check passed");
 			ADD_REASON(whystr, tmpstr);
 		}
 		if (retval & EXF_DOMAIN) {
@@ -1033,6 +1101,20 @@ acl_entry(acl)
 		def = 0;
 	}
 #endif
+#if USE_CURL
+	if (acl->a_urlchecklist != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "urlchecklist \"%s\" ", 
+		    acl->a_urlchecklist->al_name);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_urlcheck != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "urlcheck \"%s\" ",
+		    acl->a_urlcheck->u_name);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+#endif
 	if (acl->a_macrolist != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "sm_macrolist \"%s\" ", 
 		    acl->a_macrolist->al_name);
@@ -1211,6 +1293,18 @@ acl_add_list(list)
 			exit(EX_DATAERR);
 		}
 		gacl.a_dnsrbllist = ale;
+		break;
+#endif
+#if USE_CURL
+	case LT_URLCHECK:
+		if (gacl.a_urlcheck != NULL ||
+		    gacl.a_urlchecklist != NULL) {
+			mg_log(LOG_ERR,
+			    "muliple urlcheck statement (list \"%s\", line %d)",
+			    list, conf_line);
+			exit(EX_DATAERR);
+		}
+		gacl.a_urlchecklist = ale;
 		break;
 #endif
 	case LT_MACRO:

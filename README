@@ -1,9 +1,9 @@
-# $Id: README,v 1.43 2006/10/06 09:15:12 manu Exp $
+# $Id: README,v 1.44 2006/12/06 15:02:41 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2006/10/06 09:15:12 $
+		       $Date: 2006/12/06 15:02:41 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -22,10 +22,11 @@ Table of contents:
  9 Using DNSRBL
  10 Building with SPF
  11 Using DRAC
- 12 Packaging
- 13 Things to look at if things get wrong
- 14 Known problems
- 15 License
+ 12 Using URL checks
+ 13 Packaging
+ 14 Things to look at if things get wrong
+ 15 Known problems
+ 16 License
 
 Run this command to regenerate a table of contents:
  sed '/^.====/{g;p;};h;d' README
@@ -366,7 +367,13 @@ option.
 
 More information on DRAC can be obtained at 
 http://mail.cc.umanitoba.ca/drac/
-ksh: q: not found
+
+ 12 Using URL checks
+ ===================
+
+XXX Write me
+
+ 13 Packaging
  ============
 
 milter-greylist is available from NetBSD pkgsrc and FreeBSD ports.
@@ -375,7 +382,7 @@ RedHat Linux. That is achieved by running rpmbuild on milter-greylist
 source tarball: rpmbuild -bb  milter-greylist-1.7.3.tgz
 
 
- 13 Things to look at if things get wrong
+ 14 Things to look at if things get wrong
  ========================================
 
 First, read the milter-greylist(8) and greylist.conf(5) man page! :-)
@@ -424,7 +431,7 @@ tells you when the entry will expire.
 Examining the tail of this file may reveal problems with domains which
 use multiple MX servers or whose mail is actually served by another site.
 
- 14 Known problems
+ 15 Known problems
  =================
 
 If milter-greylist terminates during its operation, first check your
@@ -466,7 +473,7 @@ configure with the CC environment variable set to cc. This
 incompatibility may be fixed in gcc 3.4.
 
 
- 15 License
+ 16 License
  ==========
 
 This software is available under a 3 clauses BSD license:

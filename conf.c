@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.43 2006/09/20 07:50:09 manu Exp $ */
+/* $Id: conf.c,v 1.44 2006/12/06 15:02:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.43 2006/09/20 07:50:09 manu Exp $");
+__RCSID("$Id: conf.c,v 1.44 2006/12/06 15:02:41 manu Exp $");
 #endif
 #endif
 
@@ -64,6 +64,9 @@ __RCSID("$Id: conf.c,v 1.43 2006/09/20 07:50:09 manu Exp $");
 #include "acl.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
+#endif
+#ifdef USE_CURL
+#include "urlcheck.h"
 #endif
 #include "autowhite.h"
 #include "conf.h"
@@ -167,6 +170,9 @@ conf_load_internal(timestamp)
 		ACL_WRLOCK;
 #ifdef USE_DNSRBL
 		dnsrbl_clear();
+#endif
+#ifdef USE_CURL
+		urlcheck_clear();
 #endif
 		all_list_clear();
 		macro_clear();

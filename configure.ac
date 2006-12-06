@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.193 2006/11/20 20:54:33 manu Exp $
+# $Id: configure.ac,v 1.194 2006/12/06 15:02:41 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 3.1.1, manu@netbsd.org)
+AC_INIT(milter-greylist, 3.1.2, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -59,6 +59,11 @@ AC_ARG_WITH(libbind,
 	    LIBS="-lbind $LIBS"
 	    use_libbind=yes
 	 ])
+AC_ARG_WITH(libcurl, 
+	[  --with-libcurl=DIR  Find libcurl in DIR],
+	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_CURL" 
+	    LIBS="-lcurl $LIBS"
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -633,7 +638,6 @@ AC_ARG_ENABLE(dnsrbl,
 		exit 1;
 	 fi
 	])
-
 
 # Record the build environnement for milter-greylist -r
 AC_DEFINE_UNQUOTED([BUILD_ENV], ["`logname`@`uname -n`:`pwd` `date`"], 

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.44 2006/09/18 11:54:39 manu Exp $
+.\" $Id: greylist.conf.5,v 1.45 2006/12/06 15:02:41 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -60,14 +60,16 @@ keyword followed by the
 .I whitelist\fR,
 or
 .I blacklist
-keyword, and by any set of the 6 clauses: 
+keyword, and by any set of the following clauses: 
 .I addr\fR,
 .I domain\fR,
 .I from\fR,
 .I rcpt\fR,
 .I sm_macro\fR,
-and (if built with --enable-dnsrbl)
-.I dnsrbl\fR.
+.I urlcheck\fR
+(if built with --with-libcurl), and 
+.I dnsrbl\fR
+(if built with --enable-dnsrbl).
 A message will match an ACL entry when it complies with all of its clauses.
 .TP
 .I addr
@@ -116,6 +118,10 @@ This is used to select recipient addresses. Example:
 .I sm_macro 
 This is used to select a Sendmail macro value. See the section on that
 topic for more information.
+.TP
+.I urlcheck
+This is used to query an external configuration source through an URL.
+See the section on that topic for more information.
 .TP
 .I dnsrbl
 This is used to select a DNSRBL. See the section on that topic for
@@ -424,6 +430,79 @@ DNSRBL support is only available if enabled through the --enable-dnsrbl
 config flag. Please make sure
 .B milter-greylist(8)
 is linked against a thread-safe DNS resolver, otherwise it shall crash.
+.SH URL checks
+.B milter-greylist(8) 
+is able to query external sources of information 
+through various URL, if it was built with --with-libcurl. Here is an 
+example:
+.IP
+  urlcheck "glusr" "http://www.example.net/mgl-config?rcpt=%r"
+
+  acl greylist urlcheck "glusr" delay 15m 
+  acl whitelist default
+.PP
+For each message, the URL will be querried, with  % format tags
+being subtituted by the following parameters:
+.TP
+.I %r 
+the message recipient e-mail address
+.TP
+.I %f
+the message sender e-mail address
+.TP
+.I %i
+the sender machine IP address
+.TP
+.I %d
+the sender machine DNS address
+.TP
+.I %h
+the SMTP transaction HELO string
+.TP
+.I %%
+a single % character
+.PP
+.B milter-greylist(8) 
+expects an answer containing a list of \\n terminated lines, with  
+.I key: value 
+pairs. The most basic answer to get a match is:
+.IP
+  milterGreylistStatus: Ok
+.PP
+The answer can be more complex, with keys that will overload the ACL
+settings:
+.TP
+.I milterGreylistDelay 
+The greylisting delay to use (time unit suffix allowed).
+.TP
+.I milterGreylistAutowhite
+The autowhite delay to use (time unit suffix allowed).
+.TP
+.I milterGreylistFlushAddr
+The value is ignored. If this key is present, then the IP address for
+the sender machine will be flushed from greylist and autowhite databases.
+.TP
+.I milterGreylistCode
+The SMTP code to return (e.g.: 551).
+.TP
+.I milterGreylistECode
+The SMTP extended code to return (e.g.: 5.7.1)
+.TP
+.I milterGreylistMsg
+The string to return with SMTP codes.
+.TP
+.I milterGreylistAction
+This feature is nifty but use it with caution, as it makes the access
+list a bit difficult to understand. By specifying the values
+.I greylist\fR,
+.I whitelist\fR,
+or
+.I blacklist\fR,
+it is possible to overload the ACL action itself.
+.PP
+The ACL will match if any of the above key is returned: 
+.I milterGreylistStatus
+is not mandatory.
 .SH COMMAND-LINE FLAG EQUIVALENTS
 Most 
 .B milter-greylist(8)

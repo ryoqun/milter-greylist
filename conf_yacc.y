@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.60 2006/09/20 07:50:09 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.61 2006/12/06 15:02:41 manu Exp $");
 #endif
 #endif
 
@@ -21,6 +21,9 @@ __RCSID("$Id: conf_yacc.y,v 1.60 2006/09/20 07:50:09 manu Exp $");
 #include "macro.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
+#endif
+#ifdef USE_CURL
+#include "urlcheck.h"
 #endif
 #include "milter-greylist.h"
 
@@ -98,6 +101,7 @@ lines	:	lines netblock '\n'
 	|       lines logexpired '\n'
 	|	lines dnsrbldef '\n'
 	|	lines macrodef '\n'
+	|	lines urlcheckdef '\n'
 	|	lines listdef '\n'
 	|	lines '\n'
 	|
@@ -465,6 +469,7 @@ acl_clause:	fromaddr_clause
 	|	netblock_clause
 	|	dnsrbl_clause
 	|	macro_clause
+	|	urlcheck_clause
 	|	list_clause
 	;
 
@@ -544,6 +549,18 @@ macro_clause:		SM_MACRO QSTRING {
 			}
 	;
 
+urlcheck_clause:	URLCHECK QSTRING { 
+#ifdef USE_CURL
+			char path[QSTRLEN + 1];
+
+			acl_add_urlcheck(quotepath(path, $2, QSTRLEN));
+#else
+			mg_log(LOG_INFO, 
+			    "CURL support not compiled in line %d", 
+			    conf_line);
+#endif
+			}
+	;
 list_clause:		LIST QSTRING { 
 				char path[QSTRLEN + 1];
 
@@ -620,6 +637,20 @@ macrodef_string:	SM_MACRO QSTRING QSTRING QSTRING {
 			}
 	;
 
+urlcheckdef:	URLCHECK QSTRING QSTRING {
+#ifdef USE_CURL
+			char path1[QSTRLEN + 1];
+			char path2[QSTRLEN + 1];
+
+			urlcheck_def_add(quotepath(path1, $2, QSTRLEN), 
+			    quotepath(path2, $3, QSTRLEN));
+#else
+			mg_log(LOG_INFO, 
+			    "CURL support not compiled in line %d", 
+			    conf_line);
+#endif
+		}
+	;
 macrodef_regex:		SM_MACRO QSTRING QSTRING REGEX {
 				char name[QSTRLEN + 1];
 				char macro[QSTRLEN + 1];

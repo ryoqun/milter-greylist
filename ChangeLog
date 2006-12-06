@@ -1,5 +1,6 @@
 3.1.2
 	Fix timespamp on sparc64 (Gert Doering)
+	Add the ability to query extrnal sources in ACL using URL 
 3.1.1
 	Fix crashes during dump reloads (AIDA Shinra)
 	Fix DoS in MX sync protocol (AIDA Shinra)

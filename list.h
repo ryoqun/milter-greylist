@@ -1,4 +1,4 @@
-/* $Id: list.h,v 1.3 2006/08/27 16:02:26 manu Exp $ */
+/* $Id: list.h,v 1.4 2006/12/06 15:02:41 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -38,8 +38,8 @@ LIST_HEAD(list, list_entry);
 extern struct all_list_entry *glist;
 
 enum list_type { LT_UNKNOWN, LT_FROM, LT_RCPT, LT_DOMAIN, LT_ADDR, 
-    LT_DNSRBL, LT_MACRO };
-enum item_type { L_STRING, L_ADDR, L_REGEX, L_DNSRBL, L_MACRO };
+    LT_DNSRBL, LT_MACRO, LT_URLCHECK };
+enum item_type { L_STRING, L_ADDR, L_REGEX, L_DNSRBL, L_MACRO, L_URLCHECK };
 
 struct list_entry {
 	enum item_type l_type;
@@ -53,6 +53,9 @@ struct list_entry {
 		regex_t *regex;
 #ifdef USE_DNSRBL
 		struct dnsrbl_entry *dnsrbl;
+#endif
+#ifdef USE_CURL
+		struct urlcheck_entry *urlcheck;
 #endif
 		struct macro_entry *macro;
 	} l_data;
@@ -85,5 +88,7 @@ int list_macro_filter(struct all_list_entry *, SMFICTX *);
 int list_from_filter(struct all_list_entry *, char *);
 int list_rcpt_filter(struct all_list_entry *, char *);
 int list_domain_filter(struct all_list_entry *, char *);
+int list_urlcheck_filter(struct all_list_entry *, 
+    struct mlfi_priv *, char *, struct acl_param *);
 
 #endif /* _LIST_H_ */

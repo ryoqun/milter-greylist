@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.142 2006/11/07 05:12:01 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.143 2006/12/06 15:02:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.142 2006/11/07 05:12:01 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.143 2006/12/06 15:02:41 manu Exp $");
 #endif
 #endif
 
@@ -89,6 +89,9 @@ static int check_drac(char *dotted_ip);
 #include "milter-greylist.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
+#endif
+#ifdef USE_CURL
+#include "urlcheck.h"
 #endif
 #include "macro.h"
 
@@ -673,6 +676,10 @@ real_eom(ctx)
 			ADD_REASON(whystr, "Sender IP whitelisted by DNSRBL");
 			priv->priv_whitelist &= ~EXF_DNSRBL;
 		}
+		if (priv->priv_whitelist & EXF_URLCHECK) {
+			ADD_REASON(whystr, "URL check passed");
+			priv->priv_whitelist &= ~EXF_URLCHECK;
+		}
 		if (priv->priv_whitelist & EXF_DEFAULT) {
 			ADD_REASON(whystr, "Default is to whitelist mail");
 			priv->priv_whitelist &= ~EXF_DEFAULT;
@@ -960,6 +967,9 @@ main(argc, argv)
 	dump_init();
 #ifdef USE_DNSRBL
 	dnsrbl_init();
+#endif
+#ifdef USE_CURL
+	urlcheck_init();
 #endif
 	macro_init();
 

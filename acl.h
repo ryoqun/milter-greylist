@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.13 2006/09/04 21:28:18 manu Exp $ */
+/* $Id: acl.h,v 1.14 2006/12/06 15:02:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -87,11 +87,15 @@ struct acl_entry {
 #ifdef USE_DNSRBL
 	struct dnsrbl_entry *a_dnsrbl; 
 #endif
+#ifdef USE_CURL
+	struct urlcheck_entry *a_urlcheck;
+#endif
 	struct macro_entry *a_macro;
 	struct all_list_entry *a_fromlist;
 	struct all_list_entry *a_rcptlist;
 	struct all_list_entry *a_domainlist;
 	struct all_list_entry *a_dnsrbllist;
+	struct all_list_entry *a_urlchecklist;
 	struct all_list_entry *a_macrolist;
 	struct all_list_entry *a_addrlist;
 	time_t a_delay;
@@ -103,8 +107,21 @@ struct acl_entry {
 	TAILQ_ENTRY(acl_entry) a_list;
 };
 
+struct acl_param {
+	acl_type_t ap_type;
+	time_t ap_delay;
+	time_t ap_autowhite;
+	int ap_flags;
+	char *ap_code;
+	char *ap_ecode;
+	char *ap_msg;
+};
+
 /* a_flags */
-#define A_FLUSHADDR	1
+#define A_FLUSHADDR		0x01
+#define A_FREE_CODE		0x02
+#define A_FREE_ECODE		0x04
+#define A_FREE_MSG		0x08
 
 extern int testmode;
 extern pthread_rwlock_t acl_lock;
@@ -127,6 +144,9 @@ void acl_add_ecode(char *);
 void acl_add_msg(char *);
 #ifdef USE_DNSRBL
 void acl_add_dnsrbl(char *);
+#endif
+#ifdef USE_CURL
+void acl_add_urlcheck(char *);
 #endif
 void acl_add_macro(char *);
 struct acl_entry *acl_register_entry_first (acl_type_t);
@@ -158,4 +178,5 @@ int domaincmp(char *, char *);
 #define EXF_DNSRBL	(1 << 15)
 #define EXF_BLACKLIST	(1 << 16)
 #define EXF_MACRO	(1 << 17)
+#define EXF_URLCHECK	(1 << 18)
 #endif /* _ACL_H_ */

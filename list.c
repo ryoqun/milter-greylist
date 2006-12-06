@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.11 2006/10/02 17:03:57 manu Exp $ */
+/* $Id: list.c,v 1.12 2006/12/06 15:02:41 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.11 2006/10/02 17:03:57 manu Exp $");
+__RCSID("$Id: list.c,v 1.12 2006/12/06 15:02:41 manu Exp $");
 #endif
 #endif
 
@@ -60,6 +60,9 @@ __RCSID("$Id: list.c,v 1.11 2006/10/02 17:03:57 manu Exp $");
 #include "acl.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
+#endif
+#ifdef USE_CURL
+#include "urlcheck.h"
 #endif
 #include "macro.h"
 #include "list.h"
@@ -140,6 +143,12 @@ all_list_put(ale)
 #ifdef USE_DNSRBL
 		case L_DNSRBL:
 			/* Nothing to do, it is free'ed with dnsrbl_list */
+			break;
+#endif
+
+#ifdef USE_CURL
+		case L_URLCHECK:
+			/* Nothing to do, it is free'ed with urlcheck_list */
 			break;
 #endif
 
@@ -337,6 +346,11 @@ all_list_settype(ale, type)
 			strncat(debugstr, "dnsrbl ", DEBUGSTR);
 			break;
 #endif
+#ifdef USE_CURL
+		case LT_URLCHECK:
+			strncat(debugstr, "urlcheck ", DEBUGSTR);
+			break;
+#endif
 		case LT_ADDR:
 			strncat(debugstr, "addr ", DEBUGSTR);
 			break;
@@ -370,6 +384,33 @@ all_list_settype(ale, type)
 
 			le->l_data.dnsrbl = de;
 			le->l_type = L_DNSRBL;
+		}
+
+	}
+#endif /* USE_DNSRBL */
+
+#if USE_CURL
+	/* Lookup URL checks */
+	if (type == LT_URLCHECK) {
+		struct list_entry *le;
+
+		LIST_FOREACH(le, &ale->al_head, l_list) {
+			struct urlcheck_entry *ue;
+
+			if (le->l_type != L_STRING) {
+				mg_log(LOG_ERR, "inconsistent list line %d",
+				    conf_line);
+				exit(EX_SOFTWARE);
+			}
+
+			if ((ue = urlcheck_byname(le->l_data.string)) == NULL) {
+				mg_log(LOG_ERR, "Inexistent URL check \"%s\" "
+				    "at line %d", le->l_data.string, conf_line);
+				exit(EX_DATAERR);
+			}
+
+			le->l_data.urlcheck = ue;
+			le->l_type = L_URLCHECK;
 		}
 
 	}
@@ -440,6 +481,25 @@ list_dnsrbl_filter(list,salen, sa)
 
 	LIST_FOREACH(le, &list->al_head, l_list) {
 		if (dnsrbl_check_source(sa, salen, le->l_data.dnsrbl) == 1)
+			break;
+	}
+
+	return (le != NULL);
+}
+#endif
+
+#if USE_CURL
+int
+list_urlcheck_filter(list, priv, rcpt, ap)
+	struct all_list_entry *list;
+	struct mlfi_priv *priv;
+	char *rcpt;
+	struct acl_param *ap;
+{
+	struct list_entry *le;
+
+	LIST_FOREACH(le, &list->al_head, l_list) {
+		if (urlcheck_validate(priv, rcpt, le->l_data.urlcheck, ap) == 1)
 			break;
 	}
 

@@ -1,0 +1,584 @@
+/* $Id: urlcheck.c,v 1.1 2006/12/06 15:02:41 manu Exp $ */
+
+/*
+ * Copyright (c) 2006 Emmanuel Dreyfus
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. All advertising materials mentioning features or use of this software
+ *    must display the following acknowledgement:
+ *        This product includes software developed by Emmanuel Dreyfus
+ *
+ * THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,  
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+ * OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "config.h"
+
+#ifdef USE_CURL
+
+#ifdef HAVE_SYS_CDEFS_H
+#include <sys/cdefs.h>
+#ifdef __RCSID
+__RCSID("$Id: urlcheck.c,v 1.1 2006/12/06 15:02:41 manu Exp $");
+#endif
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <syslog.h>
+#include <errno.h>
+#include <ctype.h>
+#include <sysexits.h>
+
+#include <curl/curl.h>
+
+#ifdef HAVE_OLD_QUEUE_H 
+#include "queue.h"
+#else 
+#include <sys/queue.h>
+#endif
+#include <sys/types.h>
+
+#include "milter-greylist.h"
+#include "pending.h"
+#include "acl.h"
+#include "conf.h"
+#include "urlcheck.h"
+
+/* 
+ * locking is done through the same lock as acllist: both are static 
+ * configuration, which are readen or changed at the same times.
+ */
+struct urlchecklist urlcheck_head;
+
+static size_t urlmaxlen(char *);
+static char *fstring_expand(struct mlfi_priv *, 
+    char *, struct urlcheck_entry *);
+static size_t curl_outlet(void *, size_t, size_t, void *);
+static int answer_parse(struct iovec *, struct acl_param *);
+static int answer_getline(char *, char *, struct acl_param *);
+
+#define URLCHECK_ANSWER_MAX	4096
+
+void
+urlcheck_init(void) {
+	LIST_INIT(&urlcheck_head);
+	curl_global_init(CURL_GLOBAL_ALL);
+	return;
+}
+
+
+void
+urlcheck_def_add(name, url) /* acllist must be write locked */
+	char *name;
+	char *url;
+{
+	struct urlcheck_entry *ue;
+
+	if ((ue = malloc(sizeof(*ue))) == NULL) {
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	strncpy(ue->u_name, name, sizeof(ue->u_name));
+	ue->u_name[sizeof(ue->u_name) - 1] = '\0';
+	strncpy(ue->u_url, url, sizeof(ue->u_url));
+	ue->u_url[sizeof(ue->u_url) - 1] = '\0';
+	ue->u_urlmaxlen = urlmaxlen(ue->u_url);
+
+	LIST_INSERT_HEAD(&urlcheck_head, ue, u_list);
+
+	if (conf.c_debug || conf.c_acldebug) {
+		mg_log(LOG_DEBUG, "load URL check \"%s\" \"%s\"", 
+		    ue->u_name, ue->u_url);
+	}
+
+	return;
+}
+
+struct urlcheck_entry *
+urlcheck_byname(urlcheck)	/* acllist must be read locked */
+	char *urlcheck;
+{
+	struct urlcheck_entry *ue;	
+
+	LIST_FOREACH(ue, &urlcheck_head, u_list) {
+		if (strcmp(ue->u_name, urlcheck) == 0)
+			break;
+	}
+
+	return ue;
+}
+
+void
+urlcheck_clear(void)	/* acllist must be write locked */
+{
+	struct urlcheck_entry *ue;
+
+	while(!LIST_EMPTY(&urlcheck_head)) {
+		ue = LIST_FIRST(&urlcheck_head);
+		LIST_REMOVE(ue, u_list);
+		free(ue);
+	}
+
+	curl_global_cleanup();
+
+	urlcheck_init();
+
+	return;
+}
+
+static char *
+fstring_expand(priv, rcpt, ue)
+	struct mlfi_priv *priv;
+	char *rcpt;
+	struct urlcheck_entry *ue;
+{
+	char *outstr;
+	char *tmpstr;
+	char *tmpstrp;
+	char *last;
+	char *ptok;
+	int idx;
+	int skip_fchar;
+
+	if ((outstr = malloc(ue->u_urlmaxlen)) == NULL) {
+		mg_log(LOG_ERR, "malloc(%d) failed: %s", 
+		    ue->u_urlmaxlen, strerror(errno));
+		exit(EX_OSERR);
+	}
+	outstr[0] = '\0';
+
+	if ((tmpstr = strdup(ue->u_url)) == NULL) {
+		mg_log(LOG_ERR, "strdup() failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	tmpstrp = tmpstr;
+	idx = 0;
+	skip_fchar = 0;
+
+	while ((ptok = strtok_r(tmpstrp, "%", &last)) != NULL) {
+		if (tmpstrp != NULL)
+			tmpstrp = NULL;
+
+		if (skip_fchar) {
+			skip_fchar = 0;
+			ptok++;
+		}
+			
+		strncat(outstr, ptok, ue->u_urlmaxlen);
+		idx += strlen(ptok);
+
+		switch (tmpstr[idx + 1]) {
+		case 'h':	/* Hello string */
+			strncat(outstr, priv->priv_helo, ue->u_urlmaxlen);
+			skip_fchar = 1;
+			break;
+		case 'd':	/* Sender machine DNS name */
+			strncat(outstr, priv->priv_hostname, ue->u_urlmaxlen);
+			skip_fchar = 1;
+			break;
+		case 'f': {	/* Sender e-mail */
+			char from[ADDRLEN + 1];
+			char *fromp;
+			size_t fromlen;
+			
+			/* Strip leading and trailing <> */
+			strcpy(from, priv->priv_from);
+			fromp = (char *)from;
+			if (fromp[0] == '<')
+				fromp++;
+			fromlen = strlen(fromp);
+			if ((fromlen > 0) && (fromp[fromlen - 1] == '>'))
+				fromp[fromlen - 1] = '\0';
+
+			strncat(outstr, fromp, ue->u_urlmaxlen);
+			skip_fchar = 1;
+			break;
+		}
+		case 'r': {	/* Recipient e-mail */
+			char rcpttmp[ADDRLEN + 1];
+			char *rcpttmpp;
+			size_t rcpttmplen;
+			
+			/* Strip leading and trailing <> */
+			strcpy(rcpttmp, rcpt);
+			rcpttmpp = (char *)rcpttmp;
+			if (rcpttmpp[0] == '<')
+				rcpttmpp++;
+			rcpttmplen = strlen(rcpttmpp);
+			if ((rcpttmplen > 0) && 
+			    (rcpttmpp[rcpttmplen - 1] == '>'))
+				rcpttmpp[rcpttmplen - 1] = '\0';
+
+			strncat(outstr, rcpttmpp, ue->u_urlmaxlen);
+			skip_fchar = 1;
+			break;
+		}
+		case 'i': {	/* Sender machine IP address */
+			char ipstr[IPADDRSTRLEN];
+
+			iptostring(SA(&priv->priv_addr),
+			    priv->priv_addrlen, ipstr, sizeof(ipstr));
+			strncat(outstr, ipstr, ue->u_urlmaxlen);
+			skip_fchar = 1;
+			break;
+		}
+		case '\0': 
+			break;
+		default:
+			strncat(outstr, "%", ue->u_urlmaxlen);
+			break;
+		}
+
+		if (skip_fchar)
+			idx += 2;
+		if (tmpstr[idx] == '\0')
+			break;
+	}
+
+	free(tmpstr);
+
+	return outstr;
+}
+
+#if 0
+static char *
+url_encode(url)
+	char *url;
+{
+	char *cp;
+	size_t len;
+	char *out;
+	char *op;
+
+	len = 0;
+	for (cp = url; *cp; cp++) {
+		if (isalnum((int)*cp) || 
+		    (*cp == '.') || 
+		    (*cp == '-') || 
+		    (*cp == '_')) {
+			len++;
+		} else {
+			len += 3;
+		}
+	}
+	len++;
+
+	if ((out = malloc(len + 1)) == NULL) {
+		mg_log(LOG_ERR, "malloc(%d) failed", 
+		    len + 1, strerror(errno));
+		exit(EX_OSERR);
+	}
+	out[0] = '\0';
+	op = out;
+
+	for (cp = url; *cp; cp++) {
+		if (isalnum((int)*cp) || 
+		    (*cp == '.') || 
+		    (*cp == '-') || 
+		    (*cp == ':') || 
+		    (*cp == '_')) {
+			*op++ = *cp;
+		} else {
+			int i;
+
+			*op = '\0';
+			(void)snprintf(op, 4, "%%%x", *cp);
+			for (i = 0; i < 4; i++)
+				op[i] = (char)toupper((int)op[i]);
+			op += 3;
+		}
+	}
+
+	return out;
+}
+#endif
+
+static size_t
+curl_outlet(buffer, size, nmemb, userp)
+	void  *buffer;
+	size_t size;
+	size_t nmemb;
+	void *userp;
+{
+	struct iovec *iov;
+	void *newbuf;
+	size_t newlen;
+
+	iov = (struct iovec *)userp;
+
+	newlen = iov->iov_len + (size * nmemb);
+
+	if (newlen > URLCHECK_ANSWER_MAX) {
+		mg_log(LOG_WARNING, "urlcheck answer too big, abort");
+		if (iov->iov_base != NULL)
+			free(iov->iov_base);
+		iov->iov_len = 0;
+		return 0;
+	}
+
+	if ((newbuf = realloc(iov->iov_base, newlen)) == NULL) {
+		mg_log(LOG_ERR, "realloc() failed");
+		exit(EX_OSERR);
+	}
+	iov->iov_base = newbuf;
+	
+	memcpy(iov->iov_base + iov->iov_len, buffer, size * nmemb);
+	iov->iov_len = newlen;
+
+	return (size * nmemb);
+}
+
+
+int
+urlcheck_validate(priv, rcpt, ue, ap)
+	struct mlfi_priv *priv;
+	char *rcpt;
+	struct urlcheck_entry *ue;
+	struct acl_param *ap;
+{
+	CURL *ch;
+	CURLcode cerr;
+	char *url;
+	int retval = 0;
+	struct iovec data;
+
+	if ((ch = curl_easy_init()) == NULL) {
+		mg_log(LOG_ERR, "curl_easy_init() failed");
+		exit(EX_SOFTWARE);
+	}
+
+	url = fstring_expand(priv, rcpt, ue);
+
+#ifdef URLCHECK_DEBUG
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "checking \"%s\"\n", url);
+#endif
+
+	if ((cerr = curl_easy_setopt(ch, CURLOPT_URL, url)) != CURLE_OK) {
+		mg_log(LOG_WARNING, "curl_easy_setopt(CURLOPT_URL) failed; %s",
+		    curl_easy_strerror(cerr));
+		goto out;
+	}
+
+	if ((cerr = curl_easy_setopt(ch, 
+	    CURLOPT_WRITEFUNCTION, curl_outlet)) != CURLE_OK) {
+		mg_log(LOG_WARNING, "curl_easy_setopt(CURLOPT_WRITEFUNCTION) "
+		    "failed; %s", curl_easy_strerror(cerr));
+		goto out;
+	}
+
+	data.iov_base = NULL;
+	data.iov_len = 0;
+	if ((cerr = curl_easy_setopt(ch, 
+	    CURLOPT_WRITEDATA, (void *)&data)) != CURLE_OK) {
+		mg_log(LOG_WARNING, "curl_easy_setopt(CURLOPT_WRITEDATA) "
+		    "failed; %s", curl_easy_strerror(cerr));
+		goto out;
+	}
+
+	if ((cerr = curl_easy_perform(ch)) != CURLE_OK) {
+		mg_log(LOG_WARNING, "curl_easy_perform() failed; %s",
+		    curl_easy_strerror(cerr));
+		goto out;
+	}
+
+	if (data.iov_base == NULL) {
+		mg_log(LOG_WARNING, "urlcheck failed: no answer");
+		goto out;
+	}
+
+	retval = answer_parse(&data, ap);
+out:
+	free(url);
+	return retval;
+}
+
+static int
+answer_parse(data, ap)
+struct iovec *data;
+	struct acl_param *ap;
+{
+	int idx;
+	char *buf;
+	size_t len;
+	char *linep;
+	char *valp;
+	int retval = 0;
+
+	buf = data->iov_base;
+	len = data->iov_len;
+	idx = 0;
+
+	linep = buf;
+	valp = NULL;
+	while (idx < len) {
+		if (buf[idx] == ':') {
+			buf[idx] = '\0';
+			valp = buf + idx + 1;
+
+			/* Strip spaces */
+			while (*valp && ((*valp == ' ') || (*valp == '\t')))
+				valp++;
+		}
+
+		if (buf[idx] == '\n') {
+			buf[idx] = '\0';
+
+			if (valp == NULL) {
+				mg_log(LOG_DEBUG, 
+				    "ignoring unepxected line \"%s\"", linep);
+			} else if (answer_getline(linep, valp, ap) == -1) {
+				mg_log(LOG_DEBUG, 
+				    "ignoring unepxected \"%s\" => \"%s\"",
+				    linep, valp);
+			} else {
+				/* We have a match! */
+				retval = 1;
+			}
+			linep = buf + idx + 1;
+		}
+
+		idx++;
+	}
+
+	return retval;
+}
+
+static int
+answer_getline(key, value, ap)
+	char *key;
+	char *value;
+	struct acl_param *ap;
+{
+#ifdef URLCHECK_DEBUG
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "urlcheck got \"%s\" => \"%s\"",
+		    key, value);
+#endif
+	if ((strcasecmp(key, "milterGreylistStatus") == 0) &&
+	    (strcasecmp(value, "Ok") == 0))
+		goto out;
+
+	if (strcasecmp(key, "milterGreylistAction") == 0) {
+		if (strcasecmp(value, "greylist") == 0)
+			ap->ap_type = A_GREYLIST;
+		else if (strcasecmp(value, "blacklist") == 0)
+			ap->ap_type = A_BLACKLIST;
+		else if (strcasecmp(value, "whitelist") == 0)
+			ap->ap_type = A_WHITELIST;
+		else 
+			mg_log(LOG_WARNING, "ignored greylist-type \"%s\"",
+			    value);
+		goto out;
+	}
+
+	if (strcasecmp(key, "milterGreylistDelay") == 0) {
+		ap->ap_delay = humanized_atoi(value);
+		goto out;
+	}
+
+	if (strcasecmp(key, "milterGreylistAutowhite") == 0) {
+		ap->ap_autowhite = humanized_atoi(value);
+		goto out;
+	}
+
+	if (strcasecmp(key, "milterGreylistFlushAddr") == 0) {
+		ap->ap_flags |= A_FLUSHADDR;
+		goto out;
+	}
+
+	if (strcasecmp(key, "milterGreylistCode") == 0) {
+		if ((ap->ap_code = strdup(value)) == NULL) {
+			mg_log(LOG_ERR, "strdup(\"%s\") failed: %s",
+			    key, strerror(errno));
+			exit(EX_OSERR);
+		}
+		ap->ap_flags |= A_FREE_CODE;
+		goto out;
+	}
+
+	if (strcasecmp(key, "milterGreylistEcode") == 0) {
+		if ((ap->ap_ecode = strdup(value)) == NULL) {
+			mg_log(LOG_ERR, "strdup(\"%s\") failed: %s",
+			    key, strerror(errno));
+			exit(EX_OSERR);
+		}
+		ap->ap_flags |= A_FREE_ECODE;
+		goto out;
+	}
+
+	if (strcasecmp(key, "milterGreylistMsg") == 0) {
+		if ((ap->ap_msg = strdup(value)) == NULL) {
+			mg_log(LOG_ERR, "strdup(\"%s\") failed: %s",
+			    key, strerror(errno));
+			exit(EX_OSERR);
+		}
+		ap->ap_flags |= A_FREE_MSG;
+		goto out;
+	}
+
+	return -1;
+out:
+	return 0;
+}
+
+static size_t 
+urlmaxlen(url)
+	char *url;
+{
+	size_t len;
+	char *cp;
+	char *pp;
+
+	len = strlen(url);
+
+	cp = url;
+	do {
+		if ((pp = index(cp, '%')) == NULL)
+			break;
+
+		/* We were on the last char, or we have a % at end of URL */
+		if ((pp == '\0') || ((pp + 1) == '\0'))
+			break;
+
+		switch (*(pp + 1)) {
+		case 'h':	/* Hello string */
+		case 'd':	/* DNS address */
+		case 'f':	/* Sender e-mail */
+		case 'r':	/* Recipient e-mail */
+			len += ADDRLEN;
+			break;
+		case 'i':	/* IP address */
+			len += IPADDRSTRLEN;
+			break;
+		default:
+			break;
+		}
+
+		cp = pp + 1;
+	} while (1 /* CONSTCOND */);
+
+	return len;
+}
+
+#endif /* USE_URLCHECK */
