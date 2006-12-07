@@ -1,4 +1,4 @@
-/* $Id: urlcheck.h,v 1.1 2006/12/06 15:02:41 manu Exp $ */
+/* $Id: urlcheck.h,v 1.2 2006/12/07 10:22:00 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -29,18 +29,28 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <curl/curl.h>
+
 LIST_HEAD(urlchecklist, urlcheck_entry);
+
+struct urlcheck_cnx {
+	CURL *uc_hdl;
+	time_t uc_old;
+	pthread_mutex_t uc_lock;
+};
 
 struct urlcheck_entry {
 	char u_name[QSTRLEN + 1];
 	char u_url[QSTRLEN + 1];
 	size_t u_urlmaxlen;
+	int u_maxcnx;
+	struct urlcheck_cnx *u_cnxpool;
 	LIST_ENTRY(urlcheck_entry) u_list;
 };
 
 struct urlcheck_entry *urlcheck_byname(char *);
 void urlcheck_init(void);
-void urlcheck_def_add(char *, char *);
+void urlcheck_def_add(char *, char *, int);
 struct urlcheck_entry *dnsrbl_byname(char *);
 void urlcheck_clear(void);
 int urlcheck_validate(struct mlfi_priv *, char *,

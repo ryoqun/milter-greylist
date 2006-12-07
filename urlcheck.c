@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.1 2006/12/06 15:02:41 manu Exp $ */
+/* $Id: urlcheck.c,v 1.2 2006/12/07 10:22:00 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.1 2006/12/06 15:02:41 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.2 2006/12/07 10:22:00 manu Exp $");
 #endif
 #endif
 
@@ -47,8 +47,6 @@ __RCSID("$Id: urlcheck.c,v 1.1 2006/12/06 15:02:41 manu Exp $");
 #include <errno.h>
 #include <ctype.h>
 #include <sysexits.h>
-
-#include <curl/curl.h>
 
 #ifdef HAVE_OLD_QUEUE_H 
 #include "queue.h"
@@ -75,6 +73,7 @@ static char *fstring_expand(struct mlfi_priv *,
 static size_t curl_outlet(void *, size_t, size_t, void *);
 static int answer_parse(struct iovec *, struct acl_param *);
 static int answer_getline(char *, char *, struct acl_param *);
+static struct urlcheck_cnx *get_cnx(struct urlcheck_entry *);
 
 #define URLCHECK_ANSWER_MAX	4096
 
@@ -87,11 +86,13 @@ urlcheck_init(void) {
 
 
 void
-urlcheck_def_add(name, url) /* acllist must be write locked */
+urlcheck_def_add(name, url, max_cnx) /* acllist must be write locked */
 	char *name;
 	char *url;
+	int max_cnx;
 {
 	struct urlcheck_entry *ue;
+	struct urlcheck_cnx *uc;
 
 	if ((ue = malloc(sizeof(*ue))) == NULL) {
 		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
@@ -100,15 +101,39 @@ urlcheck_def_add(name, url) /* acllist must be write locked */
 
 	strncpy(ue->u_name, name, sizeof(ue->u_name));
 	ue->u_name[sizeof(ue->u_name) - 1] = '\0';
+
 	strncpy(ue->u_url, url, sizeof(ue->u_url));
 	ue->u_url[sizeof(ue->u_url) - 1] = '\0';
+
 	ue->u_urlmaxlen = urlmaxlen(ue->u_url);
+
+	ue->u_maxcnx = max_cnx;
+
+	if ((uc = malloc(max_cnx * sizeof(*uc))) == NULL) {
+		mg_log(LOG_ERR, "malloc(%d) failed for URL check cnx pool: %s",
+		    max_cnx * sizeof(*uc), strerror(errno));
+		exit(EX_OSERR);
+	}
+	ue->u_cnxpool = uc;
+
+	while (max_cnx > 0) {
+		uc->uc_hdl = NULL;
+		uc->uc_old = 0;
+		if (pthread_mutex_init(&uc->uc_lock, NULL) != 0) {
+			mg_log(LOG_ERR, "pthread_mutex_init() failed: %s",
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		uc++;
+		max_cnx--;
+	}
 
 	LIST_INSERT_HEAD(&urlcheck_head, ue, u_list);
 
 	if (conf.c_debug || conf.c_acldebug) {
-		mg_log(LOG_DEBUG, "load URL check \"%s\" \"%s\"", 
-		    ue->u_name, ue->u_url);
+		mg_log(LOG_DEBUG, "load URL check \"%s\" \"%s\" %d", 
+		    ue->u_name, ue->u_url, ue->u_maxcnx);
 	}
 
 	return;
@@ -132,9 +157,29 @@ void
 urlcheck_clear(void)	/* acllist must be write locked */
 {
 	struct urlcheck_entry *ue;
+	struct urlcheck_cnx *uc;
 
 	while(!LIST_EMPTY(&urlcheck_head)) {
 		ue = LIST_FIRST(&urlcheck_head);
+
+		uc = ue->u_cnxpool;
+		while (ue->u_maxcnx > 0) {
+			if (pthread_mutex_lock(&uc->uc_lock) != 0) {
+				mg_log(LOG_ERR, "pthread_mutex_lock failed "
+				    "in urlcheck_clear: %s", strerror(errno));
+				exit(EX_OSERR);
+			}
+
+			if (uc->uc_hdl != NULL)
+				curl_easy_cleanup(uc->uc_hdl);
+
+			pthread_mutex_destroy(&uc->uc_lock);
+
+			uc++;
+			ue->u_maxcnx--;
+		}
+		free(ue->u_cnxpool);
+
 		LIST_REMOVE(ue, u_list);
 		free(ue);
 	}
@@ -348,6 +393,73 @@ curl_outlet(buffer, size, nmemb, userp)
 	return (size * nmemb);
 }
 
+/* Return a locked connexion */
+static struct urlcheck_cnx *
+get_cnx(ue) 
+	struct urlcheck_entry *ue;
+{
+	struct urlcheck_cnx *uc = ue->u_cnxpool;
+	int i;
+	int error;
+	time_t oldest_date;
+	int oldest_cnx;
+	struct urlcheck_cnx *cnx = NULL;
+
+	oldest_date = uc[0].uc_old;
+	oldest_cnx = 0;
+
+	/* First, try to find a free one */
+	for (i = 0; i < ue->u_maxcnx; i++) {
+		error = pthread_mutex_trylock(&uc[i].uc_lock);
+		if (error == EBUSY) {
+			if (uc[i].uc_old < oldest_date) {
+				oldest_date = uc[i].uc_old;
+				oldest_cnx = i;
+			}
+			continue;
+		}
+		if (error != 0) {
+			mg_log(LOG_ERR, "pthread_mutex_trylock failed in "
+			    "get_cnx: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		/* We got a lock */
+		cnx = &uc[i];
+		break;
+	}
+
+	/* 
+	 * Nothing was free, we have to wait for a connexion.  
+	 * Use the one that was locked for the longest time
+	 */
+	if (cnx == NULL) {
+		mg_log(LOG_WARNING, "pool too small for URL check \"%s\"",
+		    ue->u_name);
+		cnx = &uc[oldest_cnx];
+		if (pthread_mutex_lock(&cnx->uc_lock) != 0) {
+			mg_log(LOG_ERR, "pthread_mutex_lock failed in "
+			    "get_cnx: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+	}
+
+	/* 
+	 * We now have a lock on a connexion 
+	 * Record the time and initialize it if needed
+	 */
+	cnx->uc_old = time(NULL);
+
+	if (cnx->uc_hdl == NULL) {
+		if ((cnx->uc_hdl = curl_easy_init()) == NULL) {
+			mg_log(LOG_ERR, "curl_easy_init() failed");
+			exit(EX_SOFTWARE);
+		}
+	}
+
+	return cnx;
+}
+
 
 int
 urlcheck_validate(priv, rcpt, ue, ap)
@@ -361,11 +473,7 @@ urlcheck_validate(priv, rcpt, ue, ap)
 	char *url;
 	int retval = 0;
 	struct iovec data;
-
-	if ((ch = curl_easy_init()) == NULL) {
-		mg_log(LOG_ERR, "curl_easy_init() failed");
-		exit(EX_SOFTWARE);
-	}
+	struct urlcheck_cnx *cnx;
 
 	url = fstring_expand(priv, rcpt, ue);
 
@@ -373,6 +481,9 @@ urlcheck_validate(priv, rcpt, ue, ap)
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "checking \"%s\"\n", url);
 #endif
+
+	cnx = get_cnx(ue);
+	ch = cnx->uc_hdl;
 
 	if ((cerr = curl_easy_setopt(ch, CURLOPT_URL, url)) != CURLE_OK) {
 		mg_log(LOG_WARNING, "curl_easy_setopt(CURLOPT_URL) failed; %s",
@@ -409,6 +520,12 @@ urlcheck_validate(priv, rcpt, ue, ap)
 
 	retval = answer_parse(&data, ap);
 out:
+	if (pthread_mutex_unlock(&cnx->uc_lock) != 0) {
+		mg_log(LOG_ERR, "pthread_mutex_unlock failed: %s",
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
+
 	free(url);
 	return retval;
 }

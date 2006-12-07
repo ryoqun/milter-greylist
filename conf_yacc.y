@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.61 2006/12/06 15:02:41 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.62 2006/12/07 10:22:00 manu Exp $");
 #endif
 #endif
 
@@ -637,13 +637,13 @@ macrodef_string:	SM_MACRO QSTRING QSTRING QSTRING {
 			}
 	;
 
-urlcheckdef:	URLCHECK QSTRING QSTRING {
+urlcheckdef:	URLCHECK QSTRING QSTRING TNUMBER {
 #ifdef USE_CURL
 			char path1[QSTRLEN + 1];
 			char path2[QSTRLEN + 1];
 
 			urlcheck_def_add(quotepath(path1, $2, QSTRLEN), 
-			    quotepath(path2, $3, QSTRLEN));
+			    quotepath(path2, $3, QSTRLEN), atoi($4));
 #else
 			mg_log(LOG_INFO, 
 			    "CURL support not compiled in line %d", 
