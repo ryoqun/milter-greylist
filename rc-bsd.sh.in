@@ -1,9 +1,9 @@
 #!/bin/sh
-# $Id: rc-bsd.sh.in,v 1.2 2004/07/29 06:53:02 manu Exp $
+# $Id: rc-bsd.sh.in,v 1.2.6.1 2006/12/08 05:05:19 manu Exp $
 
 # PROVIDE: miltergreylist
 # REQUIRE: LOGIN
-# BEFORE: sendmail
+# BEFORE: mail
 
 . /etc/rc.subr
 
