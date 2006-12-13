@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.2 2006/12/07 10:22:00 manu Exp $ */
+/* $Id: urlcheck.c,v 1.3 2006/12/13 07:53:42 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.2 2006/12/07 10:22:00 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.3 2006/12/13 07:53:42 manu Exp $");
 #endif
 #endif
 
@@ -74,6 +74,11 @@ static size_t curl_outlet(void *, size_t, size_t, void *);
 static int answer_parse(struct iovec *, struct acl_param *);
 static int answer_getline(char *, char *, struct acl_param *);
 static struct urlcheck_cnx *get_cnx(struct urlcheck_entry *);
+static char *strip_brackets(char *, char *, size_t);
+static char *mbox_only(char *, char *, size_t);
+static char *site_only(char *, char *, size_t);
+static char *machine_only(char *, char *, size_t);
+static char *domain_only(char *, char *, size_t);
 
 #define URLCHECK_ANSWER_MAX	4096
 
@@ -202,8 +207,7 @@ fstring_expand(priv, rcpt, ue)
 	char *tmpstrp;
 	char *last;
 	char *ptok;
-	int idx;
-	int skip_fchar;
+	int fstr_len;	/* format string length, minus the % (eg: %mr -> 2) */
 
 	if ((outstr = malloc(ue->u_urlmaxlen)) == NULL) {
 		mg_log(LOG_ERR, "malloc(%d) failed: %s", 
@@ -217,87 +221,131 @@ fstring_expand(priv, rcpt, ue)
 		exit(EX_OSERR);
 	}
 	tmpstrp = tmpstr;
-	idx = 0;
-	skip_fchar = 0;
+	fstr_len = 0;
 
 	while ((ptok = strtok_r(tmpstrp, "%", &last)) != NULL) {
-		if (tmpstrp != NULL)
+		char tmpaddr[ADDRLEN + 1];
+
+		/* 
+		 * If first time, there is no '%' to substitue yet 
+		 * (no URL starts by '%')
+		 */
+		if (tmpstrp != NULL) {
 			tmpstrp = NULL;
-
-		if (skip_fchar) {
-			skip_fchar = 0;
-			ptok++;
+			strncat(outstr, ptok, ue->u_urlmaxlen);
+			continue;
 		}
-			
-		strncat(outstr, ptok, ue->u_urlmaxlen);
-		idx += strlen(ptok);
 
-		switch (tmpstr[idx + 1]) {
+		/* 
+		 * On second time and later, ptok points on the 
+		 * character following '%'
+		 * Check if it could be a format string
+		 */
+		fstr_len = 1;
+
+		switch (*ptok) {
 		case 'h':	/* Hello string */
 			strncat(outstr, priv->priv_helo, ue->u_urlmaxlen);
-			skip_fchar = 1;
 			break;
 		case 'd':	/* Sender machine DNS name */
 			strncat(outstr, priv->priv_hostname, ue->u_urlmaxlen);
-			skip_fchar = 1;
 			break;
-		case 'f': {	/* Sender e-mail */
-			char from[ADDRLEN + 1];
-			char *fromp;
-			size_t fromlen;
-			
-			/* Strip leading and trailing <> */
-			strcpy(from, priv->priv_from);
-			fromp = (char *)from;
-			if (fromp[0] == '<')
-				fromp++;
-			fromlen = strlen(fromp);
-			if ((fromlen > 0) && (fromp[fromlen - 1] == '>'))
-				fromp[fromlen - 1] = '\0';
+		case 'f':	/* Sender e-mail */
+			strncat(outstr, 
+			    strip_brackets(tmpaddr, priv->priv_from, ADDRLEN), 
+			    ue->u_urlmaxlen);
+			break;
+		case 'r':	/* Recipient e-mail */
+			strncat(outstr, 
+				strip_brackets(tmpaddr, rcpt, ADDRLEN), 
+				ue->u_urlmaxlen);
+			break;
+		case 'm': 	/* mailbox part of sender or receiver e-mail */
+				/* Or machine part of DNS address */
+			fstr_len = 2;
 
-			strncat(outstr, fromp, ue->u_urlmaxlen);
-			skip_fchar = 1;
+			switch(*(ptok + 1)) {
+			case 'r':	/* Recipient */
+				strncat(outstr, 
+					mbox_only(tmpaddr, 
+					      rcpt, 
+					      ADDRLEN), 
+					ue->u_urlmaxlen);
+				break;
+			case 'f':	/* Sender */
+				strncat(outstr, 
+				    	mbox_only(tmpaddr, 
+					      priv->priv_from, 
+					      ADDRLEN), 
+					ue->u_urlmaxlen);
+				break;
+			case 'd':	/* DNS name */
+				strncat(outstr, 
+				    	machine_only(tmpaddr, 
+					      priv->priv_hostname, 
+					      ADDRLEN), 
+					ue->u_urlmaxlen);
+				break;
+			default:
+				fstr_len = 0;
+				break;
+			}
 			break;
-		}
-		case 'r': {	/* Recipient e-mail */
-			char rcpttmp[ADDRLEN + 1];
-			char *rcpttmpp;
-			size_t rcpttmplen;
-			
-			/* Strip leading and trailing <> */
-			strcpy(rcpttmp, rcpt);
-			rcpttmpp = (char *)rcpttmp;
-			if (rcpttmpp[0] == '<')
-				rcpttmpp++;
-			rcpttmplen = strlen(rcpttmpp);
-			if ((rcpttmplen > 0) && 
-			    (rcpttmpp[rcpttmplen - 1] == '>'))
-				rcpttmpp[rcpttmplen - 1] = '\0';
+		case 's':	/* site part of sender or reciever e-mail */
+				/* Or domain part of DNS address */
+			fstr_len = 2;
 
-			strncat(outstr, rcpttmpp, ue->u_urlmaxlen);
-			skip_fchar = 1;
+			switch(*(ptok + 1)) {
+			case 'r':	/* Recipient */
+				strncat(outstr, 
+					site_only(tmpaddr, 
+					      rcpt, 
+					      ADDRLEN), 
+					ue->u_urlmaxlen);
+				break;
+			case 'f':	/* Sender */
+				strncat(outstr, 
+				    	site_only(tmpaddr, 
+					      priv->priv_from, 
+					      ADDRLEN), 
+					ue->u_urlmaxlen);
+				break;
+			case 'd':	/* DNS name */
+				strncat(outstr, 
+				    	domain_only(tmpaddr, 
+					      priv->priv_hostname, 
+					      ADDRLEN), 
+					ue->u_urlmaxlen);
+				break;
+			default:
+				fstr_len = 0;
+				break;
+			}
 			break;
-		}
 		case 'i': {	/* Sender machine IP address */
 			char ipstr[IPADDRSTRLEN];
 
 			iptostring(SA(&priv->priv_addr),
 			    priv->priv_addrlen, ipstr, sizeof(ipstr));
 			strncat(outstr, ipstr, ue->u_urlmaxlen);
-			skip_fchar = 1;
 			break;
 		}
-		case '\0': 
-			break;
 		default:
-			strncat(outstr, "%", ue->u_urlmaxlen);
+			fstr_len = 0;
 			break;
 		}
 
-		if (skip_fchar)
-			idx += 2;
-		if (tmpstr[idx] == '\0')
-			break;
+
+		/* 
+		 * If no substitution was made, then keep the '%' 
+		 * Otherwise, skip the format string
+		 */
+		if (fstr_len == 0)
+			strncat(outstr, "%", ue->u_urlmaxlen);
+		else
+			ptok += fstr_len;
+
+		strncat(outstr, ptok, ue->u_urlmaxlen);
 	}
 
 	free(tmpstr);
@@ -683,6 +731,8 @@ urlmaxlen(url)
 		case 'd':	/* DNS address */
 		case 'f':	/* Sender e-mail */
 		case 'r':	/* Recipient e-mail */
+		case 'm':	/* mbox or machine */
+		case 's':	/* domain name */
 			len += ADDRLEN;
 			break;
 		case 'i':	/* IP address */
@@ -698,4 +748,92 @@ urlmaxlen(url)
 	return len;
 }
 
+static char *
+strip_brackets(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	size_t outlen;
+
+	/* Strip leading and trailing <> */
+	(void)strncpy(out, in, len);
+	out[len] = '\0';
+
+	outp = out;
+	if (outp[0] == '<')
+		outp++;
+
+	outlen = strlen(outp);
+	if ((outlen > 0) && 
+	    (outp[outlen - 1] == '>'))
+		outp[outlen - 1] = '\0';
+
+	return outp;
+}
+
+static char *
+mbox_only(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	char *ap;
+
+	outp = strip_brackets(out, in, len);
+	if ((ap = index(outp, (int)'@')) != NULL)
+		*ap = '\0';
+
+	return outp;
+}
+
+static char *
+site_only(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	char *ap;
+
+	outp = strip_brackets(out, in, len);
+	if ((ap = index(outp, (int)'@')) != NULL)
+		outp = ap + 1;
+
+	return outp;
+}
+
+static char *
+machine_only(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	char *ap;
+
+	outp = strip_brackets(out, in, len);
+	if ((ap = index(outp, (int)'.')) != NULL)
+		*ap = '\0';
+
+	return outp;
+}
+
+static char *
+domain_only(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	char *ap;
+
+	outp = strip_brackets(out, in, len);
+	if ((ap = index(outp, (int)'.')) != NULL)
+		outp = ap + 1;
+
+	return outp;
+}
 #endif /* USE_URLCHECK */
