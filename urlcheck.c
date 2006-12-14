@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.3 2006/12/13 07:53:42 manu Exp $ */
+/* $Id: urlcheck.c,v 1.4 2006/12/14 21:58:38 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.3 2006/12/13 07:53:42 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.4 2006/12/14 21:58:38 manu Exp $");
 #endif
 #endif
 
@@ -525,10 +525,8 @@ urlcheck_validate(priv, rcpt, ue, ap)
 
 	url = fstring_expand(priv, rcpt, ue);
 
-#ifdef URLCHECK_DEBUG
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "checking \"%s\"\n", url);
-#endif
 
 	cnx = get_cnx(ue);
 	ch = cnx->uc_hdl;
@@ -595,6 +593,11 @@ struct iovec *data;
 	idx = 0;
 
 	linep = buf;
+
+	/* strip spaces */
+	while (isspace((int)*linep))
+		linep++;
+
 	valp = NULL;
 	while (idx < len) {
 		if (buf[idx] == ':') {
@@ -602,7 +605,7 @@ struct iovec *data;
 			valp = buf + idx + 1;
 
 			/* Strip spaces */
-			while (*valp && ((*valp == ' ') || (*valp == '\t')))
+			while (isspace((int)*valp))
 				valp++;
 		}
 
@@ -621,6 +624,8 @@ struct iovec *data;
 				retval = 1;
 			}
 			linep = buf + idx + 1;
+			while (isspace((int)*linep))
+				linep++;
 		}
 
 		idx++;
@@ -640,9 +645,11 @@ answer_getline(key, value, ap)
 		mg_log(LOG_DEBUG, "urlcheck got \"%s\" => \"%s\"",
 		    key, value);
 #endif
-	if ((strcasecmp(key, "milterGreylistStatus") == 0) &&
-	    (strcasecmp(value, "Ok") == 0))
+	if (strcasecmp(key, "milterGreylistStatus") == 0) {
+		if ((strcasecmp(value, "Ok") == 0) ||
+		    (strcasecmp(value, "TRUE") == 0))
 		goto out;
+	}
 
 	if (strcasecmp(key, "milterGreylistAction") == 0) {
 		if (strcasecmp(value, "greylist") == 0)
