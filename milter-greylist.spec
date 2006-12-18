@@ -1,4 +1,4 @@
-# $Id: milter-greylist.spec,v 1.60 2006/12/07 10:22:00 manu Exp $
+# $Id: milter-greylist.spec,v 1.61 2006/12/18 22:15:02 manu Exp $
 # Contributed by Ivan F. Martinez
 %define ver 3.1.2
 %define rel 1
@@ -19,6 +19,7 @@ Requires: sendmail-cf >= 8.11
 BuildRequires: sendmail-devel >= 8.11
 BuildRequires: flex
 BuildRequires: bison
+BuildRequires: bind-libbind-devel
 
 %description
 milter-greylist is a stand-alone milter written in C that implements the
@@ -41,7 +42,7 @@ before the second attempt.
 
 
 %build
-%configure --with-user=%{user}
+%configure --with-user=%{user} --enable-dnsrbl --with-libbind
 %{__make} %{?_smp_mflags}
 
 
