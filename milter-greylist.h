@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.49 2006/11/07 05:12:01 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.50 2006/12/20 21:57:53 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
@@ -128,6 +128,18 @@ typedef union {
 
 #endif
 
+struct smtp_reply {
+	int sr_whitelist;
+	time_t sr_elapsed;
+	time_t sr_remaining;
+	int sr_acl_line;
+	time_t sr_delay;
+	time_t sr_autowhite;
+	char *sr_code;
+	char *sr_ecode;
+	char *sr_msg;
+};
+
 struct mlfi_priv {
 	sockaddr_t priv_addr;
 	socklen_t priv_addrlen;
@@ -135,17 +147,9 @@ struct mlfi_priv {
 	char priv_helo[ADDRLEN + 1];
 	char priv_from[ADDRLEN + 1];
 	char priv_rcpt[ADDRLEN + 1];
-	time_t priv_elapsed;
-	int priv_whitelist;
 	char *priv_queueid;
 	int priv_delayed_reject;
-	time_t priv_remaining;
-	int priv_acl_line;
-	time_t priv_delay;
-	time_t priv_autowhite;
-	char *priv_code;
-	char *priv_ecode;
-	char *priv_msg;
+	struct smtp_reply priv_sr;
 };
 
 sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.48 2006/12/13 09:06:00 manu Exp $
+.\" $Id: greylist.conf.5,v 1.49 2006/12/20 21:57:53 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -54,7 +54,7 @@ sender e-mail address, and recipient e-mail address. If support for
 DNSRBL was built-in, it is even possible to use DNSRBL in ACL.
 .PP
 An access-list entry starts with the
-.I acl
+.I racl
 keyword followed by the
 .I greylist\fR,
 .I whitelist\fR,
@@ -77,9 +77,9 @@ This clause is used to specify a netblock of source IP
 addresses. The syntax is an IP address followed by a slash and a CIDR
 netmask. Here is an example:
 .IP
-  acl whitelist addr 127.0.0.0/8
-  acl whitelist addr 192.168.3.0/24
-  acl whitelist addr ::1
+  racl whitelist addr 127.0.0.0/8
+  racl whitelist addr 192.168.3.0/24
+  racl whitelist addr ::1
 .IP
 If the netmask is ommitted, /32 is assumed for an IPv4 address and
 /128 is assumed for an IPv6 address.
@@ -96,7 +96,7 @@ For instance, this will whitelist any machine in the
 .I example.net
 domain:
 .IP
-  acl whitelist domain example.net
+  racl whitelist domain example.net
 .IP
 The name resolution is made by Sendmail, which hands it to 
 .B milter-greylist(8)\fR.
@@ -108,12 +108,12 @@ This is used to select sender e-mail addresses. You should not use
 that feature, because sender e-mail addresses can be trivially forged.
 Example:
 .IP
-  acl whitelist from postmaster@example.com
+  racl whitelist from postmaster@example.com
 .TP
 .I rcpt
 This is used to select recipient addresses. Example:
 .IP
-  acl greylist rcpt John.Doe@example.net
+  racl greylist rcpt John.Doe@example.net
 .TP
 .I sm_macro 
 This is used to select a Sendmail macro value. See the section on that
@@ -139,7 +139,7 @@ follow the format described in
 .B re_format(7)\fR.
 Here is an example:
 .PP
-  acl greylist rcpt /.*@example\\.net/
+  racl greylist rcpt /.*@example\\.net/
 .PP
 When regular expressions are not used, 
 .I from\fR,
@@ -175,8 +175,8 @@ global setting, and it only makes sense on an
 .I acl greylist
 entry. Example:
 .IP
-  acl greylist rcpt JDoe@example.net delay 15m autowhite 3d
-  acl greylist rcpt root@example.net delay 1h autowhite 3d
+  racl greylist rcpt JDoe@example.net delay 15m autowhite 3d
+  racl greylist rcpt root@example.net delay 1h autowhite 3d
 .TP
 .I flushaddr
 If a message matches the rule, any entry in the greylist or autowhite
@@ -184,7 +184,7 @@ databases matching the sender IP is removed. Used with a DNSRBL blacklist
 ACL, it is useful for freeing the database from entries set up by a 
 machine which is known to be a spamer. Example:
 .IP
-  acl blacklist dnsrbl "known-spamers" flushaddr
+  racl blacklist dnsrbl "known-spamers" flushaddr
 .TP
 .I code
 .TP
@@ -194,8 +194,8 @@ machine which is known to be a spamer. Example:
 These 3 values can be used to choose the SMTP code, extended code and
 reply message for temporary failures and rejects. Example:
 .IP
-  acl blacklist dnsrbl "spamstomp" msg "IP caught by spamstomp"
-  acl greylist default code "451" ecode "4.7.1"
+  racl blacklist dnsrbl "spamstomp" msg "IP caught by spamstomp"
+  racl greylist default code "451" ecode "4.7.1"
 .TP
 None of the last 3 values makes sense for a whitelist entry. 
 .PP
@@ -209,32 +209,44 @@ Here are a few complete ACL examples:
 Example 1:
 .nf
 
-acl whitelist from friend@toto.com rcpt grandma@example.com
-acl whitelist from other.friend@example.net rcpt grandma@example.com
-acl greylist rcpt grandma@example.com
-acl whitelist default
+racl whitelist from friend@toto.com rcpt grandma@example.com
+racl whitelist from other.friend@example.net rcpt grandma@example.com
+racl greylist rcpt grandma@example.com
+racl whitelist default
 .fi
 .PP
 Example 2:
 .nf
 
-acl whitelist addr 193.54.0.0/16 domain friendly.com
-acl greylist rcpt user1@atmine.com
-acl greylist rcpt user2@atmine.com
-acl greylist rcpt user3@atmine.com
-acl whitelist default
+racl whitelist addr 193.54.0.0/16 domain friendly.com
+racl greylist rcpt user1@atmine.com
+racl greylist rcpt user2@atmine.com
+racl greylist rcpt user3@atmine.com
+racl whitelist default
 .fi
 .PP
 Example 3:
 .nf
 
-acl whitelist rcpt /.*@.*otherdomain\\.org/
-acl whitelist addr 192.168.42.0/24 rcpt user1@mydomain.org
-acl whitelist from friend@example.net rcpt /.*@.*mydomain\\.org/
-acl whitelist rcpt user2@mydomain.org
-acl greylist rcpt /.*@.*mydomain\\.org/
-acl whitelist default
+racl whitelist rcpt /.*@.*otherdomain\\.org/
+racl whitelist addr 192.168.42.0/24 rcpt user1@mydomain.org
+racl whitelist from friend@example.net rcpt /.*@.*mydomain\\.org/
+racl whitelist rcpt user2@mydomain.org
+racl greylist rcpt /.*@.*mydomain\\.org/
+racl whitelist default
 .fi
+.SH DATA-STAGE ACL
+ACL using the
+.I racl
+keyword are evaluated at the RCPT stage of the SMTP transaction. It is 
+also possible to have ACL evaluated at the DATA stage of the SMTP transaction, 
+using the 
+.I dacl 
+keyword. DATA-stage ACL have limitations: their action cannot be
+.I greylist\fR,
+and they cannot use the
+.I rcpt
+clauses. 
 .SH LISTS
 It is often useful to group several users or sender IP addresses in a single
 ACL. This can be done with lists. Lists must be first defined and given 
@@ -243,9 +255,9 @@ a name before they can be used in ACL entries. Here is an example:
   list "my users" rcpt { user1@example.com user2@example.com }
   list "local" addr { 192.0.2.0/24 10.0.0.0/8 }
 
-  acl whitelist list "local"
-  acl greylist list "my users"
-  acl whitelist default
+  racl whitelist list "local"
+  racl greylist list "my users"
+  racl whitelist default
 
 .SH BACKWARD COMPATIBILITY
 Previous versions of 
@@ -392,8 +404,8 @@ reverse DNS:
 .IP
   sm_macro "maybe_forged" "{client_resolve}" "FORGED"
 
-  acl greylist sm_macro "maybe_forged" delay 1h
-  acl greylist default 15m
+  racl greylist sm_macro "maybe_forged" delay 1h
+  racl greylist default 15m
 .PP
 A regular expression can be used as the macro value. 
 It must be surrounded with slashes and not by quotes.
@@ -417,8 +429,8 @@ known to be massively infected by spamwares):
 .IP
   dnsrbl "SORBS DUN" dnsbl.sorbs.net 127.0.0.10
 
-  acl greylist dnsrbl "SORBS DUN" delay 1h
-  acl greylist default delay 15m
+  racl greylist dnsrbl "SORBS DUN" delay 1h
+  racl greylist default delay 15m
 .PP
 The definition of a DNSRBL starts by the
 .I dnsrbl
@@ -438,8 +450,8 @@ example:
 .IP
   urlcheck "glusr" "http://www.example.net/mgl-config?rcpt=%r" 5
 
-  acl greylist urlcheck "glusr" delay 15m 
-  acl whitelist default
+  racl greylist urlcheck "glusr" delay 15m 
+  racl whitelist default
 .PP
 The trailing 5 at the end of the
 .I urlcheck

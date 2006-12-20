@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.62 2006/12/07 10:22:00 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.63 2006/12/20 21:57:53 manu Exp $");
 #endif
 #endif
 
@@ -96,6 +96,8 @@ lines	:	lines netblock '\n'
 	|       lines syncaddr '\n'
 	|       lines syncsrcaddr '\n'
 	|	lines access_list '\n'
+	|	lines rcpt_access_list '\n'
+	|	lines data_access_list '\n'
 	|	lines dracdb '\n'
 	|	lines nodrac '\n'
 	|       lines logexpired '\n'
@@ -109,18 +111,18 @@ lines	:	lines netblock '\n'
 netblock:	ADDR IPADDR CIDR{
 			acl_add_netblock(SA(&$2),
 			    sizeof(struct sockaddr_in), $3);
-			acl_register_entry_first(A_WHITELIST);
+			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	|	ADDR IPADDR	{
 			acl_add_netblock(SA(&$2),
 			    sizeof(struct sockaddr_in), 32);
-			acl_register_entry_first(A_WHITELIST);
+			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	|	ADDR IP6ADDR CIDR{
 #ifdef AF_INET6
 			acl_add_netblock(SA(&$2),
 			    sizeof(struct sockaddr_in6), $3);
-			acl_register_entry_first(A_WHITELIST);
+			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 #else
 			mg_log(LOG_INFO,
 			    "IPv6 is not supported, ignore line %d",
@@ -131,7 +133,7 @@ netblock:	ADDR IPADDR CIDR{
 #ifdef AF_INET6
 			acl_add_netblock(SA(&$2),
 			    sizeof(struct sockaddr_in6), 128);
-			acl_register_entry_first(A_WHITELIST);
+			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 #else
 			mg_log(LOG_INFO,
 			    "IPv6 is not supported, ignore line %d",
@@ -141,39 +143,39 @@ netblock:	ADDR IPADDR CIDR{
 	;
 fromaddr:	FROM EMAIL	{
 			acl_add_from($2);
-			acl_register_entry_first(A_WHITELIST);
+			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
 rcptaddr:	RCPT EMAIL	{
 			acl_add_rcpt($2);
 			if (conf.c_testmode)
-				acl_register_entry_first(A_GREYLIST);
+				acl_register_entry_first(AS_RCPT, A_GREYLIST);
 			else
-				acl_register_entry_first(A_WHITELIST);
+				acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 
 	;
 fromregex:	FROM REGEX	{
 			acl_add_from_regex($2);
-			acl_register_entry_first(A_WHITELIST);
+			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
 rcptregex:	RCPT REGEX	{
 			acl_add_rcpt_regex($2);
 			if (conf.c_testmode)
-				acl_register_entry_first(A_GREYLIST);
+				acl_register_entry_first(AS_RCPT, A_GREYLIST);
 			else
-				acl_register_entry_first(A_WHITELIST);
+				acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
 domainaddr:	DOMAIN DOMAINNAME {
 			acl_add_domain($2);
-			acl_register_entry_first(A_WHITELIST);
+			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
 domainregex:	DOMAIN REGEX	 {
 			acl_add_domain_regex($2);
-			acl_register_entry_first(A_WHITELIST);
+			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
 peeraddr:	PEER IPADDR	{
@@ -434,13 +436,37 @@ syncsrcaddr:	SYNCSRCADDR STAR	{
 	;
 
 access_list:	ACL GREYLIST  acl_entry { 
-			acl_register_entry_last(A_GREYLIST);
+			acl_register_entry_last(AS_RCPT, A_GREYLIST);
 		}
 	|	ACL WHITELIST acl_entry { 
-			acl_register_entry_last(A_WHITELIST);
+			acl_register_entry_last(AS_RCPT, A_WHITELIST);
 		}
 	|	ACL BLACKLIST acl_entry { 
-			acl_register_entry_last(A_BLACKLIST);
+			acl_register_entry_last(AS_RCPT, A_BLACKLIST);
+		}
+	;
+
+rcpt_access_list:
+		RACL GREYLIST  acl_entry { 
+			acl_register_entry_last(AS_RCPT, A_GREYLIST);
+		}
+	|	RACL WHITELIST acl_entry { 
+			acl_register_entry_last(AS_RCPT, A_WHITELIST);
+		}
+	|	RACL BLACKLIST acl_entry { 
+			acl_register_entry_last(AS_RCPT, A_BLACKLIST);
+		}
+	;
+
+data_access_list:
+		DACL GREYLIST  acl_entry { 
+			acl_register_entry_last(AS_DATA, A_GREYLIST);
+		}
+	|	DACL WHITELIST acl_entry { 
+			acl_register_entry_last(AS_DATA, A_WHITELIST);
+		}
+	|	DACL BLACKLIST acl_entry { 
+			acl_register_entry_last(AS_DATA, A_BLACKLIST);
 		}
 	;
 

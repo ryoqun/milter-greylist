@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.14 2006/12/06 15:02:41 manu Exp $ */
+/* $Id: acl.h,v 1.15 2006/12/20 21:57:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -63,6 +63,11 @@ typedef enum {
 	A_BLACKLIST,
 } acl_type_t;
 
+typedef enum {
+	AS_RCPT,
+	AS_DATA,
+} acl_stage_t;
+
 #define a_addr a_netblock.nb_addr
 #define a_addrlen a_netblock.nb_addrlen
 #define a_mask a_netblock.nb_mask
@@ -70,6 +75,7 @@ typedef enum {
 struct acl_entry {
 	int a_line;
 	acl_type_t a_type;
+	acl_stage_t a_stage;
 	struct {
 		struct sockaddr *nb_addr;
 		socklen_t nb_addrlen;
@@ -149,9 +155,9 @@ void acl_add_dnsrbl(char *);
 void acl_add_urlcheck(char *);
 #endif
 void acl_add_macro(char *);
-struct acl_entry *acl_register_entry_first (acl_type_t);
-struct acl_entry *acl_register_entry_last (acl_type_t);
-int acl_filter(SMFICTX *, struct mlfi_priv *, char *);
+struct acl_entry *acl_register_entry_first (acl_stage_t, acl_type_t);
+struct acl_entry *acl_register_entry_last (acl_stage_t, acl_type_t);
+int acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *, char *);
 char *acl_entry(struct acl_entry  *);
 void acl_dump(void);
 int emailcmp(char *, char *);        

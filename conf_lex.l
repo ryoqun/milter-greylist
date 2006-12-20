@@ -52,6 +52,8 @@ syncaddr	[Ss][Yy][Nn][Cc][Aa][Dd][Dd][Rr]:?
 syncsrcaddr	[Ss][Yy][Nn][Cc][Ss][Rr][Cc][Aa][Dd][Dd][Rr]:?
 port		[Pp][Oo][Rr][Tt]
 acl		[Aa][Cc][Ll]
+racl		[Rr][Aa][Cc][Ll]
+dacl		[Dd][Aa][Cc][Ll]
 whitelist	[Ww][Hh][Ii][Tt][Ee][Ll][Ii][Ss][Tt]:?
 blacklist	[Bb][Ll][Aa][Cc][Kk][Ll][Ii][Ss][Tt]:?
 default		[Dd][Ee][Ff][Aa][Uu][Ll][Tt]
@@ -84,7 +86,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.57 2006/12/06 15:02:41 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.58 2006/12/20 21:57:52 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -148,6 +150,8 @@ star		"*"
 {syncsrcaddr}	{ return SYNCSRCADDR; }
 {port}		{ return PORT; }
 {acl}		{ return ACL; }
+{racl}		{ return RACL; }
+{dacl}		{ return DACL; }
 {whitelist}	{ return WHITELIST; }
 {blacklist}	{ return BLACKLIST; }
 {default}	{ return DEFAULT; }

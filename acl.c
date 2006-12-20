@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.37 2006/12/06 15:02:41 manu Exp $ */
+/* $Id: acl.c,v 1.38 2006/12/20 21:57:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.37 2006/12/06 15:02:41 manu Exp $");
+__RCSID("$Id: acl.c,v 1.38 2006/12/20 21:57:52 manu Exp $");
 #endif
 #endif
 
@@ -467,10 +467,24 @@ acl_add_domain_regex(regexstr)
 }
 
 struct acl_entry *
-acl_register_entry_first(acl_type)	/* acllist must be write-locked */
+acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
+	acl_stage_t acl_stage;
 	acl_type_t acl_type;
 {
 	struct acl_entry *acl;
+
+	if (acl_stage == AS_DATA) {
+		if ((gacl.a_rcptlist || gacl.a_rcpt || gacl.a_rcpt_re)) {
+			mg_log(LOG_ERR, "rcpt clause in DATA stage ACL "
+			    "at line %d", conf_line - 1);
+			exit(EX_DATAERR);
+		}
+		if (acl_type == A_GREYLIST) {
+			mg_log(LOG_ERR, "greylist action in DATA stage ACL "
+			    "at line %d", conf_line - 1);
+			exit(EX_DATAERR);
+		}
+	}
 
 	if ((acl = malloc(sizeof(*acl))) == NULL) {
 		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
@@ -478,6 +492,7 @@ acl_register_entry_first(acl_type)	/* acllist must be write-locked */
 	}
 	*acl = gacl;
 	acl->a_type = acl_type;
+	acl->a_stage = acl_stage;
 	acl->a_line = conf_line - 1;
 	TAILQ_INSERT_HEAD(&acl_head, acl, a_list);
 	acl_init_entry ();
@@ -504,16 +519,31 @@ acl_register_entry_first(acl_type)	/* acllist must be write-locked */
 }
 
 struct acl_entry *
-acl_register_entry_last(acl_type)	/* acllist must be write-locked */
+acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
+	acl_type_t acl_stage;
 	acl_type_t acl_type;
 {
 	struct acl_entry *acl;
+
+	if (acl_stage == AS_DATA) {
+		if ((gacl.a_rcptlist || gacl.a_rcpt || gacl.a_rcpt_re)) {
+			mg_log(LOG_ERR, "rcpt clause in DATA stage ACL "
+			    "at line %d", conf_line - 1);
+			exit(EX_DATAERR);
+		}
+		if (acl_type == A_GREYLIST) {
+			mg_log(LOG_ERR, "greylist action in DATA stage ACL "
+			    "at line %d", conf_line - 1);
+			exit(EX_DATAERR);
+		}
+	}
 
 	if ((acl = malloc(sizeof(*acl))) == NULL) {
 		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	*acl = gacl;
+	acl->a_stage = acl_stage;
 	acl->a_type = acl_type;
 	acl->a_line = conf_line - 1;
 	TAILQ_INSERT_TAIL(&acl_head, acl, a_list);
@@ -541,7 +571,8 @@ acl_register_entry_last(acl_type)	/* acllist must be write-locked */
 }
 
 int 
-acl_filter(ctx, priv, rcpt)
+acl_filter(stage, ctx, priv, rcpt)
+	acl_stage_t stage;
 	SMFICTX *ctx;
 	struct mlfi_priv *priv;
 	char *rcpt;
@@ -568,6 +599,9 @@ acl_filter(ctx, priv, rcpt)
 	ACL_RDLOCK;
 
 	TAILQ_FOREACH(acl, &acl_head, a_list) {
+		if (acl->a_stage != stage)
+			continue;
+
 		retval = 0;
 
 		ap.ap_type = acl->a_type;
@@ -743,30 +777,33 @@ acl_filter(ctx, priv, rcpt)
 			break;
 		}
 
-		priv->priv_acl_line = acl->a_line;
+		priv->priv_sr.sr_acl_line = acl->a_line;
 
-		priv->priv_delay =
+		priv->priv_sr.sr_delay =
 		    (ap.ap_delay != -1) ? ap.ap_delay : conf.c_delay;
-		priv->priv_autowhite =
+		priv->priv_sr.sr_autowhite =
 		    (ap.ap_autowhite != -1) ? 
 		    ap.ap_autowhite : conf.c_autowhite_validity;
 
 		if (ap.ap_code) {
-			if ((priv->priv_code = strdup(ap.ap_code)) == NULL) {
+			priv->priv_sr.sr_code = strdup(ap.ap_code);
+			if (priv->priv_sr.sr_code == NULL) { 
 				mg_log(LOG_ERR, "strdup failed: %s", 
 				    strerror(errno));
 				exit(EX_OSERR);
 			}
 		}
 		if (ap.ap_ecode) {
-			if ((priv->priv_ecode = strdup(ap.ap_ecode)) == NULL) {
+			priv->priv_sr.sr_ecode = strdup(ap.ap_ecode);
+			if (priv->priv_sr.sr_ecode == NULL) {
 				mg_log(LOG_ERR, "strdup failed: %s", 
 				    strerror(errno));
 				exit(EX_OSERR);
 			}
 		}
 		if (ap.ap_msg) {
-			if ((priv->priv_msg = strdup(ap.ap_msg)) == NULL) {
+			priv->priv_sr.sr_msg = strdup(ap.ap_msg);
+			if (priv->priv_sr.sr_msg == NULL) {
 				mg_log(LOG_ERR, "strdup failed: %s", 
 				    strerror(errno));
 				exit(EX_OSERR);
@@ -800,8 +837,8 @@ acl_filter(ctx, priv, rcpt)
 			retval = EXF_GREYLIST;
 		retval |= EXF_DEFAULT;
 
-		priv->priv_delay = conf.c_delay;
-		priv->priv_autowhite = conf.c_autowhite_validity;
+		priv->priv_sr.sr_delay = conf.c_delay;
+		priv->priv_sr.sr_autowhite = conf.c_autowhite_validity;
 	}
 
 	if (retval & EXF_WHITELIST) {
@@ -1003,7 +1040,8 @@ acl_entry(acl)
 	char maskstr[IPADDRSTRLEN];
 	int def = 1;
 
-	snprintf(entrystr, HDRLEN, "acl %d ", acl->a_line);
+	snprintf(entrystr, HDRLEN, "%cacl %d ", 
+	(acl->a_stage == AS_RCPT) ? 'r' : 'd', acl->a_line);
 
 	switch (acl->a_type) {
 	case A_GREYLIST:
