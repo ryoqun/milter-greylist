@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.50 2006/12/20 21:57:53 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.51 2006/12/24 19:04:08 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
@@ -140,13 +140,18 @@ struct smtp_reply {
 	char *sr_msg;
 };
 
+struct rcpt {
+	char r_addr[ADDRLEN + 1];
+	LIST_ENTRY(rcpt) r_list;
+};
+
 struct mlfi_priv {
 	sockaddr_t priv_addr;
 	socklen_t priv_addrlen;
 	char priv_hostname[ADDRLEN + 1];
 	char priv_helo[ADDRLEN + 1];
 	char priv_from[ADDRLEN + 1];
-	char priv_rcpt[ADDRLEN + 1];
+	LIST_HEAD(, rcpt) priv_rcpt;
 	char *priv_queueid;
 	int priv_delayed_reject;
 	struct smtp_reply priv_sr;

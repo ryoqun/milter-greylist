@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.144 2006/12/20 21:57:53 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.145 2006/12/24 19:04:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.144 2006/12/20 21:57:53 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.145 2006/12/24 19:04:08 manu Exp $");
 #endif
 #endif
 
@@ -99,6 +99,7 @@ static char *gmtoffset(time_t *, char *, size_t);
 static void writepid(char *);
 static void log_and_report_greylisting(SMFICTX *, struct mlfi_priv *, char *);
 static void reset_acl_values(struct mlfi_priv *);
+static void add_recipient(struct mlfi_priv *, char *);
 
 static sfsistat real_connect(SMFICTX *, char *, _SOCK_ADDR *);
 static sfsistat real_helo(SMFICTX *, char *);
@@ -221,6 +222,7 @@ real_connect(ctx, hostname, addr)
 	smfi_setpriv(ctx, priv);
 	bzero((void *)priv, sizeof(*priv));
 	priv->priv_sr.sr_whitelist = EXF_UNSET;
+	LIST_INIT(&priv->priv_rcpt);
 
 	strncpy(priv->priv_hostname, hostname, ADDRLEN);
 	priv->priv_hostname[ADDRLEN] = '\0';
@@ -543,6 +545,8 @@ real_envrcpt(ctx, envrcpt)
 
 	priv->priv_sr.sr_remaining = remaining;
 
+	
+	add_recipient(priv, rcpt);
 	/*
 	 * The message has been added to the greylist and will be delayed.
 	 * If the sender address is null, this will be done after the DATA
@@ -553,10 +557,6 @@ real_envrcpt(ctx, envrcpt)
 	if ((conf.c_delayedreject == 1) && 
 	    (strcmp(priv->priv_from, "<>") == 0)) {
 		priv->priv_delayed_reject = 1;
-		if (*priv->priv_rcpt == 0)
-			strcpy(priv->priv_rcpt, rcpt);
-		else
-			strcpy(priv->priv_rcpt, "(multiple recipients)");
 		return SMFIS_CONTINUE;
 	}
 
@@ -584,11 +584,13 @@ real_eom(ctx)
 	time_t t;
 	struct tm ltm;
 	struct smtp_reply rcpt_sr;
+	struct rcpt *rcpt;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 	if (priv->priv_delayed_reject) {
-		log_and_report_greylisting(ctx, priv, priv->priv_rcpt);
+		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) 
+			log_and_report_greylisting(ctx, priv, rcpt->r_addr);
 		return SMFIS_TEMPFAIL;
 	}
 
@@ -776,6 +778,7 @@ real_close(ctx)
 	SMFICTX *ctx;
 {
 	struct mlfi_priv *priv;
+	struct rcpt *r;
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) != NULL) {
 		if (priv->priv_sr.sr_code)
@@ -784,6 +787,10 @@ real_close(ctx)
 			free(priv->priv_sr.sr_ecode);
 		if (priv->priv_sr.sr_msg)
 			free(priv->priv_sr.sr_msg);
+		while ((r = LIST_FIRST(&priv->priv_rcpt)) != NULL) {
+			LIST_REMOVE(r, r_list);
+			free(r);
+		}
 		free(priv);
 		smfi_setpriv(ctx, NULL);
 	}
@@ -1612,5 +1619,24 @@ mg_log(int level, char *fmt, ...) {
 		vsyslog(level, fmt, ap);
 
 	va_end(ap);
+	return;
+}
+
+static void
+add_recipient(priv, rcpt)
+	struct mlfi_priv *priv;
+	char *rcpt;
+{
+	struct rcpt *nr;
+
+	if ((nr = malloc(sizeof(*nr))) == NULL) {
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	strncpy(nr->r_addr, rcpt, sizeof(nr->r_addr));
+	nr->r_addr[ADDRLEN] = '\0';
+
+	LIST_INSERT_HEAD(&priv->priv_rcpt, nr, r_list);
 	return;
 }
