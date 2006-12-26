@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.h,v 1.6 2006/08/28 11:49:22 manu Exp $ */
+/* $Id: dnsrbl.h,v 1.7 2006/12/26 21:21:52 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -29,8 +29,6 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <arpa/nameser.h>
-
 #ifndef NS_MAXDNAME
 #define NS_MAXDNAME 1025 
 #endif 
@@ -41,12 +39,13 @@ struct dnsrbl_entry {
 	char d_name[QSTRLEN + 1];
 	char d_domain[NS_MAXDNAME + 1];
 	sockaddr_t d_blacklisted;
+	ipaddr d_mask;
 	LIST_ENTRY(dnsrbl_entry) d_list;
 };
 
 void dnsrbl_init(void);
 int dnsrbl_check_source(struct sockaddr *, socklen_t, struct dnsrbl_entry *);
 void reverse_endian(struct sockaddr *, struct sockaddr *);
-void dnsrbl_source_add(char *, char *, struct sockaddr *);
+void dnsrbl_source_add(char *, char *, struct sockaddr *, int);
 struct dnsrbl_entry *dnsrbl_byname(char *);
 void dnsrbl_clear(void);

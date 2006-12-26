@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.17 2006/10/26 20:58:03 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.18 2006/12/26 21:21:52 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.17 2006/10/26 20:58:03 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.18 2006/12/26 21:21:52 manu Exp $");
 #endif
 #endif
 
@@ -111,6 +111,7 @@ dnsrbl_check_source(sa, salen, source)
 	int qtype, i;
 	char *dnsrbl = source->d_domain;
 	struct sockaddr *blacklisted;
+	struct sockaddr_storage result;
 	int retval = 0;
 	char *addr;
 	size_t len;
@@ -182,15 +183,27 @@ dnsrbl_check_source(sa, salen, source)
 			goto end;
 		}
 
+		if (rr.rdlength != len) {
+			mg_log(LOG_WARNING, 
+			    "ignored DNSRBL answer with unexpected length");
+			continue;
+		}
+
 		switch (blacklisted->sa_family) {
 		case AF_INET:
 			if (rr.type != T_A)
 				continue;
+			memcpy(&result, &rr.rdata, len);
+			SADDR4(&result)->s_addr &= source->d_mask.in4.s_addr;
 			break;
 #ifdef AF_INET6
 		case AF_INET6:
 			if (rr.type != T_AAAA)
 				continue;
+			memcpy(&result, &rr.rdata, len);
+			for (i = 0; i < 16; i += 4)
+				*(uint32_t *)&SADDR6(&result)->s6_addr[i] &=
+				    *(uint32_t *)&source->d_mask.in6.s6_addr[i];
 			break;
 #endif
 		default:
@@ -199,10 +212,7 @@ dnsrbl_check_source(sa, salen, source)
 			break;
 		}
 
-		if (rr.rdlength != len)
-			continue;
-
-		if (memcmp(addr, rr.rdata, len) == 0) {
+		if (memcmp(addr, &result, len) == 0) {
 			retval = 1;
 			goto end;
 		}
@@ -262,15 +272,17 @@ reverse_endian(dst, src)
 	return;
 }
 
-void
-dnsrbl_source_add(name, domain, blacklisted) /* acllist must be write locked */
+void	/* acllist must be write locked */
+dnsrbl_source_add(name, domain, blacklisted, cidr) 
 	char *name;
 	char *domain;
 	struct sockaddr *blacklisted;
+	int cidr;
 {
 	struct dnsrbl_entry *de;
 	socklen_t salen;
 	char addrstr[IPADDRSTRLEN];
+	int i;
 
 	if ((de = malloc(sizeof(*de))) == NULL) {
 		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
@@ -280,10 +292,16 @@ dnsrbl_source_add(name, domain, blacklisted) /* acllist must be write locked */
 	switch(blacklisted->sa_family) {
 	case AF_INET:
 		salen = sizeof(struct sockaddr_in);
+		prefix2mask4(cidr, &de->d_mask.in4);
+		SADDR4(blacklisted)->s_addr &= de->d_mask.in4.s_addr;
 		break;
 #ifdef AF_INET6
 	case AF_INET6:
 		salen = sizeof(struct sockaddr_in6);
+		prefix2mask6(cidr, &de->d_mask.in6);
+		for (i = 0; i < 16; i += 4)
+			*(uint32_t *)&SADDR6(blacklisted)->s6_addr[i] &=
+			    *(uint32_t *)&de->d_mask.in6.s6_addr[i];
 		break;
 #endif
 	default:
@@ -309,8 +327,8 @@ dnsrbl_source_add(name, domain, blacklisted) /* acllist must be write locked */
 			    strerror(errno));
 			exit(EX_SOFTWARE);
 		}
-		mg_log(LOG_DEBUG, "load DNSRBL \"%s\" \"%s\" %s", 
-		    de->d_name, de->d_domain, addrstr);
+		mg_log(LOG_DEBUG, "load DNSRBL \"%s\" \"%s\" %s/%d", 
+		    de->d_name, de->d_domain, addrstr, cidr);
 	}
 
 	return;

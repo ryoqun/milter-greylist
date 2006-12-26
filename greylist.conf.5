@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.49 2006/12/20 21:57:53 manu Exp $
+.\" $Id: greylist.conf.5,v 1.50 2006/12/26 21:21:52 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -246,7 +246,13 @@ keyword. DATA-stage ACL have limitations: their action cannot be
 .I greylist\fR,
 and they cannot use the
 .I rcpt
-clauses. 
+clauses. On the other hand, the following clauses can be used:
+.TP
+.I header
+String or regular expression searched in message headers
+.TP
+.I body
+String or regular expression searched in message body
 .SH LISTS
 It is often useful to group several users or sender IP addresses in a single
 ACL. This can be done with lists. Lists must be first defined and given 
@@ -427,7 +433,7 @@ a bigger greylisting delay for hosts caught in the SORBS dynamic pool
 DNRSBL (this will include DSL and cable customers pools, which are well 
 known to be massively infected by spamwares):
 .IP
-  dnsrbl "SORBS DUN" dnsbl.sorbs.net 127.0.0.10
+  dnsrbl "SORBS DUN" dnsbl.sorbs.net 127.0.0.10/32
 
   racl greylist dnsrbl "SORBS DUN" delay 1h
   racl greylist default delay 15m
@@ -679,6 +685,10 @@ d for days). Default is 5 days.
 .TP
 .I extendedregex
 Use extended regular expressions instead of basic regular expressions.
+.TP
+.I maxpeek
+Limit (in bytes) how much of messages are examined for header and body
+searches.
 .TP
 .I lazyaw
 Make auto-whitelist look at just the IP instead of the (sender IP,

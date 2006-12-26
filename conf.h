@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.38 2006/09/20 07:50:09 manu Exp $ */
+/* $Id: conf.h,v 1.39 2006/12/26 21:21:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -103,6 +103,7 @@ struct conf_rec {
 	char c_syncsrcaddr_storage[IPADDRSTRLEN + 1];
 	char c_syncsrcport_storage[NUMLEN + 1];
 	char c_dracdb_storage[QSTRLEN + 1];
+	size_t c_maxpeek;
 };
 
 /* c_forced flags */
@@ -147,6 +148,8 @@ void conf_release(void);
 extern FILE *conf_in;
 extern int conf_line;
 extern int conf_acl_end;
+extern int conf_racl_end;
+extern int conf_dacl_end;
 
 int conf_parse(void);
 void conf_dispose_input_file(void);

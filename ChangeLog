@@ -5,6 +5,8 @@
 	Fix dependency in rc-bsd.sh: it's mail, not sendmail
 	Add DATA-stage ACL
 	Update to .spec file (Rudy Eschauzier)
+	Allow header and body searches in DATA-stage ACL
+	Allow CIDR match for DNSRBL
 3.1.1
 	Fix crashes during dump reloads (AIDA Shinra)
 	Fix DoS in MX sync protocol (AIDA Shinra)

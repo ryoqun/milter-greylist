@@ -1,5 +1,4 @@
-/* $Id: milter-greylist.h,v 1.51 2006/12/24 19:04:08 manu Exp $ */
-/* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
+/* $Id: milter-greylist.h,v 1.52 2006/12/26 21:21:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -145,6 +144,16 @@ struct rcpt {
 	LIST_ENTRY(rcpt) r_list;
 };
 
+struct header {
+	char *h_line;
+	LIST_ENTRY(header) h_list;
+};
+
+struct body {
+	char *b_lines;
+	LIST_ENTRY(body) b_list;
+};
+
 struct mlfi_priv {
 	sockaddr_t priv_addr;
 	socklen_t priv_addrlen;
@@ -152,6 +161,12 @@ struct mlfi_priv {
 	char priv_helo[ADDRLEN + 1];
 	char priv_from[ADDRLEN + 1];
 	LIST_HEAD(, rcpt) priv_rcpt;
+	char *priv_cur_rcpt;
+	LIST_HEAD(, header) priv_header;
+	LIST_HEAD(, body) priv_body;
+	size_t priv_msgcount;
+	char *priv_buf;
+	size_t priv_buflen;
 	char *priv_queueid;
 	int priv_delayed_reject;
 	struct smtp_reply priv_sr;
@@ -161,6 +176,8 @@ sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);
 sfsistat mlfi_helo(SMFICTX *, char *);
 sfsistat mlfi_envfrom(SMFICTX *, char **);
 sfsistat mlfi_envrcpt(SMFICTX *, char **);
+sfsistat mlfi_header(SMFICTX *, char *, char *);
+sfsistat mlfi_body(SMFICTX *, unsigned char *, size_t);
 sfsistat mlfi_eom(SMFICTX *);
 sfsistat mlfi_close(SMFICTX *);
 void usage(char *);

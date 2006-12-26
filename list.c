@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.12 2006/12/06 15:02:41 manu Exp $ */
+/* $Id: list.c,v 1.13 2006/12/26 21:21:52 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.12 2006/12/06 15:02:41 manu Exp $");
+__RCSID("$Id: list.c,v 1.13 2006/12/26 21:21:52 manu Exp $");
 #endif
 #endif
 
@@ -341,6 +341,12 @@ all_list_settype(ale, type)
 		case LT_DOMAIN:
 			strncat(debugstr, "domain ", DEBUGSTR);
 			break;
+		case LT_HEADER:
+			strncat(debugstr, "header ", DEBUGSTR);
+			break;
+		case LT_BODY:
+			strncat(debugstr, "body ", DEBUGSTR);
+			break;
 #ifdef USE_DNSRBL
 		case LT_DNSRBL:
 			strncat(debugstr, "dnsrbl ", DEBUGSTR);
@@ -606,4 +612,58 @@ domain_out:
 	return (le != NULL);
 }
 
+int
+list_header_filter(list, header)
+	struct all_list_entry *list;
+	char *header;
+{
+	struct list_entry *le;
 
+	LIST_FOREACH(le, &list->al_head, l_list) {
+		switch(le->l_type) {
+		case L_STRING:
+			if (emailcmp(header, le->l_data.string))
+				goto header_out;
+			break;
+		case L_REGEX:
+			if (regexec(le->l_data.regex, 
+			    header, 0, NULL, 0) == 0)
+				goto header_out;
+			break;
+		default:
+			mg_log(LOG_ERR, "corrupted list");
+			exit(EX_SOFTWARE);
+			break;
+		}
+	}
+header_out:
+	return (le != NULL);
+}
+
+int
+list_body_filter(list, body)
+	struct all_list_entry *list;
+	char *body;
+{
+	struct list_entry *le;
+
+	LIST_FOREACH(le, &list->al_head, l_list) {
+		switch(le->l_type) {
+		case L_STRING:
+			if (emailcmp(body, le->l_data.string))
+				goto body_out;
+			break;
+		case L_REGEX:
+			if (regexec(le->l_data.regex, 
+			    body, 0, NULL, 0) == 0)
+				goto body_out;
+			break;
+		default:
+			mg_log(LOG_ERR, "corrupted list");
+			exit(EX_SOFTWARE);
+			break;
+		}
+	}
+body_out:
+	return (le != NULL);
+}

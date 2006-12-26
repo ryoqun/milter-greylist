@@ -71,6 +71,9 @@ flushaddr	[Ff][Ll][Uu][Ss][Hh][Aa][Dd][Dd][Rr]
 code		[Cc][Oo][Dd][Ee]
 ecode		[Ee][Cc][Oo][Dd][Ee]
 msg		[Mm][Ss][Gg]
+header		[Hh][Ee][Aa][Dd][Ee][Rr]
+body		[Bb][Oo][Dd][Yy]
+maxpeek		[Mm][Aa][Xx][Pp][Ee][Ee][Kk]
 openlist	"{"
 closelist	"}"
 nextln		"\\".*"\n"
@@ -86,7 +89,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.58 2006/12/20 21:57:52 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.59 2006/12/26 21:21:52 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -99,6 +102,8 @@ star		"*"
 
 	int conf_line;
 	int conf_acl_end;
+	int conf_racl_end;
+	int conf_dacl_end;
 %}
 
 %%
@@ -130,6 +135,9 @@ star		"*"
 {code}  	{ return CODE; }
 {ecode}  	{ return ECODE; }
 {msg}	  	{ return MSG; }
+{header}	{ BEGIN(S_REGEX); return HEADER; }
+{body}		{ BEGIN(S_REGEX); return BODY; }
+{maxpeek}	{ return MAXPEEK; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }

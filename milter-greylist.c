@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.145 2006/12/24 19:04:08 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.146 2006/12/26 21:21:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.145 2006/12/24 19:04:08 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.146 2006/12/26 21:21:52 manu Exp $");
 #endif
 #endif
 
@@ -105,6 +105,8 @@ static sfsistat real_connect(SMFICTX *, char *, _SOCK_ADDR *);
 static sfsistat real_helo(SMFICTX *, char *);
 static sfsistat real_envfrom(SMFICTX *, char **);
 static sfsistat real_envrcpt(SMFICTX *, char **);
+static sfsistat real_header(SMFICTX *, char *, char *);
+static sfsistat real_body(SMFICTX *, unsigned char *, size_t);
 static sfsistat real_eom(SMFICTX *);
 static sfsistat real_close(SMFICTX *);
 
@@ -117,9 +119,9 @@ struct smfiDesc smfilter =
 	MLFI_HELO,	/* SMTP HELO command filter */
 	mlfi_envfrom,	/* envelope sender filter */
 	mlfi_envrcpt,	/* envelope recipient filter */
-	NULL,		/* header filter */
+	mlfi_header,	/* header filter */
 	NULL,		/* end of header */
-	NULL,		/* body block filter */
+	mlfi_body,	/* body block filter */
 	mlfi_eom,	/* end of message */
 	NULL,		/* message aborted */
 	mlfi_close,	/* connection cleanup */
@@ -185,6 +187,34 @@ mlfi_envrcpt(ctx, envrcpt)
 }
 
 sfsistat
+mlfi_header(ctx, header, value)
+	SMFICTX *ctx;
+	char *header;
+	char *value;
+{
+	sfsistat r;
+
+	conf_retain();
+	r = real_header(ctx, header, value);
+	conf_release();
+	return r;
+}
+
+sfsistat
+mlfi_body(ctx, chunk, size)
+	SMFICTX *ctx;
+	unsigned char *chunk;
+	size_t size;
+{
+	sfsistat r;
+
+	conf_retain();
+	r = real_body(ctx, chunk, size);
+	conf_release();
+	return r;
+}
+
+sfsistat
 mlfi_eom(ctx)
 	SMFICTX *ctx;
 {
@@ -223,6 +253,12 @@ real_connect(ctx, hostname, addr)
 	bzero((void *)priv, sizeof(*priv));
 	priv->priv_sr.sr_whitelist = EXF_UNSET;
 	LIST_INIT(&priv->priv_rcpt);
+	priv->priv_cur_rcpt = NULL;
+	LIST_INIT(&priv->priv_header);
+	LIST_INIT(&priv->priv_body);
+	priv->priv_msgcount = 0;
+	priv->priv_buf = NULL;
+	priv->priv_buflen = 0;
 
 	strncpy(priv->priv_hostname, hostname, ADDRLEN);
 	priv->priv_hostname[ADDRLEN] = '\0';
@@ -469,8 +505,9 @@ real_envrcpt(ctx, envrcpt)
 	 * Check the ACL
 	 */
 	reset_acl_values(priv);
+	priv->priv_cur_rcpt = rcpt;
 	if ((priv->priv_sr.sr_whitelist = acl_filter(AS_RCPT, 
-	    ctx, priv, rcpt)) & EXF_WHITELIST) {
+	    ctx, priv)) & EXF_WHITELIST) {
 		priv->priv_sr.sr_elapsed = 0;
 		return SMFIS_CONTINUE;
 	}
@@ -568,6 +605,114 @@ real_envrcpt(ctx, envrcpt)
 }
 
 static sfsistat
+real_header(ctx, name, value)
+	SMFICTX *ctx;
+	char *name;
+	char *value;
+{
+	struct header *h;
+	struct mlfi_priv *priv;
+	const char sep[] = ": ";
+	size_t len;
+
+	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+
+	if (priv->priv_msgcount > conf.c_maxpeek) {
+		mg_log(LOG_DEBUG, "ignoring message beyond maxpeek = %d", 
+		    conf.c_maxpeek);
+		return SMFIS_CONTINUE;
+	}
+
+	if ((h = malloc(sizeof(*h))) == NULL) {
+		mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	len = strlen(name) + strlen(sep) + strlen(value) + 1;
+	if ((h->h_line = malloc(len)) == NULL) {
+		mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	h->h_line[0] = '\0';
+	strcat(h->h_line, name);
+	strcat(h->h_line, sep);
+	strcat(h->h_line, value);
+
+	LIST_INSERT_HEAD(&priv->priv_header, h, h_list);
+
+	priv->priv_msgcount += len;
+
+	return SMFIS_CONTINUE;
+}
+
+
+static sfsistat
+real_body(ctx, chunk, size)
+	SMFICTX *ctx;
+	unsigned char *chunk;
+	size_t size;
+{
+	struct mlfi_priv *priv;
+	struct body *b;
+	size_t linelen;
+	int i;
+
+	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+
+	/* Avoid copying the whole message to save CPU */
+	if ((priv->priv_msgcount > conf.c_maxpeek) || 
+	    (priv->priv_buflen > conf.c_maxpeek)) {
+		mg_log(LOG_DEBUG, "ignoring message beyond maxpeek = %d", 
+		    conf.c_maxpeek);
+		return SMFIS_CONTINUE;
+	}
+
+	for (i = size - 1; i >= 0; i--) {
+		if (chunk[i] == '\n')
+			break;
+	}
+
+	if (chunk[i] == '\n') { /* We have a newline */
+		if ((b = malloc(sizeof(*b))) == NULL) {
+			mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+	
+		linelen = priv->priv_buflen + i + 2;
+
+		if ((b->b_lines = malloc(linelen)) == NULL) {
+			mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		/* Gather data saved from a previous call */
+		if (priv->priv_buf) {
+			memcpy(b->b_lines, priv->priv_buf, priv->priv_buflen);
+			free(priv->priv_buf);
+		}
+		memcpy(b->b_lines + priv->priv_buflen, chunk, i + 1);
+		b->b_lines[linelen - 1] = '\0';
+		priv->priv_buflen = 0;
+
+		LIST_INSERT_HEAD(&priv->priv_body, b, b_list);
+
+		priv->priv_msgcount += linelen;
+	} else { /* No newline in chunk, keep it for later */
+		if ((priv->priv_buf = realloc(priv->priv_buf, 
+		    priv->priv_buflen + size)) == NULL) {
+			mg_log(LOG_ERR, 
+			    "realloc() failed: %s", 
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
+		memcpy(&priv->priv_buf[priv->priv_buflen], chunk, size);
+		priv->priv_buflen += size;
+	}
+
+	return SMFIS_CONTINUE;
+}
+
+static sfsistat
 real_eom(ctx)
 	SMFICTX *ctx;
 {
@@ -588,6 +733,27 @@ real_eom(ctx)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
+	/* 
+	 * If we got no newline at all, at least 
+	 * we can save the current buffer 
+	 */
+	if (LIST_EMPTY(&priv->priv_body) && (priv->priv_buflen > 0)) {
+		struct body *b;
+
+		if ((b = malloc(sizeof(*b))) == NULL) {
+			mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		b->b_lines = priv->priv_buf;
+		b->b_lines[priv->priv_buflen - 1] = '\0';
+
+		priv->priv_buf = NULL;
+		priv->priv_buflen = 0;
+
+		LIST_INSERT_HEAD(&priv->priv_body, b, b_list);
+	}
+
 	if (priv->priv_delayed_reject) {
 		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) 
 			log_and_report_greylisting(ctx, priv, rcpt->r_addr);
@@ -600,7 +766,8 @@ real_eom(ctx)
 	 * We save data obtained from RCPT and we will restore it afterward
 	 */
 	memcpy(&rcpt_sr, &priv->priv_sr, sizeof(rcpt_sr));
-	priv->priv_sr.sr_whitelist = acl_filter(AS_DATA, ctx, priv, NULL);
+	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
+	priv->priv_sr.sr_whitelist = acl_filter(AS_DATA, ctx, priv);
 	if (priv->priv_sr.sr_whitelist & EXF_BLACKLIST) {
 		char aclstr[16];
 		char addrstr[IPADDRSTRLEN];
@@ -779,6 +946,8 @@ real_close(ctx)
 {
 	struct mlfi_priv *priv;
 	struct rcpt *r;
+	struct header *h;
+	struct body *b;
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) != NULL) {
 		if (priv->priv_sr.sr_code)
@@ -791,6 +960,18 @@ real_close(ctx)
 			LIST_REMOVE(r, r_list);
 			free(r);
 		}
+		while ((h = LIST_FIRST(&priv->priv_header)) != NULL) {
+			free(h->h_line);
+			LIST_REMOVE(h, h_list);
+			free(h);
+		}
+		while ((b = LIST_FIRST(&priv->priv_body)) != NULL) {
+			free(b->b_lines);
+			LIST_REMOVE(b, b_list);
+			free(b);
+		}
+		if (priv->priv_buf)
+			free(priv->priv_buf);
 		free(priv);
 		smfi_setpriv(ctx, NULL);
 	}
@@ -1062,6 +1243,15 @@ main(argc, argv)
 	 * No lock needed here either.
 	 */
 	dump_reload();
+
+	/*
+	 * If no body/header search exists, don't install the hooks,
+	 * it will improve performance a lot.
+	 */
+	if (conf.c_maxpeek == 0) {
+		smfilter.xxfi_header = NULL;
+		smfilter.xxfi_body = NULL;
+	}
 
 	/* 
 	 * Register our callbacks 

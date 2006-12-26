@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.38 2006/12/20 21:57:52 manu Exp $ */
+/* $Id: acl.c,v 1.39 2006/12/26 21:21:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.38 2006/12/20 21:57:52 manu Exp $");
+__RCSID("$Id: acl.c,v 1.39 2006/12/26 21:21:52 manu Exp $");
 #endif
 #endif
 
@@ -302,6 +302,58 @@ acl_add_rcpt(email)
 }
 
 void
+acl_add_header(header)
+	char *header;
+{
+	if (gacl.a_header != NULL || 
+	    gacl.a_header_re != NULL ||
+	    gacl.a_headerlist != NULL) {
+		mg_log(LOG_ERR,
+		    "header specified twice in ACL line %d",
+		    conf_line);
+		exit(EX_DATAERR);
+	}
+	if ((gacl.a_header = strdup(header)) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl header %s", header);
+
+	if (conf.c_maxpeek == 0)
+		conf.c_maxpeek = -1;
+
+	return;
+}
+
+void
+acl_add_body(body)
+	char *body;
+{
+	if (gacl.a_body != NULL || 
+	    gacl.a_body_re != NULL ||
+	    gacl.a_bodylist != NULL) {
+		mg_log(LOG_ERR,
+		    "body specified twice in ACL line %d",
+		    conf_line);
+		exit(EX_DATAERR);
+	}
+	if ((gacl.a_body = strdup(body)) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl body %s", body);
+
+	if (conf.c_maxpeek == 0)
+		conf.c_maxpeek = -1;
+
+	return;
+}
+
+void
 acl_add_domain(domain)
 	char *domain;
 {
@@ -466,6 +518,106 @@ acl_add_domain_regex(regexstr)
 	return;
 }
 
+void
+acl_add_header_regex(regexstr)
+	char *regexstr;
+{
+	size_t len;
+	int error;
+	char errstr[ERRLEN + 1];
+
+	if (gacl.a_header != NULL || 
+	    gacl.a_header_re != NULL ||
+	    gacl.a_headerlist != NULL) {
+		mg_log(LOG_ERR,
+		    "header specified twice in ACL line %d",
+		    conf_line);
+		exit(EX_DATAERR);
+	}
+	/* 
+	 * Strip leading and trailing slashes
+	 */
+	len = strlen(regexstr);
+	if (len > 0)
+		regexstr[len - 1] = '\0';
+	regexstr++;
+
+	if ((gacl.a_header_re = malloc(sizeof(*gacl.a_header_re))) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	if ((error = regcomp(gacl.a_header_re, regexstr,
+	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
+		regerror(error, gacl.a_header_re, errstr, ERRLEN);
+		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
+		    regexstr, errstr);
+		exit(EX_OSERR);
+	}
+
+	if ((gacl.a_header_re_copy = strdup(regexstr)) == NULL) {
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl header regex %s", regexstr);
+
+	if (conf.c_maxpeek == 0)
+		conf.c_maxpeek = -1;
+
+	return;
+}
+
+void
+acl_add_body_regex(regexstr)
+	char *regexstr;
+{
+	size_t len;
+	int error;
+	char errstr[ERRLEN + 1];
+
+	if (gacl.a_body != NULL || 
+	    gacl.a_body_re != NULL ||
+	    gacl.a_bodylist != NULL) {
+		mg_log(LOG_ERR,
+		    "body specified twice in ACL line %d",
+		    conf_line);
+		exit(EX_DATAERR);
+	}
+	/* 
+	 * Strip leading and trailing slashes
+	 */
+	len = strlen(regexstr);
+	if (len > 0)
+		regexstr[len - 1] = '\0';
+	regexstr++;
+
+	if ((gacl.a_body_re = malloc(sizeof(*gacl.a_header_re))) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	if ((error = regcomp(gacl.a_body_re, regexstr,
+	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
+		regerror(error, gacl.a_body_re, errstr, ERRLEN);
+		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
+		    regexstr, errstr);
+		exit(EX_OSERR);
+	}
+
+	if ((gacl.a_body_re_copy = strdup(regexstr)) == NULL) {
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl body regex %s", regexstr);
+
+	if (conf.c_maxpeek == 0)
+		conf.c_maxpeek = -1;
+
+	return;
+}
+
 struct acl_entry *
 acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 	acl_stage_t acl_stage;
@@ -474,6 +626,14 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 	struct acl_entry *acl;
 
 	if (acl_stage == AS_DATA) {
+		if (conf_dacl_end != 0)
+			mg_log(LOG_WARNING, "ignored dacl entry after dacl "
+			    "default rule at line %d", conf_line - 1);
+		if (conf_acl_end != 0) {
+			conf_dacl_end = 1;
+			conf_acl_end = 0;
+		}
+
 		if ((gacl.a_rcptlist || gacl.a_rcpt || gacl.a_rcpt_re)) {
 			mg_log(LOG_ERR, "rcpt clause in DATA stage ACL "
 			    "at line %d", conf_line - 1);
@@ -483,6 +643,14 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 			mg_log(LOG_ERR, "greylist action in DATA stage ACL "
 			    "at line %d", conf_line - 1);
 			exit(EX_DATAERR);
+		}
+	} else {
+		if (conf_racl_end != 0)
+			mg_log(LOG_WARNING, "ignored racl entry after racl "
+			    "default rule at line %d", conf_line - 1);
+		if (conf_acl_end != 0) {
+			conf_racl_end = 1;
+			conf_acl_end = 0;
 		}
 	}
 
@@ -520,12 +688,20 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 
 struct acl_entry *
 acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
-	acl_type_t acl_stage;
+	acl_stage_t acl_stage;
 	acl_type_t acl_type;
 {
 	struct acl_entry *acl;
 
 	if (acl_stage == AS_DATA) {
+		if (conf_dacl_end != 0)
+			mg_log(LOG_WARNING, "ignored dacl entry after dacl "
+			    "default rule at line %d", conf_line - 1);
+		if (conf_acl_end != 0) {
+			conf_dacl_end = 1;
+			conf_acl_end = 0;
+		}
+
 		if ((gacl.a_rcptlist || gacl.a_rcpt || gacl.a_rcpt_re)) {
 			mg_log(LOG_ERR, "rcpt clause in DATA stage ACL "
 			    "at line %d", conf_line - 1);
@@ -535,6 +711,14 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 			mg_log(LOG_ERR, "greylist action in DATA stage ACL "
 			    "at line %d", conf_line - 1);
 			exit(EX_DATAERR);
+		}
+	} else {
+		if (conf_racl_end != 0)
+			mg_log(LOG_WARNING, "ignored racl entry after racl "
+			    "default rule at line %d", conf_line - 1);
+		if (conf_acl_end != 0) {
+			conf_racl_end = 1;
+			conf_acl_end = 0;
 		}
 	}
 
@@ -571,11 +755,10 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 }
 
 int 
-acl_filter(stage, ctx, priv, rcpt)
+acl_filter(stage, ctx, priv)
 	acl_stage_t stage;
 	SMFICTX *ctx;
 	struct mlfi_priv *priv;
-	char *rcpt;
 {
 	struct sockaddr *sa;
 	socklen_t salen;
@@ -589,12 +772,14 @@ acl_filter(stage, ctx, priv, rcpt)
 	int retval;
 	int testmode = conf.c_testmode;
 	struct acl_param ap;
+	char *cur_rcpt;
 
 	sa = SA(&priv->priv_addr);
 	salen = priv->priv_addrlen;
 	hostname = priv->priv_hostname;
 	from = priv->priv_from;
 	queueid = priv->priv_queueid;
+	cur_rcpt = priv->priv_cur_rcpt;
 
 	ACL_RDLOCK;
 
@@ -677,28 +862,99 @@ acl_filter(stage, ctx, priv, rcpt)
 			}
 		}
 
-		if (acl->a_rcptlist != NULL) {
-			if (list_rcpt_filter(acl->a_rcptlist, rcpt)) {
+		if (cur_rcpt && (acl->a_rcptlist != NULL)) {
+			if (list_rcpt_filter(acl->a_rcptlist, cur_rcpt)) {
 				retval |= EXF_RCPT;
 			} else {
 				continue;
 			}
 		}
 
-		if (acl->a_rcpt != NULL) {
-			if (emailcmp(rcpt, acl->a_rcpt) == 0) {
+		if (cur_rcpt && (acl->a_rcpt != NULL)) {
+			if (emailcmp(cur_rcpt, acl->a_rcpt) == 0) {
 			retval |= EXF_RCPT;
 			} else {
 				continue;
 			}
 		}
 
-		if (acl->a_rcpt_re != NULL) {
-			if (regexec(acl->a_rcpt_re, rcpt, 0, NULL, 0) == 0) {
+		if (cur_rcpt && (acl->a_rcpt_re != NULL)) {
+			if (regexec(acl->a_rcpt_re, 
+			    cur_rcpt, 0, NULL, 0) == 0) {
 				retval |= EXF_RCPT;
 			} else {
 				continue;
 			}
+		}
+
+		if ((stage == AS_DATA) && (acl->a_header != NULL)) {
+			struct header *h;
+			int found = 0;
+
+			LIST_FOREACH(h, &priv->priv_header, h_list) {
+				if (strstr(h->h_line, acl->a_header) != NULL) {
+					found = 1;
+					break;
+				}
+			}
+
+			if (found)
+				retval |= EXF_HEADER;
+			else
+				continue;
+		}
+
+		if ((stage == AS_DATA) && (acl->a_header_re != NULL)) {
+			struct header *h;
+			int found = 0;
+
+			LIST_FOREACH(h, &priv->priv_header, h_list) {
+				if (regexec(acl->a_header_re, h->h_line, 
+				    0, NULL, 0) == 0){
+					found = 1;
+					break;
+				}
+			}
+
+			if (found)
+				retval |= EXF_HEADER;
+			else
+				continue;
+		}
+
+		if ((stage == AS_DATA) && (acl->a_body != NULL)) {
+			struct body *b;
+			int found = 0;
+
+			LIST_FOREACH(b, &priv->priv_body, b_list) {
+				if (strstr(b->b_lines, acl->a_body) != NULL) {
+					found = 1;
+					break;
+				}
+			}
+
+			if (found)
+				retval |= EXF_BODY;
+			else
+				continue;
+		}
+
+		if ((stage == AS_DATA) && (acl->a_body_re != NULL)) {
+			struct body *b;
+			int found = 0;
+
+			LIST_FOREACH(b, &priv->priv_body, b_list) {
+				if (regexec(acl->a_body_re, b->b_lines, 
+				    0, NULL, 0) == 0){
+					found = 1;
+					break;
+				}
+			}
+
+			if (found)
+				retval |= EXF_BODY;
+			else
+				continue;
 		}
 #ifdef USE_DNSRBL
 		if (acl->a_dnsrbllist != NULL) {
@@ -721,7 +977,8 @@ acl_filter(stage, ctx, priv, rcpt)
 #ifdef USE_CURL
 		if (acl->a_urlchecklist != NULL) {
 			if (list_urlcheck_filter(acl->a_urlchecklist, 
-			    priv, rcpt, &ap)) {
+			    priv, 
+			    (cur_rcpt != NULL) ? cur_rcpt : NULL, &ap)) {
 				retval |= EXF_URLCHECK;
 			} else {
 				continue;
@@ -729,7 +986,8 @@ acl_filter(stage, ctx, priv, rcpt)
 		}
 
 		if (acl->a_urlcheck != NULL) {
-			if (urlcheck_validate(priv, rcpt, 
+			if (urlcheck_validate(priv, 
+			    (cur_rcpt != NULL) ? cur_rcpt : NULL,
 			    acl->a_urlcheck, &ap) == 1) {
 				retval |= EXF_URLCHECK;
 			} else {
@@ -824,7 +1082,8 @@ acl_filter(stage, ctx, priv, rcpt)
 		if (conf.c_debug || conf.c_acldebug) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
 			mg_log(LOG_DEBUG, "Mail from=%s, rcpt=%s, addr=%s[%s] "
-			    "is matched by entry %s", from, rcpt, 
+			    "is matched by entry %s", from, 
+			    (cur_rcpt != NULL) ? cur_rcpt : "(nil)",
 			    hostname, addrstr, acl_entry(acl));
 		}
 	} else {
@@ -871,9 +1130,9 @@ acl_filter(stage, ctx, priv, rcpt)
 			     "sender %s is whitelisted", from);
 			ADD_REASON(whystr, tmpstr);
 		}
-		if (retval & EXF_RCPT) {
+		if ((retval & EXF_RCPT) && (cur_rcpt != NULL)) {
 			snprintf(tmpstr, sizeof(tmpstr),
-			     "recipient %s is whitelisted", rcpt);
+			     "recipient %s is whitelisted", cur_rcpt);
 			ADD_REASON(whystr, tmpstr);
 		}
 		if (retval & EXF_MACRO) {
@@ -886,7 +1145,9 @@ acl_filter(stage, ctx, priv, rcpt)
 		}
 		iptostring(sa, salen, addrstr, sizeof(addrstr));
 		snprintf(tmpstr, sizeof(tmpstr),
-		    "(from=%s, rcpt=%s, addr=%s[%s])", from, rcpt, hostname, addrstr);
+		    "(from=%s, rcpt=%s, addr=%s[%s])", from, 
+		    (cur_rcpt != NULL) ? cur_rcpt : "(nil)",
+		    hostname, addrstr);
 		ADD_REASON(whystr, tmpstr);
 
 		mg_log(LOG_INFO, "%s: skipping greylist because %s",
@@ -1122,6 +1383,42 @@ acl_entry(acl)
 	if (acl->a_domain_re != NULL) {
 		snprintf(tempstr, sizeof(tempstr), "domain /%s/ ",
 		    acl->a_domain_re_copy);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_header != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "header \"%s\" ", 
+		    acl->a_header);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_header_re != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "header /%s/ ", 
+		    acl->a_header_re_copy);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_headerlist != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "headerlist \"%s\" ", 
+		    acl->a_headerlist->al_name);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_body != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "body \"%s\" ", 
+		    acl->a_body);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_body_re != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "body /%s/ ", 
+		    acl->a_body_re_copy);
+		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		def = 0;
+	}
+	if (acl->a_bodylist != NULL) {
+		snprintf(tempstr, sizeof(tempstr), "bodylist \"%s\" ", 
+		    acl->a_bodylist->al_name);
 		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}

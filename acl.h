@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.15 2006/12/20 21:57:52 manu Exp $ */
+/* $Id: acl.h,v 1.16 2006/12/26 21:21:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -84,12 +84,18 @@ struct acl_entry {
 	char *a_from;
 	char *a_rcpt;
 	char *a_domain;
+	char *a_header;
+	char *a_body;
 	regex_t *a_from_re;
 	char *a_from_re_copy;
 	regex_t *a_rcpt_re;
 	char *a_rcpt_re_copy;
 	regex_t *a_domain_re;
 	char *a_domain_re_copy;
+	regex_t *a_header_re;
+	char *a_header_re_copy;
+	regex_t *a_body_re;
+	char *a_body_re_copy;
 #ifdef USE_DNSRBL
 	struct dnsrbl_entry *a_dnsrbl; 
 #endif
@@ -104,6 +110,8 @@ struct acl_entry {
 	struct all_list_entry *a_urlchecklist;
 	struct all_list_entry *a_macrolist;
 	struct all_list_entry *a_addrlist;
+	struct all_list_entry *a_headerlist;
+	struct all_list_entry *a_bodylist;
 	time_t a_delay;
 	time_t a_autowhite;
 	int a_flags;
@@ -141,6 +149,10 @@ void acl_add_from(char *);
 void acl_add_rcpt(char *);
 void acl_add_from_regex(char *);
 void acl_add_rcpt_regex(char *);
+void acl_add_header(char *);
+void acl_add_header_regex(char *);
+void acl_add_body(char *);
+void acl_add_body_regex(char *);
 void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
 void acl_add_list(char *);
@@ -157,7 +169,7 @@ void acl_add_urlcheck(char *);
 void acl_add_macro(char *);
 struct acl_entry *acl_register_entry_first (acl_stage_t, acl_type_t);
 struct acl_entry *acl_register_entry_last (acl_stage_t, acl_type_t);
-int acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *, char *);
+int acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *);
 char *acl_entry(struct acl_entry  *);
 void acl_dump(void);
 int emailcmp(char *, char *);        
@@ -185,4 +197,6 @@ int domaincmp(char *, char *);
 #define EXF_BLACKLIST	(1 << 16)
 #define EXF_MACRO	(1 << 17)
 #define EXF_URLCHECK	(1 << 18)
+#define EXF_HEADER	(1 << 19)
+#define EXF_BODY	(1 << 20)
 #endif /* _ACL_H_ */

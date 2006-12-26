@@ -1,4 +1,4 @@
-/* $Id: urlcheck.h,v 1.2 2006/12/07 10:22:00 manu Exp $ */
+/* $Id: urlcheck.h,v 1.3 2006/12/26 21:21:52 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -51,7 +51,6 @@ struct urlcheck_entry {
 struct urlcheck_entry *urlcheck_byname(char *);
 void urlcheck_init(void);
 void urlcheck_def_add(char *, char *, int);
-struct urlcheck_entry *dnsrbl_byname(char *);
 void urlcheck_clear(void);
 int urlcheck_validate(struct mlfi_priv *, char *,
     struct urlcheck_entry *, struct acl_param *);

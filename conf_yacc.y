@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.63 2006/12/20 21:57:53 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.64 2006/12/26 21:21:52 manu Exp $");
 #endif
 #endif
 
@@ -99,6 +99,7 @@ lines	:	lines netblock '\n'
 	|	lines rcpt_access_list '\n'
 	|	lines data_access_list '\n'
 	|	lines dracdb '\n'
+	|	lines maxpeek '\n'
 	|	lines nodrac '\n'
 	|       lines logexpired '\n'
 	|	lines dnsrbldef '\n'
@@ -471,13 +472,8 @@ data_access_list:
 	;
 
 acl_entry:	acl_default_entry 	{ conf_acl_end = 1; }
-	| 	acl_plain_entry	{
-			if (conf_acl_end != 0)
-				mg_log(LOG_WARNING, 
-				    "ignored acl entry after acl "
-				    "default rule at line %d", conf_line);
-		}
-	;
+	| 	acl_plain_entry	
+	;	
 
 acl_default_entry: DEFAULT acl_values |	DEFAULT	;
 acl_plain_entry: acl_clauses acl_values | acl_clauses;
@@ -497,6 +493,10 @@ acl_clause:	fromaddr_clause
 	|	macro_clause
 	|	urlcheck_clause
 	|	list_clause
+	|	header_clause
+	|	headerregex_clause
+	|	body_clause
+	|	bodyregex_clause
 	;
 
 acl_values:	acl_value
@@ -575,6 +575,26 @@ macro_clause:		SM_MACRO QSTRING {
 			}
 	;
 
+header_clause:		HEADER QSTRING {
+				char qstring[QSTRLEN + 1];
+
+				acl_add_header(quotepath(qstring, $2, QSTRLEN));
+			}
+	;
+
+headerregex_clause:	HEADER REGEX { acl_add_header_regex ($2); }
+	;
+
+body_clause:		BODY QSTRING {
+				char qstring[QSTRLEN + 1];
+
+				acl_add_body(quotepath(qstring, $2, QSTRLEN));
+			}
+	;
+
+bodyregex_clause:	BODY REGEX { acl_add_body_regex ($2); }
+	;
+
 urlcheck_clause:	URLCHECK QSTRING { 
 #ifdef USE_CURL
 			char path[QSTRLEN + 1];
@@ -636,12 +656,32 @@ dracdb:			DRAC DB QSTRING	{
 nodrac:			NODRAC	{ conf.c_nodrac = 1; }
 	;
 
-dnsrbldef:	DNSRBL QSTRING DOMAINNAME IPADDR {
+maxpeek:		MAXPEEK TNUMBER { conf.c_maxpeek = atoi($2); }
+	;
+
+dnsrbldef:	dnsrbldefip | dnsrbldefnetblock
+	;
+
+dnsrbldefip:	DNSRBL QSTRING DOMAINNAME IPADDR {
 #ifdef USE_DNSRBL
 			char path[QSTRLEN + 1];
 
 			dnsrbl_source_add(quotepath(path, $2, QSTRLEN), 
-			    $3, SA(&$4));
+			    $3, SA(&$4), 32);
+#else
+			mg_log(LOG_INFO, 
+			    "DNSRBL support not compiled in line %d", 
+			    conf_line);
+#endif
+		}
+	;
+
+dnsrbldefnetblock:	DNSRBL QSTRING DOMAINNAME IPADDR CIDR {
+#ifdef USE_DNSRBL
+			char path[QSTRLEN + 1];
+
+			dnsrbl_source_add(quotepath(path, $2, QSTRLEN), 
+			    $3, SA(&$4), $5);
 #else
 			mg_log(LOG_INFO, 
 			    "DNSRBL support not compiled in line %d", 
