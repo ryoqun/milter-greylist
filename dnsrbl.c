@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.19 2006/12/29 18:32:44 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.20 2006/12/29 18:47:09 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.19 2006/12/29 18:32:44 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.20 2006/12/29 18:47:09 manu Exp $");
 #endif
 #endif
 
@@ -108,7 +108,7 @@ dnsrbl_check_source(ad, stage, ap, priv)
 #endif
 	sockaddr_t ss;
 	char req[NS_MAXDNAME + 1];
-	char *ans = NULL;
+	unsigned char *ans = NULL;
 	int anslen;
 	ns_msg handle;
 	ns_rr rr;
