@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.4 2006/12/14 21:58:38 manu Exp $ */
+/* $Id: urlcheck.c,v 1.5 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.4 2006/12/14 21:58:38 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.5 2006/12/29 18:32:44 manu Exp $");
 #endif
 #endif
 
@@ -98,6 +98,12 @@ urlcheck_def_add(name, url, max_cnx) /* acllist must be write locked */
 {
 	struct urlcheck_entry *ue;
 	struct urlcheck_cnx *uc;
+
+	if (urlcheck_byname(name) != NULL) {
+		mg_log(LOG_ERR, "urlcheck \"%s\" defined twice at line %d",
+		    name, conf_line - 1);
+		exit(EX_DATAERR);
+	}
 
 	if ((ue = malloc(sizeof(*ue))) == NULL) {
 		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
@@ -166,11 +172,24 @@ urlcheck_clear(void)	/* acllist must be write locked */
 
 	while(!LIST_EMPTY(&urlcheck_head)) {
 		ue = LIST_FIRST(&urlcheck_head);
+		LIST_REMOVE(ue, u_list);
 
 		uc = ue->u_cnxpool;
 		while (ue->u_maxcnx > 0) {
+			/* 
+			 * Drain the lock. No other thread should be
+			 * able to acquire it now since we removed 
+			 * ue from the list. XXX is that right?
+			 */
+
 			if (pthread_mutex_lock(&uc->uc_lock) != 0) {
 				mg_log(LOG_ERR, "pthread_mutex_lock failed "
+				    "in urlcheck_clear: %s", strerror(errno));
+				exit(EX_OSERR);
+			}
+
+			if (pthread_mutex_unlock(&uc->uc_lock) != 0) {
+				mg_log(LOG_ERR, "pthread_mutex_unlock failed "
 				    "in urlcheck_clear: %s", strerror(errno));
 				exit(EX_OSERR);
 			}
@@ -184,8 +203,6 @@ urlcheck_clear(void)	/* acllist must be write locked */
 			ue->u_maxcnx--;
 		}
 		free(ue->u_cnxpool);
-
-		LIST_REMOVE(ue, u_list);
 		free(ue);
 	}
 
@@ -256,9 +273,10 @@ fstring_expand(priv, rcpt, ue)
 			    ue->u_urlmaxlen);
 			break;
 		case 'r':	/* Recipient e-mail */
-			strncat(outstr, 
-				strip_brackets(tmpaddr, rcpt, ADDRLEN), 
-				ue->u_urlmaxlen);
+			if (rcpt != NULL)
+				strncat(outstr, 
+					strip_brackets(tmpaddr, rcpt, ADDRLEN), 
+					ue->u_urlmaxlen);
 			break;
 		case 'm': 	/* mailbox part of sender or receiver e-mail */
 				/* Or machine part of DNS address */
@@ -510,12 +528,14 @@ get_cnx(ue)
 
 
 int
-urlcheck_validate(priv, rcpt, ue, ap)
+urlcheck_validate(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
 	struct mlfi_priv *priv;
+{
 	char *rcpt;
 	struct urlcheck_entry *ue;
-	struct acl_param *ap;
-{
 	CURL *ch;
 	CURLcode cerr;
 	char *url;
@@ -523,6 +543,8 @@ urlcheck_validate(priv, rcpt, ue, ap)
 	struct iovec data;
 	struct urlcheck_cnx *cnx;
 
+	rcpt = priv->priv_cur_rcpt;
+	ue = ad->urlcheck;
 	url = fstring_expand(priv, rcpt, ue);
 
 	if (conf.c_debug)

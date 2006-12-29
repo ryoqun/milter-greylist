@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.39 2006/12/26 21:21:52 manu Exp $ */
+/* $Id: acl.c,v 1.40 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.39 2006/12/26 21:21:52 manu Exp $");
+__RCSID("$Id: acl.c,v 1.40 2006/12/29 18:32:44 manu Exp $");
 #endif
 #endif
 
@@ -78,11 +78,551 @@ pthread_rwlock_t acl_lock;
 
 static struct acl_entry gacl;
 
+char *acl_print_netblock(acl_data_t *, char *, size_t);
+char *acl_print_string(acl_data_t *, char *, size_t);
+char *acl_print_regex(acl_data_t *, char *, size_t);
+char *acl_print_list(acl_data_t *, char *, size_t);
+void acl_free_netblock(acl_data_t *);
+void acl_free_string(acl_data_t *);
+void acl_free_regex(acl_data_t *);
+void acl_add_netblock(acl_data_t *, void *);
+void acl_add_string(acl_data_t *, void *);
+void acl_add_regex(acl_data_t *, void *);
+void acl_add_body_string(acl_data_t *, void *);
+void acl_add_body_regex(acl_data_t *, void *);
+void acl_add_macro(acl_data_t *, void *);
+void acl_add_list(acl_data_t *, void *);
+char *acl_print_macro(acl_data_t *, char *, size_t);
+#ifdef USE_DNSRBL
+void acl_add_dnsrbl(acl_data_t *, void *);
+char *acl_print_dnsrbl(acl_data_t *, char *, size_t);
+#endif
+#ifdef USE_CURL
+void acl_add_urlcheck(acl_data_t *, void *);
+char *acl_print_urlcheck(acl_data_t *, char *, size_t);
+#endif
+
+struct acl_clause_rec acl_clause_rec[] = {
+	/* Temporary types for lists */
+	{ AC_LIST, MULTIPLE_OK, AS_NONE, "list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+	{ AC_EMAIL, MULTIPLE_OK, AS_NONE, "email", 
+	  AT_NONE, AC_NONE, AC_NONE,
+	  *acl_print_string, *acl_add_string, 
+	  *acl_free_string, NULL },
+	{ AC_REGEX, MULTIPLE_OK, AS_NONE, "regex", 
+	  AT_NONE, AC_NONE, AC_NONE,
+	  *acl_print_regex, *acl_add_regex, 
+	  *acl_free_regex, NULL },
+	{ AC_STRING, MULTIPLE_OK, AS_NONE, "string", 
+	  AT_NONE, AC_NONE, AC_NONE,
+	  *acl_print_string, *acl_add_string, 
+	  *acl_free_string, NULL },
+
+	/* Real types used in clauses */
+	{ AC_NETBLOCK, UNIQUE, AS_ANY, "net", 
+	  AT_NETBLOCK, AC_NETBLOCK_LIST, AC_NETBLOCK,
+	  *acl_print_netblock, *acl_add_netblock,
+	  *acl_free_netblock, *acl_netblock_filter },
+	{ AC_NETBLOCK_LIST, UNIQUE, AS_ANY, "net_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+	{ AC_DOMAIN, UNIQUE, AS_ANY, "domain", 
+	  AT_STRING, AC_DOMAIN_LIST, AC_DOMAIN,
+	  *acl_print_string, *acl_add_string,
+	  *acl_free_string, *acl_domain_cmp },
+	{ AC_DOMAIN_RE, UNIQUE, AS_ANY, "domain_re", 
+	  AT_REGEX, AC_DOMAIN_LIST, AC_REGEX,
+	  *acl_print_regex, *acl_add_regex,
+	  *acl_free_regex, *acl_domain_regexec },
+	{ AC_DOMAIN_LIST, UNIQUE, AS_ANY, "domain_list", 
+	  AT_LIST,  AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+	{ AC_FROM, UNIQUE, AS_ANY, "from", 
+	  AT_STRING, AC_FROM_LIST, AC_EMAIL,
+	  *acl_print_string, *acl_add_string,
+	  *acl_free_string, *acl_from_cmp },
+	{ AC_FROM_RE, UNIQUE, AS_ANY, "from_re", 
+	  AT_REGEX, AC_FROM_LIST, AC_REGEX,
+	  *acl_print_regex, *acl_add_regex,
+	  *acl_free_regex, *acl_from_regexec },
+	{ AC_FROM_LIST, UNIQUE, AS_ANY, "from_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+	{ AC_RCPT, UNIQUE, AS_RCPT, "rcpt", 
+	  AT_STRING, AC_RCPT_LIST, AC_EMAIL,
+	  *acl_print_string, *acl_add_string,
+	  *acl_free_string, *acl_rcpt_cmp },
+	{ AC_RCPT_RE, UNIQUE, AS_RCPT, "rcpt_re", 
+	  AT_REGEX, AC_RCPT_LIST, AC_REGEX,
+	  *acl_print_regex, *acl_add_regex,
+	  *acl_free_regex, *acl_rcpt_regexec },
+	{ AC_RCPT_LIST, UNIQUE, AS_RCPT, "rcpt_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+	{ AC_BODY, MULTIPLE_OK, AS_DATA, "body", 
+	  AT_STRING, AC_BODY_LIST, AC_STRING,
+	  *acl_print_string, *acl_add_body_string, 
+	  *acl_free_string, *acl_body_strstr },
+	{ AC_BODY_RE, MULTIPLE_OK, AS_DATA, "body_re", 
+	  AT_REGEX, AC_BODY_LIST, AC_REGEX,
+	  *acl_print_regex, *acl_add_body_regex, 
+	  *acl_free_regex, *acl_body_regexec },
+	{ AC_BODY_LIST, MULTIPLE_OK, AS_DATA, "body_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+	{ AC_HEADER, MULTIPLE_OK, AS_DATA, "header", 
+	  AT_STRING, AC_HEADER_LIST, AC_STRING,
+	  *acl_print_string, *acl_add_body_string, 
+	  *acl_free_string, *acl_header_strstr },
+	{ AC_HEADER_RE, MULTIPLE_OK, AS_DATA, "header_re", 
+	  AT_REGEX, AC_HEADER_LIST, AC_REGEX,
+	  *acl_print_regex, *acl_add_body_regex, 
+	  *acl_free_regex, *acl_header_regexec },
+	{ AC_HEADER_LIST, MULTIPLE_OK, AS_DATA, "header_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+	{ AC_MACRO, MULTIPLE_OK, AS_ANY, "macro", 
+	  AT_MACRO, AC_MACRO_LIST, AC_STRING,
+	  *acl_print_macro, *acl_add_macro,
+	  NULL, *macro_check },
+	{ AC_MACRO_LIST, MULTIPLE_OK, AS_ANY, "macro_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_macro, *acl_add_macro,
+	  NULL, *macro_check },
+#ifdef USE_DNSRBL
+	{ AC_DNSRBL, MULTIPLE_OK, AS_ANY, "macro", 
+	  AT_DNSRBL, AC_DNSRBL_LIST, AC_STRING,
+	  *acl_print_dnsrbl, *acl_add_dnsrbl,
+	  NULL, *dnsrbl_check_source },
+	{ AC_DNSRBL_LIST, MULTIPLE_OK, AS_ANY, "macro_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+#endif
+#ifdef USE_CURL
+	{ AC_URLCHECK, MULTIPLE_OK, AS_ANY, "urlcheck", 
+	  AT_URLCHECK, AC_URLCHECK_LIST, AC_STRING,
+	  *acl_print_urlcheck, *acl_add_urlcheck,
+	  NULL, *urlcheck_validate },
+	{ AC_URLCHECK_LIST, MULTIPLE_OK, AS_ANY, "urlcheck_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+#endif
+};
+
+struct {
+	acl_stage_t ss_stage;
+	char *ss_string;
+} stage_string_rec[] = {
+	{ AS_NONE, "NONE" },
+	{ AS_RCPT, "RCPT" },
+	{ AS_DATA, "DATA" },
+	{ AS_ANY, "ANY" },
+};
+
+char *
+stage_string(stage)
+	acl_stage_t stage;
+{
+	int i;
+	int count =  sizeof(stage_string_rec) / sizeof(*stage_string_rec);
+
+	for (i = 0; i < count; i++)
+		if (stage_string_rec[i].ss_stage == stage)
+			return stage_string_rec[i].ss_string;
+
+	mg_log(LOG_ERR, "unexpected ACL stage %d", stage);
+	exit(EX_SOFTWARE);
+	/* NOTREACHED */
+	return NULL;
+}
+
+int
+acl_domain_cmp(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	char *host = priv->priv_hostname;
+	char *domain = ad->string;
+	int hidx, didx;
+
+	if ((host[0] == '\0') && domain[0] == '\0')
+		return 1;
+
+	if ((host[0] == '\0') || domain[0] == '\0') 
+		return 0;
+
+	hidx = strlen(host) - 1;
+	didx = strlen(domain) - 1;
+
+	while ((hidx >= 0) && (didx >= 0)) {
+		if (tolower((int)host[hidx]) != tolower((int)domain[didx])) {
+			return (0);
+		}
+		hidx--;
+		didx--;
+	}
+
+	if (didx >= 0)
+		return (0);
+
+	return (1);
+}
+
+int
+acl_header_strstr(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	struct header *h;
+	 
+	if (stage != AS_DATA) {
+		mg_log(LOG_ERR, "header filter called at non DATA stage");
+		exit(EX_SOFTWARE);
+	}
+
+	LIST_FOREACH(h, &priv->priv_header, h_list)
+		if (strstr(h->h_line, ad->string) != NULL)
+			return EXF_HEADER;
+	return 0;
+}
+
+int
+acl_body_strstr(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	struct body *b;
+	 
+	if (stage != AS_DATA) {
+		mg_log(LOG_ERR, "body filter called at non DATA stage");
+		exit(EX_SOFTWARE);
+	}
+
+	LIST_FOREACH(b, &priv->priv_body, b_list)
+		if (strstr(b->b_lines, ad->string) != NULL)
+			return EXF_BODY;
+	return 0;
+}
+
+int
+acl_from_regexec(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	if (regexec(ad->regex.re, 
+	    priv->priv_from, 0, NULL, 0) == 0)
+		return EXF_FROM;
+	return 0;
+}
+
+int
+acl_rcpt_regexec(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	if (stage != AS_RCPT) {
+		mg_log(LOG_ERR, "rcpt filter called at non RCPT stage");
+		exit(EX_SOFTWARE);
+	}
+
+	if (regexec(ad->regex.re, 
+	    priv->priv_cur_rcpt, 0, NULL, 0) == 0)
+		return EXF_RCPT;
+	return 0;
+}
+
+int
+acl_domain_regexec(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	if (regexec(ad->regex.re, 
+	    priv->priv_hostname, 0, NULL, 0) == 0)
+		return EXF_DOMAIN;
+	return 0;
+}
+
+int
+acl_header_regexec(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	struct header *h;
+	 
+	if (stage != AS_DATA) {
+		mg_log(LOG_ERR, "header filter called at non DATA stage");
+		exit(EX_SOFTWARE);
+	}
+
+	LIST_FOREACH(h, &priv->priv_header, h_list)
+		if (regexec(ad->regex.re, 
+		    h->h_line, 0, NULL, 0) == 0)
+			return EXF_HEADER;
+	return 0;
+}
+
+int
+acl_from_cmp(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	char *from = ad->string;
+
+	if (emailcmp(priv->priv_from, from) == 0) 
+		return EXF_FROM;
+	return 0;
+}
+
+int
+acl_rcpt_cmp(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	char *rcpt = ad->string;
+
+	if (stage != AS_RCPT) {
+		mg_log(LOG_ERR, "rcpt filter called at non RCPT stage");
+		exit(EX_SOFTWARE);
+	}
+
+	if (emailcmp(priv->priv_cur_rcpt, rcpt) == 0)
+		return EXF_RCPT;
+	return 0;
+}
+
+int
+acl_list_filter(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	struct all_list_entry *ale;
+	struct list_entry *le;
+	int retval;	    
+			       
+	ale = ad->list;
+	
+	LIST_FOREACH(le, &ale->al_head, l_list) {
+		retval = (*le->l_acr->acr_filter)(ad, stage, ap, priv);
+		if (retval != 0)
+			return retval;
+	}
+
+	return 0;
+}
+
+int
+acl_body_regexec(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	struct body *b;
+	 
+	if (stage != AS_DATA) {
+		mg_log(LOG_ERR, "body filter called at non DATA stage");
+		exit(EX_SOFTWARE);
+	}
+
+	LIST_FOREACH(b, &priv->priv_body, b_list)
+		if (regexec(ad->regex.re, 
+		    b->b_lines, 0, NULL, 0) == 0)
+			return EXF_BODY;
+	return 0;
+}
+
+
+
+struct acl_clause_rec *
+acl_list_item_fixup(item_type, list_type)
+	acl_data_type_t item_type;
+	acl_data_type_t list_type;
+{
+	struct acl_clause_rec *cur_acr;
+	int i;
+	int count = sizeof(acl_clause_rec) / sizeof(*acl_clause_rec);
+
+	for (i = 0; i < count; i++) {
+		cur_acr = &acl_clause_rec[i];
+
+		    if ((cur_acr->acr_list_type == list_type) &&
+			(cur_acr->acr_item_type == item_type))
+			return cur_acr;
+	}
+
+	return NULL;
+}
+
+struct acl_clause_rec *
+get_acl_clause_rec(type)
+	acl_clause_t type;
+{
+	int i;
+	int count = sizeof(acl_clause_rec) / sizeof(*acl_clause_rec);
+
+	for (i = 0; i < count; i++)
+		if (acl_clause_rec[i].acr_type == type)
+			return &acl_clause_rec[i];
+
+	mg_log(LOG_ERR, "unexpected acl clause type %d", type);
+	exit(EX_SOFTWARE);
+	/* NOTREACHED */
+	return NULL;
+}
+
+char *
+acl_print_string(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	snprintf(buf, len, "\"%s\"", ad->string);
+	return buf;
+}
+
+char *
+acl_print_regex(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	snprintf(buf, len, "%s", ad->regex.re_copy);
+	return buf;
+}
+
+char *
+acl_print_list(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	snprintf(buf, len, "\"%s\"", ad->list->al_name);
+	return buf;
+}
+
+void
+acl_add_string(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	char *string = data;	
+
+	if ((ad->string = strdup(string)) == NULL) {
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	return;
+}
+
+void
+acl_add_body_string(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	if (conf.c_maxpeek == 0)
+		conf.c_maxpeek = -1;
+
+	return acl_add_string(ad, data);
+}
+
+void 
+acl_add_body_regex(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	if (conf.c_maxpeek == 0)
+		conf.c_maxpeek = -1;
+
+	return acl_add_regex(ad, data);
+}
+#define ERRLEN 1024
+void
+acl_add_regex(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	char *regexstr = data;	
+	regex_t *regex;
+	char errstr[ERRLEN + 1];
+	int error;
+
+	if ((regex = malloc(sizeof(*regex))) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	ad->regex.re = regex;
+
+	if ((error = regcomp(regex, regexstr, 
+	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
+		regerror(error, regex, errstr, ERRLEN);
+		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
+		    regexstr, errstr);
+		exit(EX_OSERR);
+	}
+
+	if ((ad->regex.re_copy = strdup(regexstr)) == NULL) {
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	return;
+}
+
+void
+acl_free_string(ad)
+	acl_data_t *ad;
+{
+	free(ad->string);
+	return;
+}
+
+void
+acl_free_regex(ad)
+	acl_data_t *ad;
+{
+	regfree(ad->regex.re);
+	free(ad->regex.re_copy);
+	return;
+}
+
 static void
-acl_init_entry (void) {
-	memset (&gacl, 0, sizeof (gacl));
+acl_init_entry(void) {
+	memset(&gacl, 0, sizeof (gacl));
 	gacl.a_delay = -1;
 	gacl.a_autowhite = -1;
+	LIST_INIT(&gacl.a_clause);
 }
 
 void
@@ -107,25 +647,24 @@ acl_add_flushaddr(void) {
 }
 
 void
-acl_add_netblock(sa, salen, cidr)
+acl_add_netblock(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	struct acl_netblock_data *and = data;
 	struct sockaddr *sa;
 	socklen_t salen;
 	int cidr;
-{
 	ipaddr mask;
-	char addrstr[IPADDRSTRLEN];
-	char maskstr[IPADDRSTRLEN];
 	int maxcidr, masklen;
 #ifdef AF_INET6
 	int i;
 #endif
 
-	if (gacl.a_addr != NULL) {
-		mg_log(LOG_ERR,
-		    "addr specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
+	sa = and->addr;
+	salen = and->salen;
+	cidr = and->cidr;
+
 	switch (sa->sa_family) {
 	case AF_INET:
 		maxcidr = 32;
@@ -164,453 +703,200 @@ acl_add_netblock(sa, salen, cidr)
 #endif
 	}
 
-	if ((gacl.a_addr = malloc(salen)) == NULL ||
-	    (gacl.a_mask = malloc(masklen)) == NULL) {
+	if ((ad->netblock.addr = malloc(salen)) == NULL) {
 		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 		
-	gacl.a_addrlen = salen;
-	memcpy(gacl.a_addr, sa, salen);
-	memcpy(gacl.a_mask, &mask, masklen);
-
-	if (conf.c_debug || conf.c_acldebug) {
-		iptostring(gacl.a_addr, gacl.a_addrlen, addrstr,
-		    sizeof(addrstr));
-		inet_ntop(gacl.a_addr->sa_family, gacl.a_mask, maskstr,
-		    sizeof(maskstr));
-		mg_log(LOG_DEBUG, "load acl net %s/%s", addrstr, maskstr);
-	}
+	ad->netblock.salen = salen;
+	ad->netblock.cidr = cidr;
+	memcpy(ad->netblock.addr, sa, salen);
+	memcpy(&ad->netblock.mask, &mask, masklen);
 
 	return;
 }
 
 void
-acl_add_from(email)
-	char *email;
+acl_free_netblock(ad)
+	acl_data_t *ad;
 {
-	if (gacl.a_from != NULL || 
-	    gacl.a_from_re != NULL ||
-	    gacl.a_fromlist != NULL ) {
-		mg_log(LOG_ERR,
-		    "from specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	if ((gacl.a_from = strdup(email)) == NULL) {
-		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-		
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl from %s", email);
-
+	free(ad->netblock.addr);
 	return;
+}
+
+char *
+acl_print_netblock(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	char addrstr[IPADDRSTRLEN];
+	char maskstr[IPADDRSTRLEN];
+	
+	iptostring(ad->netblock.addr, ad->netblock.salen,
+		   addrstr, sizeof(addrstr));
+	inet_ntop(ad->netblock.addr->sa_family,
+		  &ad->netblock.mask,
+		  maskstr, sizeof(maskstr));
+	snprintf(buf, len, "%s/%s", addrstr, maskstr);
+	return buf;
+}
+
+int
+acl_netblock_filter(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	struct sockaddr *sa;
+
+	sa = SA(&priv->priv_addr);
+
+	if (ip_match(sa, 
+		     ad->netblock.addr, 
+		     ad->netblock.mask))
+		return EXF_ADDR;
+	return 0;
 }
 
 #ifdef USE_DNSRBL
 void
-acl_add_dnsrbl(dnsrbl)
-	char *dnsrbl;
+acl_add_dnsrbl(ad, data)
+	acl_data_t *ad;
+	void *data;
 {
-	if (gacl.a_dnsrbl != NULL ||
-	    gacl.a_dnsrbllist != NULL) {
-		mg_log(LOG_ERR,
-		    "dnsrbl specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	if ((gacl.a_dnsrbl = dnsrbl_byname(dnsrbl)) == NULL) {
+	char *dnsrbl = data;
+	
+	if ((ad->dnsrbl = dnsrbl_byname(dnsrbl)) == NULL) {
 		mg_log(LOG_ERR, "unknown DNSRBL \"%s\"", dnsrbl);
 		exit(EX_DATAERR);
 	}
 		
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl dnsrbl %s", dnsrbl);
-
 	return;
+}
+
+char *
+acl_print_dnsrbl(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	snprintf(buf, len, "\"%s\"", ad->dnsrbl->d_name);
+	return buf;
 }
 #endif
 
 #ifdef USE_CURL
 void
-acl_add_urlcheck(urlcheck)
-	char *urlcheck;
+acl_add_urlcheck(ad, data)
+	acl_data_t *ad;
+	void *data;
 {
-	if (gacl.a_urlcheck != NULL ||
-	    gacl.a_urlchecklist != NULL) {
-		mg_log(LOG_ERR,
-		    "urlcheck specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	if ((gacl.a_urlcheck = urlcheck_byname(urlcheck)) == NULL) {
+	char *urlcheck = data;
+
+	if ((ad->urlcheck = urlcheck_byname(urlcheck)) == NULL) {
 		mg_log(LOG_ERR, "unknown URL check \"%s\"", urlcheck);
 		exit(EX_DATAERR);
 	}
 		
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl urlcheck %s", urlcheck);
-
 	return;
+}
+
+char *
+acl_print_urlcheck(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	snprintf(buf, len, "\"%s\"", ad->urlcheck->u_name);
+	return buf;
 }
 #endif
 
 void
-acl_add_macro(macro)
-	char *macro;
+acl_add_macro(ad, data)
+	acl_data_t *ad;
+	void *data;
 {
-	if (gacl.a_macro != NULL ||
-	    gacl.a_macrolist != NULL) {
-		mg_log(LOG_ERR,
-		    "sm_macro specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	if ((gacl.a_macro = macro_byname(macro)) == NULL) {
+	char *macro = data;
+
+	if ((ad->macro = macro_byname(macro)) == NULL) {
 		mg_log(LOG_ERR, "unknown sm_macro \"%s\"", macro);
 		exit(EX_DATAERR);
 	}
 		
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl sm_macro %s", macro);
-
 	return;
 }
 
-void
-acl_add_rcpt(email)
-	char *email;
+char *
+acl_print_macro(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
 {
-	if (gacl.a_rcpt != NULL || 
-	    gacl.a_rcpt_re != NULL ||
-	    gacl.a_rcptlist != NULL) {
-		mg_log(LOG_ERR,
-		    "rcpt specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	if ((gacl.a_rcpt = strdup(email)) == NULL) {
+	snprintf(buf, len, "\"%s\"", ad->macro->m_name);
+	return buf;
+}
+
+void
+acl_add_clause(type, data)
+	acl_clause_t type;
+	void *data;
+{
+	struct acl_clause *ac;
+	struct acl_clause *cac;
+	struct acl_clause_rec *acr;
+
+	acr = get_acl_clause_rec(type);
+
+	if ((ac = malloc(sizeof(*ac))) == NULL) {
 		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
+
+	if (acr->acr_unicity == UNIQUE) {
+		LIST_FOREACH(cac, &gacl.a_clause, ac_list) {
+			if (cac->ac_type == type) {
+				mg_log(LOG_ERR, 
+				    "Multiple %s clauses in ACL line %d",
+				    acr->acr_name, conf_line);
+				exit(EX_DATAERR);
+			}
+		}
+	}
+
+	ac->ac_type = type;
+	ac->ac_acr = acr;
+	(*acr->acr_add)(&ac->ac_data, data);
+	LIST_INSERT_HEAD(&gacl.a_clause, ac, ac_list);
 		
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl rcpt %s", email);
-
-	return;
-}
-
-void
-acl_add_header(header)
-	char *header;
-{
-	if (gacl.a_header != NULL || 
-	    gacl.a_header_re != NULL ||
-	    gacl.a_headerlist != NULL) {
-		mg_log(LOG_ERR,
-		    "header specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	if ((gacl.a_header = strdup(header)) == NULL) {
-		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-		
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl header %s", header);
-
-	if (conf.c_maxpeek == 0)
-		conf.c_maxpeek = -1;
-
-	return;
-}
-
-void
-acl_add_body(body)
-	char *body;
-{
-	if (gacl.a_body != NULL || 
-	    gacl.a_body_re != NULL ||
-	    gacl.a_bodylist != NULL) {
-		mg_log(LOG_ERR,
-		    "body specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	if ((gacl.a_body = strdup(body)) == NULL) {
-		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-		
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl body %s", body);
-
-	if (conf.c_maxpeek == 0)
-		conf.c_maxpeek = -1;
-
-	return;
-}
-
-void
-acl_add_domain(domain)
-	char *domain;
-{
-	if (gacl.a_domain != NULL || 
-	    gacl.a_domain_re != NULL ||
-	    gacl.a_domainlist != NULL) {
-		mg_log(LOG_ERR,
-		    "domain specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	if ((gacl.a_domain = strdup(domain)) == NULL) {
-		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-		
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl domain %s", domain);
-
-	return;
-}
-
-#define ERRLEN 1024
-void
-acl_add_from_regex(regexstr)
-	char *regexstr;
-{
-	size_t len;
-	int error;
-	char errstr[ERRLEN + 1];
-
-	if (gacl.a_from != NULL || 
-	    gacl.a_from_re != NULL ||
-	    gacl.a_fromlist != NULL) {
-		mg_log(LOG_ERR,
-		    "from specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
 	/* 
-	 * Strip leading and trailing slashes
+	 * Lists deserve a special treatment: the clause is parsed with 
+	 * a generic type AC_LIST, and we need to lookup the real list type
 	 */
-	len = strlen(regexstr);
-	if (len > 0)
-		regexstr[len - 1] = '\0';
-	regexstr++;
+	if (ac->ac_type == AC_LIST) {
+		if (conf.c_debug || conf.c_acldebug) {
+			char tmpbuf[64];
 
-	if ((gacl.a_from_re = malloc(sizeof(*gacl.a_from_re))) == NULL) {
-		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-	if ((error = regcomp(gacl.a_from_re, regexstr, 
-	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
-		regerror(error, gacl.a_from_re, errstr, ERRLEN);
-		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
-		    regexstr, errstr);
-		exit(EX_OSERR);
-	}
-
-	if ((gacl.a_from_re_copy = strdup(regexstr)) == NULL) {
-		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
-		exit(EX_OSERR);
+			mg_log(LOG_DEBUG, 
+			    "switching ACL clause %s from type %s to %s",
+			    (*acr->acr_print)
+				(&ac->ac_data, tmpbuf, sizeof(tmpbuf)),
+			    acr->acr_name,
+			    ac->ac_data.list->al_acr->acr_name);
+		}
+			
+		ac->ac_type = ac->ac_data.list->al_acr->acr_type;
+		ac->ac_acr = ac->ac_data.list->al_acr;
 	}
 
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl from regex %s", regexstr);
+	if (conf.c_debug || conf.c_acldebug) {
+		char tmpbuf[64];
 
-	return;
-}
-
-void
-acl_add_rcpt_regex(regexstr)
-	char *regexstr;
-{
-	size_t len;
-	int error;
-	char errstr[ERRLEN + 1];
-
-	if (gacl.a_rcpt != NULL || 
-	    gacl.a_rcpt_re != NULL ||
-	    gacl.a_rcptlist != NULL) {
-		mg_log(LOG_ERR,
-		    "rcpt specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
+		mg_log(LOG_DEBUG, "load acl %s %s", acr->acr_name, 
+		    (*acr->acr_print)(&ac->ac_data, tmpbuf, sizeof(tmpbuf)));
 	}
-	/* 
-	 * Strip leading and trailing slashes
-	 */
-	len = strlen(regexstr);
-	if (len > 0)
-		regexstr[len - 1] = '\0';
-	regexstr++;
-
-	if ((gacl.a_rcpt_re = malloc(sizeof(*gacl.a_rcpt_re))) == NULL) {
-		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-	if ((error = regcomp(gacl.a_rcpt_re, regexstr,
-	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
-		regerror(error, gacl.a_rcpt_re, errstr, ERRLEN);
-		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
-		    regexstr, errstr);
-		exit(EX_OSERR);
-	}
-
-	if ((gacl.a_rcpt_re_copy = strdup(regexstr)) == NULL) {
-		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl rcpt regex %s", regexstr);
-
-	return;
-}
-
-void
-acl_add_domain_regex(regexstr)
-	char *regexstr;
-{
-	size_t len;
-	int error;
-	char errstr[ERRLEN + 1];
-
-	if (gacl.a_domain != NULL || 
-	    gacl.a_domain_re != NULL ||
-	    gacl.a_domainlist != NULL) {
-		mg_log(LOG_ERR,
-		    "domain specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	/* 
-	 * Strip leading and trailing slashes
-	 */
-	len = strlen(regexstr);
-	if (len > 0)
-		regexstr[len - 1] = '\0';
-	regexstr++;
-
-	if ((gacl.a_domain_re = malloc(sizeof(*gacl.a_domain_re))) == NULL) {
-		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-	if ((error = regcomp(gacl.a_domain_re, regexstr,
-	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
-		regerror(error, gacl.a_domain_re, errstr, ERRLEN);
-		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
-		    regexstr, errstr);
-		exit(EX_OSERR);
-	}
-
-	if ((gacl.a_domain_re_copy = strdup(regexstr)) == NULL) {
-		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl domain regex %s", regexstr);
-
-	return;
-}
-
-void
-acl_add_header_regex(regexstr)
-	char *regexstr;
-{
-	size_t len;
-	int error;
-	char errstr[ERRLEN + 1];
-
-	if (gacl.a_header != NULL || 
-	    gacl.a_header_re != NULL ||
-	    gacl.a_headerlist != NULL) {
-		mg_log(LOG_ERR,
-		    "header specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	/* 
-	 * Strip leading and trailing slashes
-	 */
-	len = strlen(regexstr);
-	if (len > 0)
-		regexstr[len - 1] = '\0';
-	regexstr++;
-
-	if ((gacl.a_header_re = malloc(sizeof(*gacl.a_header_re))) == NULL) {
-		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-	if ((error = regcomp(gacl.a_header_re, regexstr,
-	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
-		regerror(error, gacl.a_header_re, errstr, ERRLEN);
-		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
-		    regexstr, errstr);
-		exit(EX_OSERR);
-	}
-
-	if ((gacl.a_header_re_copy = strdup(regexstr)) == NULL) {
-		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl header regex %s", regexstr);
-
-	if (conf.c_maxpeek == 0)
-		conf.c_maxpeek = -1;
-
-	return;
-}
-
-void
-acl_add_body_regex(regexstr)
-	char *regexstr;
-{
-	size_t len;
-	int error;
-	char errstr[ERRLEN + 1];
-
-	if (gacl.a_body != NULL || 
-	    gacl.a_body_re != NULL ||
-	    gacl.a_bodylist != NULL) {
-		mg_log(LOG_ERR,
-		    "body specified twice in ACL line %d",
-		    conf_line);
-		exit(EX_DATAERR);
-	}
-	/* 
-	 * Strip leading and trailing slashes
-	 */
-	len = strlen(regexstr);
-	if (len > 0)
-		regexstr[len - 1] = '\0';
-	regexstr++;
-
-	if ((gacl.a_body_re = malloc(sizeof(*gacl.a_header_re))) == NULL) {
-		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-	if ((error = regcomp(gacl.a_body_re, regexstr,
-	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
-		regerror(error, gacl.a_body_re, errstr, ERRLEN);
-		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
-		    regexstr, errstr);
-		exit(EX_OSERR);
-	}
-
-	if ((gacl.a_body_re_copy = strdup(regexstr)) == NULL) {
-		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl body regex %s", regexstr);
 
 	if (conf.c_maxpeek == 0)
 		conf.c_maxpeek = -1;
@@ -624,6 +910,25 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 	acl_type_t acl_type;
 {
 	struct acl_entry *acl;
+	struct acl_clause *ac;
+
+	LIST_FOREACH(ac, &gacl.a_clause, ac_list) {
+		if (ac->ac_acr->acr_stage == AS_ANY)
+			continue;
+		if (ac->ac_acr->acr_stage != acl_stage) {
+			char b[1024];
+
+			mg_log(LOG_ERR, "%s %s clause should be used in %s "
+			    "stage and is present %s stage ACL line %d",
+			    ac->ac_acr->acr_name, 
+			    (*ac->ac_acr->acr_print)
+				(&ac->ac_data, b, sizeof(b)),
+			    stage_string(ac->ac_acr->acr_stage),
+			    stage_string(acl_stage),
+			    conf_line - 1);
+			exit(EX_DATAERR);
+		}
+	}
 
 	if (acl_stage == AS_DATA) {
 		if (conf_dacl_end != 0)
@@ -634,11 +939,6 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 			conf_acl_end = 0;
 		}
 
-		if ((gacl.a_rcptlist || gacl.a_rcpt || gacl.a_rcpt_re)) {
-			mg_log(LOG_ERR, "rcpt clause in DATA stage ACL "
-			    "at line %d", conf_line - 1);
-			exit(EX_DATAERR);
-		}
 		if (acl_type == A_GREYLIST) {
 			mg_log(LOG_ERR, "greylist action in DATA stage ACL "
 			    "at line %d", conf_line - 1);
@@ -658,7 +958,7 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
-	*acl = gacl;
+	memcpy(acl, &gacl, sizeof(*acl));
 	acl->a_type = acl_type;
 	acl->a_stage = acl_stage;
 	acl->a_line = conf_line - 1;
@@ -692,6 +992,25 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 	acl_type_t acl_type;
 {
 	struct acl_entry *acl;
+	struct acl_clause *ac;
+
+	LIST_FOREACH(ac, &gacl.a_clause, ac_list) {
+		if (ac->ac_acr->acr_stage == AS_ANY)
+			continue;
+		if (ac->ac_acr->acr_stage != acl_stage) {
+			char b[1024];
+
+			mg_log(LOG_ERR, "%s %s clause should be used in %s "
+			    "stage and is present %s stage ACL line %d",
+			    ac->ac_acr->acr_name, 
+			    (*ac->ac_acr->acr_print)
+				(&ac->ac_data, b, sizeof(b)),
+			    stage_string(ac->ac_acr->acr_stage),
+			    stage_string(acl_stage),
+			    conf_line - 1);
+			exit(EX_DATAERR);
+		}
+	}
 
 	if (acl_stage == AS_DATA) {
 		if (conf_dacl_end != 0)
@@ -702,11 +1021,6 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 			conf_acl_end = 0;
 		}
 
-		if ((gacl.a_rcptlist || gacl.a_rcpt || gacl.a_rcpt_re)) {
-			mg_log(LOG_ERR, "rcpt clause in DATA stage ACL "
-			    "at line %d", conf_line - 1);
-			exit(EX_DATAERR);
-		}
 		if (acl_type == A_GREYLIST) {
 			mg_log(LOG_ERR, "greylist action in DATA stage ACL "
 			    "at line %d", conf_line - 1);
@@ -731,7 +1045,7 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 	acl->a_type = acl_type;
 	acl->a_line = conf_line - 1;
 	TAILQ_INSERT_TAIL(&acl_head, acl, a_list);
-	acl_init_entry ();
+	acl_init_entry();
 
 	if (conf.c_debug || conf.c_acldebug) {
 		switch(acl_type) {
@@ -770,9 +1084,11 @@ acl_filter(stage, ctx, priv)
 	char whystr[HDRLEN];
 	char tmpstr[HDRLEN];
 	int retval;
+	int found;
 	int testmode = conf.c_testmode;
 	struct acl_param ap;
 	char *cur_rcpt;
+	struct acl_clause *ac;
 
 	sa = SA(&priv->priv_addr);
 	salen = priv->priv_addrlen;
@@ -788,6 +1104,7 @@ acl_filter(stage, ctx, priv)
 			continue;
 
 		retval = 0;
+		found = -1;
 
 		ap.ap_type = acl->a_type;
 		ap.ap_delay = acl->a_delay;
@@ -797,218 +1114,16 @@ acl_filter(stage, ctx, priv)
 		ap.ap_ecode = acl->a_ecode;
 		ap.ap_msg = acl->a_msg;
 
-		if (acl->a_addrlist != NULL) {
-			if (list_addr_filter(acl->a_addrlist, sa)) {
-				retval |= EXF_ADDR;
-			} else {
-				continue;
-			}
+		LIST_FOREACH(ac, &acl->a_clause, ac_list) {
+			if ((found = (*ac->ac_acr->acr_filter)
+					(&ac->ac_data, stage, &ap, priv)) == 0)
+				break;
+
+			retval |= found;
 		}
+		if (found == 0)
+			continue;
 
-		if (acl->a_addr != NULL) {
-			if (ip_match(sa, acl->a_addr, acl->a_mask)) {
-				retval |= EXF_ADDR;
-			} else  {
-				continue;
-			}
-		}
-
-		if (acl->a_domainlist != NULL) {
-			if (list_domain_filter(acl->a_domainlist, hostname)) {
-				retval |= EXF_DOMAIN;
-			} else {
-				continue;
-			}
-		}
-
-		if (acl->a_domain != NULL) {
-			if (domaincmp(hostname, acl->a_domain)) {
-				retval |= EXF_DOMAIN;
-			} else {
-				continue;
-			}
-		}
-
-		if (acl->a_domain_re != NULL) {
-			if (regexec(acl->a_domain_re,
-			    hostname, 0, NULL, 0) == 0) {
-				retval |= EXF_DOMAIN;
-			} else {
-				continue;
-			}
-		}
-
-		if (acl->a_fromlist != NULL) {
-			if (list_from_filter(acl->a_fromlist, from)) {
-				retval |= EXF_FROM;
-			} else {
-				continue;
-			}
-		}
-
-		if (acl->a_from != NULL) {
-			if (emailcmp(from, acl->a_from) == 0) {
-				retval |= EXF_FROM;
-			} else {
-				continue;
-			}
-		}
-
-		if (acl->a_from_re != NULL) {
-			if (regexec(acl->a_from_re, from, 0, NULL, 0) == 0) {
-				retval |= EXF_FROM;
-			} else {
-				continue;
-			}
-		}
-
-		if (cur_rcpt && (acl->a_rcptlist != NULL)) {
-			if (list_rcpt_filter(acl->a_rcptlist, cur_rcpt)) {
-				retval |= EXF_RCPT;
-			} else {
-				continue;
-			}
-		}
-
-		if (cur_rcpt && (acl->a_rcpt != NULL)) {
-			if (emailcmp(cur_rcpt, acl->a_rcpt) == 0) {
-			retval |= EXF_RCPT;
-			} else {
-				continue;
-			}
-		}
-
-		if (cur_rcpt && (acl->a_rcpt_re != NULL)) {
-			if (regexec(acl->a_rcpt_re, 
-			    cur_rcpt, 0, NULL, 0) == 0) {
-				retval |= EXF_RCPT;
-			} else {
-				continue;
-			}
-		}
-
-		if ((stage == AS_DATA) && (acl->a_header != NULL)) {
-			struct header *h;
-			int found = 0;
-
-			LIST_FOREACH(h, &priv->priv_header, h_list) {
-				if (strstr(h->h_line, acl->a_header) != NULL) {
-					found = 1;
-					break;
-				}
-			}
-
-			if (found)
-				retval |= EXF_HEADER;
-			else
-				continue;
-		}
-
-		if ((stage == AS_DATA) && (acl->a_header_re != NULL)) {
-			struct header *h;
-			int found = 0;
-
-			LIST_FOREACH(h, &priv->priv_header, h_list) {
-				if (regexec(acl->a_header_re, h->h_line, 
-				    0, NULL, 0) == 0){
-					found = 1;
-					break;
-				}
-			}
-
-			if (found)
-				retval |= EXF_HEADER;
-			else
-				continue;
-		}
-
-		if ((stage == AS_DATA) && (acl->a_body != NULL)) {
-			struct body *b;
-			int found = 0;
-
-			LIST_FOREACH(b, &priv->priv_body, b_list) {
-				if (strstr(b->b_lines, acl->a_body) != NULL) {
-					found = 1;
-					break;
-				}
-			}
-
-			if (found)
-				retval |= EXF_BODY;
-			else
-				continue;
-		}
-
-		if ((stage == AS_DATA) && (acl->a_body_re != NULL)) {
-			struct body *b;
-			int found = 0;
-
-			LIST_FOREACH(b, &priv->priv_body, b_list) {
-				if (regexec(acl->a_body_re, b->b_lines, 
-				    0, NULL, 0) == 0){
-					found = 1;
-					break;
-				}
-			}
-
-			if (found)
-				retval |= EXF_BODY;
-			else
-				continue;
-		}
-#ifdef USE_DNSRBL
-		if (acl->a_dnsrbllist != NULL) {
-			if (list_dnsrbl_filter(acl->a_dnsrbllist, salen, sa)) {
-				retval |= EXF_DNSRBL;
-			} else {
-				continue;
-			}
-		}
-
-		if (acl->a_dnsrbl != NULL) {
-			if (dnsrbl_check_source(sa, 
-			    salen, acl->a_dnsrbl) == 1) {
-				retval |= EXF_DNSRBL;
-			} else {
-				continue;
-			}
-		}
-#endif
-#ifdef USE_CURL
-		if (acl->a_urlchecklist != NULL) {
-			if (list_urlcheck_filter(acl->a_urlchecklist, 
-			    priv, 
-			    (cur_rcpt != NULL) ? cur_rcpt : NULL, &ap)) {
-				retval |= EXF_URLCHECK;
-			} else {
-				continue;
-			}
-		}
-
-		if (acl->a_urlcheck != NULL) {
-			if (urlcheck_validate(priv, 
-			    (cur_rcpt != NULL) ? cur_rcpt : NULL,
-			    acl->a_urlcheck, &ap) == 1) {
-				retval |= EXF_URLCHECK;
-			} else {
-				continue;
-			}
-		}
-#endif
-		if (acl->a_macrolist != NULL) {
-			if (list_macro_filter(acl->a_macrolist, ctx)) {
-				retval |= EXF_MACRO;
-			} else {
-				continue;
-			}
-		}
-		if (acl->a_macro != NULL) {
-			if (macro_check(ctx, acl->a_macro) == 0) {
-				retval |= EXF_MACRO;
-			} else {
-				continue;
-			}
-		}
 		/*
 		 * We found an entry that matches, exit the evaluation
 		 * loop
@@ -1158,35 +1273,6 @@ acl_filter(stage, ctx, priv)
 }
 
 
-int
-domaincmp(host, domain)
-	char *host;
-	char *domain;
-{
-	int hidx, didx;
-
-	if ((host[0] == '\0') && domain[0] == '\0')
-		return 1;
-
-	if ((host[0] == '\0') || domain[0] == '\0') 
-		return 0;
-
-	hidx = strlen(host) - 1;
-	didx = strlen(domain) - 1;
-
-	while ((hidx >= 0) && (didx >= 0)) {
-		if (tolower((int)host[hidx]) != tolower((int)domain[didx])) {
-			return (0);
-		}
-		hidx--;
-		didx--;
-	}
-
-	if (didx >= 0)
-		return (0);
-
-	return (1);
-}
 
 int 
 emailcmp(big, little)
@@ -1249,33 +1335,21 @@ emailcmp(big, little)
 void
 acl_clear(void) {	/* acllist must be write locked */
 	struct acl_entry *acl;
+	struct acl_clause *ac;
 
 	while (!TAILQ_EMPTY(&acl_head)) {
 		acl = TAILQ_FIRST(&acl_head);
 		TAILQ_REMOVE(&acl_head, acl, a_list);
 
-		if (acl->a_addr != NULL) {
-			free(acl->a_addr);
-			free(acl->a_mask);
+
+		while (!LIST_EMPTY(&acl->a_clause)) {
+			ac = LIST_FIRST(&acl->a_clause);
+			LIST_REMOVE(ac, ac_list);
+			if (ac->ac_acr->acr_free)
+				(*ac->ac_acr->acr_free)(&ac->ac_data);
+			free(ac);
 		}
-		if (acl->a_from != NULL)
-			free(acl->a_from);
-		if (acl->a_rcpt != NULL)
-			free(acl->a_rcpt);
-		if (acl->a_domain != NULL)
-			free(acl->a_domain);
-		if (acl->a_from_re != NULL)
-			regfree(acl->a_from_re);
-		if (acl->a_from_re_copy != NULL)
-			free(acl->a_from_re_copy);
-		if (acl->a_rcpt_re != NULL)
-			regfree(acl->a_rcpt_re);
-		if (acl->a_rcpt_re_copy != NULL)
-			free(acl->a_rcpt_re_copy);
-		if (acl->a_domain_re != NULL)
-			regfree(acl->a_domain_re);
-		if (acl->a_domain_re_copy != NULL)
-			free(acl->a_domain_re_copy);
+
 		if (acl->a_code != NULL)
 			free(acl->a_code);
 		if (acl->a_ecode != NULL)
@@ -1297,12 +1371,21 @@ acl_entry(acl)
 {
 	static char entrystr[HDRLEN];
 	char tempstr[HDRLEN];
-	char addrstr[IPADDRSTRLEN];
-	char maskstr[IPADDRSTRLEN];
 	int def = 1;
+	struct acl_clause *ac;
 
-	snprintf(entrystr, HDRLEN, "%cacl %d ", 
-	(acl->a_stage == AS_RCPT) ? 'r' : 'd', acl->a_line);
+	switch (acl->a_stage) {
+	case AS_RCPT:
+		snprintf(entrystr, HDRLEN, "racl %d ", acl->a_line);
+		break;
+	case AS_DATA:
+		snprintf(entrystr, HDRLEN, "dacl %d ", acl->a_line);
+		break;
+	default:
+		mg_log(LOG_ERR, "unexpected stage %d", acl->a_stage);
+		exit(EX_SOFTWARE);
+		break;		
+	}
 
 	switch (acl->a_type) {
 	case A_GREYLIST:
@@ -1320,148 +1403,18 @@ acl_entry(acl)
 		break;
 	}
 
-	if (acl->a_addrlist != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "addr list \"%s\" ", 
-		    acl->a_addrlist->al_name);
+	LIST_FOREACH(ac, &acl->a_clause, ac_list) {
+		char tempstr2[HDRLEN];
+		acl_data_t *ad;
+
+		ad = &ac->ac_data;
+		snprintf(tempstr, sizeof(tempstr), "%s %s ",
+		    ac->ac_acr->acr_name, 
+		    (*ac->ac_acr->acr_print)(ad, tempstr2, sizeof(tempstr2)));
 		mystrlcat(entrystr, tempstr, sizeof(entrystr));
 		def = 0;
 	}
-	if (acl->a_addr != NULL) {
-		iptostring(acl->a_addr, acl->a_addrlen, addrstr,
-		    sizeof(addrstr));
-		inet_ntop(acl->a_addr->sa_family, acl->a_mask, maskstr,
-		    sizeof(maskstr));
-		snprintf(tempstr, sizeof(tempstr), "addr %s/%s ", addrstr, maskstr);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_fromlist != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "from list \"%s\" ", 
-		    acl->a_fromlist->al_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_from != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "from %s ", acl->a_from);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_from_re != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "from /%s/ ",
-		    acl->a_from_re_copy);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_rcptlist != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "rcpt list \"%s\" ", 
-		    acl->a_rcptlist->al_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_rcpt != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "rcpt %s ", acl->a_rcpt);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_rcpt_re != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "rcpt /%s/ ",
-		    acl->a_rcpt_re_copy);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_domainlist != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "domainlist \"%s\" ", 
-		    acl->a_domainlist->al_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_domain != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "domain %s ", acl->a_domain);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_domain_re != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "domain /%s/ ",
-		    acl->a_domain_re_copy);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_header != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "header \"%s\" ", 
-		    acl->a_header);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_header_re != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "header /%s/ ", 
-		    acl->a_header_re_copy);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_headerlist != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "headerlist \"%s\" ", 
-		    acl->a_headerlist->al_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_body != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "body \"%s\" ", 
-		    acl->a_body);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_body_re != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "body /%s/ ", 
-		    acl->a_body_re_copy);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_bodylist != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "bodylist \"%s\" ", 
-		    acl->a_bodylist->al_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-#if USE_DNSRBL
-	if (acl->a_dnsrbllist != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "dnsrbllist \"%s\" ", 
-		    acl->a_dnsrbllist->al_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_dnsrbl != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "dnsrbl \"%s\" ",
-		    acl->a_dnsrbl->d_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-#endif
-#if USE_CURL
-	if (acl->a_urlchecklist != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "urlchecklist \"%s\" ", 
-		    acl->a_urlchecklist->al_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_urlcheck != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "urlcheck \"%s\" ",
-		    acl->a_urlcheck->u_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-#endif
-	if (acl->a_macrolist != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "sm_macrolist \"%s\" ", 
-		    acl->a_macrolist->al_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
-	if (acl->a_macro != NULL) {
-		snprintf(tempstr, sizeof(tempstr), "sm_macro \"%s\" ",
-		    acl->a_macro->m_name);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
-		def = 0;
-	}
+
 	if (acl->a_delay != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[delay %ld] ", (long)acl->a_delay);
@@ -1570,10 +1523,13 @@ acl_add_autowhite(delay)
 }
 
 void
-acl_add_list(list)
-	char *list;
+acl_add_list(ad, data)
+	acl_data_t *ad;
+	void *data;
 {
+	char *list = data;
 	struct all_list_entry *ale;
+	struct acl_clause *cac;
 
 	if ((ale = all_list_byname(list)) == NULL) {
 		mg_log(LOG_ERR, "inexistent list \"%s\" line %d",
@@ -1581,98 +1537,18 @@ acl_add_list(list)
 		exit(EX_DATAERR);
 	}
 
-	switch (ale->al_type) {
-	case LT_FROM:
-		if (gacl.a_from != NULL || 
-		    gacl.a_from_re != NULL ||
-		    gacl.a_fromlist != NULL) {
+	LIST_FOREACH(cac, &gacl.a_clause, ac_list) {
+		if (cac->ac_acr->acr_list_type != ale->al_acr->acr_type)
+			continue;
+		if (cac->ac_acr->acr_unicity == UNIQUE) {
 			mg_log(LOG_ERR,
-			    "muliple from statement (list \"%s\", line %d)",
-			    list, conf_line);
+			    "multiple %s statement (list \"%s\", line %d)",
+			    cac->ac_acr->acr_name, list, conf_line);
 			exit(EX_DATAERR);
 		}
-		gacl.a_fromlist = ale;
-		break;
-
-	case LT_RCPT:
-		if (gacl.a_rcpt != NULL ||
-		    gacl.a_rcpt_re != NULL ||
-		    gacl.a_rcptlist != NULL) {
-			mg_log(LOG_ERR,
-			    "muliple rcpt statement (list \"%s\", line %d)",
-			    list, conf_line);
-			exit(EX_DATAERR);
-		}
-		gacl.a_rcptlist = ale;
-		break;
-
-	case LT_DOMAIN:
-		if (gacl.a_domain != NULL ||
-		    gacl.a_domain_re != NULL ||
-		    gacl.a_domainlist != NULL) {
-			mg_log(LOG_ERR,
-			    "muliple domain statement (list \"%s\", line %d)",
-			    list, conf_line);
-			exit(EX_DATAERR);
-		}
-		gacl.a_domainlist = ale;
-		break;
-
-#if USE_DNSRBL
-	case LT_DNSRBL:
-		if (gacl.a_dnsrbl != NULL ||
-		    gacl.a_dnsrbllist != NULL) {
-			mg_log(LOG_ERR,
-			    "muliple dnsrbl statement (list \"%s\", line %d)",
-			    list, conf_line);
-			exit(EX_DATAERR);
-		}
-		gacl.a_dnsrbllist = ale;
-		break;
-#endif
-#if USE_CURL
-	case LT_URLCHECK:
-		if (gacl.a_urlcheck != NULL ||
-		    gacl.a_urlchecklist != NULL) {
-			mg_log(LOG_ERR,
-			    "muliple urlcheck statement (list \"%s\", line %d)",
-			    list, conf_line);
-			exit(EX_DATAERR);
-		}
-		gacl.a_urlchecklist = ale;
-		break;
-#endif
-	case LT_MACRO:
-		if (gacl.a_macro != NULL ||
-		    gacl.a_macrolist != NULL) {
-			mg_log(LOG_ERR,
-			    "muliple sm_macro statement (list \"%s\", line %d)",
-			    list, conf_line);
-			exit(EX_DATAERR);
-		}
-		gacl.a_macrolist = ale;
-		break;
-
-	case LT_ADDR:
-		if (gacl.a_addr != NULL ||
-		    gacl.a_addrlist != NULL) {
-			mg_log(LOG_ERR,
-			    "muliple addr statement (list \"%s\", line %d)",
-			    list, conf_line);
-			exit(EX_DATAERR);
-		}
-		gacl.a_addrlist = ale;
-		break;
-
-	default:
-		mg_log(LOG_ERR, "unexpected al_type %d line %d", 
-		    ale->al_type, conf_line);
-		exit(EX_DATAERR);
-		break;
 	}
-		
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl list \"%s\"", list);
+
+	ad->list = ale;
 
 	return;
 }

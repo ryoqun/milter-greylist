@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.16 2006/12/26 21:21:52 manu Exp $ */
+/* $Id: acl.h,v 1.17 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -48,6 +48,46 @@
 #include <arpa/inet.h>
 #include <regex.h>
 
+typedef enum { A_GREYLIST, A_WHITELIST, A_BLACKLIST, } acl_type_t;
+typedef enum { AS_NONE, AS_RCPT, AS_DATA, AS_ANY, } acl_stage_t;
+typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK,
+	       AT_DNSRBL, AT_URLCHECK, AT_MACRO, AT_LIST } acl_data_type_t;
+
+typedef enum {
+	AC_NONE,
+	AC_LIST,
+	AC_EMAIL,
+	AC_REGEX,
+	AC_STRING,
+	AC_FROM,
+	AC_FROM_RE,
+	AC_FROM_LIST,
+	AC_RCPT,
+	AC_RCPT_RE,
+	AC_RCPT_LIST,
+	AC_DOMAIN,
+	AC_DOMAIN_RE,
+	AC_DOMAIN_LIST,
+	AC_NETBLOCK,
+	AC_NETBLOCK_LIST,
+	AC_BODY,
+	AC_BODY_LIST,
+	AC_BODY_RE,
+	AC_HEADER,
+	AC_HEADER_LIST,
+	AC_HEADER_RE,
+	AC_DNSRBL,
+	AC_DNSRBL_LIST,
+	AC_MACRO,
+	AC_MACRO_RE,
+	AC_MACRO_LIST,
+	AC_URLCHECK,
+	AC_URLCHECK_LIST,
+} acl_clause_t;
+
+struct acl_clause;
+struct acl_param;
+
 #include "pending.h"
 #include "milter-greylist.h"
 
@@ -57,68 +97,11 @@
 
 TAILQ_HEAD(acllist, acl_entry);
 
-typedef enum { 
-	A_GREYLIST,
-	A_WHITELIST,
-	A_BLACKLIST,
-} acl_type_t;
-
-typedef enum {
-	AS_RCPT,
-	AS_DATA,
-} acl_stage_t;
-
-#define a_addr a_netblock.nb_addr
-#define a_addrlen a_netblock.nb_addrlen
-#define a_mask a_netblock.nb_mask
-
-struct acl_entry {
-	int a_line;
-	acl_type_t a_type;
-	acl_stage_t a_stage;
-	struct {
-		struct sockaddr *nb_addr;
-		socklen_t nb_addrlen;
-		ipaddr *nb_mask;
-	} a_netblock;
-	char *a_from;
-	char *a_rcpt;
-	char *a_domain;
-	char *a_header;
-	char *a_body;
-	regex_t *a_from_re;
-	char *a_from_re_copy;
-	regex_t *a_rcpt_re;
-	char *a_rcpt_re_copy;
-	regex_t *a_domain_re;
-	char *a_domain_re_copy;
-	regex_t *a_header_re;
-	char *a_header_re_copy;
-	regex_t *a_body_re;
-	char *a_body_re_copy;
-#ifdef USE_DNSRBL
-	struct dnsrbl_entry *a_dnsrbl; 
-#endif
-#ifdef USE_CURL
-	struct urlcheck_entry *a_urlcheck;
-#endif
-	struct macro_entry *a_macro;
-	struct all_list_entry *a_fromlist;
-	struct all_list_entry *a_rcptlist;
-	struct all_list_entry *a_domainlist;
-	struct all_list_entry *a_dnsrbllist;
-	struct all_list_entry *a_urlchecklist;
-	struct all_list_entry *a_macrolist;
-	struct all_list_entry *a_addrlist;
-	struct all_list_entry *a_headerlist;
-	struct all_list_entry *a_bodylist;
-	time_t a_delay;
-	time_t a_autowhite;
-	int a_flags;
-	char *a_code;
-	char *a_ecode;
-	char *a_msg;
-	TAILQ_ENTRY(acl_entry) a_list;
+struct acl_netblock_data {
+        struct sockaddr *addr;
+        ipaddr *mask;
+	socklen_t salen;
+	int cidr;
 };
 
 struct acl_param {
@@ -137,43 +120,112 @@ struct acl_param {
 #define A_FREE_ECODE		0x04
 #define A_FREE_MSG		0x08
 
+struct all_list_entry;
+enum list_type;
+
+typedef union acl_data {
+	struct acl_netblock_data netblock;
+	char *string;
+	struct {
+		regex_t *re;
+		char *re_copy;
+	} regex;
+	struct all_list_entry *list;
+	struct macro_entry *macro;
+#ifdef USE_DNSRBL
+	struct dnsrbl_entry *dnsrbl;
+#endif
+#ifdef USE_CURL
+	struct urlcheck_entry *urlcheck;
+#endif
+} acl_data_t;
+
+struct acl_clause_rec {
+	acl_clause_t acr_type;
+	enum { UNIQUE, MULTIPLE_OK } acr_unicity;
+	acl_stage_t acr_stage;
+	char *acr_name;
+	acl_data_type_t acr_data_type;
+	acl_clause_t acr_list_type;
+	acl_clause_t acr_item_type;
+	char *(*acr_print)(acl_data_t *, char *, size_t);
+	void (*acr_add)(acl_data_t *, void *data);
+	void (*acr_free)(acl_data_t *);
+	int (*acr_filter)(acl_data_t *, acl_stage_t, 
+			  struct acl_param *, struct mlfi_priv *);
+};
+
+struct acl_clause {
+	acl_clause_t ac_type;
+	union acl_data ac_data;
+	struct acl_clause_rec *ac_acr;
+	LIST_ENTRY(acl_clause) ac_list;
+};
+
+#define a_addr a_netblock.nb_addr
+#define a_addrlen a_netblock.nb_addrlen
+#define a_mask a_netblock.nb_mask
+
+struct acl_entry {
+	int a_line;
+	acl_type_t a_type;
+	acl_stage_t a_stage;
+	LIST_HEAD(,acl_clause) a_clause;
+	time_t a_delay;
+	time_t a_autowhite;
+	int a_flags;
+	char *a_code;
+	char *a_ecode;
+	char *a_msg;
+	TAILQ_ENTRY(acl_entry) a_list;
+};
+
 extern int testmode;
 extern pthread_rwlock_t acl_lock;
 
+char *stage_string(acl_stage_t);
+struct acl_clause_rec *get_acl_clause_rec(acl_clause_t);
+struct acl_clause_rec *acl_list_item_fixup(acl_data_type_t, acl_data_type_t);
 void acl_init(void);
 void acl_clear(void);
-void acl_add_netblock(struct sockaddr *, socklen_t, int);
-void acl_add_domain(char *);
-void acl_add_domain_regex(char *);
-void acl_add_from(char *);
-void acl_add_rcpt(char *);
-void acl_add_from_regex(char *);
-void acl_add_rcpt_regex(char *);
-void acl_add_header(char *);
-void acl_add_header_regex(char *);
-void acl_add_body(char *);
-void acl_add_body_regex(char *);
+void acl_add_clause(acl_clause_t, void *);
 void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
-void acl_add_list(char *);
 void acl_add_flushaddr(void);
 void acl_add_code(char *);
 void acl_add_ecode(char *);
 void acl_add_msg(char *);
-#ifdef USE_DNSRBL
-void acl_add_dnsrbl(char *);
-#endif
-#ifdef USE_CURL
-void acl_add_urlcheck(char *);
-#endif
-void acl_add_macro(char *);
-struct acl_entry *acl_register_entry_first (acl_stage_t, acl_type_t);
-struct acl_entry *acl_register_entry_last (acl_stage_t, acl_type_t);
+struct acl_entry *acl_register_entry_first(acl_stage_t, acl_type_t);
+struct acl_entry *acl_register_entry_last(acl_stage_t, acl_type_t);
 int acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *);
 char *acl_entry(struct acl_entry  *);
 void acl_dump(void);
 int emailcmp(char *, char *);        
-int domaincmp(char *, char *);
+
+int acl_netblock_filter(acl_data_t *, acl_stage_t, 
+			struct acl_param *, struct mlfi_priv *);
+int acl_list_filter(acl_data_t *, acl_stage_t, 
+		    struct acl_param *, struct mlfi_priv *);
+int acl_from_cmp(acl_data_t *, acl_stage_t, 
+		 struct acl_param *, struct mlfi_priv *);
+int acl_from_regexec(acl_data_t *, acl_stage_t, 
+		 struct acl_param *, struct mlfi_priv *);
+int acl_rcpt_cmp(acl_data_t *, acl_stage_t, 
+		 struct acl_param *, struct mlfi_priv *);
+int acl_rcpt_regexec(acl_data_t *, acl_stage_t, 
+		 struct acl_param *, struct mlfi_priv *);
+int acl_domain_cmp(acl_data_t *, acl_stage_t, 
+	           struct acl_param *, struct mlfi_priv *);
+int acl_domain_regexec(acl_data_t *, acl_stage_t, 
+		       struct acl_param *, struct mlfi_priv *);
+int acl_body_strstr(acl_data_t *, acl_stage_t, 
+		    struct acl_param *, struct mlfi_priv *);
+int acl_header_strstr(acl_data_t *, acl_stage_t, 
+		      struct acl_param *, struct mlfi_priv *);
+int acl_body_regexec(acl_data_t *, acl_stage_t, 
+		     struct acl_param *, struct mlfi_priv *);
+int acl_header_regexec(acl_data_t *, acl_stage_t, 
+		       struct acl_param *, struct mlfi_priv *);
 
 /* acl_filter() return codes */
 #define	EXF_UNSET	0

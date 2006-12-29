@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.h,v 1.7 2006/12/26 21:21:52 manu Exp $ */
+/* $Id: dnsrbl.h,v 1.8 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -29,6 +29,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "acl.h"
+
 #ifndef NS_MAXDNAME
 #define NS_MAXDNAME 1025 
 #endif 
@@ -44,7 +46,8 @@ struct dnsrbl_entry {
 };
 
 void dnsrbl_init(void);
-int dnsrbl_check_source(struct sockaddr *, socklen_t, struct dnsrbl_entry *);
+int dnsrbl_check_source(acl_data_t *, acl_stage_t,
+			struct acl_param *, struct mlfi_priv *);
 void reverse_endian(struct sockaddr *, struct sockaddr *);
 void dnsrbl_source_add(char *, char *, struct sockaddr *, int);
 struct dnsrbl_entry *dnsrbl_byname(char *);

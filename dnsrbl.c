@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.18 2006/12/26 21:21:52 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.19 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.18 2006/12/26 21:21:52 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.19 2006/12/29 18:32:44 manu Exp $");
 #endif
 #endif
 
@@ -94,11 +94,15 @@ dnsrbl_init(void) {
 }
 
 int
-dnsrbl_check_source(sa, salen, source)
+dnsrbl_check_source(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
 	struct sockaddr *sa;
 	socklen_t salen;
         struct dnsrbl_entry *source;
-{
 #ifdef HAVE_RESN
 	struct __res_state res;
 #endif
@@ -109,13 +113,17 @@ dnsrbl_check_source(sa, salen, source)
 	ns_msg handle;
 	ns_rr rr;
 	int qtype, i;
-	char *dnsrbl = source->d_domain;
+	char *dnsrbl;
 	struct sockaddr *blacklisted;
 	struct sockaddr_storage result;
 	int retval = 0;
 	char *addr;
 	size_t len;
 
+	sa = SA(&priv->priv_addr);
+	salen = priv->priv_addrlen;
+	source = ad->dnsrbl;
+	dnsrbl = source->d_domain;
 	/* No IPv6 DNSRBL exists right now */
 	if (sa->sa_family != AF_INET)
 		return 0;
@@ -283,6 +291,12 @@ dnsrbl_source_add(name, domain, blacklisted, cidr)
 	socklen_t salen;
 	char addrstr[IPADDRSTRLEN];
 	int i;
+
+	if (dnsrbl_byname(name) != NULL) {
+		mg_log(LOG_ERR, "dnsrbl \"%s\" defined twice at line %d",
+		    name, conf_line - 1);
+		exit(EX_DATAERR);
+	}
 
 	if ((de = malloc(sizeof(*de))) == NULL) {
 		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));

@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.13 2006/12/26 21:21:52 manu Exp $ */
+/* $Id: list.c,v 1.14 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.13 2006/12/26 21:21:52 manu Exp $");
+__RCSID("$Id: list.c,v 1.14 2006/12/29 18:32:44 manu Exp $");
 #endif
 #endif
 
@@ -66,10 +66,10 @@ __RCSID("$Id: list.c,v 1.13 2006/12/26 21:21:52 manu Exp $");
 #endif
 #include "macro.h"
 #include "list.h"
+#include "acl.h"
 
 struct all_list all_list_head;
 struct all_list_entry *glist;
-
 
 void
 all_list_init(void)
@@ -101,7 +101,7 @@ all_list_clear(void)	/* acllist must be write locked */
 
 struct all_list_entry *
 all_list_get(type, name)
-	int type;
+	acl_clause_t type;
 	char *name;
 {
 	struct all_list_entry *ale;
@@ -111,7 +111,7 @@ all_list_get(type, name)
 		exit(EX_OSERR);
 	}
 
-	ale->al_type = type;
+	ale->al_acr = get_acl_clause_rec(type);
 	strncpy(ale->al_name, name, sizeof(ale->al_name));
 	ale->al_name[sizeof(ale->al_name) - 1] = '\0';
 	LIST_INIT(&ale->al_head);
@@ -131,296 +131,127 @@ all_list_put(ale)
 		le = LIST_FIRST(&ale->al_head);
 		LIST_REMOVE(le, l_list);
 
-		switch(le->l_type) {
-		case L_STRING:
-			free(le->l_data.string);
-			break;
-
-		case L_REGEX:
-			regfree(le->l_data.regex);
-			break;
-
-#ifdef USE_DNSRBL
-		case L_DNSRBL:
-			/* Nothing to do, it is free'ed with dnsrbl_list */
-			break;
-#endif
-
-#ifdef USE_CURL
-		case L_URLCHECK:
-			/* Nothing to do, it is free'ed with urlcheck_list */
-			break;
-#endif
-
-		case L_ADDR:
-			free(le->l_data.netblock.nb_addr);
-			free(le->l_data.netblock.nb_mask);
-			break;
-		default:
-			mg_log(LOG_ERR, "unexpected type %d", ale->al_type);
-			exit(EX_SOFTWARE);
-			break;
-		}
+		if (le->l_acr->acr_free)
+			(*le->l_acr->acr_free)(&le->l_data);
 
 		free(le);
 	}
-
 	return;
 }
 
 void
 list_add(ale, type, data)
 	struct all_list_entry *ale;
-	enum item_type type;
+	acl_clause_t type;
 	void *data;
 {
 	struct list_entry *le;
-
-	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load list item %s", (char *)data);
-
-	if ((le = malloc(sizeof(*le))) == NULL) {
-		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	le->l_type = type;
-
-	switch(type) {
-	case L_STRING:
-		if ((le->l_data.string = strdup(data)) == NULL) {
-			mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
-			exit(EX_OSERR);
-		}
-		break;
-
-#define ERRLEN 1024
-	case L_REGEX: {
-		size_t len;
-		char *str = (char *)data;
-		regex_t *re;
-		int error;
-		int extended;
-		char errstr[ERRLEN + 1];
-
-		/* Strip leading and trailing slashes */
-		len = strlen(str);
-		if (len > 0)
-			str[len - 1] = '\0';
-		str++;
-
-		if ((re = malloc(sizeof(*re))) == NULL) {
-			mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
-			exit(EX_OSERR);
-		}
-
-		extended = (conf.c_extendedregex ? REG_EXTENDED : 0);
-		if ((error = regcomp(re, str, extended | REG_ICASE)) != 0) {
-			regerror(error, re, errstr, ERRLEN);
-			mg_log(LOG_ERR, "bad regular expression \"%s\": %s",
-			    str, errstr);
-			exit(EX_DATAERR);
-		}
-
-		le->l_data.regex = re;
-		break;
-	}
-		
-	case L_ADDR:
-		/* Not done here */
-		/* FALLTHROUGH */
-	default:
-		mg_log(LOG_ERR, "unexpected l_type %d", type);
-		exit(EX_OSERR);
-	}
-
-	LIST_INSERT_HEAD(&ale->al_head, le, l_list);
-}
-
-/* Lot of code duplicate with acl_add_netblock() ... */
-void
-list_add_netblock(ale, sa, salen, cidr)
-	struct all_list_entry *ale;
-	struct sockaddr *sa;
-	socklen_t salen;
-	int cidr;
-{
-	struct list_entry *le;
-	ipaddr mask;
-	int maxcidr, masklen;
-#ifdef AF_INET
-	int i;
-#endif
-	if (conf.c_debug || conf.c_acldebug) { 
-		char addrstr[IPADDRSTRLEN];
-
-		iptostring(sa, salen, addrstr, sizeof(addrstr));
-                mg_log(LOG_DEBUG, "load list item %s/%d", addrstr, cidr);
-	}
-
-	if ((le = malloc(sizeof(*le))) == NULL) {
-		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	le->l_type = L_ADDR;
-
-	switch (sa->sa_family) {
-	case AF_INET:
-		maxcidr = 32;
-		masklen = sizeof(mask.in4);
-		break;
-#ifdef AF_INET6
-	case AF_INET6:
-		maxcidr = 128;
-		masklen = sizeof(mask.in6);
-		break;
-#endif
-	default:
-		mg_log(LOG_ERR, "bad address family line %d", conf_line);
-		exit(EX_DATAERR);
-		break;
-	}
-
-	if (cidr > maxcidr || cidr < 0) {
-		mg_log(LOG_ERR, "bad mask in acl list line %d", conf_line);
-		exit(EX_DATAERR);
-	}
 	
-	switch (sa->sa_family) {
-	case AF_INET:
-		prefix2mask4(cidr, &mask.in4);
-		SADDR4(sa)->s_addr &= mask.in4.s_addr;
-		break;
-#ifdef AF_INET6
-	case AF_INET6:
-		prefix2mask6(cidr, &mask.in6);
-		for (i = 0; i < 16; i += 4)
-			*(uint32_t *)&SADDR6(sa)->s6_addr[i] &=
-			    *(uint32_t *)&mask.in6.s6_addr[i];
-		break;
-#endif
-	default:
-		break;
-	}
-
-	if (((le->l_data.netblock.nb_addr = malloc(salen)) == NULL) ||
-	    ((le->l_data.netblock.nb_mask = malloc(masklen)) == NULL)) {
+	if ((le = malloc(sizeof(*le))) == NULL) {
 		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
-	le->l_data.netblock.nb_addrlen = salen;
-	memcpy(le->l_data.netblock.nb_addr, sa, salen);
-	memcpy(le->l_data.netblock.nb_mask, &mask, masklen);
+	le->l_acr = get_acl_clause_rec(type);
+	(*le->l_acr->acr_add)(&le->l_data, data);
 
 	LIST_INSERT_HEAD(&ale->al_head, le, l_list);
 
-	return;
+	if (conf.c_debug || conf.c_acldebug) {
+		char buf[1024];
+
+		mg_log(LOG_INFO, "load list item %s", 
+		    (*le->l_acr->acr_print)(&le->l_data, buf, sizeof(buf)));
+	}
 }
 
-#define DEBUGSTR 1024
 void
-all_list_settype(ale, type)
+all_list_settype(ale, l_type)
 	struct all_list_entry *ale;
-	enum list_type type;
+	acl_clause_t l_type;
 {
-	ale->al_type = type;
+	struct acl_clause_rec *list_acr;
+	struct list_entry *le;
+	acl_clause_t i_type;
+	char *string;
+	struct acl_clause_rec *new_item_acr;
 
-	if (conf.c_debug || conf.c_acldebug) { 
-		char debugstr[DEBUGSTR + 1];
+	list_acr = get_acl_clause_rec(l_type);
 
-		snprintf(debugstr, DEBUGSTR, "load list type ");
-		switch(type) {
-		case LT_FROM:
-			strncat(debugstr, "from ", DEBUGSTR);
-			break;
-		case LT_RCPT:
-			strncat(debugstr, "rcpt ", DEBUGSTR);
-			break;
-		case LT_DOMAIN:
-			strncat(debugstr, "domain ", DEBUGSTR);
-			break;
-		case LT_HEADER:
-			strncat(debugstr, "header ", DEBUGSTR);
-			break;
-		case LT_BODY:
-			strncat(debugstr, "body ", DEBUGSTR);
-			break;
-#ifdef USE_DNSRBL
-		case LT_DNSRBL:
-			strncat(debugstr, "dnsrbl ", DEBUGSTR);
-			break;
-#endif
-#ifdef USE_CURL
-		case LT_URLCHECK:
-			strncat(debugstr, "urlcheck ", DEBUGSTR);
-			break;
-#endif
-		case LT_ADDR:
-			strncat(debugstr, "addr ", DEBUGSTR);
-			break;
-		default:
-			mg_log(LOG_ERR, "unexpected al_type %d", 
-			    type);
-			break;
+	/* Fix each item type */
+	LIST_FOREACH(le, &ale->al_head, l_list) {
+		if (le->l_acr->acr_stage != AS_NONE) 
+			continue;
+
+		i_type = le->l_acr->acr_type;
+		new_item_acr = acl_list_item_fixup(i_type, l_type);
+		if (new_item_acr == NULL) {
+			char b[1024];
+
+			mg_log(LOG_ERR, 
+			    "list has mismatching item %s at line %d",
+			    (*le->l_acr->acr_print)(&le->l_data, b, sizeof(b)),
+			    conf_line);
+			exit(EX_DATAERR);	
 		}
-		mg_log(LOG_DEBUG, debugstr);
-	}
 
-#if USE_DNSRBL
-	/* Lookup the DNSRBL */
-	if (type == LT_DNSRBL) {
-		struct list_entry *le;
+		if (conf.c_debug || conf.c_acldebug) {
+			char b[1024];
 
-		LIST_FOREACH(le, &ale->al_head, l_list) {
-			struct dnsrbl_entry *de;
+			mg_log(LOG_DEBUG, "item %s changing type from %s to %s",
+			    (*le->l_acr->acr_print)(&le->l_data, b, sizeof(b)),
+			    le->l_acr->acr_name, new_item_acr->acr_name);
+		}
 
-			if (le->l_type != L_STRING) {
-				mg_log(LOG_ERR, "inconsistent list line %d",
-				    conf_line);
-				exit(EX_SOFTWARE);
-			}
+		/* 
+		 * Possible type changes:
+		 * AC_EMAIL -> AC_FROM, AC_RCPT
+		 * AC_REGEX -> AC_FROM_RE, AC_RCPT_RE, AC_DOMAIN_RE, ...
+		 *    No need for data modification
+		 * AC_STRING -> AC_DNSRBL, AC_URLCHECK, AC_MACRO, AC_BODY, ...
+		 *    We get a string and we reinject it.
+		 */
+		if (le->l_acr->acr_type != new_item_acr->acr_type) {
+			char b[1024];
 
-			if ((de = dnsrbl_byname(le->l_data.string)) == NULL) {
-				mg_log(LOG_ERR, "Inexistent DNSRBL \"%s\" "
-				    "at line %d", le->l_data.string, conf_line);
+			switch(le->l_acr->acr_type) {
+			case AC_EMAIL:
+			case AC_REGEX:
+				le->l_acr = new_item_acr;
+				break;
+			case AC_STRING:
+				string = strdup(le->l_data.string);
+				if (string == NULL) {
+					mg_log(LOG_ERR, "strdup failed: %s",
+					    strerror(errno));
+					exit(EX_DATAERR);
+				}
+				(*le->l_acr->acr_free)(&le->l_data);
+				le->l_acr = new_item_acr;
+				(*le->l_acr->acr_add)(&le->l_data, string);
+				free(string);
+				break;
+			default:
+				(void)(*le->l_acr->acr_print)
+				    (&le->l_data, b, sizeof(b));
+
+				mg_log(LOG_ERR, "cannot switch item %s "
+				    "type from %s to %s", b,
+				    le->l_acr->acr_name, 
+				    new_item_acr->acr_name);
 				exit(EX_DATAERR);
+				break;
 			}
-
-			le->l_data.dnsrbl = de;
-			le->l_type = L_DNSRBL;
 		}
 
 	}
-#endif /* USE_DNSRBL */
+	ale->al_acr = list_acr;
 
-#if USE_CURL
-	/* Lookup URL checks */
-	if (type == LT_URLCHECK) {
-		struct list_entry *le;
+	if (conf.c_debug || conf.c_acldebug) 
+		mg_log(LOG_INFO, "load list type %s, stage %s", 
+		    ale->al_acr->acr_name, 
+		    stage_string(ale->al_acr->acr_stage));
 
-		LIST_FOREACH(le, &ale->al_head, l_list) {
-			struct urlcheck_entry *ue;
-
-			if (le->l_type != L_STRING) {
-				mg_log(LOG_ERR, "inconsistent list line %d",
-				    conf_line);
-				exit(EX_SOFTWARE);
-			}
-
-			if ((ue = urlcheck_byname(le->l_data.string)) == NULL) {
-				mg_log(LOG_ERR, "Inexistent URL check \"%s\" "
-				    "at line %d", le->l_data.string, conf_line);
-				exit(EX_DATAERR);
-			}
-
-			le->l_data.urlcheck = ue;
-			le->l_type = L_URLCHECK;
-		}
-
-	}
-#endif /* USE_DNSRBL */
 	return;
 }
 
@@ -429,6 +260,12 @@ all_list_setname(ale, name)
 	struct all_list_entry *ale;
 	char *name;
 {
+	if (all_list_byname(name) != NULL) {
+		mg_log(LOG_ERR, "list \"%s\" defined twice at line %d",
+		    name, conf_line - 1);
+		exit(EX_DATAERR);
+	}
+
 	if (conf.c_debug || conf.c_acldebug)
 		mg_log(LOG_DEBUG, "load list name \"%s\"", name);
 
@@ -440,7 +277,7 @@ all_list_setname(ale, name)
 void
 glist_init(void)
 {
-	glist = all_list_get(LT_UNKNOWN, "");
+	glist = all_list_get(AC_LIST, "");
 	return;
 }
 
@@ -459,211 +296,3 @@ all_list_byname(name)
 	return ale;
 }
 
-int
-list_addr_filter(list, sa)
-	struct all_list_entry *list;
-	struct sockaddr *sa;
-{
-	struct list_entry *le;
-
-	LIST_FOREACH(le, &list->al_head, l_list) {
-		if (ip_match(sa, 
-		    le->l_data.netblock.nb_addr, 
-		    le->l_data.netblock.nb_mask))
-			break;
-	}
-
-	return (le != NULL);
-}
-
-#if USE_DNSRBL
-int
-list_dnsrbl_filter(list,salen, sa)
-	struct all_list_entry *list;
-	socklen_t salen;
-	struct sockaddr *sa;
-{
-	struct list_entry *le;
-
-	LIST_FOREACH(le, &list->al_head, l_list) {
-		if (dnsrbl_check_source(sa, salen, le->l_data.dnsrbl) == 1)
-			break;
-	}
-
-	return (le != NULL);
-}
-#endif
-
-#if USE_CURL
-int
-list_urlcheck_filter(list, priv, rcpt, ap)
-	struct all_list_entry *list;
-	struct mlfi_priv *priv;
-	char *rcpt;
-	struct acl_param *ap;
-{
-	struct list_entry *le;
-
-	LIST_FOREACH(le, &list->al_head, l_list) {
-		if (urlcheck_validate(priv, rcpt, le->l_data.urlcheck, ap) == 1)
-			break;
-	}
-
-	return (le != NULL);
-}
-#endif
-
-int
-list_macro_filter(list, ctx)
-	struct all_list_entry *list;
-	SMFICTX *ctx;
-{
-	struct list_entry *le;
-
-	LIST_FOREACH(le, &list->al_head, l_list) {
-		if (macro_check(ctx, le->l_data.macro) == 0)
-			break;
-	}
-
-	return (le != NULL);
-}
-
-int
-list_from_filter(list, from)
-	struct all_list_entry *list;
-	char *from;
-{
-	struct list_entry *le;
-
-	LIST_FOREACH(le, &list->al_head, l_list) {
-		switch(le->l_type) {
-		case L_STRING:
-			if (emailcmp(from, le->l_data.string) == 0)
-				goto from_out;
-			break;
-		case L_REGEX:
-			if (regexec(le->l_data.regex, 
-			    from, 0, NULL, 0) == 0)
-				goto from_out;
-			break;
-		default:
-			mg_log(LOG_ERR, "corrupted list");
-			exit(EX_SOFTWARE);
-			break;
-		}
-	}
-from_out:
-	return (le != NULL);
-}
-
-int
-list_rcpt_filter(list, rcpt)
-	struct all_list_entry *list;
-	char *rcpt;
-{
-	struct list_entry *le;
-
-	LIST_FOREACH(le, &list->al_head, l_list) {
-		switch(le->l_type) {
-		case L_STRING:
-			if (emailcmp(rcpt, le->l_data.string) == 0)
-				goto rcpt_out;
-			break;
-		case L_REGEX:
-			if (regexec(le->l_data.regex, 
-			    rcpt, 0, NULL, 0) == 0)
-				goto rcpt_out;
-			break;
-		default:
-			mg_log(LOG_ERR, "corrupted list");
-			exit(EX_SOFTWARE);
-			break;
-		}
-	}
-rcpt_out:
-	return (le != NULL);
-}
-
-int
-list_domain_filter(list, domain)
-	struct all_list_entry *list;
-	char *domain;
-{
-	struct list_entry *le;
-
-	LIST_FOREACH(le, &list->al_head, l_list) {
-		switch(le->l_type) {
-		case L_STRING:
-			if (domaincmp(domain, le->l_data.string))
-				goto domain_out;
-			break;
-		case L_REGEX:
-			if (regexec(le->l_data.regex, 
-			    domain, 0, NULL, 0) == 0)
-				goto domain_out;
-			break;
-		default:
-			mg_log(LOG_ERR, "corrupted list");
-			exit(EX_SOFTWARE);
-			break;
-		}
-	}
-domain_out:
-	return (le != NULL);
-}
-
-int
-list_header_filter(list, header)
-	struct all_list_entry *list;
-	char *header;
-{
-	struct list_entry *le;
-
-	LIST_FOREACH(le, &list->al_head, l_list) {
-		switch(le->l_type) {
-		case L_STRING:
-			if (emailcmp(header, le->l_data.string))
-				goto header_out;
-			break;
-		case L_REGEX:
-			if (regexec(le->l_data.regex, 
-			    header, 0, NULL, 0) == 0)
-				goto header_out;
-			break;
-		default:
-			mg_log(LOG_ERR, "corrupted list");
-			exit(EX_SOFTWARE);
-			break;
-		}
-	}
-header_out:
-	return (le != NULL);
-}
-
-int
-list_body_filter(list, body)
-	struct all_list_entry *list;
-	char *body;
-{
-	struct list_entry *le;
-
-	LIST_FOREACH(le, &list->al_head, l_list) {
-		switch(le->l_type) {
-		case L_STRING:
-			if (emailcmp(body, le->l_data.string))
-				goto body_out;
-			break;
-		case L_REGEX:
-			if (regexec(le->l_data.regex, 
-			    body, 0, NULL, 0) == 0)
-				goto body_out;
-			break;
-		default:
-			mg_log(LOG_ERR, "corrupted list");
-			exit(EX_SOFTWARE);
-			break;
-		}
-	}
-body_out:
-	return (le != NULL);
-}

@@ -1,4 +1,4 @@
-/* $Id: macro.h,v 1.1 2006/08/28 06:33:14 manu Exp $ */
+/* $Id: macro.h,v 1.2 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -29,6 +29,8 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "acl.h"
+
 LIST_HEAD(macrolist, macro_entry);
 
 struct macro_entry {
@@ -46,7 +48,8 @@ struct macro_entry {
 #define m_regex m_value.regex
 
 void macro_init(void);
-int macro_check(SMFICTX *, struct macro_entry *);
+int macro_check(acl_data_t *, acl_stage_t,
+		struct acl_param *, struct mlfi_priv *);
 void macro_add_unset(char *, char *);
 void macro_add_string(char *, char *, char *);
 void macro_add_regex(char *, char *, char *);

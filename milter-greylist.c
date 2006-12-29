@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.146 2006/12/26 21:21:52 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.147 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.146 2006/12/26 21:21:52 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.147 2006/12/29 18:32:44 manu Exp $");
 #endif
 #endif
 
@@ -251,6 +251,7 @@ real_connect(ctx, hostname, addr)
 
 	smfi_setpriv(ctx, priv);
 	bzero((void *)priv, sizeof(*priv));
+	priv->priv_ctx = ctx;
 	priv->priv_sr.sr_whitelist = EXF_UNSET;
 	LIST_INIT(&priv->priv_rcpt);
 	priv->priv_cur_rcpt = NULL;

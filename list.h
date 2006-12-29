@@ -1,4 +1,4 @@
-/* $Id: list.h,v 1.5 2006/12/26 21:21:52 manu Exp $ */
+/* $Id: list.h,v 1.6 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -37,60 +37,30 @@ LIST_HEAD(list, list_entry);
 
 extern struct all_list_entry *glist;
 
-enum list_type { LT_UNKNOWN, LT_FROM, LT_RCPT, LT_DOMAIN, LT_ADDR, 
-    LT_DNSRBL, LT_MACRO, LT_URLCHECK, LT_HEADER, LT_BODY };
-enum item_type { L_STRING, L_ADDR, L_REGEX, L_DNSRBL, L_MACRO, L_URLCHECK };
-
 struct list_entry {
-	enum item_type l_type;
-	union {
-		struct {
-			struct sockaddr *nb_addr;
-			socklen_t nb_addrlen;
-			ipaddr *nb_mask;
-		} netblock;
-		char *string;
-		regex_t *regex;
-#ifdef USE_DNSRBL
-		struct dnsrbl_entry *dnsrbl;
-#endif
-#ifdef USE_CURL
-		struct urlcheck_entry *urlcheck;
-#endif
-		struct macro_entry *macro;
-	} l_data;
+	struct acl_clause_rec *l_acr;
+	acl_data_t l_data;
 	LIST_ENTRY(list_entry) l_list;
 };
 
 struct all_list_entry {
-	enum list_type al_type;
+	struct acl_clause_rec *al_acr;
 	char al_name[QSTRLEN + 1];
 	LIST_ENTRY(all_list_entry) al_list;
-	struct list al_head;
+	LIST_HEAD(,list_entry) al_head;
 };
 
 void all_list_init(void);
 void all_list_clear(void);
 
-struct all_list_entry *all_list_get(int, char *);
+struct all_list_entry *all_list_get(acl_clause_t, char *);
 void all_list_put(struct all_list_entry *);
-void list_add(struct all_list_entry *, enum item_type, void *);
+void list_add(struct all_list_entry *, acl_clause_t, void *);
 void list_add_netblock(struct all_list_entry *, 
     struct sockaddr *, socklen_t, int);
-void all_list_settype(struct all_list_entry *, enum list_type);
+void all_list_settype(struct all_list_entry *, acl_clause_t);
 void all_list_setname(struct all_list_entry *, char *);
 void glist_init(void);
 struct all_list_entry *all_list_byname(char *);
-
-int list_addr_filter(struct all_list_entry *, struct sockaddr *);
-int list_dnsrbl_filter(struct all_list_entry *, socklen_t, struct sockaddr *);
-int list_macro_filter(struct all_list_entry *, SMFICTX *);
-int list_from_filter(struct all_list_entry *, char *);
-int list_rcpt_filter(struct all_list_entry *, char *);
-int list_domain_filter(struct all_list_entry *, char *);
-int list_header_filter(struct all_list_entry *, char *);
-int list_body_filter(struct all_list_entry *, char *);
-int list_urlcheck_filter(struct all_list_entry *, 
-    struct mlfi_priv *, char *, struct acl_param *);
 
 #endif /* _LIST_H_ */

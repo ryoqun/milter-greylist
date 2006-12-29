@@ -1,4 +1,4 @@
-/* $Id: macro.c,v 1.3 2006/10/05 20:05:56 manu Exp $ */
+/* $Id: macro.c,v 1.4 2006/12/29 18:32:44 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: macro.c,v 1.3 2006/10/05 20:05:56 manu Exp $");
+__RCSID("$Id: macro.c,v 1.4 2006/12/29 18:32:44 manu Exp $");
 #endif
 #endif
 
@@ -71,16 +71,20 @@ macro_init(void) {
 }
 
 int
-macro_check(ctx, me)
+macro_check(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
 	SMFICTX *ctx;
 	struct macro_entry *me;
-{
 	char *value;
-        struct mlfi_priv *priv;
 	int extended;
 	int retval;
 
-	priv = (struct mlfi_priv *)smfi_getpriv(ctx);
+	ctx = priv->priv_ctx;
+	me = ad->macro;
 
 	value = smfi_getsymval(ctx, me->m_macro);
 							 
@@ -125,6 +129,12 @@ macro_add_unset(name, macro)
 	char *macro;
 {
 	struct macro_entry *me;
+
+	if (macro_byname(name) != NULL) {
+		mg_log(LOG_ERR, "macro \"%s\" defined twice at line %d",
+		    name, conf_line - 1);
+		exit(EX_DATAERR);
+	}
 
 	if ((me = malloc(sizeof(*me))) == NULL) {
 		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));

@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.64 2006/12/26 21:21:52 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.65 2006/12/29 18:32:44 manu Exp $");
 #endif
 #endif
 
@@ -110,19 +110,34 @@ lines	:	lines netblock '\n'
 	|
 	;
 netblock:	ADDR IPADDR CIDR{
-			acl_add_netblock(SA(&$2),
-			    sizeof(struct sockaddr_in), $3);
+			struct acl_netblock_data and;
+
+			and.addr = SA(&$2);
+			and.salen = sizeof(struct sockaddr_in);
+			and.cidr = $3;
+
+			acl_add_clause(AC_NETBLOCK, &and);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	|	ADDR IPADDR	{
-			acl_add_netblock(SA(&$2),
-			    sizeof(struct sockaddr_in), 32);
+			struct acl_netblock_data and;
+
+			and.addr = SA(&$2);
+			and.salen = sizeof(struct sockaddr_in);
+			and.cidr = 32;
+
+			acl_add_clause(AC_NETBLOCK, &and);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	|	ADDR IP6ADDR CIDR{
 #ifdef AF_INET6
-			acl_add_netblock(SA(&$2),
-			    sizeof(struct sockaddr_in6), $3);
+			struct acl_netblock_data and;
+
+			and.addr = SA(&$2);
+			and.salen = sizeof(struct sockaddr_in6);
+			and.cidr = $3;
+
+			acl_add_clause(AC_NETBLOCK, &and);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 #else
 			mg_log(LOG_INFO,
@@ -132,8 +147,13 @@ netblock:	ADDR IPADDR CIDR{
 		}
 	|	ADDR IP6ADDR	{
 #ifdef AF_INET6
-			acl_add_netblock(SA(&$2),
-			    sizeof(struct sockaddr_in6), 128);
+			struct acl_netblock_data and;
+
+			and.addr = SA(&$2);
+			and.salen = sizeof(struct sockaddr_in6);
+			and.cidr = 128;
+
+			acl_add_clause(AC_NETBLOCK, &and);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 #else
 			mg_log(LOG_INFO,
@@ -143,12 +163,12 @@ netblock:	ADDR IPADDR CIDR{
 		}
 	;
 fromaddr:	FROM EMAIL	{
-			acl_add_from($2);
+			acl_add_clause(AC_FROM, $2);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
 rcptaddr:	RCPT EMAIL	{
-			acl_add_rcpt($2);
+			acl_add_clause(AC_RCPT, $2);
 			if (conf.c_testmode)
 				acl_register_entry_first(AS_RCPT, A_GREYLIST);
 			else
@@ -157,12 +177,12 @@ rcptaddr:	RCPT EMAIL	{
 
 	;
 fromregex:	FROM REGEX	{
-			acl_add_from_regex($2);
+			acl_add_clause(AC_FROM_RE, $2);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
 rcptregex:	RCPT REGEX	{
-			acl_add_rcpt_regex($2);
+			acl_add_clause(AC_RCPT_RE, $2);
 			if (conf.c_testmode)
 				acl_register_entry_first(AS_RCPT, A_GREYLIST);
 			else
@@ -170,12 +190,12 @@ rcptregex:	RCPT REGEX	{
 		}
 	;
 domainaddr:	DOMAIN DOMAINNAME {
-			acl_add_domain($2);
+			acl_add_clause(AC_DOMAIN, $2);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
 domainregex:	DOMAIN REGEX	 {
-			acl_add_domain_regex($2);
+			acl_add_clause(AC_DOMAIN_RE, $2);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
@@ -537,29 +557,29 @@ msg_value:		MSG QSTRING {
 				acl_add_msg(quotepath(msg, $2, QSTRLEN));
 			}
 	;
-fromaddr_clause:	FROM EMAIL { acl_add_from ($2); }
+fromaddr_clause:	FROM EMAIL { acl_add_clause(AC_FROM, $2); }
 	;
 
-fromregex_clause:	FROM REGEX { acl_add_from_regex ($2); }
+fromregex_clause:	FROM REGEX { acl_add_clause(AC_FROM_RE, $2); }
 	;
 
-rcptaddr_clause:	RCPT EMAIL { acl_add_rcpt ($2); }
+rcptaddr_clause:	RCPT EMAIL { acl_add_clause(AC_RCPT, $2); }
 	;
 
-rcptregex_clause:	RCPT REGEX { acl_add_rcpt_regex ($2); }
+rcptregex_clause:	RCPT REGEX { acl_add_clause(AC_RCPT_RE, $2); }
 	;
 
-domainaddr_clause:	DOMAIN DOMAINNAME { acl_add_domain ($2); }
+domainaddr_clause:	DOMAIN DOMAINNAME { acl_add_clause(AC_DOMAIN, $2); }
 	;
 
-domainregex_clause:	DOMAIN REGEX { acl_add_domain_regex ($2); }
+domainregex_clause:	DOMAIN REGEX { acl_add_clause(AC_DOMAIN_RE, $2); }
 	;
 
 dnsrbl_clause:		DNSRBL QSTRING { 
 #ifdef USE_DNSRBL
 			char path[QSTRLEN + 1];
 
-			acl_add_dnsrbl(quotepath(path, $2, QSTRLEN));
+			acl_add_clause(AC_DNSRBL, quotepath(path, $2, QSTRLEN));
 #else
 			mg_log(LOG_INFO, 
 			    "DNSRBL support not compiled in line %d", 
@@ -568,38 +588,42 @@ dnsrbl_clause:		DNSRBL QSTRING {
 			}
 	;
 
-macro_clause:		SM_MACRO QSTRING {
-				char qstring[QSTRLEN + 1];
+macro_clause:	SM_MACRO QSTRING {
+			char qstring[QSTRLEN + 1];
 
-				acl_add_macro(quotepath(qstring, $2, QSTRLEN));
-			}
+			acl_add_clause(AC_MACRO,
+				       quotepath(qstring, $2, QSTRLEN));
+		}
 	;
 
-header_clause:		HEADER QSTRING {
-				char qstring[QSTRLEN + 1];
+header_clause:	HEADER QSTRING {
+			char qstring[QSTRLEN + 1];
 
-				acl_add_header(quotepath(qstring, $2, QSTRLEN));
-			}
+			acl_add_clause(AC_HEADER,
+				       quotepath(qstring, $2, QSTRLEN));
+		}
 	;
 
-headerregex_clause:	HEADER REGEX { acl_add_header_regex ($2); }
+headerregex_clause:	HEADER REGEX { acl_add_clause(AC_HEADER_RE, $2); }
 	;
 
 body_clause:		BODY QSTRING {
 				char qstring[QSTRLEN + 1];
 
-				acl_add_body(quotepath(qstring, $2, QSTRLEN));
+				acl_add_clause(AC_BODY,
+				    quotepath(qstring, $2, QSTRLEN));
 			}
 	;
 
-bodyregex_clause:	BODY REGEX { acl_add_body_regex ($2); }
+bodyregex_clause:	BODY REGEX { acl_add_clause(AC_BODY_RE, $2); }
 	;
 
 urlcheck_clause:	URLCHECK QSTRING { 
 #ifdef USE_CURL
 			char path[QSTRLEN + 1];
 
-			acl_add_urlcheck(quotepath(path, $2, QSTRLEN));
+			acl_add_clause(AC_URLCHECK, 
+				       quotepath(path, $2, QSTRLEN));
 #else
 			mg_log(LOG_INFO, 
 			    "CURL support not compiled in line %d", 
@@ -610,21 +634,37 @@ urlcheck_clause:	URLCHECK QSTRING {
 list_clause:		LIST QSTRING { 
 				char path[QSTRLEN + 1];
 
-				acl_add_list(quotepath(path, $2, QSTRLEN));
+				acl_add_clause(AC_LIST, 
+					       quotepath(path, $2, QSTRLEN));
 			}
 	;
 netblock_clause:	ADDR IPADDR CIDR {
-				acl_add_netblock(SA(&$2),
-			    sizeof(struct sockaddr_in), $3);
+				struct acl_netblock_data and;
+
+				and.addr = SA(&$2);
+				and.salen = sizeof(struct sockaddr_in);
+				and.cidr = $3;
+
+				acl_add_clause(AC_NETBLOCK, &and);
 			}
 	|		ADDR IPADDR	{
-				acl_add_netblock(SA(&$2),
-					    sizeof(struct sockaddr_in), 32);
+				struct acl_netblock_data and;
+
+				and.addr = SA(&$2);
+				and.salen = sizeof(struct sockaddr_in);
+				and.cidr = 32;
+
+				acl_add_clause(AC_NETBLOCK, &and);
 			}
 	|		ADDR IP6ADDR CIDR{
 #ifdef AF_INET6
-				acl_add_netblock(SA(&$2),
-				    sizeof(struct sockaddr_in6), $3);
+				struct acl_netblock_data and;
+
+				and.addr = SA(&$2);
+				and.salen = sizeof(struct sockaddr_in6);
+				and.cidr = $3;
+
+				acl_add_clause(AC_NETBLOCK, &and);
 #else
 				mg_log(LOG_INFO, 
 				    "IPv6 is not supported, ignore line %d",
@@ -633,8 +673,13 @@ netblock_clause:	ADDR IPADDR CIDR {
 			}
 	|		ADDR IP6ADDR	{
 #ifdef AF_INET6
-				acl_add_netblock(SA(&$2),
-				    sizeof(struct sockaddr_in6), 128);
+				struct acl_netblock_data and;
+
+				and.addr = SA(&$2);
+				and.salen = sizeof(struct sockaddr_in6);
+				and.cidr = 128;
+
+				acl_add_clause(AC_NETBLOCK, &and);
 #else
 				mg_log(LOG_INFO, "IPv6 is not supported, "
 				     "ignore line %d", conf_line);
@@ -744,33 +789,39 @@ listdef:	LIST QSTRING list_clause {
 	;
 
 list_clause:	FROM OPENLIST email_list CLOSELIST
-			{ all_list_settype(glist, LT_FROM); }
+			{ all_list_settype(glist, AC_FROM_LIST); }
 	|	RCPT OPENLIST email_list CLOSELIST
-			{ all_list_settype(glist, LT_RCPT); }
+			{ all_list_settype(glist, AC_RCPT_LIST); }
 	|	DOMAIN OPENLIST domain_list CLOSELIST
-			{ all_list_settype(glist, LT_DOMAIN); }
+			{ all_list_settype(glist, AC_DOMAIN_LIST); }
 	|	DNSRBL OPENLIST qstring_list CLOSELIST
-			{ all_list_settype(glist, LT_DNSRBL); }
+			{ all_list_settype(glist, AC_DNSRBL_LIST); }
+	|	URLCHECK OPENLIST qstring_list CLOSELIST
+			{ all_list_settype(glist, AC_URLCHECK_LIST); }
+	|	BODY OPENLIST qstring_list CLOSELIST
+			{ all_list_settype(glist, AC_BODY_LIST); }
+	|	HEADER OPENLIST qstring_list CLOSELIST
+			{ all_list_settype(glist, AC_HEADER_LIST); }
 	|	SM_MACRO OPENLIST qstring_list CLOSELIST
-			{ all_list_settype(glist, LT_MACRO); }
+			{ all_list_settype(glist, AC_MACRO_LIST); }
 	|	ADDR OPENLIST addr_list CLOSELIST
-			{ all_list_settype(glist, LT_ADDR); }
+			{ all_list_settype(glist, AC_NETBLOCK_LIST); }
 	;
 
 email_list:	email_item
 	|	email_list email_item
 	;
 
-email_item: 	EMAIL	{ list_add(glist, L_STRING, $1); }
-	|	REGEX 	{ list_add(glist, L_REGEX, $1); }
+email_item: 	EMAIL	{ list_add(glist, AC_EMAIL, $1); }
+	|	REGEX 	{ list_add(glist, AC_REGEX, $1); }
 	;
 
 domain_list:	domain_item
 	|	domain_list domain_item
 	;
 
-domain_item:	DOMAINNAME	{ list_add(glist, L_STRING, $1); }
-	|	REGEX		{ list_add(glist, L_REGEX, $1); }	
+domain_item:	DOMAINNAME	{ list_add(glist, AC_DOMAIN, $1); }
+	|	REGEX		{ list_add(glist, AC_REGEX, $1); }	
 	;
 
 qstring_list:	qstring_item
@@ -780,7 +831,7 @@ qstring_list:	qstring_item
 qstring_item:	QSTRING		{ 
 			char tmpstr[QSTRLEN + 1];
 
-			list_add(glist, L_STRING, 
+			list_add(glist, AC_STRING, 
 			    quotepath(tmpstr, $1, QSTRLEN));
 		}
 	;
@@ -790,17 +841,29 @@ addr_list:	addr_item
 	;
 
 addr_item: 	IPADDR CIDR {
-			list_add_netblock(glist, SA(&$1), 
-			    sizeof(struct sockaddr_in), $2);
+			struct acl_netblock_data and;
+
+			and.addr = SA(&$1);
+			and.salen = sizeof(struct sockaddr_in);
+			and.cidr = $2;
+			list_add(glist, AC_NETBLOCK, &and);
 		}
 	|	IPADDR {
-			list_add_netblock(glist, SA(&$1), 
-			    sizeof(struct sockaddr_in), 32);
+			struct acl_netblock_data and;
+
+			and.addr = SA(&$1);
+			and.salen = sizeof(struct sockaddr_in);
+			and.cidr = 32;
+			list_add(glist, AC_NETBLOCK, &and);
 		}
 	|	IP6ADDR CIDR{
 #ifdef AF_INET6
-			list_add_netblock(glist, SA(&$1), 
-			    sizeof(struct sockaddr_in6), $2);
+			struct acl_netblock_data and;
+
+			and.addr = SA(&$1);
+			and.salen = sizeof(struct sockaddr_in6);
+			and.cidr = $2;
+			list_add(glist, AC_NETBLOCK, &and);
 #else
 			mg_log(LOG_INFO,
 			    "IPv6 is not supported, ignore line %d",
@@ -809,8 +872,12 @@ addr_item: 	IPADDR CIDR {
 		}
 	|	IP6ADDR	{
 #ifdef AF_INET6
-			list_add_netblock(glist, SA(&$1), 
-			    sizeof(struct sockaddr_in6), 128);
+			struct acl_netblock_data and;
+
+			and.addr = SA(&$1);
+			and.salen = sizeof(struct sockaddr_in6);
+			and.cidr = 128;
+			list_add(glist, AC_NETBLOCK, &and);
 #else
 			mg_log(LOG_ERR, 
 			    "IPv6 is not supported, ignore line %d",
