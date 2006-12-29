@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.40 2006/12/29 18:32:44 manu Exp $ */
+/* $Id: acl.c,v 1.41 2006/12/29 20:38:17 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.40 2006/12/29 18:32:44 manu Exp $");
+__RCSID("$Id: acl.c,v 1.41 2006/12/29 20:38:17 manu Exp $");
 #endif
 #endif
 
@@ -76,7 +76,7 @@ __RCSID("$Id: acl.c,v 1.40 2006/12/29 18:32:44 manu Exp $");
 struct acllist acl_head;
 pthread_rwlock_t acl_lock;
 
-static struct acl_entry gacl;
+static struct acl_entry *gacl;
 
 char *acl_print_netblock(acl_data_t *, char *, size_t);
 char *acl_print_string(acl_data_t *, char *, size_t);
@@ -617,12 +617,22 @@ acl_free_regex(ad)
 	return;
 }
 
-static void
-acl_init_entry(void) {
-	memset(&gacl, 0, sizeof (gacl));
-	gacl.a_delay = -1;
-	gacl.a_autowhite = -1;
-	LIST_INIT(&gacl.a_clause);
+static struct acl_entry *
+acl_init_entry(void)
+{
+	struct acl_entry *acl;
+
+	if ((acl = malloc(sizeof(*acl))) == NULL) {
+		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	memset(acl, 0, sizeof (acl));
+	acl->a_delay = -1;
+	acl->a_autowhite = -1;
+	LIST_INIT(&acl->a_clause);
+
+	return acl;
 }
 
 void
@@ -635,14 +645,14 @@ acl_init(void) {
 		    strerror(error));
 		exit(EX_OSERR);
 	}
-	acl_init_entry();
+	gacl = acl_init_entry();
 
 	return;
 }
 
 void
 acl_add_flushaddr(void) {
-	gacl.a_flags |= A_FLUSHADDR;
+	gacl->a_flags |= A_FLUSHADDR;
 	return;	
 }
 
@@ -856,7 +866,7 @@ acl_add_clause(type, data)
 	}
 
 	if (acr->acr_unicity == UNIQUE) {
-		LIST_FOREACH(cac, &gacl.a_clause, ac_list) {
+		LIST_FOREACH(cac, &gacl->a_clause, ac_list) {
 			if (cac->ac_type == type) {
 				mg_log(LOG_ERR, 
 				    "Multiple %s clauses in ACL line %d",
@@ -869,7 +879,7 @@ acl_add_clause(type, data)
 	ac->ac_type = type;
 	ac->ac_acr = acr;
 	(*acr->acr_add)(&ac->ac_data, data);
-	LIST_INSERT_HEAD(&gacl.a_clause, ac, ac_list);
+	LIST_INSERT_HEAD(&gacl->a_clause, ac, ac_list);
 		
 	/* 
 	 * Lists deserve a special treatment: the clause is parsed with 
@@ -912,7 +922,7 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 	struct acl_entry *acl;
 	struct acl_clause *ac;
 
-	LIST_FOREACH(ac, &gacl.a_clause, ac_list) {
+	LIST_FOREACH(ac, &gacl->a_clause, ac_list) {
 		if (ac->ac_acr->acr_stage == AS_ANY)
 			continue;
 		if (ac->ac_acr->acr_stage != acl_stage) {
@@ -958,12 +968,12 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
-	memcpy(acl, &gacl, sizeof(*acl));
+	acl = gacl;
 	acl->a_type = acl_type;
 	acl->a_stage = acl_stage;
 	acl->a_line = conf_line - 1;
 	TAILQ_INSERT_HEAD(&acl_head, acl, a_list);
-	acl_init_entry ();
+	gacl = acl_init_entry ();
 
 	if (conf.c_debug || conf.c_acldebug) {
 		switch(acl_type) {
@@ -994,7 +1004,7 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 	struct acl_entry *acl;
 	struct acl_clause *ac;
 
-	LIST_FOREACH(ac, &gacl.a_clause, ac_list) {
+	LIST_FOREACH(ac, &gacl->a_clause, ac_list) {
 		if (ac->ac_acr->acr_stage == AS_ANY)
 			continue;
 		if (ac->ac_acr->acr_stage != acl_stage) {
@@ -1036,16 +1046,12 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 		}
 	}
 
-	if ((acl = malloc(sizeof(*acl))) == NULL) {
-		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-	*acl = gacl;
+	acl = gacl;
 	acl->a_stage = acl_stage;
 	acl->a_type = acl_type;
 	acl->a_line = conf_line - 1;
 	TAILQ_INSERT_TAIL(&acl_head, acl, a_list);
-	acl_init_entry();
+	gacl = acl_init_entry();
 
 	if (conf.c_debug || conf.c_acldebug) {
 		switch(acl_type) {
@@ -1341,7 +1347,6 @@ acl_clear(void) {	/* acllist must be write locked */
 		acl = TAILQ_FIRST(&acl_head);
 		TAILQ_REMOVE(&acl_head, acl, a_list);
 
-
 		while (!LIST_EMPTY(&acl->a_clause)) {
 			ac = LIST_FIRST(&acl->a_clause);
 			LIST_REMOVE(ac, ac_list);
@@ -1358,9 +1363,6 @@ acl_clear(void) {	/* acllist must be write locked */
 			free(acl->a_msg);
 		free(acl);
 	}
-
-	TAILQ_INIT(&acl_head);
-	acl_init_entry();
 
 	return;
 }
@@ -1490,13 +1492,13 @@ void
 acl_add_delay(delay)
 	time_t delay;
 {
-	if (gacl.a_delay != -1) {
+	if (gacl->a_delay != -1) {
 		mg_log(LOG_ERR,
 		    "delay specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
-	gacl.a_delay = delay;
+	gacl->a_delay = delay;
 		
 	if (conf.c_debug || conf.c_acldebug)
 		mg_log(LOG_DEBUG, "load acl delay %ld", (long)delay);
@@ -1508,13 +1510,13 @@ void
 acl_add_autowhite(delay)
 	time_t delay;
 {
-	if (gacl.a_autowhite != -1) {
+	if (gacl->a_autowhite != -1) {
 		mg_log(LOG_ERR,
 		    "autowhite specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
-	gacl.a_autowhite = delay;
+	gacl->a_autowhite = delay;
 		
 	if (conf.c_debug || conf.c_acldebug)
 		mg_log(LOG_DEBUG, "load acl delay %ld", (long)delay);
@@ -1537,7 +1539,7 @@ acl_add_list(ad, data)
 		exit(EX_DATAERR);
 	}
 
-	LIST_FOREACH(cac, &gacl.a_clause, ac_list) {
+	LIST_FOREACH(cac, &gacl->a_clause, ac_list) {
 		if (cac->ac_acr->acr_list_type != ale->al_acr->acr_type)
 			continue;
 		if (cac->ac_acr->acr_unicity == UNIQUE) {
@@ -1557,13 +1559,13 @@ void
 acl_add_code(code)
 	char *code;
 {
-	if (gacl.a_code) {
+	if (gacl->a_code) {
 		mg_log(LOG_ERR,
 		    "code specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
-	if ((gacl.a_code = strdup(code)) == NULL) {
+	if ((gacl->a_code = strdup(code)) == NULL) {
 		mg_log(LOG_ERR,
 		    "malloc failed in ACL line %d", conf_line);
 		exit(EX_OSERR);
@@ -1579,13 +1581,13 @@ void
 acl_add_ecode(ecode)
 	char *ecode;
 {
-	if (gacl.a_ecode) {
+	if (gacl->a_ecode) {
 		mg_log(LOG_ERR,
 		    "ecode specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
-	if ((gacl.a_ecode = strdup(ecode)) == NULL) {
+	if ((gacl->a_ecode = strdup(ecode)) == NULL) {
 		mg_log(LOG_ERR,
 		    "malloc failed in ACL line %d", conf_line);
 		exit(EX_OSERR);
@@ -1601,13 +1603,13 @@ void
 acl_add_msg(msg)
 	char *msg;
 {
-	if (gacl.a_msg) {
+	if (gacl->a_msg) {
 		mg_log(LOG_ERR,
 		    "msg specified twice in ACL line %d", conf_line);
 		exit(EX_DATAERR);
 	}
 
-	if ((gacl.a_msg = strdup(msg)) == NULL) {
+	if ((gacl->a_msg = strdup(msg)) == NULL) {
 		mg_log(LOG_ERR,
 		    "malloc failed in ACL line %d", conf_line);
 		exit(EX_OSERR);
