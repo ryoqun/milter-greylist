@@ -166,13 +166,13 @@
 #define PACKAGE_NAME "milter-greylist"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "milter-greylist 3.1.2"
+#define PACKAGE_STRING "milter-greylist 3.1.3"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "milter-greylist"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "3.1.2"
+#define PACKAGE_VERSION "3.1.3"
 
 /* Define to 1 if the C compiler supports function prototypes. */
 #define PROTOTYPES 1
