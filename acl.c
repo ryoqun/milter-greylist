@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.41 2006/12/29 20:38:17 manu Exp $ */
+/* $Id: acl.c,v 1.42 2006/12/30 23:34:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.41 2006/12/29 20:38:17 manu Exp $");
+__RCSID("$Id: acl.c,v 1.42 2006/12/30 23:34:35 manu Exp $");
 #endif
 #endif
 
@@ -433,7 +433,7 @@ acl_list_filter(ad, stage, ap, priv)
 	ale = ad->list;
 	
 	LIST_FOREACH(le, &ale->al_head, l_list) {
-		retval = (*le->l_acr->acr_filter)(ad, stage, ap, priv);
+		retval = (*le->l_acr->acr_filter)(&le->l_data, stage, ap, priv);
 		if (retval != 0)
 			return retval;
 	}
@@ -584,16 +584,21 @@ acl_add_regex(ad, data)
 	}
 	ad->regex.re = regex;
 
+	if ((ad->regex.re_copy = strdup(regexstr)) == NULL) {
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if (regexstr[0] == '/')
+		regexstr++;
+	if ((strlen(regexstr) > 0) && (regexstr[strlen(regexstr) - 1] == '/'))
+		regexstr[strlen(regexstr) - 1] = '\0';
+
 	if ((error = regcomp(regex, regexstr, 
 	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
 		regerror(error, regex, errstr, ERRLEN);
 		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
 		    regexstr, errstr);
-		exit(EX_OSERR);
-	}
-
-	if ((ad->regex.re_copy = strdup(regexstr)) == NULL) {
-		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
@@ -627,7 +632,7 @@ acl_init_entry(void)
 		exit(EX_OSERR);
 	}
 
-	memset(acl, 0, sizeof (acl));
+	memset(acl, 0, sizeof(*acl));
 	acl->a_delay = -1;
 	acl->a_autowhite = -1;
 	LIST_INIT(&acl->a_clause);
@@ -717,11 +722,15 @@ acl_add_netblock(ad, data)
 		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
+	if ((ad->netblock.mask = malloc(sizeof(*ad->netblock.mask))) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
 		
 	ad->netblock.salen = salen;
 	ad->netblock.cidr = cidr;
 	memcpy(ad->netblock.addr, sa, salen);
-	memcpy(&ad->netblock.mask, &mask, masklen);
+	memcpy(ad->netblock.mask, &mask, masklen);
 
 	return;
 }
@@ -731,6 +740,7 @@ acl_free_netblock(ad)
 	acl_data_t *ad;
 {
 	free(ad->netblock.addr);
+	free(ad->netblock.mask);
 	return;
 }
 
