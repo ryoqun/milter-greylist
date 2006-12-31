@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.147 2006/12/29 18:32:44 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.148 2006/12/31 18:05:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.147 2006/12/29 18:32:44 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.148 2006/12/31 18:05:57 manu Exp $");
 #endif
 #endif
 
@@ -1313,11 +1313,25 @@ main(argc, argv)
 	 */
 	if (conf.c_user != NULL) {
 		struct passwd *pw = NULL;
+		struct group *gr = NULL;
+		char *c_group = NULL;
+
+		if ((c_group = strchr(conf.c_user, ':')) != NULL)
+			*c_group++ = '\0';
 
 		if ((pw = getpwnam(conf.c_user)) == NULL) {
 			mg_log(LOG_ERR, "%s: cannot get user %s data: %s",
 			    argv[0], conf.c_user, strerror(errno));
 			exit(EX_OSERR);
+		}
+
+		if (c_group != NULL) {
+			if ((gr = getgrnam(c_group)) == NULL) {
+				mg_log(LOG_ERR, "%s: cannot get group %s data: %s",
+			    	argv[0], c_group, strerror(errno));
+				exit(EX_OSERR);
+			}
+			pw->pw_gid = gr->gr_gid;
 		}
 
 #ifdef HAVE_INITGROUPS
@@ -1396,7 +1410,7 @@ usage(progname)
 	mg_log(LOG_ERR,
 	    "       [-f configfile] [-h] [-l] [-q] [-r] [-S] [-T]");
 	mg_log(LOG_ERR,
-	    "       [-u username] [-v] [-w greylist_delay] [-L cidrmask]");
+	    "       [-u username[:groupname]] [-v] [-w greylist_delay] [-L cidrmask]");
 	mg_log(LOG_ERR,
 	    "       [-M prefixlen] [-P pidfile] -p socket");
 	exit(EX_USAGE);

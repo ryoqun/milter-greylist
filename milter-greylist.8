@@ -1,5 +1,5 @@
 .\"
-.\" $Id: milter-greylist.8,v 1.40 2006/08/30 20:50:42 manu Exp $
+.\" $Id: milter-greylist.8,v 1.41 2006/12/31 18:05:57 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -46,7 +46,7 @@
 [\fB-r\fR]
 [\fB-S\fR]
 [\fB-T\fR]
-[\fB-u \fIusername\fR]
+[\fB-u \fIusername\fR[:\fIgroupname\fR]]
 [\fB-v\fR]
 [\fB-w \fIgreylist_delay\fR]
 [\fB-L \fIcidrmask\fR]
@@ -235,10 +235,12 @@ selected for greylisting. This option and the
 .I rcpt
 lines have been deprecated in favor of ACL, so do not use it. 
 .TP
-.B -u \fIusername\fR
+.B -u \fIusername\fR[:\fIgroupname\fR]
 Drop root privileges and switch to 
 .I username
-credentials.  Make sure this user has write access to 
+(and optionally
+.IR groupname )
+credentials. Make sure this user (and group) has write access to
 .I greylist.db\fR.
 Equivalent to the
 .I user
@@ -308,6 +310,7 @@ Remy Card,
 Alexandre Cherif,
 Eugene Crosser,
 Elrond,
+Ralf S. Engelschall,
 Cyril Guibourg,
 Klas Heggemann,
 Matthieu Herrb,
