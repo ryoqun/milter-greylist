@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.6 2007/01/01 08:08:41 manu Exp $ */
+/* $Id: urlcheck.c,v 1.7 2007/01/01 10:57:13 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.6 2007/01/01 08:08:41 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.7 2007/01/01 10:57:13 manu Exp $");
 #endif
 #endif
 
@@ -67,9 +67,8 @@ __RCSID("$Id: urlcheck.c,v 1.6 2007/01/01 08:08:41 manu Exp $");
  */
 struct urlchecklist urlcheck_head;
 
-static size_t urlmaxlen(char *);
 static char *fstring_expand(struct mlfi_priv *, 
-    char *, struct urlcheck_entry *);
+    char *, char *);
 static size_t curl_outlet(void *, size_t, size_t, void *);
 static int answer_parse(struct iovec *, struct acl_param *);
 static int answer_getline(char *, char *, struct acl_param *);
@@ -115,8 +114,6 @@ urlcheck_def_add(name, url, max_cnx) /* acllist must be write locked */
 
 	strncpy(ue->u_url, url, sizeof(ue->u_url));
 	ue->u_url[sizeof(ue->u_url) - 1] = '\0';
-
-	ue->u_urlmaxlen = urlmaxlen(ue->u_url);
 
 	ue->u_maxcnx = max_cnx;
 
@@ -213,14 +210,48 @@ urlcheck_clear(void)	/* acllist must be write locked */
 	return;
 }
 
+static void
+mystrncat(s, append, slenmax)
+	char **s;
+	char *append;
+	size_t *slenmax;
+{
+	char *str = *s;
+	size_t alen;
+	size_t slen;
+
+	slen = strlen(*s);
+	alen = strlen(append);
+
+	if (slen + alen > *slenmax) {
+		if (conf.c_debug)
+			mg_log(LOG_DEBUG, "resize url buffer %d -> %d",
+			    *slenmax, slen + alen);
+
+		if ((str = realloc(str, slen + alen + 1)) == NULL) {
+			mg_log(LOG_ERR, "malloc(%d) failed",
+			    slen + alen + 1, strerror(errno));
+			exit(EX_OSERR);
+		}
+		*slenmax = slen + alen;
+		*s = str;
+	}
+
+	memcpy(str + slen, append, alen);
+	str[slen + alen] = '\0';
+
+	return;
+}
+
 static char *
-fstring_expand(priv, rcpt, ue)
+fstring_expand(priv, rcpt, fstring)
 	struct mlfi_priv *priv;
 	char *rcpt;
-	struct urlcheck_entry *ue;
+	char *fstring;
 {
 	size_t offset;
 	char *outstr;
+	size_t outmaxlen = URLMAXLEN;
 	char *tmpstr;
 	char *tmpstrp;
 	char *last;
@@ -228,14 +259,13 @@ fstring_expand(priv, rcpt, ue)
 	int fstr_len;	/* format string length, minus the % (eg: %mr -> 2) */
 	int skip_until_brace_close = 0;
 
-	if ((outstr = malloc(ue->u_urlmaxlen)) == NULL) {
-		mg_log(LOG_ERR, "malloc(%d) failed: %s", 
-		    ue->u_urlmaxlen, strerror(errno));
+	if ((outstr = malloc(outmaxlen + 1)) == NULL) {
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 	outstr[0] = '\0';
 
-	if ((tmpstr = strdup(ue->u_url)) == NULL) {
+	if ((tmpstr = strdup(fstring)) == NULL) {
 		mg_log(LOG_ERR, "strdup() failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
@@ -257,7 +287,7 @@ fstring_expand(priv, rcpt, ue)
 
 			skip_until_brace_close = 0;
 			ptok = cp + 1;
-			strncat(outstr, ptok, ue->u_urlmaxlen);
+			mystrncat(&outstr, ptok, &outmaxlen);
 			continue;
 		}
 
@@ -267,7 +297,7 @@ fstring_expand(priv, rcpt, ue)
 		 */
 		if (tmpstrp != NULL) {
 			tmpstrp = NULL;
-			strncat(outstr, ptok, ue->u_urlmaxlen);
+			mystrncat(&outstr, ptok, &outmaxlen);
 			continue;
 		}
 
@@ -280,21 +310,21 @@ fstring_expand(priv, rcpt, ue)
 
 		switch (*ptok) {
 		case 'h':	/* Hello string */
-			strncat(outstr, priv->priv_helo, ue->u_urlmaxlen);
+			mystrncat(&outstr, priv->priv_helo, &outmaxlen);
 			break;
 		case 'd':	/* Sender machine DNS name */
-			strncat(outstr, priv->priv_hostname, ue->u_urlmaxlen);
+			mystrncat(&outstr, priv->priv_hostname, &outmaxlen);
 			break;
 		case 'f':	/* Sender e-mail */
-			strncat(outstr, 
+			mystrncat(&outstr, 
 			    strip_brackets(tmpaddr, priv->priv_from, ADDRLEN), 
-			    ue->u_urlmaxlen);
+			    &outmaxlen);
 			break;
 		case 'r':	/* Recipient e-mail */
 			if (rcpt != NULL)
-				strncat(outstr, 
+				mystrncat(&outstr, 
 					strip_brackets(tmpaddr, rcpt, ADDRLEN), 
-					ue->u_urlmaxlen);
+					&outmaxlen);
 			break;
 		case 'm': 	/* mailbox part of sender or receiver e-mail */
 				/* Or machine part of DNS address */
@@ -302,25 +332,25 @@ fstring_expand(priv, rcpt, ue)
 
 			switch(*(ptok + 1)) {
 			case 'r':	/* Recipient */
-				strncat(outstr, 
+				mystrncat(&outstr, 
 					mbox_only(tmpaddr, 
 					      rcpt, 
 					      ADDRLEN), 
-					ue->u_urlmaxlen);
+					&outmaxlen);
 				break;
 			case 'f':	/* Sender */
-				strncat(outstr, 
+				mystrncat(&outstr, 
 				    	mbox_only(tmpaddr, 
 					      priv->priv_from, 
 					      ADDRLEN), 
-					ue->u_urlmaxlen);
+					&outmaxlen);
 				break;
 			case 'd':	/* DNS name */
-				strncat(outstr, 
+				mystrncat(&outstr, 
 				    	machine_only(tmpaddr, 
 					      priv->priv_hostname, 
 					      ADDRLEN), 
-					ue->u_urlmaxlen);
+					&outmaxlen);
 				break;
 			default:
 				fstr_len = 0;
@@ -333,25 +363,25 @@ fstring_expand(priv, rcpt, ue)
 
 			switch(*(ptok + 1)) {
 			case 'r':	/* Recipient */
-				strncat(outstr, 
+				mystrncat(&outstr, 
 					site_only(tmpaddr, 
 					      rcpt, 
 					      ADDRLEN), 
-					ue->u_urlmaxlen);
+					&outmaxlen);
 				break;
 			case 'f':	/* Sender */
-				strncat(outstr, 
+				mystrncat(&outstr, 
 				    	site_only(tmpaddr, 
 					      priv->priv_from, 
 					      ADDRLEN), 
-					ue->u_urlmaxlen);
+					&outmaxlen);
 				break;
 			case 'd':	/* DNS name */
-				strncat(outstr, 
+				mystrncat(&outstr, 
 				    	domain_only(tmpaddr, 
 					      priv->priv_hostname, 
 					      ADDRLEN), 
-					ue->u_urlmaxlen);
+					&outmaxlen);
 				break;
 			default:
 				fstr_len = 0;
@@ -363,7 +393,7 @@ fstring_expand(priv, rcpt, ue)
 
 			iptostring(SA(&priv->priv_addr),
 			    priv->priv_addrlen, ipstr, sizeof(ipstr));
-			strncat(outstr, ipstr, ue->u_urlmaxlen);
+			mystrncat(&outstr, ipstr, &outmaxlen);
 			break;
 		}
 		case 'T': {	/* current time %T{strftime_string} */
@@ -382,7 +412,7 @@ fstring_expand(priv, rcpt, ue)
 			 * since strtok removed the next *
 			 */
 			offset = ((u_long)ptok + 2) - (u_long)tmpstr;
-			for (cp = ue->u_url + offset; *cp; cp++) {
+			for (cp = fstring + offset; *cp; cp++) {
 				fstr_len++;
 				if (*cp == '}')
 					break;
@@ -402,13 +432,13 @@ fstring_expand(priv, rcpt, ue)
 			}
 
 			/* -3 to remove T{ after the % and trailing } */
-			memcpy(format, ue->u_url + offset, fstr_len - 3);
+			memcpy(format, fstring + offset, fstr_len - 3);
 			format[fstr_len - 3] = '\0';
 
 			now = time(NULL);
 			(void)localtime_r(&now, &tm);
 			(void)strftime(outstr + strlen(outstr), 
-			    ue->u_urlmaxlen - strlen(outstr), format, &tm);
+			    outmaxlen - strlen(outstr), format, &tm);
 			
 			free(format);
 
@@ -467,7 +497,7 @@ fstring_expand(priv, rcpt, ue)
 			if (symval == NULL)
 				symval = "";
 
-			strncat(outstr, symval, ue->u_urlmaxlen);
+			mystrncat(&outstr, symval, &outmaxlen);
 
 			free(symname);
 			break;
@@ -489,11 +519,11 @@ fstring_expand(priv, rcpt, ue)
 		 * Otherwise, skip the format string
 		 */
 		if (fstr_len == 0)
-			strncat(outstr, "%", ue->u_urlmaxlen);
+			mystrncat(&outstr, "%", &outmaxlen);
 		else
 			ptok += fstr_len;
 
-		strncat(outstr, ptok, ue->u_urlmaxlen);
+		mystrncat(&outstr, ptok, &outmaxlen);
 	}
 
 	free(tmpstr);
@@ -675,7 +705,7 @@ urlcheck_validate(ad, stage, ap, priv)
 
 	rcpt = priv->priv_cur_rcpt;
 	ue = ad->urlcheck;
-	url = fstring_expand(priv, rcpt, ue);
+	url = fstring_expand(priv, rcpt, ue->u_url);
 
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "checking \"%s\"\n", url);
@@ -864,53 +894,6 @@ answer_getline(key, value, ap)
 	return -1;
 out:
 	return 0;
-}
-
-static size_t 
-urlmaxlen(url)
-	char *url;
-{
-	size_t len;
-	char *cp;
-	char *pp;
-
-	len = strlen(url);
-
-	cp = url;
-	do {
-		if ((pp = index(cp, '%')) == NULL)
-			break;
-
-		/* We were on the last char, or we have a % at end of URL */
-		if ((pp == '\0') || ((pp + 1) == '\0'))
-			break;
-
-		switch (*(pp + 1)) {
-		case 'h':	/* Hello string */
-		case 'd':	/* DNS address */
-		case 'f':	/* Sender e-mail */
-		case 'r':	/* Recipient e-mail */
-		case 'm':	/* mbox or machine */
-		case 's':	/* domain name */
-			len += ADDRLEN;
-			break;
-		case 'i':	/* IP address */
-			len += IPADDRSTRLEN;
-			break;
-		case 'M':	/* Sendmail macro */
-			len += MACROMAXLEN;
-			break;
-		case 'T':	/* Time */
-			len += TIMEMAXLEN;
-			break;
-		default:
-			break;
-		}
-
-		cp = pp + 1;
-	} while (1 /* CONSTCOND */);
-
-	return len;
 }
 
 static char *

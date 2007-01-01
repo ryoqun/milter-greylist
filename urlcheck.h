@@ -1,4 +1,4 @@
-/* $Id: urlcheck.h,v 1.5 2007/01/01 08:08:41 manu Exp $ */
+/* $Id: urlcheck.h,v 1.6 2007/01/01 10:57:13 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -32,11 +32,10 @@
 #include <curl/curl.h>
 
 /* 
- * Max length for sendmail macro value and time. Of course that is not 
- * right but it should fit most usages.
+ * Maximum URL length. This is just a hint, 
+ * the code will adjust the buffer if needed.
  */
-#define MACROMAXLEN	4096	/* Sendmail's default MACBUFSIZE */
-#define TIMEMAXLEN	128	/* Arbitrary */
+#define URLMAXLEN	2083
 
 LIST_HEAD(urlchecklist, urlcheck_entry);
 
@@ -49,7 +48,6 @@ struct urlcheck_cnx {
 struct urlcheck_entry {
 	char u_name[QSTRLEN + 1];
 	char u_url[QSTRLEN + 1];
-	size_t u_urlmaxlen;
 	int u_maxcnx;
 	struct urlcheck_cnx *u_cnxpool;
 	LIST_ENTRY(urlcheck_entry) u_list;
