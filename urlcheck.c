@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.7 2007/01/01 10:57:13 manu Exp $ */
+/* $Id: urlcheck.c,v 1.8 2007/01/01 13:26:12 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.7 2007/01/01 10:57:13 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.8 2007/01/01 13:26:12 manu Exp $");
 #endif
 #endif
 
@@ -292,13 +292,14 @@ fstring_expand(priv, rcpt, fstring)
 		}
 
 		/* 
-		 * If first time, there is no '%' to substitue yet 
-		 * (no URL starts by '%')
+		 * If first time, check if the first char was a '%'
 		 */
 		if (tmpstrp != NULL) {
 			tmpstrp = NULL;
-			mystrncat(&outstr, ptok, &outmaxlen);
-			continue;
+			if (fstring[0] != '%') {
+				mystrncat(&outstr, ptok, &outmaxlen);
+				continue;
+			}
 		}
 
 		/* 
