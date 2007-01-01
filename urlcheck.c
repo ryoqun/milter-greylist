@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.5 2006/12/29 18:32:44 manu Exp $ */
+/* $Id: urlcheck.c,v 1.6 2007/01/01 08:08:41 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.5 2006/12/29 18:32:44 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.6 2007/01/01 08:08:41 manu Exp $");
 #endif
 #endif
 
@@ -219,12 +219,14 @@ fstring_expand(priv, rcpt, ue)
 	char *rcpt;
 	struct urlcheck_entry *ue;
 {
+	size_t offset;
 	char *outstr;
 	char *tmpstr;
 	char *tmpstrp;
 	char *last;
 	char *ptok;
 	int fstr_len;	/* format string length, minus the % (eg: %mr -> 2) */
+	int skip_until_brace_close = 0;
 
 	if ((outstr = malloc(ue->u_urlmaxlen)) == NULL) {
 		mg_log(LOG_ERR, "malloc(%d) failed: %s", 
@@ -242,6 +244,22 @@ fstring_expand(priv, rcpt, ue)
 
 	while ((ptok = strtok_r(tmpstrp, "%", &last)) != NULL) {
 		char tmpaddr[ADDRLEN + 1];
+
+		if (skip_until_brace_close) {
+			char *cp;
+
+			for (cp = ptok; *cp; cp++)
+				if (*cp == '}') 
+					break;
+
+			if (*cp == '\0')
+				continue;
+
+			skip_until_brace_close = 0;
+			ptok = cp + 1;
+			strncat(outstr, ptok, ue->u_urlmaxlen);
+			continue;
+		}
 
 		/* 
 		 * If first time, there is no '%' to substitue yet 
@@ -348,11 +366,123 @@ fstring_expand(priv, rcpt, ue)
 			strncat(outstr, ipstr, ue->u_urlmaxlen);
 			break;
 		}
+		case 'T': {	/* current time %T{strftime_string} */
+			char *cp;
+			time_t now;
+			struct tm tm;
+			char *format;
+
+			if (*(ptok + 1) != '{')
+				break;
+
+			fstr_len = 2;
+
+			/* 
+			 * Lookup in the original string and not in tmpstr
+			 * since strtok removed the next *
+			 */
+			offset = ((u_long)ptok + 2) - (u_long)tmpstr;
+			for (cp = ue->u_url + offset; *cp; cp++) {
+				fstr_len++;
+				if (*cp == '}')
+					break;
+			}
+
+			/* No match, no substitution */
+			if (*cp == '\0') {
+				fstr_len = 0;
+				break;
+			}
+
+			format = malloc(fstr_len + 1);
+			if (format == NULL) {
+				mg_log(LOG_ERR, "malloc failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+
+			/* -3 to remove T{ after the % and trailing } */
+			memcpy(format, ue->u_url + offset, fstr_len - 3);
+			format[fstr_len - 3] = '\0';
+
+			now = time(NULL);
+			(void)localtime_r(&now, &tm);
+			(void)strftime(outstr + strlen(outstr), 
+			    ue->u_urlmaxlen - strlen(outstr), format, &tm);
+			
+			free(format);
+
+			/* We need to skip inside of %T{} */
+			skip_until_brace_close = 1;
+			break;
+		}
+		case 'M': { 	/* sendmail macro (maybe %Mj or %M{foo}) */
+			char *cp;
+			char *symval;
+			char *symname;
+
+			switch(*(ptok + 1)) {
+			case '{':
+				fstr_len = 2;
+				/* Find the trailing } */
+				for (cp = ptok + 2; *cp; cp++) {
+					fstr_len++;
+					if (*cp == '}')
+						break;
+				}
+
+				/* No match, no substitution */
+				if (*cp == '\0')
+					fstr_len = 0;
+
+				break;
+			default:
+				fstr_len = 2;
+				break;
+			}
+
+			if (fstr_len == 0)
+				break;
+
+			symname = malloc(fstr_len + 1);
+			if (symname == NULL) {
+				mg_log(LOG_ERR, "malloc failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+			/* +1/-1 to skip the M after the % */
+			memcpy(symname, ptok + 1, fstr_len - 1);
+			symname[fstr_len - 1] = '\0';
+
+			symval = smfi_getsymval(priv->priv_ctx, symname);
+
+#if 0
+			if (conf.c_debug) 
+				mg_log(LOG_DEBUG, 
+				    "macro %s value = \"%s\"",
+				    symname, 
+				    (symval == NULL) ? "(null)" : symval);
+#endif
+
+			if (symval == NULL)
+				symval = "";
+
+			strncat(outstr, symval, ue->u_urlmaxlen);
+
+			free(symname);
+			break;
+		}
 		default:
 			fstr_len = 0;
 			break;
 		}
 
+		/* 
+		 * Special case for %T{}: no need to copy the 
+		 * next chars until a %, as we want to skip until a }
+		 */
+		if (skip_until_brace_close)
+			continue;
 
 		/* 
 		 * If no substitution was made, then keep the '%' 
@@ -766,6 +896,12 @@ urlmaxlen(url)
 			break;
 		case 'i':	/* IP address */
 			len += IPADDRSTRLEN;
+			break;
+		case 'M':	/* Sendmail macro */
+			len += MACROMAXLEN;
+			break;
+		case 'T':	/* Time */
+			len += TIMEMAXLEN;
 			break;
 		default:
 			break;

@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.42 2006/12/30 23:34:35 manu Exp $ */
+/* $Id: acl.c,v 1.43 2007/01/01 08:08:41 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.42 2006/12/30 23:34:35 manu Exp $");
+__RCSID("$Id: acl.c,v 1.43 2007/01/01 08:08:41 manu Exp $");
 #endif
 #endif
 
@@ -318,6 +318,7 @@ acl_body_strstr(ad, stage, ap, priv)
 	LIST_FOREACH(b, &priv->priv_body, b_list)
 		if (strstr(b->b_lines, ad->string) != NULL)
 			return EXF_BODY;
+
 	return 0;
 }
 

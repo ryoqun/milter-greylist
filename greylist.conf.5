@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.50 2006/12/26 21:21:52 manu Exp $
+.\" $Id: greylist.conf.5,v 1.51 2007/01/01 08:08:41 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -497,6 +497,18 @@ the machine part of %d (before the first . sign)
 .TP
 .I %sd
 the site part of %d (after the first . sign)
+.TP
+.I %M
+a sendmail macro value. Examples: 
+.I %Mj
+or
+.I %M{if_addr}
+.TP
+.I %T
+a brace-enclosed
+.B strftime(3) 
+format string that will be substituted by the system time. Example:
+.I %T{%Y%m%d:%H%M%S}
 .TP
 .I %%
 a single % character
