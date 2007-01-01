@@ -1,9 +1,9 @@
-# $Id: README,v 1.44 2006/12/06 15:02:41 manu Exp $
+# $Id: README,v 1.45 2007/01/01 12:53:19 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2006/12/06 15:02:41 $
+		       $Date: 2007/01/01 12:53:19 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -287,7 +287,7 @@ source ports and destination port 5252.
  ==============
 
 milter-greylist can use a DNSRBL to decide wether a host should be
-greylisted or whitelisted. For instance, let us say that you cant to
+greylisted or whitelisted. For instance, let us say that you want to
 greylist any host appearing in the SORBS dynamic pool list (this include
 DSL and cable pools). You would do this:
 
