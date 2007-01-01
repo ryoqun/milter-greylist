@@ -1,9 +1,9 @@
-# $Id: README,v 1.45 2007/01/01 12:53:19 manu Exp $
+# $Id: README,v 1.46 2007/01/01 12:57:40 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/01/01 12:53:19 $
+		       $Date: 2007/01/01 12:57:40 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -291,7 +291,7 @@ greylisted or whitelisted. For instance, let us say that you want to
 greylist any host appearing in the SORBS dynamic pool list (this include
 DSL and cable pools). You would do this:
 
-# if IP a.b.c.d is positive, then nslookup of d.c.b.a.dnsbl.sorbs.net 
+# if IP 192.0.2.18 is positive, then nslookup of 18.2.0.192.dnsbl.sorbs.net 
 # returns 127.0.0.10
 dnsrbl "SORBS DUN" dnsbl.sorbs.net 127.0.0.10
 acl greylist dnsrbl "SORBS DUN"
