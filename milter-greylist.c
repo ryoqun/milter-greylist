@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.148 2006/12/31 18:05:57 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.149 2007/01/01 17:29:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.148 2006/12/31 18:05:57 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.149 2007/01/01 17:29:29 manu Exp $");
 #endif
 #endif
 
@@ -52,6 +52,7 @@ __RCSID("$Id: milter-greylist.c,v 1.148 2006/12/31 18:05:57 manu Exp $");
 #include <unistd.h>
 #include <stdarg.h>
 #include <signal.h>
+#include <string.h>
 
 /* On IRIX, <unistd.h> defines a EX_OK that clashes with <sysexits.h> */
 #ifdef EX_OK
@@ -86,6 +87,7 @@ static int check_drac(char *dotted_ip);
 #include "sync.h"
 #include "spf.h"
 #include "autowhite.h"
+#include "stat.h"
 #include "milter-greylist.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"
@@ -253,6 +255,7 @@ real_connect(ctx, hostname, addr)
 	bzero((void *)priv, sizeof(*priv));
 	priv->priv_ctx = ctx;
 	priv->priv_sr.sr_whitelist = EXF_UNSET;
+	priv->priv_sr.sr_retcode = -1;
 	LIST_INIT(&priv->priv_rcpt);
 	priv->priv_cur_rcpt = NULL;
 	LIST_INIT(&priv->priv_header);
@@ -428,11 +431,17 @@ real_envrcpt(ctx, envrcpt)
 	char addrstr[IPADDRSTRLEN];
 	char rcpt[ADDRLEN + 1];
 
+	/*
+	 * Strip spaces from the recipient address
+	 */
+	strncpy_rmsp(rcpt, *envrcpt, ADDRLEN);
+	rcpt[ADDRLEN] = '\0';
+
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 	if (!iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
 	    sizeof(addrstr)))
-		return SMFIS_CONTINUE;
+		goto exit_accept;
 
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "%s: addr = %s[%s], from = %s, rcpt = %s", 
@@ -462,7 +471,7 @@ real_envrcpt(ctx, envrcpt)
 	    (priv->priv_sr.sr_whitelist & EXF_ACCESSDB) ||
 	    (priv->priv_sr.sr_whitelist & EXF_MACRO) ||
 	    (priv->priv_sr.sr_whitelist & EXF_STARTTLS))
-		return SMFIS_CONTINUE;
+		goto exit_accept;
 
 #ifdef USE_DRAC
 	if ((SA(&priv->priv_addr)->sa_family == AF_INET) && 
@@ -472,7 +481,7 @@ real_envrcpt(ctx, envrcpt)
 		priv->priv_sr.sr_elapsed = 0;
 		priv->priv_sr.sr_whitelist = EXF_DRAC;
 
-		return SMFIS_CONTINUE;
+		goto exit_accept;
 	}
 #endif
 
@@ -488,19 +497,13 @@ real_envrcpt(ctx, envrcpt)
 		priv->priv_sr.sr_elapsed = 0;
 		priv->priv_sr.sr_whitelist = EXF_ACCESSDB;
  
-		return SMFIS_CONTINUE;
+		goto exit_accept;
 	}
 
 	/* 
 	 * Restart the sync master thread if nescessary
 	 */
 	sync_master_restart();
-
-	/*
-	 * Strip spaces from the recipient address
-	 */
-	strncpy_rmsp(rcpt, *envrcpt, ADDRLEN);
-	rcpt[ADDRLEN] = '\0';
 
 	/*
 	 * Check the ACL
@@ -510,7 +513,7 @@ real_envrcpt(ctx, envrcpt)
 	if ((priv->priv_sr.sr_whitelist = acl_filter(AS_RCPT, 
 	    ctx, priv)) & EXF_WHITELIST) {
 		priv->priv_sr.sr_elapsed = 0;
-		return SMFIS_CONTINUE;
+		goto exit_accept;
 	}
 
 	/* 
@@ -539,7 +542,8 @@ real_envrcpt(ctx, envrcpt)
 		    priv->priv_sr.sr_msg : msg;
 		(void)smfi_setreply(ctx, code, ecode, msg);
 
-		return *code == '4' ? SMFIS_TEMPFAIL : SMFIS_REJECT;
+		return mg_stat(priv,
+		    *code == '4' ? SMFIS_TEMPFAIL : SMFIS_REJECT);
 	}
 
 	/* 
@@ -552,7 +556,7 @@ real_envrcpt(ctx, envrcpt)
 
 	if (priv->priv_sr.sr_whitelist != EXF_NONE) {
 		priv->priv_sr.sr_elapsed = 0;
-		return SMFIS_CONTINUE;
+		goto exit_accept;
 	}
 
 	/*
@@ -579,12 +583,10 @@ real_envrcpt(ctx, envrcpt)
 	    priv->priv_from, rcpt, &remaining, &priv->priv_sr.sr_elapsed,
 	    priv->priv_queueid, priv->priv_sr.sr_delay, 
 	    priv->priv_sr.sr_autowhite) != 0)
-		return SMFIS_CONTINUE;
+		goto exit_accept;
 
 	priv->priv_sr.sr_remaining = remaining;
 
-	
-	add_recipient(priv, rcpt);
 	/*
 	 * The message has been added to the greylist and will be delayed.
 	 * If the sender address is null, this will be done after the DATA
@@ -595,14 +597,19 @@ real_envrcpt(ctx, envrcpt)
 	if ((conf.c_delayedreject == 1) && 
 	    (strcmp(priv->priv_from, "<>") == 0)) {
 		priv->priv_delayed_reject = 1;
-		return SMFIS_CONTINUE;
+		add_recipient(priv, rcpt);
+		goto exit_accept;
 	}
 
 	/*
 	 * Log temporary failure and report to the client.
 	 */
 	log_and_report_greylisting(ctx, priv, *envrcpt);
-	return SMFIS_TEMPFAIL;
+	return mg_stat(priv, SMFIS_TEMPFAIL);
+
+exit_accept:
+	add_recipient(priv, rcpt);
+	return SMFIS_CONTINUE;
 }
 
 static sfsistat
@@ -733,6 +740,7 @@ real_eom(ctx)
 	struct rcpt *rcpt;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
 
 	/* 
 	 * If we got no newline at all, at least 
@@ -758,7 +766,7 @@ real_eom(ctx)
 	if (priv->priv_delayed_reject) {
 		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) 
 			log_and_report_greylisting(ctx, priv, rcpt->r_addr);
-		return SMFIS_TEMPFAIL;
+		return mg_stat(priv, SMFIS_TEMPFAIL);
 	}
 
 	/* 
@@ -767,7 +775,6 @@ real_eom(ctx)
 	 * We save data obtained from RCPT and we will restore it afterward
 	 */
 	memcpy(&rcpt_sr, &priv->priv_sr, sizeof(rcpt_sr));
-	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
 	priv->priv_sr.sr_whitelist = acl_filter(AS_DATA, ctx, priv);
 	if (priv->priv_sr.sr_whitelist & EXF_BLACKLIST) {
 		char aclstr[16];
@@ -793,7 +800,8 @@ real_eom(ctx)
 		    priv->priv_sr.sr_msg : msg;
 		(void)smfi_setreply(ctx, code, ecode, msg);
 
-		return *code == '4' ? SMFIS_TEMPFAIL : SMFIS_REJECT;
+		return mg_stat(priv, 
+		    *code == '4' ? SMFIS_TEMPFAIL : SMFIS_REJECT);
 	}
 
 	/* Restore the info collected from RCPT stage */
@@ -921,7 +929,7 @@ real_eom(ctx)
 
 		smfi_addheader(ctx, HEADERNAME, hdr);
 
-		return SMFIS_CONTINUE;
+		return mg_stat(priv, SMFIS_CONTINUE);
 	}
 
 	h = priv->priv_sr.sr_elapsed / 3600;
@@ -938,7 +946,7 @@ real_eom(ctx)
 	if (conf.c_report & C_DELAYS)
 		smfi_addheader(ctx, HEADERNAME, hdr);
 
-	return SMFIS_CONTINUE;
+	return mg_stat(priv, SMFIS_CONTINUE);
 }
 
 static sfsistat
@@ -1844,4 +1852,573 @@ add_recipient(priv, rcpt)
 
 	LIST_INSERT_HEAD(&priv->priv_rcpt, nr, r_list);
 	return;
+}
+
+static void
+mystrncat(s, append, slenmax)
+	char **s;
+	char *append;
+	size_t *slenmax;
+{
+	char *str = *s;
+	size_t alen;
+	size_t slen;
+
+	slen = strlen(*s);
+	alen = strlen(append);
+
+	if (slen + alen > *slenmax) {
+		if (conf.c_debug)
+			mg_log(LOG_DEBUG, "resize url buffer %d -> %d",
+			    *slenmax, slen + alen);
+
+		if ((str = realloc(str, slen + alen + 1)) == NULL) {
+			mg_log(LOG_ERR, "malloc(%d) failed",
+			    slen + alen + 1, strerror(errno));
+			exit(EX_OSERR);
+		}
+		*slenmax = slen + alen;
+		*s = str;
+	}
+
+	memcpy(str + slen, append, alen);
+	str[slen + alen] = '\0';
+
+	return;
+}
+
+static char *
+strip_brackets(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	size_t outlen;
+
+	/* Strip leading and trailing <> */
+	(void)strncpy(out, in, len);
+	out[len] = '\0';
+
+	outp = out;
+	if (outp[0] == '<')
+		outp++;
+
+	outlen = strlen(outp);
+	if ((outlen > 0) && 
+	    (outp[outlen - 1] == '>'))
+		outp[outlen - 1] = '\0';
+
+	return outp;
+}
+
+static char *
+mbox_only(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	char *ap;
+
+	outp = strip_brackets(out, in, len);
+	if ((ap = index(outp, (int)'@')) != NULL)
+		*ap = '\0';
+
+	return outp;
+}
+
+static char *
+site_only(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	char *ap;
+
+	outp = strip_brackets(out, in, len);
+	if ((ap = index(outp, (int)'@')) != NULL)
+		outp = ap + 1;
+
+	return outp;
+}
+
+static char *
+machine_only(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	char *ap;
+
+	outp = strip_brackets(out, in, len);
+	if ((ap = index(outp, (int)'.')) != NULL)
+		*ap = '\0';
+
+	return outp;
+}
+
+static char *
+domain_only(out, in, len)
+	char *out;
+	char *in;
+	size_t len;
+{
+	char *outp;
+	char *ap;
+
+	outp = strip_brackets(out, in, len);
+	if ((ap = index(outp, (int)'.')) != NULL)
+		outp = ap + 1;
+
+	return outp;
+}
+
+char *
+fstring_expand(priv, rcpt, fstring)
+	struct mlfi_priv *priv;
+	char *rcpt;
+	char *fstring;
+{
+	size_t offset;
+	char *outstr;
+	size_t outmaxlen = URLMAXLEN;
+	char *tmpstr;
+	char *tmpstrp;
+	char *last;
+	char *ptok;
+	int fstr_len;	/* format string length, minus the % (eg: %mr -> 2) */
+	int skip_until_brace_close = 0;
+
+	if ((outstr = malloc(outmaxlen + 1)) == NULL) {
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	outstr[0] = '\0';
+
+	if ((tmpstr = strdup(fstring)) == NULL) {
+		mg_log(LOG_ERR, "strdup() failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	tmpstrp = tmpstr;
+	fstr_len = 0;
+
+	while ((ptok = strtok_r(tmpstrp, "%", &last)) != NULL) {
+		char tmpaddr[ADDRLEN + 1];
+
+		if (skip_until_brace_close) {
+			char *cp;
+
+			for (cp = ptok; *cp; cp++)
+				if (*cp == '}') 
+					break;
+
+			if (*cp == '\0')
+				continue;
+
+			skip_until_brace_close = 0;
+			ptok = cp + 1;
+			mystrncat(&outstr, ptok, &outmaxlen);
+			continue;
+		}
+
+		/* 
+		 * If first time, check if the first char was a '%'
+		 */
+		if (tmpstrp != NULL) {
+			tmpstrp = NULL;
+			if (fstring[0] != '%') {
+				mystrncat(&outstr, ptok, &outmaxlen);
+				continue;
+			}
+		}
+
+		/* 
+		 * On second time and later, ptok points on the 
+		 * character following '%'
+		 * Check if it could be a format string
+		 */
+		fstr_len = 1;
+
+		switch (*ptok) {
+		case 'h':	/* Hello string */
+			mystrncat(&outstr, priv->priv_helo, &outmaxlen);
+			break;
+		case 'd':	/* Sender machine DNS name */
+			mystrncat(&outstr, priv->priv_hostname, &outmaxlen);
+			break;
+		case 'f':	/* Sender e-mail */
+			mystrncat(&outstr, 
+			    strip_brackets(tmpaddr, priv->priv_from, ADDRLEN), 
+			    &outmaxlen);
+			break;
+		case 'r':	/* Recipient e-mail */
+			if (rcpt != NULL)
+				mystrncat(&outstr, 
+					strip_brackets(tmpaddr, rcpt, ADDRLEN), 
+					&outmaxlen);
+			break;
+		case 'm': 	/* mailbox part of sender or receiver e-mail */
+				/* Or machine part of DNS address */
+			fstr_len = 2;
+
+			switch(*(ptok + 1)) {
+			case 'r':	/* Recipient */
+				mystrncat(&outstr, 
+					mbox_only(tmpaddr, 
+					      rcpt, 
+					      ADDRLEN), 
+					&outmaxlen);
+				break;
+			case 'f':	/* Sender */
+				mystrncat(&outstr, 
+				    	mbox_only(tmpaddr, 
+					      priv->priv_from, 
+					      ADDRLEN), 
+					&outmaxlen);
+				break;
+			case 'd':	/* DNS name */
+				mystrncat(&outstr, 
+				    	machine_only(tmpaddr, 
+					      priv->priv_hostname, 
+					      ADDRLEN), 
+					&outmaxlen);
+				break;
+			default:
+				fstr_len = 0;
+				break;
+			}
+			break;
+		case 's':	/* site part of sender or reciever e-mail */
+				/* Or domain part of DNS address */
+			fstr_len = 2;
+
+			switch(*(ptok + 1)) {
+			case 'r':	/* Recipient */
+				mystrncat(&outstr, 
+					site_only(tmpaddr, 
+					      rcpt, 
+					      ADDRLEN), 
+					&outmaxlen);
+				break;
+			case 'f':	/* Sender */
+				mystrncat(&outstr, 
+				    	site_only(tmpaddr, 
+					      priv->priv_from, 
+					      ADDRLEN), 
+					&outmaxlen);
+				break;
+			case 'd':	/* DNS name */
+				mystrncat(&outstr, 
+				    	domain_only(tmpaddr, 
+					      priv->priv_hostname, 
+					      ADDRLEN), 
+					&outmaxlen);
+				break;
+			default:
+				fstr_len = 0;
+				break;
+			}
+			break;
+		case 'i': {	/* Sender machine IP address */
+			char ipstr[IPADDRSTRLEN];
+
+			iptostring(SA(&priv->priv_addr),
+			    priv->priv_addrlen, ipstr, sizeof(ipstr));
+			mystrncat(&outstr, ipstr, &outmaxlen);
+			break;
+		}
+		case 'T': {	/* current time %T{strftime_string} */
+			char *cp;
+			time_t now;
+			struct tm tm;
+			char *format;
+
+			if (*(ptok + 1) != '{')
+				break;
+
+			fstr_len = 2;
+
+			/* 
+			 * Lookup in the original string and not in tmpstr
+			 * since strtok removed the next *
+			 */
+			offset = ((u_long)ptok + 2) - (u_long)tmpstr;
+			for (cp = fstring + offset; *cp; cp++) {
+				fstr_len++;
+				if (*cp == '}')
+					break;
+			}
+
+			/* No match, no substitution */
+			if (*cp == '\0') {
+				fstr_len = 0;
+				break;
+			}
+
+			format = malloc(fstr_len + 1);
+			if (format == NULL) {
+				mg_log(LOG_ERR, "malloc failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+
+			/* -3 to remove T{ after the % and trailing } */
+			memcpy(format, fstring + offset, fstr_len - 3);
+			format[fstr_len - 3] = '\0';
+
+			now = time(NULL);
+			(void)localtime_r(&now, &tm);
+			(void)strftime(outstr + strlen(outstr), 
+			    outmaxlen - strlen(outstr), format, &tm);
+			
+			free(format);
+
+			/* We need to skip inside of %T{} */
+			skip_until_brace_close = 1;
+			break;
+		}
+		case 'M': { 	/* sendmail macro (maybe %Mj or %M{foo}) */
+			char *cp;
+			char *symval;
+			char *symname;
+
+			switch(*(ptok + 1)) {
+			case '{':
+				fstr_len = 2;
+				/* Find the trailing } */
+				for (cp = ptok + 2; *cp; cp++) {
+					fstr_len++;
+					if (*cp == '}')
+						break;
+				}
+
+				/* No match, no substitution */
+				if (*cp == '\0')
+					fstr_len = 0;
+
+				break;
+			default:
+				fstr_len = 2;
+				break;
+			}
+
+			if (fstr_len == 0)
+				break;
+
+			symname = malloc(fstr_len + 1);
+			if (symname == NULL) {
+				mg_log(LOG_ERR, "malloc failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+			/* +1/-1 to skip the M after the % */
+			memcpy(symname, ptok + 1, fstr_len - 1);
+			symname[fstr_len - 1] = '\0';
+
+			symval = smfi_getsymval(priv->priv_ctx, symname);
+
+#if 0
+			if (conf.c_debug) 
+				mg_log(LOG_DEBUG, 
+				    "macro %s value = \"%s\"",
+				    symname, 
+				    (symval == NULL) ? "(null)" : symval);
+#endif
+
+			if (symval == NULL)
+				symval = "";
+
+			mystrncat(&outstr, symval, &outmaxlen);
+
+			free(symname);
+			break;
+		}
+		case 'S': 	/* status returned to sendmail */
+			switch (priv->priv_sr.sr_retcode) {
+			case SMFIS_CONTINUE:
+				mystrncat(&outstr, "accept", &outmaxlen);
+				break;
+			case SMFIS_TEMPFAIL:
+				mystrncat(&outstr, "tempfail", &outmaxlen);
+				break;
+			case SMFIS_REJECT:
+				mystrncat(&outstr, "reject", &outmaxlen);
+				break;
+			case -1: /* Not known */
+				break;
+			default:
+				mg_log(LOG_ERR, "unexpected sr_retcode = %d",
+				    priv->priv_sr.sr_retcode);
+				exit(EX_SOFTWARE);
+				break;
+			}
+			break;
+		case 'A': {	/* Line number for matching ACL */
+			char buf[16];
+
+			snprintf(buf, sizeof(buf), "%d", 
+			   priv->priv_sr.sr_acl_line); 
+			mystrncat(&outstr, buf, &outmaxlen);
+			break;
+		}	
+			
+		default:
+			fstr_len = 0;
+			break;
+		}
+
+		/* 
+		 * Special case for %T{}: no need to copy the 
+		 * next chars until a %, as we want to skip until a }
+		 */
+		if (skip_until_brace_close)
+			continue;
+
+		/* 
+		 * If no substitution was made, then keep the '%' 
+		 * Otherwise, skip the format string
+		 */
+		if (fstr_len == 0)
+			mystrncat(&outstr, "%", &outmaxlen);
+		else
+			ptok += fstr_len;
+
+		mystrncat(&outstr, ptok, &outmaxlen);
+	}
+
+	free(tmpstr);
+
+	return outstr;
+}
+
+char *
+fstring_escape(fstring)
+	char *fstring;
+{
+	char *cp;
+
+	for (cp = fstring; *cp != '\0'; cp++) {
+		int slen;
+
+		if (*cp != '\\')
+			continue;
+
+		slen = 0;
+		switch(*(cp + 1)) {
+		case '\0':
+			return fstring;
+			break;
+		case 'a':	/* bell */
+			*cp = '\a';
+			slen = 1;
+			break;
+		case 'b':	/* backspace */
+			*cp = '\f';
+			slen = 1;
+			break;
+		case 'f':	/* formfeed */
+			*cp = '\f';
+			slen = 1;
+			break;
+		case 'n':	/* newline */
+			*cp = '\n';
+			slen = 1;
+			break;
+		case 'r':	/* carriage return */
+			*cp = '\r';
+			slen = 1;
+			break;
+		case 't':	/* horizontal tab */
+			*cp = '\t';
+			slen = 1;
+			break;
+		case 'v':	/* vertical tab */
+			*cp = '\v';
+			slen = 1;
+			break;
+		case '\\':	/* backslash */
+			*cp = '\\';
+			slen = 1;
+			break;
+		case '\?':	/* question mark */
+			*cp = '\?';
+			slen = 1;
+			break;
+		case '\'':	/* single quote */
+			*cp = '\'';
+			slen = 1;
+			break;
+		case '\"':	/* double quote */
+			*cp = '\"';
+			slen = 1;
+			break;
+		case '0': {	/* octal value */
+			char c1, c2;
+			
+			if (*(cp + 2) == '\0')
+				break;
+			c1 = *(cp + 2);
+			if (*(cp + 3) == '\0')
+				break;
+			c2 = *(cp + 2);
+
+			if (isdigit((int)c1) && isdigit((int)c2)) {
+				int d1, d2;
+
+				d1 = c1 - '0';
+				d2 = c2 - '0';
+				*cp = (8 * d1) + d2;
+				slen = 3;
+			} 
+			/* And we'll ignore \0 alone */
+			break;
+		}
+		case 'x': {	/* hexadecimal value */
+			char c1, c2;
+			
+			if (*(cp + 2) == '\0')
+				break;
+			c1 = *(cp + 2);
+			if (*(cp + 3) == '\0')
+				break;
+			c2 = *(cp + 2);
+
+			if (isxdigit((int)c1) && isxdigit((int)c2)) {
+				int d1, d2;
+
+				if (isdigit((int)c1))
+					d1 = c1 - '0';
+				else if (islower((int)c1))
+					d1 = c1 - 'a';
+				else
+					d1 = c1 - 'A';
+
+				if (isdigit((int)c2))
+					d2 = c2 - '0';
+				else if (islower((int)c2))
+					d2 = c2 - 'a';
+				else
+					d2 = c2 - 'A';
+
+				*cp = (16 * d1) + d2;
+				slen = 3;
+			} 
+			break;
+		}
+		default: /* Unknown sequence, discard */
+			slen = -1;
+			break;
+		}
+
+		if (slen == -1)
+			bcopy(cp + 1, cp, strlen(cp + 1) + 1);
+		if (slen != 0)
+			bcopy(cp + 1 + slen, cp + 1, strlen(cp + 1 + slen) + 1);
+		slen = 0;
+	}
+
+	return fstring;
 }

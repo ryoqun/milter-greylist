@@ -36,6 +36,7 @@ socket		[Ss][Oo][Cc][Kk][Ee][Tt]:?
 user		[Uu][Ss][Ee][Rr]:?
 nodetach	[Nn][Oo][Dd][Ee][Tt][Aa][Cc][Hh]
 report		[Rr][Ee][Pp][Oo][Rr][Tt]:?
+stat		[Ss][Tt][Aa][Tt]
 none		[Nn][Oo][Nn][Ee]
 delays		[Dd][Ee][Ll][Aa][Yy][Ss]
 nodelays	[Nn][Oo][Dd][Ee][Ll][Aa][Yy][Ss]
@@ -89,7 +90,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.59 2006/12/26 21:21:52 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.60 2007/01/01 17:29:29 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -146,6 +147,7 @@ star		"*"
 {user}		{ return USER; }
 {nodetach}	{ return NODETACH; }
 {report}	{ return REPORT; }
+{stat}		{ return STAT; }
 {none}		{ return NONE; }
 {delays}	{ return DELAYS; }
 {nodelays}	{ return NODELAYS; }

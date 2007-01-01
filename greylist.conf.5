@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.51 2007/01/01 08:08:41 manu Exp $
+.\" $Id: greylist.conf.5,v 1.52 2007/01/01 17:29:29 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -559,6 +559,43 @@ it is possible to overload the ACL action itself.
 The ACL will match if any of the above key is returned: 
 .I milterGreylistStatus
 is not mandatory.
+.SH CUSTOM REPORTS
+The 
+.I stat
+keyword can be used to specify a custom report for milter-greylist activity.
+It should be supplied with an output (either file or external command) and
+a format string. Here is an example:
+.IP
+  stat ">>/var/log/milter-greylist.log" "%T{%T},%i,%s,%r,%A\\n"
+.PP
+If the output starts by 
+.I >>
+or
+.I >
+then it is a file. Use
+.I >> 
+to append to an existing file, and use
+.I > 
+to overwrite it. If the output starts by a 
+.I |
+then the output is a shell command, like in the example below:
+.IP
+  stat "|logger -p local7.info" "%T{%T},%i,%s,%r,%A\\n"
+.PP
+The format string gets substituted as URL checks format string: %r gets
+substituted by the recipient, %f by the sender, and so on. There are a
+few additionnal substitutions that can be interesting here:
+.TP
+.I %S 
+the action performed:
+.I accept\fR,
+.I tempfail\fR,
+or
+.I reject\fR.
+.TP
+.I %A
+the line number of the ACL that caused the action.
+.PP
 .SH COMMAND-LINE FLAG EQUIVALENTS
 Most 
 .B milter-greylist(8)

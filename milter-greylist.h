@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.53 2006/12/29 18:32:44 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.54 2007/01/01 17:29:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -137,6 +137,7 @@ struct smtp_reply {
 	char *sr_code;
 	char *sr_ecode;
 	char *sr_msg;
+	sfsistat sr_retcode;
 };
 
 struct rcpt {
@@ -193,6 +194,9 @@ void final_dump(void);
 int main(int, char **);
 void mg_log(int, char *, ...);
 char *strncpy_rmsp(char *, char *, size_t);
+char *fstring_expand(struct mlfi_priv *, 
+    char *, char *);
+char *fstring_escape(char *);
 
 #ifdef HAVE_STRLCAT
 /* #include <string.h> */
