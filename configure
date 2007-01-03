@@ -846,6 +846,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-drac	Enable DRAC support
   --enable-dnsrbl	Enable DNSRBL support
+  --enable-postfix	Enable Postfix support
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -8924,6 +8925,16 @@ if test "${enable_dnsrbl+set}" = set; then
 		echo "Try installing BIND9 and using --with-libbind, or if you";
 		echo "know what you are doing, use --with-thread-safe-resolver";
 		exit 1;
+	 fi
+
+fi;
+
+# We disable some features for Postfix
+# Check whether --enable-postfix or --disable-postfix was given.
+if test "${enable_postfix+set}" = set; then
+  enableval="$enable_postfix"
+  if test x$enableval = xyes; then
+		CFLAGS=$CFLAGS" -DUSE_POSTFIX"
 	 fi
 
 fi;

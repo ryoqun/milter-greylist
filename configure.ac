@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.195 2006/12/29 20:47:29 manu Exp $
+# $Id: configure.ac,v 1.196 2007/01/03 06:03:49 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -636,6 +636,14 @@ AC_ARG_ENABLE(dnsrbl,
 		echo "Try installing BIND9 and using --with-libbind, or if you";
 		echo "know what you are doing, use --with-thread-safe-resolver";
 		exit 1;
+	 fi
+	])
+
+# We disable some features for Postfix
+AC_ARG_ENABLE(postfix,
+	[  --enable-postfix	Enable Postfix support],
+	[if test x$enableval = xyes; then
+		CFLAGS=$CFLAGS" -DUSE_POSTFIX"
 	 fi
 	])
 

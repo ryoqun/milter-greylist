@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.149 2007/01/01 17:29:29 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.150 2007/01/03 06:03:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.149 2007/01/01 17:29:29 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.150 2007/01/03 06:03:49 manu Exp $");
 #endif
 #endif
 
@@ -337,7 +337,14 @@ real_envfrom(ctx, envfrom)
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
 	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
+#ifndef USE_POSTFIX
+		/* 
+		 * Postfix does not choose a queue file name 
+		 * until after it accepts the first valid RCPT TO 
+		 * command, so don't log the failure 
+		 */
 		mg_log(LOG_DEBUG, "smfi_getsymval failed for {i}");
+#endif
 		priv->priv_queueid = "(unknown id)";
 	}
 
@@ -813,7 +820,12 @@ real_eom(ctx)
 		fqdn = host;
 	}
 
+#ifndef USE_POSTFIX
+	/* 
+	 * Macro {if_addr} does not exist in Postfix 
+	 */
 	ip = smfi_getsymval(ctx, "{if_addr}");
+#endif
 #ifdef AF_INET6
 	/*
 	 * XXX: sendmail doesn't return {if_addr} when connection is
@@ -829,7 +841,9 @@ real_eom(ctx)
 	}
 #endif
 	if (ip == NULL) {
+#ifndef USE_POSTFIX
 		mg_log(LOG_DEBUG, "smfi_getsymval failed for {if_addr}");
+#endif
 		ip = "0.0.0.0";
 	}
 
@@ -922,11 +936,18 @@ real_eom(ctx)
 			mystrlcat (whystr, "Internal error ", HDRLEN);
 		}
 
+#ifndef USE_POSTFIX
 		snprintf(hdr, HDRLEN, "%s, not delayed by "
 		    "milter-greylist-%s (%s [%s]); %s %s (%s)",
 		    whystr, PACKAGE_VERSION, fqdn, 
 		    ip, timestr, tzstr, tznamestr);
-
+#else
+		/* don't print ip for Postfix */
+		snprintf(hdr, HDRLEN, "%s, not delayed by "
+		    "milter-greylist-%s (%s); %s %s (%s)",
+		    whystr, PACKAGE_VERSION, fqdn, 
+		    timestr, tzstr, tznamestr);
+#endif
 		smfi_addheader(ctx, HEADERNAME, hdr);
 
 		return mg_stat(priv, SMFIS_CONTINUE);

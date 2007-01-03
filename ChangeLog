@@ -2,6 +2,7 @@
 	Add support for switching to a given group (Ralf S. Engelschall)
 	Add substitutions for sendmail macro and strftime in URL checks
 	Add custom logs of milter-greylist actions, see stat in greylist.conf
+	Fixes for running with Postfix (Nerijus Baliunas)
 3.1.3
 	Fix various bugs (regex searches, lists matches, uninitialized memory)
 3.1.2
