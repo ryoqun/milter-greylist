@@ -1,9 +1,9 @@
-# $Id: README,v 1.46 2007/01/01 12:57:40 manu Exp $
+# $Id: README,v 1.47 2007/01/03 06:14:31 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/01/01 12:57:40 $
+		       $Date: 2007/01/03 06:14:31 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -23,10 +23,11 @@ Table of contents:
  10 Building with SPF
  11 Using DRAC
  12 Using URL checks
- 13 Packaging
- 14 Things to look at if things get wrong
- 15 Known problems
- 16 License
+ 13 Custom logs
+ 14 Packaging
+ 15 Things to look at if things get wrong
+ 16 Known problems
+ 17 License
 
 Run this command to regenerate a table of contents:
  sed '/^.====/{g;p;};h;d' README
@@ -368,21 +369,76 @@ option.
 More information on DRAC can be obtained at 
 http://mail.cc.umanitoba.ca/drac/
 
+
  12 Using URL checks
  ===================
 
-XXX Write me
+ACL can cause URL lookups:
 
- 13 Packaging
+urlcheck "mytest" "http://www.example.net/mgl.php?rcpt=%r+ip=%i" 10
+acl greylist urlcheck "mytest"
+
+For each ACL evaluation will spawn a request to
+http://www.example.net/mgl.php?rcpt=%r+ip=%i, with
+%r replaced by recipient e-mail
+%i replaced by IP address
+You can also substitute domain, sender address, and various other data,
+including any sendmail macro. Check the greylist.conf(5) man page for
+details. The trailing 10 is the maximum number of simultaneous
+connections you want to have.
+
+The mgl.php script is to answer if you get a match by sending back this:
+milterGreylistStatus: Ok
+
+Even better, you can send settings in the reply:
+milterGreylistStatus: Ok
+milterGreylistDelay: 1h
+
+autowhite, code, ecode, flushaddr and msg can be overloaded. You can
+even overload the ACL action (ie: turning a greylist ACL into a
+blacklist action), see the man page for details.
+
+Something to note: the reply format is LDIF-like. It was chosen so that
+the URL could be a ldap:// query, though this has not been experimented 
+yet. 
+
+
+ 13 Custom logs
+ ==============
+
+It is possible to monitor milter-greylist activity with a custom log
+format. You can choose where the output is sent (file or external
+command), and the output format. If you have this in greylist.conf:
+stat ">>/var/log/milter-greylist.log" "%T{%T}    %i:%s:%f:%S\n"
+
+On each mail, this will give you a line like this in milter-greylist.log:
+10:08:04    192.0.2.16:spammer@evil.com:postmaster@example.net:reject
+
+Another example, to send the data to the local7 facility of syslog,
+using the external command logger:
+stat "|logger -p local7.info" "%i:%s:%f:%S\n" 
+
+Substitutions are the same as in URL checks (%i becomes sender IP, %s
+becomes sender e-mail, %r becomes recipient, and so on). A few nifty
+additions:
+
+%T{format} is substituted by strftime(3) time format. So %T{%F %T} gives
+you a date/time in the following format: YYYY-MM-DD HH:MM:SS 
+%S is substituted by the action milter-greylist chose: accept, tempfail
+or reject
+%A is substituted by the line number of the ACL that caused the decision
+
+
+ 14 Packaging
  ============
 
 milter-greylist is available from NetBSD pkgsrc and FreeBSD ports.
 A .spec file is included in the distribution to build a RPM for
 RedHat Linux. That is achieved by running rpmbuild on milter-greylist
-source tarball: rpmbuild -bb  milter-greylist-1.7.3.tgz
+source tarball: rpmbuild -bb milter-greylist-1.7.3.tgz
 
 
- 14 Things to look at if things get wrong
+ 15 Things to look at if things get wrong
  ========================================
 
 First, read the milter-greylist(8) and greylist.conf(5) man page! :-)
@@ -431,7 +487,7 @@ tells you when the entry will expire.
 Examining the tail of this file may reveal problems with domains which
 use multiple MX servers or whose mail is actually served by another site.
 
- 15 Known problems
+ 16 Known problems
  =================
 
 If milter-greylist terminates during its operation, first check your
@@ -473,7 +529,7 @@ configure with the CC environment variable set to cc. This
 incompatibility may be fixed in gcc 3.4.
 
 
- 16 License
+ 17 License
  ==========
 
 This software is available under a 3 clauses BSD license:
