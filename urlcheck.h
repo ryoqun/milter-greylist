@@ -1,4 +1,4 @@
-/* $Id: urlcheck.h,v 1.6 2007/01/01 10:57:13 manu Exp $ */
+/* $Id: urlcheck.h,v 1.7 2007/01/03 05:53:30 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -30,14 +30,6 @@
  */
 
 #include <curl/curl.h>
-
-/* 
- * Maximum URL length. This is just a hint, 
- * the code will adjust the buffer if needed.
- */
-#define URLMAXLEN	2083
-
-LIST_HEAD(urlchecklist, urlcheck_entry);
 
 struct urlcheck_cnx {
 	CURL *uc_hdl;

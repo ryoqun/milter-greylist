@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.54 2007/01/01 17:29:29 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.55 2007/01/03 05:53:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -46,6 +46,14 @@
 #define REGEXLEN 1024
 #define HDRLEN 1024
 #define HEADERNAME "X-Greylist"
+/* 
+ * Maximum URL length. This is just a hint, 
+ * the code will adjust the buffer if needed.
+ */
+#define URLMAXLEN	2083
+
+LIST_HEAD(urlchecklist, urlcheck_entry);
+
 
 
 #if defined(HAVE_GETNAMEINFO)
