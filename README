@@ -1,9 +1,9 @@
-# $Id: README,v 1.47 2007/01/03 06:14:31 manu Exp $
+# $Id: README,v 1.48 2007/01/03 17:43:49 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/01/03 06:14:31 $
+		       $Date: 2007/01/03 17:43:49 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -12,22 +12,23 @@ Table of contents:
 ==================
 
  1 Building and installing milter-greylist 
- 2 Configuring sendmail with milter-greylist
- 3 Configuring milter-greylist 
- 4 Trying it out for a few users 
- 5 Running it for the whole site 
- 6 Lists and per-ACL settings
- 7 Dealing with mail farms
- 8 Working with multiple MXs
- 9 Using DNSRBL
- 10 Building with SPF
- 11 Using DRAC
- 12 Using URL checks
- 13 Custom logs
- 14 Packaging
- 15 Things to look at if things get wrong
- 16 Known problems
- 17 License
+ 2 Configuring Sendmail with milter-greylist
+ 3 Configuring Postfix with milter-greylist
+ 4 Configuring milter-greylist 
+ 5 Trying it out for a few users 
+ 6 Running it for the whole site 
+ 7 Lists and per-ACL settings
+ 8 Dealing with mail farms
+ 9 Working with multiple MXs
+ 10 Using DNSRBL
+ 11 Building with SPF
+ 12 Using DRAC
+ 13 Using URL checks
+ 14 Custom logs
+ 15 Packaging
+ 16 Things to look at if things get wrong
+ 17 Known problems
+ 18 License
 
 Run this command to regenerate a table of contents:
  sed '/^.====/{g;p;};h;d' README
@@ -74,7 +75,7 @@ for Solaris. They are not installed by default; you have install the
 startup script manually if you want to use one.
 
 
- 2 Configuring sendmail with milter-greylist
+ 2 Configuring Sendmail with milter-greylist
  ===========================================
 
 You need a few options in sendmail.cf to use milter-greylist:
@@ -127,8 +128,23 @@ milter-greylist instead of overwriting what has already been done. This
 should simplify an automatic generation of sendmail.cf.
 
 
+ 3 Configuring Postfix with milter-greylist
+ ==========================================
 
- 3 Configuring milter-greylist 
+As Postfix currently does not provide milter library, you need to have
+sendmail sources or development package installed. See
+http://www.postfix.org/MILTER_README.html#limitations
+
+Use --enable-postfix flag when configuring milter-greylist.
+
+Add the following to postfix main.cf (customize for your needs):
+milter_default_action = accept
+milter_connect_macros = j
+milter_protocol = 3
+smtpd_milters = unix:/var/milter-greylist/milter-greylist.sock
+
+
+ 4 Configuring milter-greylist 
  =============================
 
 Edit /etc/mail/greylist.conf, and add addr lines for at least
@@ -145,7 +161,7 @@ some other are not, and dial-up and ADSL ISPs are definitively not
 friendly at all.
 
 
- 4 Trying it out for a few users 
+ 5 Trying it out for a few users 
  ===============================
 
 Add some rcpt access-lists to /etc/mail/greylist.conf for the users 
@@ -178,7 +194,7 @@ and similar tuples will be accepted with no retry for one day. Using -a0
 disables this feature.
 
 
- 5 Running it for the whole site 
+ 6 Running it for the whole site 
  ===============================
 
 Remove the "acl greylist rcpt ..." lines from /etc/mail/greylist.conf, 
@@ -200,7 +216,7 @@ acl greylist rcpt /.*@example\.net/
 acl whitelist default
 
 
- 6 Lists and per-ACL settings
+ 7 Lists and per-ACL settings
  ============================
 
 It is possible to have per-ACL greylisting and autowhitelisting
@@ -228,7 +244,7 @@ Theses two advanced features were added in release 2.1.7 and may not be
 fully stable.
 
 
- 7 Dealing with mail farms
+ 8 Dealing with mail farms
  =========================
 
 Some Internet service provider such as Hotmail feature mail farms,
@@ -253,7 +269,7 @@ servers that will always resend their messages, there is no point in
 greylisting them.
 
 
- 8 Working with multiple MXs
+ 9 Working with multiple MXs
  ===========================
 
 When running several MXs, the client should try each server after
@@ -284,8 +300,8 @@ connections in both directions between random unprivileged
 source ports and destination port 5252.
 
 
- 9 Using DNSRBL
- ==============
+ 10 Using DNSRBL
+ ===============
 
 milter-greylist can use a DNSRBL to decide wether a host should be
 greylisted or whitelisted. For instance, let us say that you want to
@@ -322,7 +338,7 @@ BIND9 from sources, using the --enable-libbind
 flag to BIND9's configure.
 
 
- 10 Building with SPF
+ 11 Building with SPF
  ====================
 
 milter-greylist can use either libspf or libspf2 to perform SPF
@@ -354,7 +370,7 @@ libbind is only available as a static library. It seems to be the
 default with BIND 8, which causes troubles. BIND 9 is fine.
 
 
- 11 Using DRAC
+ 12 Using DRAC
  =============
 
 milter-greylist can be built with DRAC (Dynamic Relay Authorization
@@ -370,7 +386,7 @@ More information on DRAC can be obtained at
 http://mail.cc.umanitoba.ca/drac/
 
 
- 12 Using URL checks
+ 13 Using URL checks
  ===================
 
 ACL can cause URL lookups:
@@ -403,7 +419,7 @@ the URL could be a ldap:// query, though this has not been experimented
 yet. 
 
 
- 13 Custom logs
+ 14 Custom logs
  ==============
 
 It is possible to monitor milter-greylist activity with a custom log
@@ -429,7 +445,7 @@ or reject
 %A is substituted by the line number of the ACL that caused the decision
 
 
- 14 Packaging
+ 15 Packaging
  ============
 
 milter-greylist is available from NetBSD pkgsrc and FreeBSD ports.
@@ -438,7 +454,7 @@ RedHat Linux. That is achieved by running rpmbuild on milter-greylist
 source tarball: rpmbuild -bb milter-greylist-1.7.3.tgz
 
 
- 15 Things to look at if things get wrong
+ 16 Things to look at if things get wrong
  ========================================
 
 First, read the milter-greylist(8) and greylist.conf(5) man page! :-)
@@ -487,7 +503,8 @@ tells you when the entry will expire.
 Examining the tail of this file may reveal problems with domains which
 use multiple MX servers or whose mail is actually served by another site.
 
- 16 Known problems
+
+ 17 Known problems
  =================
 
 If milter-greylist terminates during its operation, first check your
@@ -529,7 +546,7 @@ configure with the CC environment variable set to cc. This
 incompatibility may be fixed in gcc 3.4.
 
 
- 17 License
+ 18 License
  ==========
 
 This software is available under a 3 clauses BSD license:
