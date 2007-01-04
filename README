@@ -1,9 +1,9 @@
-# $Id: README,v 1.48 2007/01/03 17:43:49 manu Exp $
+# $Id: README,v 1.49 2007/01/04 05:04:13 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/01/03 17:43:49 $
+		       $Date: 2007/01/04 05:04:13 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -135,7 +135,9 @@ As Postfix currently does not provide milter library, you need to have
 sendmail sources or development package installed. See
 http://www.postfix.org/MILTER_README.html#limitations
 
-Use --enable-postfix flag when configuring milter-greylist.
+Use --enable-postfix flag when configuring milter-greylist, or you
+can build an rpm like this:
+rpmbuild --define "build_postfix 1" -tb milter-greylist-3.1.4.tgz
 
 Add the following to postfix main.cf (customize for your needs):
 milter_default_action = accept
@@ -449,9 +451,13 @@ or reject
  ============
 
 milter-greylist is available from NetBSD pkgsrc and FreeBSD ports.
-A .spec file is included in the distribution to build a RPM for
-RedHat Linux. That is achieved by running rpmbuild on milter-greylist
-source tarball: rpmbuild -bb milter-greylist-1.7.3.tgz
+A .spec file is included in the distribution to build an RPM for
+RedHat Linux. This is achieved by running rpmbuild on milter-greylist
+source tarball: rpmbuild -tb milter-greylist-3.1.4.tgz. You can define
+build_user, build_postfix, build_dnsrbl, build_libbind - for example,
+to build with DNSRBL support and choose smmsp as the user that will run
+milter-greylist, use
+rpmbuild --define "build_user smmsp" --define "build_dnsrbl 1" -tb milter-greylist-3.1.4.tgz
 
 
  16 Things to look at if things get wrong

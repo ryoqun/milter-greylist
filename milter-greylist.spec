@@ -1,10 +1,26 @@
-# $Id: milter-greylist.spec,v 1.63 2007/01/01 08:08:41 manu Exp $
+# $Id: milter-greylist.spec,v 1.64 2007/01/04 05:04:13 manu Exp $
 # Contributed by Ivan F. Martinez
-%define ver 3.1.2
-%define rel 1
-%define user root
 
-Summary: GreyList milter for sendmail
+%define ver 3.1.4
+%define rel 1
+
+%define user root
+%{?build_user:%define user %{build_user}}
+
+%define postfix 0
+%{?build_postfix:%define postfix 1}
+
+%define dnsrbl 0
+%{?build_dnsrbl:%define dnsrbl 1}
+
+%define libbind 0
+%{?build_libbind:%define libbind 1}
+
+%if ! %{postfix}
+Summary: GreyList milter for Sendmail
+%else
+Summary: GreyList milter for Postfix
+%endif
 Name: milter-greylist
 Version:   %ver
 Release:   %rel
@@ -14,12 +30,16 @@ Source0: ftp://ftp.espci.fr/pub/milter-greylist/%{name}-%{version}.tgz
 URL: http://hcpnet.free.fr/milter-greylist/
 BuildRoot: %{_tmppath}/%{name}-%{version}-root-%(%{__id_u} -n)
 
+%if ! %{postfix}
 Requires: sendmail >= 8.11
 Requires: sendmail-cf >= 8.11
+%endif
 BuildRequires: sendmail-devel >= 8.11
 BuildRequires: flex
 BuildRequires: bison
+%if %{libbind}
 BuildRequires: bind-libbind-devel
+%endif
 
 %description
 milter-greylist is a stand-alone milter written in C that implements the
@@ -42,7 +62,19 @@ before the second attempt.
 
 
 %build
-%configure --with-user=%{user} --enable-dnsrbl --with-libbind
+%configure \
+	--with-user=%{user} \
+%if %{postfix}
+	--enable-postfix \
+%endif
+%if %{dnsrbl}
+	--enable-dnsrbl \
+%endif
+%if %{libbind}
+	--with-libbind
+
+%endif
+
 %{__make} %{?_smp_mflags}
 
 
@@ -73,6 +105,7 @@ fi
 
 %post
 /sbin/chkconfig --add milter-greylist
+%if ! %{postfix}
 /bin/grep -q -E '(FEATURE|INPUT_MAIL_FILTER).*milter-greylist' /etc/mail/sendmail.mc
 if [ $? -ne 0 ]
 then
@@ -80,18 +113,21 @@ then
 	echo "FEATURE(\`milter-greylist')dnl"
 	echo "to /etc/mail/sendmail.mc file"
 fi
+%endif
 
 
 %preun
 if [ $1 -eq 0 ]; then
 	/sbin/service milter-greylist stop > /dev/null 2>&1 || :
 	/sbin/chkconfig --del milter-greylist
+%if ! %{postfix}
 	/bin/grep -q -E '(FEATURE|INPUT_MAIL_FILTER).*milter-greylist' /etc/mail/sendmail.mc
 	if [ $? -eq 0 ]
 	then
-		echo "You you must remove the milter-greylist config"
+		echo "You must remove the milter-greylist config"
 		echo "from /etc/mail/sendmail.mc file"
 	fi
+%endif
 fi
 
 %postun
@@ -120,6 +156,9 @@ fi
 %attr(0600,%{user},root) %ghost %{_localstatedir}/milter-greylist/greylist.db
 
 %changelog
+* Thu Jan  4 2007 Nerijus Baliunas <nerijus|users.sourceforge.net> 3.1.4-1
+- added build_user, build_postfix, build_dnsrbl, build_libbind definitions
+
 * Sun Mar 13 2005 Petr Kristof <Petr|Kristof_CZ> 1.7.4-3
 - support for running as specific user
 
