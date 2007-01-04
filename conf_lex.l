@@ -66,6 +66,7 @@ logexpired    [Ll][Oo][Gg][Ee][Xx][Pp][Ii][Rr][Ee][Dd]
 dnsrbl		[Dd][Nn][Ss][Rr][Bb][Ll]
 sm_macro	[Ss][Mm]_[Mm][Aa][Cc][Rr][Oo]
 urlcheck	[Uu][Rr][Ll][Cc][Hh][Ee][Cc][Kk]
+postmsg		[Pp][Oo][Ss][Tt][Mm][Ss][Gg]
 unset		[Uu][Nn][Ss][Ee][Tt]
 list		[Ll][Ii][Ss][Tt]
 flushaddr	[Ff][Ll][Uu][Ss][Hh][Aa][Dd][Dd][Rr]
@@ -90,7 +91,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.60 2007/01/01 17:29:29 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.61 2007/01/04 23:01:46 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -130,6 +131,7 @@ star		"*"
 {dnsrbl}  	{ return DNSRBL; }
 {sm_macro}  	{ BEGIN(S_REGEX); return SM_MACRO; }
 {urlcheck}  	{ return URLCHECK; }
+{postmsg}	{ return POSTMSG; }
 {unset}  	{ return UNSET; }
 {list}  	{ return LIST; }
 {flushaddr}  	{ return FLUSHADDR; }

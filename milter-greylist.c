@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.150 2007/01/03 06:03:49 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.151 2007/01/04 23:01:46 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.150 2007/01/03 06:03:49 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.151 2007/01/04 23:01:46 manu Exp $");
 #endif
 #endif
 
@@ -258,8 +258,8 @@ real_connect(ctx, hostname, addr)
 	priv->priv_sr.sr_retcode = -1;
 	LIST_INIT(&priv->priv_rcpt);
 	priv->priv_cur_rcpt = NULL;
-	LIST_INIT(&priv->priv_header);
-	LIST_INIT(&priv->priv_body);
+	SIMPLEQ_INIT(&priv->priv_header);
+	SIMPLEQ_INIT(&priv->priv_body);
 	priv->priv_msgcount = 0;
 	priv->priv_buf = NULL;
 	priv->priv_buflen = 0;
@@ -628,6 +628,7 @@ real_header(ctx, name, value)
 	struct header *h;
 	struct mlfi_priv *priv;
 	const char sep[] = ": ";
+	const char crlf[] = "\r\n";
 	size_t len;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
@@ -643,8 +644,8 @@ real_header(ctx, name, value)
 		exit(EX_OSERR);
 	}
 
-	len = strlen(name) + strlen(sep) + strlen(value) + 1;
-	if ((h->h_line = malloc(len)) == NULL) {
+	len = strlen(name) + strlen(sep) + strlen(value) + strlen(crlf);
+	if ((h->h_line = malloc(len + 1)) == NULL) {
 		mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
@@ -652,8 +653,9 @@ real_header(ctx, name, value)
 	strcat(h->h_line, name);
 	strcat(h->h_line, sep);
 	strcat(h->h_line, value);
+	strcat(h->h_line, crlf);
 
-	LIST_INSERT_HEAD(&priv->priv_header, h, h_list);
+	SIMPLEQ_INSERT_TAIL(&priv->priv_header, h, h_list);
 
 	priv->priv_msgcount += len;
 
@@ -682,6 +684,26 @@ real_body(ctx, chunk, size)
 		return SMFIS_CONTINUE;
 	}
 
+	/* First time: add \r\n between headers and body */
+	if (SIMPLEQ_EMPTY(&priv->priv_body) && (priv->priv_buflen == 0)) {
+		const char crlf[] = "\r\n";
+
+		if ((b = malloc(sizeof(*b))) == NULL) {
+			mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		if ((b->b_lines = strdup(crlf)) == NULL) {
+			mg_log(LOG_ERR, "strdup() failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		SIMPLEQ_INSERT_TAIL(&priv->priv_body, b, b_list);
+
+		priv->priv_msgcount += strlen(crlf);
+	}
+
+
 	for (i = size - 1; i >= 0; i--) {
 		if (chunk[i] == '\n')
 			break;
@@ -693,9 +715,10 @@ real_body(ctx, chunk, size)
 			exit(EX_OSERR);
 		}
 	
-		linelen = priv->priv_buflen + i + 2;
+		i++; /* Include the \n in this chunk */
+		linelen = priv->priv_buflen + i;
 
-		if ((b->b_lines = malloc(linelen)) == NULL) {
+		if ((b->b_lines = malloc(linelen + 1)) == NULL) {
 			mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
 			exit(EX_OSERR);
 		}
@@ -706,10 +729,10 @@ real_body(ctx, chunk, size)
 			free(priv->priv_buf);
 		}
 		memcpy(b->b_lines + priv->priv_buflen, chunk, i + 1);
-		b->b_lines[linelen - 1] = '\0';
+		b->b_lines[linelen] = '\0';
 		priv->priv_buflen = 0;
 
-		LIST_INSERT_HEAD(&priv->priv_body, b, b_list);
+		SIMPLEQ_INSERT_TAIL(&priv->priv_body, b, b_list);
 
 		priv->priv_msgcount += linelen;
 	} else { /* No newline in chunk, keep it for later */
@@ -753,7 +776,7 @@ real_eom(ctx)
 	 * If we got no newline at all, at least 
 	 * we can save the current buffer 
 	 */
-	if (LIST_EMPTY(&priv->priv_body) && (priv->priv_buflen > 0)) {
+	if (SIMPLEQ_EMPTY(&priv->priv_body) && (priv->priv_buflen > 0)) {
 		struct body *b;
 
 		if ((b = malloc(sizeof(*b))) == NULL) {
@@ -767,7 +790,7 @@ real_eom(ctx)
 		priv->priv_buf = NULL;
 		priv->priv_buflen = 0;
 
-		LIST_INSERT_HEAD(&priv->priv_body, b, b_list);
+		SIMPLEQ_INSERT_TAIL(&priv->priv_body, b, b_list);
 	}
 
 	if (priv->priv_delayed_reject) {
@@ -990,14 +1013,14 @@ real_close(ctx)
 			LIST_REMOVE(r, r_list);
 			free(r);
 		}
-		while ((h = LIST_FIRST(&priv->priv_header)) != NULL) {
+		while ((h = SIMPLEQ_FIRST(&priv->priv_header)) != NULL) {
 			free(h->h_line);
-			LIST_REMOVE(h, h_list);
+			SIMPLEQ_REMOVE_HEAD(&priv->priv_header, h_list);
 			free(h);
 		}
-		while ((b = LIST_FIRST(&priv->priv_body)) != NULL) {
+		while ((b = SIMPLEQ_FIRST(&priv->priv_body)) != NULL) {
 			free(b->b_lines);
-			LIST_REMOVE(b, b_list);
+			SIMPLEQ_REMOVE_HEAD(&priv->priv_body, b_list);
 			free(b);
 		}
 		if (priv->priv_buf)
