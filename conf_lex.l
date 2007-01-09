@@ -21,9 +21,12 @@ peer		[Pp][Ee][Ee][Rr]:?
 verbose		[Vv][Ee][Rr][Bb][Oo][Ss][Ee]
 quiet		[Qq][Uu][Ii][Ee][Tt]
 noauth		[Nn][Oo][Aa][Uu][Tt][Hh]
+auth		[Aa][Uu][Tt][Hh]
+tls		[Tt][Ll][Ss]
 noaccessdb	[Nn][Oo][Aa][Cc][Cc][Ee][Ss][Ss][Dd][Bb]
 extendedregex	[Ee][Xx][Tt][Ee][Nn][Dd][Ee][Dd][Rr][Ee][Gg][Ee][Xx]
 nospf		[Nn][Oo][Ss][Pp][Ff]
+spf		[Ss][Pp][Ff]
 delayedreject	[Dd][Ee][Ll][Aa][Yy][Ee][Dd][Rr][Ee][Jj][Ee][Cc][Tt]
 testmode	[Tt][Ee][Ss][Tt][Mm][Oo][Dd][Ee]
 greylist	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt]:?		
@@ -91,7 +94,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.61 2007/01/04 23:01:46 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.62 2007/01/09 22:22:43 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -119,10 +122,13 @@ star		"*"
 {lazyaw}	{ return LAZYAW; }
 {greylist}	{ return GREYLIST; }
 {noauth}	{ return NOAUTH; }
+{auth}		{ return AUTH; }
+{tls}		{ return TLS; }
 {noaccessdb}	{ return NOACCESSDB; }
 {extendedregex}	{ return EXTENDEDREGEX; }
 {delayedreject}	{ return DELAYEDREJECT; }
 {nospf}		{ return NOSPF; }
+{spf}		{ return SPF; }
 {quiet}		{ return QUIET; }
 {testmode}	{ return TESTMODE; }
 {verbose}	{ return VERBOSE; }

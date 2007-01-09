@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.44 2007/01/04 23:01:46 manu Exp $ */
+/* $Id: acl.c,v 1.45 2007/01/09 22:22:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.44 2007/01/04 23:01:46 manu Exp $");
+__RCSID("$Id: acl.c,v 1.45 2007/01/09 22:22:43 manu Exp $");
 #endif
 #endif
 
@@ -70,6 +70,10 @@ __RCSID("$Id: acl.c,v 1.44 2007/01/04 23:01:46 manu Exp $");
 #ifdef USE_CURL
 #include "urlcheck.h"
 #endif
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
+     defined(HAVE_SPF2_10) || defined(HAVE_SPF2)) 
+#include "spf.h"
+#endif
 #include "macro.h"
 #include "milter-greylist.h"
 
@@ -82,6 +86,7 @@ char *acl_print_netblock(acl_data_t *, char *, size_t);
 char *acl_print_string(acl_data_t *, char *, size_t);
 char *acl_print_regex(acl_data_t *, char *, size_t);
 char *acl_print_list(acl_data_t *, char *, size_t);
+char *acl_print_null(acl_data_t *, char *, size_t);
 void acl_free_netblock(acl_data_t *);
 void acl_free_string(acl_data_t *);
 void acl_free_regex(acl_data_t *);
@@ -218,6 +223,37 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 #endif
+	{ AC_AUTH, MULTIPLE_OK, AS_ANY, "auth", 
+	  AT_STRING, AC_AUTH_LIST, AC_STRING,
+	  *acl_print_string, *acl_add_string,
+	  *acl_free_string, *acl_auth_strcmp },
+	{ AC_AUTH_RE, MULTIPLE_OK, AS_ANY, "auth_re", 
+	  AT_REGEX, AC_AUTH_LIST, AC_REGEX,
+	  *acl_print_regex, *acl_add_regex,
+	  *acl_free_regex, *acl_auth_regexec },
+	{ AC_AUTH_LIST, MULTIPLE_OK, AS_ANY, "auth_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+	{ AC_TLS, MULTIPLE_OK, AS_ANY, "tls", 
+	  AT_STRING, AC_TLS_LIST, AC_STRING,
+	  *acl_print_string, *acl_add_string,
+	  *acl_free_string, *acl_tls_strcmp },
+	{ AC_TLS_RE, MULTIPLE_OK, AS_ANY, "tls_re", 
+	  AT_REGEX, AC_TLS_LIST, AC_REGEX,
+	  *acl_print_regex, *acl_add_regex,
+	  *acl_free_regex, *acl_tls_regexec },
+	{ AC_TLS_LIST, MULTIPLE_OK, AS_ANY, "tls_list", 
+	  AT_LIST, AC_NONE, AC_NONE,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
+     defined(HAVE_SPF2_10) || defined(HAVE_SPF2)) 
+	{ AC_SPF, UNIQUE, AS_ANY, "spf",
+	  AT_NONE, AC_NONE, AC_SPF, 
+	  *acl_print_null, NULL,
+	  NULL, *spf_check },
+#endif
 };
 
 struct {
@@ -336,6 +372,44 @@ acl_from_regexec(ad, stage, ap, priv)
 }
 
 int
+acl_auth_regexec(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	char *auth_authen;
+
+	auth_authen = smfi_getsymval(priv->priv_ctx, "{auth_authen}");
+	if (auth_authen == NULL)
+		return 0;
+
+	if(regexec(ad->regex.re, auth_authen, 0, NULL, 0) == 0)
+		return EXF_AUTH;
+	return 0;
+}
+
+int
+acl_tls_regexec(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	char *verify;
+	char *dn;
+
+	if (((verify = smfi_getsymval(priv->priv_ctx, "{verify}")) == NULL) ||
+	    (strcmp(verify, "OK") != 0) ||
+	    ((dn = smfi_getsymval(priv->priv_ctx, "{cert_subject}")) == NULL))
+		return 0;
+
+	if(regexec(ad->regex.re, dn, 0, NULL, 0) == 0)
+		return EXF_STARTTLS;
+	return 0;
+}
+
+int
 acl_rcpt_regexec(ad, stage, ap, priv)
 	acl_data_t *ad;
 	acl_stage_t stage;
@@ -417,6 +491,46 @@ acl_rcpt_cmp(ad, stage, ap, priv)
 
 	if (emailcmp(priv->priv_cur_rcpt, rcpt) == 0)
 		return EXF_RCPT;
+	return 0;
+}
+
+int
+acl_auth_strcmp(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	char *auth_authen;
+
+	auth_authen = smfi_getsymval(priv->priv_ctx, "{auth_authen}");
+	if (auth_authen == NULL)
+		return 0;
+
+	if (strcmp(auth_authen, ad->string) == 0)
+		return EXF_AUTH;
+
+	return 0;
+}
+
+int
+acl_tls_strcmp(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	char *verify;
+	char *dn;
+
+	if (((verify = smfi_getsymval(priv->priv_ctx, "{verify}")) == NULL) ||
+	    (strcmp(verify, "OK") != 0) ||
+	    ((dn = smfi_getsymval(priv->priv_ctx, "{cert_subject}")) == NULL))
+		return 0;
+
+	if (strcmp(dn, ad->string) == 0)
+		return EXF_STARTTLS;
+
 	return 0;
 }
 
@@ -529,6 +643,15 @@ acl_print_list(ad, buf, len)
 	size_t len;
 {
 	snprintf(buf, len, "\"%s\"", ad->list->al_name);
+	return buf;
+}
+
+char *
+acl_print_null(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
 	return buf;
 }
 
@@ -889,7 +1012,8 @@ acl_add_clause(type, data)
 
 	ac->ac_type = type;
 	ac->ac_acr = acr;
-	(*acr->acr_add)(&ac->ac_data, data);
+	if (acr->acr_add != NULL)
+		(*acr->acr_add)(&ac->ac_data, data);
 	LIST_INSERT_HEAD(&gacl->a_clause, ac, ac_list);
 		
 	/* 

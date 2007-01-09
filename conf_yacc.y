@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG AUTH TLS SPF
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.67 2007/01/04 23:01:46 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.68 2007/01/09 22:22:43 manu Exp $");
 #endif
 #endif
 
@@ -529,6 +529,11 @@ acl_clause:	fromaddr_clause
 	|	headerregex_clause
 	|	body_clause
 	|	bodyregex_clause
+	|	auth_clause
+	|	authregex_clause
+	|	tls_clause
+	|	tlsregex_clause
+	|	spf_clause
 	;
 
 acl_values:	acl_value
@@ -628,6 +633,49 @@ body_clause:		BODY QSTRING {
 	;
 
 bodyregex_clause:	BODY REGEX { acl_add_clause(AC_BODY_RE, $2); }
+	;
+
+auth_clause:		AUTH QSTRING {
+				char qstring[QSTRLEN + 1];
+
+				acl_add_clause(AC_AUTH,
+				    quotepath(qstring, $2, QSTRLEN));
+				conf.c_noauth = 1; 
+			}
+	;
+
+authregex_clause:	AUTH REGEX { 
+				acl_add_clause(AC_AUTH_RE, $2); 
+				conf.c_noauth = 1; 
+			}
+	;
+
+tls_clause:		TLS QSTRING {
+				char qstring[QSTRLEN + 1];
+
+				acl_add_clause(AC_TLS,
+				    quotepath(qstring, $2, QSTRLEN));
+				conf.c_noauth = 1; 
+			}
+	;
+
+tlsregex_clause:	TLS REGEX { 
+				acl_add_clause(AC_TLS_RE, $2); 
+				conf.c_noauth = 1;  
+			}
+	;
+
+spf_clause:		SPF {
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
+     defined(HAVE_SPF2_10) || defined(HAVE_SPF2))
+				acl_add_clause(AC_SPF, NULL); 
+				conf.c_nospf = 1;
+#else
+				mg_log(LOG_INFO, 
+				    "SPF support not compiled in line %d", 
+				    conf_line);
+#endif
+			}
 	;
 
 urlcheck_clause:	URLCHECK QSTRING { 
@@ -834,6 +882,10 @@ list_clause:	FROM OPENLIST email_list CLOSELIST
 			{ all_list_settype(glist, AC_MACRO_LIST); }
 	|	ADDR OPENLIST addr_list CLOSELIST
 			{ all_list_settype(glist, AC_NETBLOCK_LIST); }
+	|	AUTH OPENLIST qstring_list CLOSELIST
+			{ all_list_settype(glist, AC_AUTH_LIST); }
+	|	TLS OPENLIST qstring_list CLOSELIST
+			{ all_list_settype(glist, AC_TLS_LIST); }
 	;
 
 email_list:	email_item

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.53 2007/01/04 23:01:46 manu Exp $
+.\" $Id: greylist.conf.5,v 1.54 2007/01/09 22:22:43 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -66,6 +66,10 @@ keyword, and by any set of the following clauses:
 .I from\fR,
 .I rcpt\fR,
 .I sm_macro\fR,
+.I auth\fR,
+.I tls\fR,
+.I spf\fR
+(if build with SPF support), 
 .I urlcheck\fR
 (if built with --with-libcurl), and 
 .I dnsrbl\fR
@@ -118,6 +122,32 @@ This is used to select recipient addresses. Example:
 .I sm_macro 
 This is used to select a Sendmail macro value. See the section on that
 topic for more information.
+.TP
+.I auth
+This is used to select a user that succeeded SMTP AUTH. In order to select
+any user that succeeds SMTP AUTH, you can use a regular expression matching, 
+like below;
+.IP
+  racl whiteliste auth /.*/
+.IP
+Using such a clause automatically disable global STARTTLS and
+SMTP AUTH whitelisting, like if the
+.I noauth
+keyword would have been used.
+.TP
+.I tls
+This is used to select the distinguished name (DN) of a user that succeeded
+STARTTLS. Using such a clause automatically disable global STARTTLS and
+SMTP AUTH whitelisting, like if the 
+.I noauth
+keyword would have been used.
+.TP
+.I spf
+This is used to select transactions with a valid SPF status. This clause
+is only available if SPF support was compiled in. Using it will disable
+global SPF whitelisting, like if the
+.I nospf
+keyword would have been used.
 .TP
 .I urlcheck
 This is used to query an external configuration source through an URL.

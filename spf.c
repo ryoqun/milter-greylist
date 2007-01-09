@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.23 2006/08/27 20:54:41 manu Exp $ */
+/* $Id: spf.c,v 1.24 2007/01/09 22:22:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.23 2006/08/27 20:54:41 manu Exp $");
+__RCSID("$Id: spf.c,v 1.24 2007/01/09 22:22:43 manu Exp $");
 #endif
 #endif
 
@@ -61,12 +61,16 @@ __RCSID("$Id: spf.c,v 1.23 2006/08/27 20:54:41 manu Exp $");
 #endif
 
 int
-spf_check(sa, salen, helo, from)
-	struct sockaddr *sa;
-	socklen_t salen;
-	char *helo;
-	char *from;
+spf_check(ad, as, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t as;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
 {
+	struct sockaddr *sa = SA(&priv->priv_addr);
+	socklen_t salen = priv->priv_addrlen;
+	char *helo = priv->priv_helo;
+	char *fromp = priv->priv_from;
 	peer_info_t *p = NULL;
 	char addr[IPADDRSTRLEN];
 	int result = EXF_NONE;
@@ -131,12 +135,16 @@ out1:
 
 #if defined(HAVE_SPF_ALT) || defined(HAVE_SPF2_10)
 int
-spf_alt_check(sa, salen, helo, fromp)
-	struct sockaddr *sa;
-	socklen_t salen;
-	char *helo;
-	char *fromp;
+spf_check(ad, as, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t as;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
 {
+	struct sockaddr *sa = SA(&priv->priv_addr);
+	socklen_t salen = priv->priv_addrlen;
+	char *helo = priv->priv_helo;
+	char *fromp = priv->priv_from;
 	SPF_config_t spfconf;
 	SPF_dns_config_t dnsconf;
 	char addr[IPADDRSTRLEN];
@@ -197,7 +205,7 @@ spf_alt_check(sa, salen, helo, fromp)
 	 * Get the SPF result
 	 */
 	SPF_init_output(&out);
-#if ((SPF_LIB_VERSION_MAJOR == 0) && (SPF_LIB_VERSION_MINOR <= 3))
+#if 0 &&((SPF_LIB_VERSION_MAJOR == 0) && (SPF_LIB_VERSION_MINOR <= 3))
 	out = SPF_result(spfconf, dnsconf, NULL);
 #else
 	out = SPF_result(spfconf, dnsconf);
@@ -230,12 +238,15 @@ out1:
 #include <spf2/spf.h>
 
 int
-spf2_check(sa, salen, helo, fromp)
-	struct sockaddr *sa;
-	socklen_t salen;
-	char *helo;
-	char *fromp;
+spf_check(ad, as, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t as;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
 {
+	struct sockaddr *sa = SA(&priv->priv_addr);
+	char *helo = priv->priv_helo;
+	char *fromp = priv->priv_from;
 	SPF_server_t *spf_server;
 	SPF_request_t *spf_request;
 	SPF_response_t *spf_response;

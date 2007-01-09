@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.17 2006/12/29 18:32:44 manu Exp $ */
+/* $Id: acl.h,v 1.18 2007/01/09 22:22:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -50,7 +50,7 @@
 
 typedef enum { A_GREYLIST, A_WHITELIST, A_BLACKLIST, } acl_type_t;
 typedef enum { AS_NONE, AS_RCPT, AS_DATA, AS_ANY, } acl_stage_t;
-typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK,
+typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK, 
 	       AT_DNSRBL, AT_URLCHECK, AT_MACRO, AT_LIST } acl_data_type_t;
 
 typedef enum {
@@ -83,6 +83,13 @@ typedef enum {
 	AC_MACRO_LIST,
 	AC_URLCHECK,
 	AC_URLCHECK_LIST,
+	AC_AUTH,
+	AC_AUTH_RE,
+	AC_AUTH_LIST,
+	AC_TLS,
+	AC_TLS_RE,
+	AC_TLS_LIST,
+	AC_SPF,
 } acl_clause_t;
 
 struct acl_clause;
@@ -214,6 +221,14 @@ int acl_rcpt_cmp(acl_data_t *, acl_stage_t,
 		 struct acl_param *, struct mlfi_priv *);
 int acl_rcpt_regexec(acl_data_t *, acl_stage_t, 
 		 struct acl_param *, struct mlfi_priv *);
+int acl_auth_strcmp(acl_data_t *, acl_stage_t, 
+		    struct acl_param *, struct mlfi_priv *);
+int acl_auth_regexec(acl_data_t *, acl_stage_t, 
+		     struct acl_param *, struct mlfi_priv *);
+int acl_tls_strcmp(acl_data_t *, acl_stage_t, 
+		   struct acl_param *, struct mlfi_priv *);
+int acl_tls_regexec(acl_data_t *, acl_stage_t, 
+		    struct acl_param *, struct mlfi_priv *);
 int acl_domain_cmp(acl_data_t *, acl_stage_t, 
 	           struct acl_param *, struct mlfi_priv *);
 int acl_domain_regexec(acl_data_t *, acl_stage_t, 

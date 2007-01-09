@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.11 2005/10/03 07:58:53 manu Exp $ */
+/* $Id: spf.h,v 1.12 2007/01/09 22:22:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -39,20 +39,15 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
-#if defined(HAVE_SPF2)
-int spf2_check(struct sockaddr *, socklen_t, char *, char *);
-#define SPF_CHECK(w,x,y,z) spf2_check((w),(x),(y),(z))
+#include "acl.h"
 
-#elif defined(HAVE_SPF_ALT) || defined(HAVE_SPF2_10)
-int spf_alt_check(struct sockaddr *, socklen_t, char *, char *);
-#define SPF_CHECK(w,x,y,z) spf_alt_check((w),(x),(y),(z))
-
-#elif defined(HAVE_SPF)
-int spf_check(struct sockaddr *, socklen_t, char*, char *);
-#define SPF_CHECK(w,x,y,z) spf_check((w),(x),(y),(z))
-
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
+     defined(HAVE_SPF2_10) || defined(HAVE_SPF2))
+int spf_check(acl_data_t *, acl_stage_t,
+		  struct acl_param *, struct mlfi_priv *);
+#define SPF_CHECK(priv) spf_check(NULL, AS_RCPT, NULL, (priv))
 #else
-#define SPF_CHECK(w,x,y,z) EXF_NONE
+#define SPF_CHECK(priv) EXF_NONE
 
 #endif
 

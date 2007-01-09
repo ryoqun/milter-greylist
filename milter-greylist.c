@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.151 2007/01/04 23:01:46 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.152 2007/01/09 22:22:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.151 2007/01/04 23:01:46 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.152 2007/01/09 22:22:43 manu Exp $");
 #endif
 #endif
 
@@ -405,9 +405,7 @@ real_envfrom(ctx, envfrom)
 	/*
 	 * Is the sender address SPF-compliant?
 	 */
-	if ((conf.c_nospf == 0) && 
-	    (SPF_CHECK(SA(&priv->priv_addr), priv->priv_addrlen,
-	    priv->priv_helo, *envfrom) != EXF_NONE)) {
+	if ((conf.c_nospf == 0) && (SPF_CHECK(priv) != EXF_NONE)) {
 		char ipstr[IPADDRSTRLEN];
 
 		if (iptostring(SA(&priv->priv_addr),

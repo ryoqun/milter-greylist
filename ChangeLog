@@ -7,6 +7,7 @@
 	Document how to use milter-greylist with Postfix (Nerijus Baliunas)
 	Update .spec for Postfix (Nerijus Baliunas)
 	Optionnaly post the message body to an URL check at DATA stage
+	Integrate SPF, SMTP AUTH and STARTTLS in ACL
 3.1.3
 	Fix various bugs (regex searches, lists matches, uninitialized memory)
 3.1.2
