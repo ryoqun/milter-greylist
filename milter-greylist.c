@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.152 2007/01/09 22:22:43 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.153 2007/01/10 10:54:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.152 2007/01/09 22:22:43 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.153 2007/01/10 10:54:26 manu Exp $");
 #endif
 #endif
 
@@ -258,6 +258,7 @@ real_connect(ctx, hostname, addr)
 	priv->priv_sr.sr_retcode = -1;
 	LIST_INIT(&priv->priv_rcpt);
 	priv->priv_cur_rcpt = NULL;
+	priv->priv_rcptcount = 0;
 	SIMPLEQ_INIT(&priv->priv_header);
 	SIMPLEQ_INIT(&priv->priv_body);
 	priv->priv_msgcount = 0;
@@ -631,6 +632,9 @@ real_header(ctx, name, value)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
+	len = strlen(name) + strlen(sep) + strlen(value) + strlen(crlf);
+	priv->priv_msgcount += len;
+
 	if (priv->priv_msgcount > conf.c_maxpeek) {
 		mg_log(LOG_DEBUG, "ignoring message beyond maxpeek = %d", 
 		    conf.c_maxpeek);
@@ -655,8 +659,6 @@ real_header(ctx, name, value)
 
 	SIMPLEQ_INSERT_TAIL(&priv->priv_header, h, h_list);
 
-	priv->priv_msgcount += len;
-
 	return SMFIS_CONTINUE;
 }
 
@@ -677,6 +679,7 @@ real_body(ctx, chunk, size)
 	/* Avoid copying the whole message to save CPU */
 	if ((priv->priv_msgcount > conf.c_maxpeek) || 
 	    (priv->priv_buflen > conf.c_maxpeek)) {
+		priv->priv_msgcount += size;
 		mg_log(LOG_DEBUG, "ignoring message beyond maxpeek = %d", 
 		    conf.c_maxpeek);
 		return SMFIS_CONTINUE;
@@ -1538,6 +1541,17 @@ humanized_atoi(str)	/* *str is modified */
 		unit = 7 * 24 * 60 * 60;
 		break;
 
+	/* For msgsize clauses */
+	case 'k':
+		unit = 1024;
+		break;
+
+	case 'M':
+		unit = 1024 * 1024;
+		break;
+
+	/* Giga and beyond is probably useless... */
+
 	default:
 		return atoi(str);
 		break;
@@ -1893,6 +1907,7 @@ add_recipient(priv, rcpt)
 	nr->r_addr[ADDRLEN] = '\0';
 
 	LIST_INSERT_HEAD(&priv->priv_rcpt, nr, r_list);
+	priv->priv_rcptcount++;
 	return;
 }
 

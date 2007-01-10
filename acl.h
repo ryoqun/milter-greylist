@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.18 2007/01/09 22:22:43 manu Exp $ */
+/* $Id: acl.h,v 1.19 2007/01/10 10:54:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -50,7 +50,7 @@
 
 typedef enum { A_GREYLIST, A_WHITELIST, A_BLACKLIST, } acl_type_t;
 typedef enum { AS_NONE, AS_RCPT, AS_DATA, AS_ANY, } acl_stage_t;
-typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK, 
+typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK, AT_OPNUM, 
 	       AT_DNSRBL, AT_URLCHECK, AT_MACRO, AT_LIST } acl_data_type_t;
 
 typedef enum {
@@ -90,6 +90,8 @@ typedef enum {
 	AC_TLS_RE,
 	AC_TLS_LIST,
 	AC_SPF,
+	AC_MSGSIZE,
+	AC_RCPTCOUNT,
 } acl_clause_t;
 
 struct acl_clause;
@@ -103,6 +105,13 @@ struct acl_param;
 #define ACL_UNLOCK UNLOCK(acl_lock)
 
 TAILQ_HEAD(acllist, acl_entry);
+
+enum operator { OP_EQ, OP_NE, OP_GT, OP_LT, OP_GE, OP_LE };
+
+struct acl_opnum_data {
+	enum operator op;
+	int num;
+};
 
 struct acl_netblock_data {
         struct sockaddr *addr;
@@ -145,6 +154,7 @@ typedef union acl_data {
 #ifdef USE_CURL
 	struct urlcheck_entry *urlcheck;
 #endif
+	struct acl_opnum_data opnum;
 } acl_data_t;
 
 struct acl_clause_rec {
@@ -241,6 +251,10 @@ int acl_body_regexec(acl_data_t *, acl_stage_t,
 		     struct acl_param *, struct mlfi_priv *);
 int acl_header_regexec(acl_data_t *, acl_stage_t, 
 		       struct acl_param *, struct mlfi_priv *);
+int acl_rcptcount_cmp(acl_data_t *, acl_stage_t, 
+		      struct acl_param *, struct mlfi_priv *);
+int acl_msgsize_cmp(acl_data_t *, acl_stage_t, 
+		    struct acl_param *, struct mlfi_priv *);
 
 /* acl_filter() return codes */
 #define	EXF_UNSET	0
@@ -266,4 +280,6 @@ int acl_header_regexec(acl_data_t *, acl_stage_t,
 #define EXF_URLCHECK	(1 << 18)
 #define EXF_HEADER	(1 << 19)
 #define EXF_BODY	(1 << 20)
+#define EXF_MSGSIZE	(1 << 21)
+#define EXF_RCPTCOUNT	(1 << 22)
 #endif /* _ACL_H_ */

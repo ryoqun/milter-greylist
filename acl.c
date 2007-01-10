@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.45 2007/01/09 22:22:43 manu Exp $ */
+/* $Id: acl.c,v 1.46 2007/01/10 10:54:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.45 2007/01/09 22:22:43 manu Exp $");
+__RCSID("$Id: acl.c,v 1.46 2007/01/10 10:54:26 manu Exp $");
 #endif
 #endif
 
@@ -87,6 +87,8 @@ char *acl_print_string(acl_data_t *, char *, size_t);
 char *acl_print_regex(acl_data_t *, char *, size_t);
 char *acl_print_list(acl_data_t *, char *, size_t);
 char *acl_print_null(acl_data_t *, char *, size_t);
+char *acl_print_opnum(acl_data_t *, char *, size_t);
+int acl_opnum_cmp(int, enum operator, int);
 void acl_free_netblock(acl_data_t *);
 void acl_free_string(acl_data_t *);
 void acl_free_regex(acl_data_t *);
@@ -96,6 +98,8 @@ void acl_add_regex(acl_data_t *, void *);
 void acl_add_body_string(acl_data_t *, void *);
 void acl_add_body_regex(acl_data_t *, void *);
 void acl_add_macro(acl_data_t *, void *);
+void acl_add_opnum(acl_data_t *, void *);
+void acl_add_opnum_body(acl_data_t *, void *);
 void acl_add_list(acl_data_t *, void *);
 char *acl_print_macro(acl_data_t *, char *, size_t);
 #ifdef USE_DNSRBL
@@ -159,15 +163,15 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  AT_LIST, AC_NONE, AC_NONE,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
-	{ AC_RCPT, UNIQUE, AS_RCPT, "rcpt", 
+	{ AC_RCPT, MULTIPLE_OK, AS_ANY, "rcpt", 
 	  AT_STRING, AC_RCPT_LIST, AC_EMAIL,
 	  *acl_print_string, *acl_add_string,
 	  *acl_free_string, *acl_rcpt_cmp },
-	{ AC_RCPT_RE, UNIQUE, AS_RCPT, "rcpt_re", 
+	{ AC_RCPT_RE, MULTIPLE_OK, AS_ANY, "rcpt_re", 
 	  AT_REGEX, AC_RCPT_LIST, AC_REGEX,
 	  *acl_print_regex, *acl_add_regex,
 	  *acl_free_regex, *acl_rcpt_regexec },
-	{ AC_RCPT_LIST, UNIQUE, AS_RCPT, "rcpt_list", 
+	{ AC_RCPT_LIST, MULTIPLE_OK, AS_ANY, "rcpt_list", 
 	  AT_LIST, AC_NONE, AC_NONE,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
@@ -254,6 +258,14 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  *acl_print_null, NULL,
 	  NULL, *spf_check },
 #endif
+	{ AC_MSGSIZE, MULTIPLE_OK, AS_DATA, "msgsize", 
+	  AT_OPNUM, AC_NONE, AC_MSGSIZE,
+	  *acl_print_opnum, *acl_add_opnum,
+	  NULL, *acl_msgsize_cmp },
+	{ AC_RCPTCOUNT, MULTIPLE_OK, AS_ANY, "rcptcount", 
+	  AT_OPNUM, AC_NONE, AC_RCPTCOUNT,
+	  *acl_print_opnum, *acl_add_opnum_body,
+	  NULL, *acl_rcptcount_cmp },
 };
 
 struct {
@@ -281,6 +293,66 @@ stage_string(stage)
 	exit(EX_SOFTWARE);
 	/* NOTREACHED */
 	return NULL;
+}
+
+int 
+acl_opnum_cmp(val1, op, val2)
+	int val1;
+	enum operator op;
+	int val2;
+{
+	switch(op) {
+	case OP_EQ:
+		return (val1 == val2);
+		break;
+	case OP_NE:
+		return (val1 != val2);
+		break;
+	case OP_LT:
+		return (val1 < val2);
+		break;
+	case OP_GT:
+		return (val1 > val2);
+		break;
+	case OP_LE:
+		return (val1 <= val2);
+		break;
+	case OP_GE:
+		return (val1 >= val2);
+		break;
+	default:
+		mg_log(LOG_ERR, "unexpected operator");
+		exit(EX_SOFTWARE);
+		break;
+	}
+	/* NOTREACHED */
+	return 0;
+}
+
+int
+acl_rcptcount_cmp(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	if (acl_opnum_cmp(priv->priv_rcptcount, ad->opnum.op, ad->opnum.num))
+		return EXF_RCPTCOUNT;
+
+	return 0;
+}
+
+int
+acl_msgsize_cmp(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	if (acl_opnum_cmp(priv->priv_msgcount, ad->opnum.op, ad->opnum.num))
+		return EXF_MSGSIZE;
+
+	return 0;
 }
 
 int
@@ -484,13 +556,17 @@ acl_rcpt_cmp(ad, stage, ap, priv)
 {
 	char *rcpt = ad->string;
 
-	if (stage != AS_RCPT) {
-		mg_log(LOG_ERR, "rcpt filter called at non RCPT stage");
-		exit(EX_SOFTWARE);
+	if (stage == AS_RCPT) {
+		if (emailcmp(priv->priv_cur_rcpt, rcpt) == 0)
+			return EXF_RCPT;
+	} else {
+		struct rcpt *r;
+
+		 LIST_FOREACH(r, &priv->priv_rcpt, r_list)
+			if (emailcmp(r->r_addr, rcpt) == 0)
+				return EXF_RCPT;
 	}
 
-	if (emailcmp(priv->priv_cur_rcpt, rcpt) == 0)
-		return EXF_RCPT;
 	return 0;
 }
 
@@ -652,6 +728,42 @@ acl_print_null(ad, buf, len)
 	char *buf;
 	size_t len;
 {
+	return buf;
+}
+
+char *
+acl_print_opnum(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	struct {
+		enum operator op;
+		char *str;
+	} op_to_str[] = {
+		{ OP_EQ, "==" },
+		{ OP_NE, "!=" },
+		{ OP_GT, ">" },
+		{ OP_LT, "<" },
+		{ OP_GE, ">=" },
+		{ OP_LE, "<=" },
+	};
+	int i;
+	char *str = NULL;
+
+	for (i = 0; i < sizeof(op_to_str) / sizeof(*op_to_str); i++) {
+		if (op_to_str[i].op == ad->opnum.op) {
+			str = op_to_str[i].str;
+			break;
+		}
+	}
+	if (str == NULL) {
+		mg_log(LOG_ERR, "unexpected operator");
+		exit(EX_SOFTWARE);
+	}
+
+	snprintf(buf, len, "%s %d", str, ad->opnum.num);
+
 	return buf;
 }
 
@@ -1688,6 +1800,31 @@ acl_add_list(ad, data)
 	ad->list = ale;
 
 	return;
+}
+
+void
+acl_add_opnum_body(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	if (conf.c_maxpeek == 0)
+		conf.c_maxpeek = -1;
+
+	acl_add_opnum(ad, data);
+	return;
+}
+
+void
+acl_add_opnum(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	struct acl_opnum_data *aod;
+
+	aod = (struct acl_opnum_data *)data;
+
+	ad->opnum.op = aod->op;
+	ad->opnum.num = aod->num;
 }
 
 void 

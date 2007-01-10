@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.54 2007/01/09 22:22:43 manu Exp $
+.\" $Id: greylist.conf.5,v 1.55 2007/01/10 10:54:26 manu Exp $
 .\"
 .\" Copyright (c) 2004 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -65,6 +65,7 @@ keyword, and by any set of the following clauses:
 .I domain\fR,
 .I from\fR,
 .I rcpt\fR,
+.I rcptcount\fR,
 .I sm_macro\fR,
 .I auth\fR,
 .I tls\fR,
@@ -118,6 +119,12 @@ Example:
 This is used to select recipient addresses. Example:
 .IP
   racl greylist rcpt John.Doe@example.net
+.TP
+.I rcptcount
+Followed by an operator and a recipient count, this is used to select the
+amount of recipients. Example:
+.IP
+  racl blacklist rcptcount >= 25 msg "No more than 25 recipients, please"
 .TP
 .I sm_macro 
 This is used to select a Sendmail macro value. See the section on that
@@ -272,17 +279,31 @@ keyword are evaluated at the RCPT stage of the SMTP transaction. It is
 also possible to have ACL evaluated at the DATA stage of the SMTP transaction, 
 using the 
 .I dacl 
-keyword. DATA-stage ACL have limitations: their action cannot be
-.I greylist\fR,
-and they cannot use the
-.I rcpt
-clauses. On the other hand, the following clauses can be used:
+keyword. DATA-stage ACL cannot use the
+.I greylist
+cction, on the other hand, the following clauses can be used to work on message
+content:
 .TP
 .I header
 String or regular expression searched in message headers
 .TP
 .I body
 String or regular expression searched in message body
+.TP
+.I msgsize
+Operator followed by a message size (k or M suffix allowed for kilobytes
+or megabytes). Example:
+.IP
+  dacl blacklist msgsize >= 4M msg "No more than 4 MB please"
+.PP
+Note that at DATA stage, the
+.I rcpt
+clause will match if any of the recipients match the clause. If you want to
+match an exact set of recipients, you can use multiple 
+.I rcpt
+clauses along with a
+.I rcptcount
+clause.
 .SH LISTS
 It is often useful to group several users or sender IP addresses in a single
 ACL. This can be done with lists. Lists must be first defined and given 

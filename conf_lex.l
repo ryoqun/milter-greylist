@@ -23,6 +23,8 @@ quiet		[Qq][Uu][Ii][Ee][Tt]
 noauth		[Nn][Oo][Aa][Uu][Tt][Hh]
 auth		[Aa][Uu][Tt][Hh]
 tls		[Tt][Ll][Ss]
+msgsize		[Mm][Ss][Gg][Ss][Ii][Zz][Ee]
+rcptcount	[Rr][Cc][Pp][Tt][Cc][Oo][Uu][Nn][Tt]
 noaccessdb	[Nn][Oo][Aa][Cc][Cc][Ee][Ss][Ss][Dd][Bb]
 extendedregex	[Ee][Xx][Tt][Ee][Nn][Dd][Ee][Dd][Rr][Ee][Gg][Ee][Xx]
 nospf		[Nn][Oo][Ss][Pp][Ff]
@@ -83,6 +85,12 @@ openlist	"{"
 closelist	"}"
 nextln		"\\".*"\n"
 star		"*"
+eq		"=="
+ne		"!="
+ge		">="
+le		"<="
+gt		">"
+lt		"<"
 
 %s S_REGEX
 
@@ -94,7 +102,7 @@ star		"*"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.62 2007/01/09 22:22:43 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.63 2007/01/10 10:54:26 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -114,6 +122,12 @@ star		"*"
 %%
 {blank}
 {comment}
+{eq}		{	yylval.op = OP_EQ; return OP; }
+{ne}		{	yylval.op = OP_NE; return OP; }
+{lt}		{	yylval.op = OP_LT; return OP; }
+{gt}		{	yylval.op = OP_GT; return OP; }
+{le}		{	yylval.op = OP_LE; return OP; }
+{ge}		{	yylval.op = OP_GE; return OP; }
 {addr}		{ return ADDR; }
 {from}		{ BEGIN(S_REGEX); return FROM; }
 {rcpt}		{ BEGIN(S_REGEX); return RCPT; }
@@ -124,6 +138,8 @@ star		"*"
 {noauth}	{ return NOAUTH; }
 {auth}		{ return AUTH; }
 {tls}		{ return TLS; }
+{msgsize}	{ return MSGSIZE; }
+{rcptcount}	{ return RCPTCOUNT; }
 {noaccessdb}	{ return NOACCESSDB; }
 {extendedregex}	{ return EXTENDEDREGEX; }
 {delayedreject}	{ return DELAYEDREJECT; }

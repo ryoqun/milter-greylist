@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.56 2007/01/04 23:01:46 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.57 2007/01/10 10:54:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -172,6 +172,7 @@ struct mlfi_priv {
 	char priv_from[ADDRLEN + 1];
 	LIST_HEAD(, rcpt) priv_rcpt;
 	char *priv_cur_rcpt;
+	int priv_rcptcount;
 	SIMPLEQ_HEAD(, header) priv_header;
 	SIMPLEQ_HEAD(, body) priv_body;
 	size_t priv_msgcount;

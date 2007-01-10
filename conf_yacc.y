@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG AUTH TLS SPF
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG AUTH TLS SPF MSGSIZE RCPTCOUNT OP
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.68 2007/01/09 22:22:43 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.69 2007/01/10 10:54:26 manu Exp $");
 #endif
 #endif
 
@@ -52,6 +52,7 @@ void conf_error(char *);
 	char qstring[QSTRLEN + 1];
 	char delay[NUMLEN + 1];
 	char regex[REGEXLEN + 1];
+	enum operator op; 
 	}
 %type <ipaddr> IPADDR;
 %type <ip6addr> IP6ADDR;
@@ -62,6 +63,7 @@ void conf_error(char *);
 %type <delay> TNUMBER;
 %type <qstring> QSTRING;
 %type <regex> REGEX;
+%type <op> OP;
 
 %%
 lines	:	lines netblock '\n' 
@@ -534,6 +536,8 @@ acl_clause:	fromaddr_clause
 	|	tls_clause
 	|	tlsregex_clause
 	|	spf_clause
+	|	msgsize_clause
+	|	rcptcount_clause
 	;
 
 acl_values:	acl_value
@@ -758,10 +762,31 @@ dracdb:			DRAC DB QSTRING	{
 		}
 	;
 
+msgsize_clause:		MSGSIZE OP TNUMBER {
+				struct acl_opnum_data aond;
+
+				aond.op = $2;
+				aond.num = humanized_atoi($3);
+				
+				acl_add_clause(AC_MSGSIZE, &aond);
+		}
+	;
+
+rcptcount_clause:	RCPTCOUNT OP TNUMBER {
+				struct acl_opnum_data aond;
+
+				aond.op = $2;
+				aond.num = humanized_atoi($3);
+				
+				acl_add_clause(AC_RCPTCOUNT, &aond);
+		}
+	;
+
+
 nodrac:			NODRAC	{ conf.c_nodrac = 1; }
 	;
 
-maxpeek:		MAXPEEK TNUMBER { conf.c_maxpeek = atoi($2); }
+maxpeek:		MAXPEEK TNUMBER { conf.c_maxpeek = humanized_atoi($2); }
 	;
 
 dnsrbldef:	dnsrbldefip | dnsrbldefnetblock
