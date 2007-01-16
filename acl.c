@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.46 2007/01/10 10:54:26 manu Exp $ */
+/* $Id: acl.c,v 1.47 2007/01/16 05:10:37 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.46 2007/01/10 10:54:26 manu Exp $");
+__RCSID("$Id: acl.c,v 1.47 2007/01/16 05:10:37 manu Exp $");
 #endif
 #endif
 
@@ -403,7 +403,7 @@ acl_header_strstr(ad, stage, ap, priv)
 		exit(EX_SOFTWARE);
 	}
 
-	SIMPLEQ_FOREACH(h, &priv->priv_header, h_list)
+	TAILQ_FOREACH(h, &priv->priv_header, h_list)
 		if (strstr(h->h_line, ad->string) != NULL)
 			return EXF_HEADER;
 	return 0;
@@ -423,7 +423,7 @@ acl_body_strstr(ad, stage, ap, priv)
 		exit(EX_SOFTWARE);
 	}
 
-	SIMPLEQ_FOREACH(b, &priv->priv_body, b_list)
+	TAILQ_FOREACH(b, &priv->priv_body, b_list)
 		if (strstr(b->b_lines, ad->string) != NULL)
 			return EXF_BODY;
 
@@ -526,7 +526,7 @@ acl_header_regexec(ad, stage, ap, priv)
 		exit(EX_SOFTWARE);
 	}
 
-	SIMPLEQ_FOREACH(h, &priv->priv_header, h_list)
+	TAILQ_FOREACH(h, &priv->priv_header, h_list)
 		if (regexec(ad->regex.re, 
 		    h->h_line, 0, NULL, 0) == 0)
 			return EXF_HEADER;
@@ -646,7 +646,7 @@ acl_body_regexec(ad, stage, ap, priv)
 		exit(EX_SOFTWARE);
 	}
 
-	SIMPLEQ_FOREACH(b, &priv->priv_body, b_list)
+	TAILQ_FOREACH(b, &priv->priv_body, b_list)
 		if (regexec(ad->regex.re, 
 		    b->b_lines, 0, NULL, 0) == 0)
 			return EXF_BODY;

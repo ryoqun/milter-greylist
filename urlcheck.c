@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.10 2007/01/04 23:01:46 manu Exp $ */
+/* $Id: urlcheck.c,v 1.11 2007/01/16 05:10:38 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.10 2007/01/04 23:01:46 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.11 2007/01/16 05:10:38 manu Exp $");
 #endif
 #endif
 
@@ -303,11 +303,11 @@ find_boundary(priv, boundary)
 	boundary[BOUNDARY_LEN] = '\0';
 
 	do {
-		SIMPLEQ_FOREACH(h, &priv->priv_header, h_list)
+		TAILQ_FOREACH(h, &priv->priv_header, h_list)
 			if (strstr(h->h_line, boundary) != NULL)
 				goto next;
 			
-		SIMPLEQ_FOREACH(b, &priv->priv_body, b_list)
+		TAILQ_FOREACH(b, &priv->priv_body, b_list)
 			if (strstr(b->b_lines, boundary) != NULL)
 				goto next;
 
@@ -364,7 +364,7 @@ curl_post(buffer, size, nmemb, userp)
 			if (len > 0)
 				memcpy(buffer, pd->pd_curptr, len);
 
-			pd->pd_curhdr = SIMPLEQ_NEXT(pd->pd_curhdr, h_list);
+			pd->pd_curhdr = TAILQ_NEXT(pd->pd_curhdr, h_list);
 
 			/* 
 			 * If there are no more headers, we will move to
@@ -397,7 +397,7 @@ curl_post(buffer, size, nmemb, userp)
 
 			/* Move to the next one */
 			pd->pd_curbody = 
-			    SIMPLEQ_NEXT(pd->pd_curbody, b_list);
+			    TAILQ_NEXT(pd->pd_curbody, b_list);
 
 			/* If it's not the last one... */
 			if (pd->pd_curbody != NULL)
@@ -591,7 +591,7 @@ urlcheck_validate(ad, stage, ap, priv)
 
 	if ((stage == AS_DATA) &&
 	    ue->u_postmsg && 
-	    !SIMPLEQ_EMPTY(&priv->priv_header)) {
+	    !TAILQ_EMPTY(&priv->priv_header)) {
 		struct post_data pd;
 		size_t len;
 		char head_templ[] = 
@@ -646,8 +646,8 @@ urlcheck_validate(ad, stage, ap, priv)
 		}
 
 		pd.pd_priv = priv;
-		pd.pd_curhdr = SIMPLEQ_FIRST(&priv->priv_header);
-		pd.pd_curbody = SIMPLEQ_FIRST(&priv->priv_body);
+		pd.pd_curhdr = TAILQ_FIRST(&priv->priv_header);
+		pd.pd_curbody = TAILQ_FIRST(&priv->priv_body);
 		pd.pd_curptr = NULL;
 		pd.pd_done = 0;
 

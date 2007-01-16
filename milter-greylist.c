@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.153 2007/01/10 10:54:26 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.154 2007/01/16 05:10:37 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.153 2007/01/10 10:54:26 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.154 2007/01/16 05:10:37 manu Exp $");
 #endif
 #endif
 
@@ -259,8 +259,8 @@ real_connect(ctx, hostname, addr)
 	LIST_INIT(&priv->priv_rcpt);
 	priv->priv_cur_rcpt = NULL;
 	priv->priv_rcptcount = 0;
-	SIMPLEQ_INIT(&priv->priv_header);
-	SIMPLEQ_INIT(&priv->priv_body);
+	TAILQ_INIT(&priv->priv_header);
+	TAILQ_INIT(&priv->priv_body);
 	priv->priv_msgcount = 0;
 	priv->priv_buf = NULL;
 	priv->priv_buflen = 0;
@@ -657,7 +657,7 @@ real_header(ctx, name, value)
 	strcat(h->h_line, value);
 	strcat(h->h_line, crlf);
 
-	SIMPLEQ_INSERT_TAIL(&priv->priv_header, h, h_list);
+	TAILQ_INSERT_TAIL(&priv->priv_header, h, h_list);
 
 	return SMFIS_CONTINUE;
 }
@@ -686,7 +686,7 @@ real_body(ctx, chunk, size)
 	}
 
 	/* First time: add \r\n between headers and body */
-	if (SIMPLEQ_EMPTY(&priv->priv_body) && (priv->priv_buflen == 0)) {
+	if (TAILQ_EMPTY(&priv->priv_body) && (priv->priv_buflen == 0)) {
 		const char crlf[] = "\r\n";
 
 		if ((b = malloc(sizeof(*b))) == NULL) {
@@ -699,7 +699,7 @@ real_body(ctx, chunk, size)
 			exit(EX_OSERR);
 		}
 
-		SIMPLEQ_INSERT_TAIL(&priv->priv_body, b, b_list);
+		TAILQ_INSERT_TAIL(&priv->priv_body, b, b_list);
 
 		priv->priv_msgcount += strlen(crlf);
 	}
@@ -733,7 +733,7 @@ real_body(ctx, chunk, size)
 		b->b_lines[linelen] = '\0';
 		priv->priv_buflen = 0;
 
-		SIMPLEQ_INSERT_TAIL(&priv->priv_body, b, b_list);
+		TAILQ_INSERT_TAIL(&priv->priv_body, b, b_list);
 
 		priv->priv_msgcount += linelen;
 	} else { /* No newline in chunk, keep it for later */
@@ -777,7 +777,7 @@ real_eom(ctx)
 	 * If we got no newline at all, at least 
 	 * we can save the current buffer 
 	 */
-	if (SIMPLEQ_EMPTY(&priv->priv_body) && (priv->priv_buflen > 0)) {
+	if (TAILQ_EMPTY(&priv->priv_body) && (priv->priv_buflen > 0)) {
 		struct body *b;
 
 		if ((b = malloc(sizeof(*b))) == NULL) {
@@ -791,7 +791,7 @@ real_eom(ctx)
 		priv->priv_buf = NULL;
 		priv->priv_buflen = 0;
 
-		SIMPLEQ_INSERT_TAIL(&priv->priv_body, b, b_list);
+		TAILQ_INSERT_TAIL(&priv->priv_body, b, b_list);
 	}
 
 	if (priv->priv_delayed_reject) {
@@ -1014,14 +1014,14 @@ real_close(ctx)
 			LIST_REMOVE(r, r_list);
 			free(r);
 		}
-		while ((h = SIMPLEQ_FIRST(&priv->priv_header)) != NULL) {
+		while ((h = TAILQ_FIRST(&priv->priv_header)) != NULL) {
 			free(h->h_line);
-			SIMPLEQ_REMOVE_HEAD(&priv->priv_header, h_list);
+			TAILQ_REMOVE(&priv->priv_header, h,  h_list);
 			free(h);
 		}
-		while ((b = SIMPLEQ_FIRST(&priv->priv_body)) != NULL) {
+		while ((b = TAILQ_FIRST(&priv->priv_body)) != NULL) {
 			free(b->b_lines);
-			SIMPLEQ_REMOVE_HEAD(&priv->priv_body, b_list);
+			TAILQ_REMOVE(&priv->priv_body, b, b_list);
 			free(b);
 		}
 		if (priv->priv_buf)
