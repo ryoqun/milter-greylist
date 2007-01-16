@@ -1,4 +1,4 @@
-# $Id: milter-greylist.spec.in,v 1.6 2007/01/04 05:04:13 manu Exp $
+# $Id: milter-greylist.spec.in,v 1.7 2007/01/16 04:57:27 manu Exp $
 # Contributed by Ivan F. Martinez
 
 %define ver @PACKAGE_VERSION@
@@ -33,6 +33,8 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-root-%(%{__id_u} -n)
 %if ! %{postfix}
 Requires: sendmail >= 8.11
 Requires: sendmail-cf >= 8.11
+%else
+Requires: postfix >= 2.3
 %endif
 BuildRequires: sendmail-devel >= 8.11
 BuildRequires: flex
