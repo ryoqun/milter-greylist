@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.154 2007/01/16 05:10:37 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.155 2007/01/17 14:25:28 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.154 2007/01/16 05:10:37 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.155 2007/01/17 14:25:28 manu Exp $");
 #endif
 #endif
 
@@ -983,10 +983,18 @@ real_eom(ctx)
 	priv->priv_sr.sr_elapsed = priv->priv_sr.sr_elapsed % 60;
 	s = priv->priv_sr.sr_elapsed;
 
+#ifndef USE_POSTFIX
 	snprintf(hdr, HDRLEN,
 	    "Delayed for %02d:%02d:%02d by milter-greylist-%s "
 	    "(%s [%s]); %s %s (%s)", 
 	    h, mn, s, PACKAGE_VERSION, fqdn, ip, timestr, tzstr, tznamestr);
+#else
+	/* don't print ip for Postfix */
+	snprintf(hdr, HDRLEN,
+	    "Delayed for %02d:%02d:%02d by milter-greylist-%s "
+	    "(%s); %s %s (%s)",
+	    h, mn, s, PACKAGE_VERSION, fqdn, timestr, tzstr, tznamestr);
+#endif
 
 	if (conf.c_report & C_DELAYS)
 		smfi_addheader(ctx, HEADERNAME, hdr);
