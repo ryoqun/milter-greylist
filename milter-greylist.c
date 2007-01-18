@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.155 2007/01/17 14:25:28 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.156 2007/01/18 15:04:28 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.155 2007/01/17 14:25:28 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.156 2007/01/18 15:04:28 manu Exp $");
 #endif
 #endif
 
@@ -1885,17 +1885,19 @@ void
 mg_log(int level, char *fmt, ...) {
 	va_list ap;
 
-	va_start(ap, fmt);
-
 	if (conf_cold || nodetach) {
+		va_start(ap, fmt);
 		vfprintf(stderr, fmt, ap);
 		fprintf(stderr, "\n");
+		va_end(ap);
 	}
 
-	if (!conf_cold)
+	if (!conf_cold) {
+		va_start(ap, fmt);
 		vsyslog(level, fmt, ap);
+		va_end(ap);
+	}
 
-	va_end(ap);
 	return;
 }
 
