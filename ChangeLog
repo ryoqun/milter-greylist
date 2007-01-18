@@ -1,6 +1,7 @@
 3.0.1
 	Fix timespamp on sparc64 (Gert Doering)
 	Fix dependency in rc-bsd.sh: it's mail, not sendmail
+	Fix crashes when running with -D on some systems (John Thiltges)
 3.0
 	Fix crashes during dump reloads (AIDA Shinra)
 	Fix DoS in MX sync protocol (AIDA Shinra)
