@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.52 2006/11/29 21:08:54 manu Exp $ */
+/* $Id: autowhite.c,v 1.53 2007/01/22 14:08:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.52 2006/11/29 21:08:54 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.53 2007/01/22 14:08:16 manu Exp $");
 #endif
 #endif
 
@@ -65,8 +65,6 @@ __RCSID("$Id: autowhite.c,v 1.52 2006/11/29 21:08:54 manu Exp $");
 #include "acl.h"
 #include "sync.h"
 
-static void autowhite_insert_to_queue(struct autowhite *);
-
 pthread_mutex_t autowhite_lock = PTHREAD_MUTEX_INITIALIZER;
 struct autowhitelist autowhite_head;
 struct autowhite_bucket *autowhite_buckets;
@@ -91,41 +89,26 @@ autowhite_init(void) {
 	return;
 }
 
+/* List must be locked */
 int
-autowhite_timeout(void)
-{
+autowhite_timeout(aw, now)
 	struct autowhite *aw;
-	struct autowhite *next_aw;
-	struct timeval now;
+	struct timeval *now;
+{
 	int dirty = 0;
 	
-	gettimeofday(&now, NULL);
-	
-	AUTOWHITE_LOCK;
-	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
-		next_aw = TAILQ_NEXT(aw, a_list);
-		
-		/*
-		 * Expiration
-		 */
-		if (aw->a_tv.tv_sec < now.tv_sec) {
-			char buf[IPADDRSTRLEN];
+	if (aw->a_tv.tv_sec < now->tv_sec) {
+		char buf[IPADDRSTRLEN];
 
-			iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
-                      mg_log(LOG_INFO, "(local): addr %s from %s rcpt %s: "
-			    "autowhitelisted entry expired",
-			    buf, aw->a_from, aw->a_rcpt);
+		iptostring(aw->a_sa, aw->a_salen, buf, sizeof(buf));
+		mg_log(LOG_INFO, "(local): addr %s from %s rcpt %s: "
+		    "autowhitelisted entry expired",
+		    buf, aw->a_from, aw->a_rcpt);
 
-			autowhite_put(aw);
-
-			dirty++;
-
-			continue;
-		}
-		break;
+		autowhite_put(aw);
+		dirty = 1;
 	}
-	AUTOWHITE_UNLOCK;
-	
+
 	return dirty;
 }
 
@@ -139,6 +122,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 	char *queueid;
 {
 	struct autowhite *aw;
+	struct autowhite *aw_next;
 	struct timeval now;
 	char addr[IPADDRSTRLEN];
 	int h, mn, s;
@@ -168,11 +152,16 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 #endif
 	}
 
-	dirty = autowhite_timeout();
-	
 	AUTOWHITE_LOCK;
 	b = &autowhite_buckets[BUCKET_HASH(sa, from, rcpt, AUTOWHITE_BUCKETS)];
-	TAILQ_FOREACH(aw, &b->b_autowhite_head, ab_list) {
+	for (aw = TAILQ_FIRST(&b->b_autowhite_head); aw; aw = aw_next) {
+		aw_next = TAILQ_NEXT(aw, ab_list);
+
+		if (autowhite_timeout(aw, &now)) {
+			dirty++;
+			continue;
+		}
+
 	 	/*
 		 * Look for an already existing entry
 		 */
@@ -184,7 +173,7 @@ autowhite_add(sa, salen, from, rcpt, date, queueid)
 
 			/* Rearrange the big queue */
 			TAILQ_REMOVE(&autowhite_head, aw, a_list);
-			autowhite_insert_to_queue(aw);
+			TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
 
 			dirty++;
 
@@ -225,6 +214,7 @@ autowhite_check(sa, salen, from, rcpt, queueid, gldelay, autowhite)
 	time_t autowhite;
 {
 	struct autowhite *aw;
+	struct autowhite *next_aw;
 	struct pending *pending;
 	struct timeval now, delay;
 	char addr[IPADDRSTRLEN];
@@ -258,11 +248,16 @@ autowhite_check(sa, salen, from, rcpt, queueid, gldelay, autowhite)
 #endif
 	}
 
-	dirty = autowhite_timeout();
-	
 	AUTOWHITE_LOCK;
 	b = &autowhite_buckets[BUCKET_HASH(sa, from, rcpt, AUTOWHITE_BUCKETS)];
-	TAILQ_FOREACH(aw, &b->b_autowhite_head, ab_list) {
+	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
+		next_aw = TAILQ_NEXT(aw, a_list);
+		
+		if (autowhite_timeout(aw, &now)) {
+			dirty++;
+			continue;
+		}
+
 		/*
 		 * Look for our record
 		 */
@@ -274,7 +269,7 @@ autowhite_check(sa, salen, from, rcpt, queueid, gldelay, autowhite)
 
 			/* Rearrange the big queue */
 			TAILQ_REMOVE(&autowhite_head, aw, a_list);
-			autowhite_insert_to_queue(aw);
+			TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
 
 			dirty++;
 
@@ -314,17 +309,26 @@ autowhite_textdump(stream)
 	FILE *stream;
 {
 	struct autowhite *aw;
+	struct autowhite *next_aw;
+	struct timeval now;
 	int done = 0;
 	char textdate[DATELEN + 1];
 	char textaddr[IPADDRSTRLEN];
 	struct tm tm;
+
+	(void)gettimeofday(&now, NULL);
 
 	fprintf(stream, "\n\n#\n# Auto-whitelisted tuples\n#\n");
 	fprintf(stream, "# Sender IP\t%s\t%s\tExpire\n",
 	    "Sender e-mail", "Recipient e-mail");
 
 	AUTOWHITE_LOCK;
-	TAILQ_FOREACH(aw, &autowhite_head, a_list) {
+	for (aw = TAILQ_FIRST(&autowhite_head); aw; aw = next_aw) {
+		next_aw = TAILQ_NEXT(aw, a_list);
+
+		if (autowhite_timeout(aw, &now))
+			continue;
+
 		iptostring(aw->a_sa, aw->a_salen, textaddr, sizeof(textaddr));
 	
 		if (conf.c_dump_no_time_translation) {
@@ -362,25 +366,6 @@ autowhite_textdump(stream)
  * we need to find the right position where to insert a new entry.
  */
 
-/* autowhite list must be locked */
-static void
-autowhite_insert_to_queue(newentry)
-	struct autowhite *newentry;
-{
-	struct autowhite *aw;
-	
-	TAILQ_FOREACH_REVERSE(aw, &autowhite_head, autowhitelist, a_list) {
-		if (aw->a_tv.tv_sec < newentry->a_tv.tv_sec ||
-		    (aw->a_tv.tv_sec == newentry->a_tv.tv_sec &&
-		     aw->a_tv.tv_usec < newentry->a_tv.tv_usec))
-			break;
-	}
-	if (aw)
-		TAILQ_INSERT_AFTER(&autowhite_head, aw, newentry, a_list);
-	else
-		TAILQ_INSERT_HEAD(&autowhite_head, newentry, a_list);
-}
-
 struct autowhite *
 autowhite_get(sa, salen, from, rcpt, date) /* autowhite list must be locked */
 	struct sockaddr *sa;
@@ -409,7 +394,7 @@ autowhite_get(sa, salen, from, rcpt, date) /* autowhite list must be locked */
 	memcpy(aw->a_sa, sa, salen);
 	aw->a_salen = salen;
 
-	autowhite_insert_to_queue(aw);
+	TAILQ_INSERT_TAIL(&autowhite_head, aw, a_list);
 	TAILQ_INSERT_TAIL(&autowhite_buckets[BUCKET_HASH(aw->a_sa, 
 	    from, rcpt, AUTOWHITE_BUCKETS)].b_autowhite_head, aw, ab_list);
 

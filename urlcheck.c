@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.11 2007/01/16 05:10:38 manu Exp $ */
+/* $Id: urlcheck.c,v 1.12 2007/01/22 14:08:16 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.11 2007/01/16 05:10:38 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.12 2007/01/22 14:08:16 manu Exp $");
 #endif
 #endif
 
@@ -735,7 +735,8 @@ struct iovec *data;
 		if (buf[idx] == '\n') {
 			buf[idx] = '\0';
 			mg_log(LOG_DEBUG, 
-			    "ignoring unexpected line \"%s\"", linep);
+			    "ignoring unexpected line with no value \"%s\"", 
+			    linep);
 			idx++;
 			continue;
 		}

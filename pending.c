@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.82 2006/11/29 21:08:55 manu Exp $ */
+/* $Id: pending.c,v 1.83 2007/01/22 14:08:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.82 2006/11/29 21:08:55 manu Exp $");
+__RCSID("$Id: pending.c,v 1.83 2007/01/22 14:08:16 manu Exp $");
 #endif
 #endif
 
@@ -70,8 +70,6 @@ __RCSID("$Id: pending.c,v 1.82 2006/11/29 21:08:55 manu Exp $");
 #include "autowhite.h"
 #include "milter-greylist.h"
 
-static void pending_insert_to_queue(struct pending *);
-
 struct pending_bucket *pending_buckets;
 struct pendinglist pending_head;
 /* protects pending_head and pending_buckets */
@@ -105,33 +103,27 @@ pending_init(void) {
 	return;
 }
 
-/*
- * A new entry is inserted to the back of the queue in most cases,
- * but it is not true in these situations:
- * - The conf.c_delay was shortened
- * - System clock was turned to the past
- *
- * To ensure that the queue is sorted by expiration times (p_tv),
- * we need to find the right position where to insert a new entry.
- */
-
 /* pending_lock must be locked */
-static void
-pending_insert_to_queue(newentry)
-	struct pending *newentry;
+int 
+pending_timeout(pending, now)
+	struct pending *pending;
+	struct timeval *now;
 {
-	struct pending *p;
-	
-	TAILQ_FOREACH_REVERSE(p, &pending_head, pendinglist, p_list) {
-		if (p->p_tv.tv_sec < newentry->p_tv.tv_sec ||
-		    (p->p_tv.tv_sec == newentry->p_tv.tv_sec &&
-		     p->p_tv.tv_usec < newentry->p_tv.tv_usec))
-			break;
+	int dirty = 0;
+
+	if (now->tv_sec - pending->p_tv.tv_sec > conf.c_timeout) {
+		if (conf.c_debug || conf.c_logexpired) {
+			mg_log(LOG_DEBUG,
+			    "(local): %s from %s to %s: greylisted "
+			    "entry timed out",
+			    pending->p_addr, pending->p_from,
+			    pending->p_rcpt);
+		}
+		pending_put(pending);
+		dirty = 1;
 	}
-	if (p)
-		TAILQ_INSERT_AFTER(&pending_head, p, newentry, p_list);
-	else
-		TAILQ_INSERT_HEAD(&pending_head, newentry, p_list);
+
+	return dirty;
 }
 
 /* pending_lock must be locked */
@@ -185,7 +177,7 @@ pending_get(sa, salen, from, rcpt, date)
 
 	pending->p_refcnt = 1;
 
-	pending_insert_to_queue(pending);
+	TAILQ_INSERT_TAIL(&pending_head, pending, p_list);
 	TAILQ_INSERT_TAIL(&pending_buckets[BUCKET_HASH(pending->p_sa, 
 	    from, rcpt, PENDING_BUCKETS)].b_pending_head, pending, pb_list); 
 
@@ -221,40 +213,6 @@ pending_put(pending)
 	return;
 }
 
-int
-pending_timeout(void)
-{
-	struct pending *pending;
-	struct pending *next;
-	struct timeval now;
-	int dirty = 0;
-	
-	gettimeofday(&now, NULL);
-	
-	PENDING_LOCK;
-	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
-		next = TAILQ_NEXT(pending, p_list);
-		/*
-		 * Check for expired entries
-		 */
-		if (now.tv_sec - pending->p_tv.tv_sec > conf.c_timeout) {
-			if (conf.c_debug || conf.c_logexpired) {
-				mg_log(LOG_DEBUG,
-				    "(local): %s from %s to %s: greylisted "
-				    "entry timed out",
-				    pending->p_addr, pending->p_from,
-				    pending->p_rcpt);
-			}
-			++dirty;
-			pending_put(pending);
-			continue;
-		}
-		break; /* The rest of the entries are OK */
-	}
-	PENDING_UNLOCK;
-
-	return dirty;
-}
 
 void
 pending_del(sa, salen, from, rcpt, time)
@@ -267,11 +225,11 @@ pending_del(sa, salen, from, rcpt, time)
 	char addr[IPADDRSTRLEN];
 	struct pending *pending;
 	struct pending *next;
-	struct timeval tv;
+	struct timeval now;
 	struct pending_bucket *b;
 	int dirty = 0;
 
-	gettimeofday(&tv, NULL);
+	gettimeofday(&now, NULL);
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return;
 
@@ -280,6 +238,11 @@ pending_del(sa, salen, from, rcpt, time)
 	for (pending = TAILQ_FIRST(&b->b_pending_head); 
 	    pending; pending = next) {
 		next = TAILQ_NEXT(pending, pb_list);
+
+		if (pending_timeout(pending, &now)) {
+			++dirty;
+			continue;
+		}
 
 		/*
 		 * Look for our entry.
@@ -296,7 +259,6 @@ pending_del(sa, salen, from, rcpt, time)
 	}
 	PENDING_UNLOCK;
 	
-	dirty += pending_timeout();
 	dump_touch(dirty);
 	
 	return;
@@ -317,6 +279,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	char addr[IPADDRSTRLEN];
 	struct pending *pending;
 	struct pending *next;
+	struct timeval tv;
 	time_t now;
 	time_t rest = -1;
 	time_t accepted = -1;
@@ -325,17 +288,21 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	ipaddr *mask = NULL;
 	time_t date;
 
-	now = time(NULL);
+	(void)gettimeofday(&tv, NULL);
+	now = tv.tv_sec;
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
 		return 1;
 
-	dirty = pending_timeout();
-	
 	b = &pending_buckets[BUCKET_HASH(sa, from, rcpt, PENDING_BUCKETS)];
 	PENDING_LOCK;
 	for (pending = TAILQ_FIRST(&b->b_pending_head); 
 	    pending; pending = next) {
 		next = TAILQ_NEXT(pending, pb_list);
+
+		if (pending_timeout(pending, &tv)) {
+			++dirty;
+			continue;
+		}
 
 		/*
 		 * The time the entry shall be accepted
@@ -410,17 +377,26 @@ int
 pending_textdump(stream)
 	FILE *stream;
 {
+	struct timeval now;
 	struct pending *pending;
+	struct pending *next;
 	int done = 0;
 	char textdate[DATELEN + 1];
 	struct tm tm;
+
+	gettimeofday(&now, NULL);
 
 	fprintf(stream, "\n\n#\n# greylisted tuples\n#\n");
 	fprintf(stream, "# Sender IP\t%s\t%s\tTime accepted\n", 
 	    "Sender e-mail", "Recipient e-mail");
 
 	PENDING_LOCK;
-	TAILQ_FOREACH(pending, &pending_head, p_list) {
+	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
+		next = TAILQ_NEXT(pending, p_list);
+
+		if (pending_timeout(pending, &now))
+			continue;
+
 		if (conf.c_dump_no_time_translation) {
 			fprintf(stream, "%s\t%s\t%s\t%ld\n", 
 			    pending->p_addr, pending->p_from, 
