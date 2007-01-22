@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.189.2.10 2006/11/20 20:51:37 manu Exp $
+# $Id: configure.ac,v 1.189.2.11 2007/01/22 22:36:48 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 3.0, manu@netbsd.org)
+AC_INIT(milter-greylist, 3.0.1b1, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -666,6 +666,14 @@ AC_ARG_ENABLE(dnsrbl,
 	 fi
 	])
 
+
+# We disable some features for Postfix
+AC_ARG_ENABLE(postfix,
+	[  --enable-postfix	Enable Postfix support],
+	[if test x$enableval = xyes; then
+		CFLAGS=$CFLAGS" -DUSE_POSTFIX"
+	 fi
+	])
 
 # Record the build environnement for milter-greylist -r
 AC_DEFINE_UNQUOTED([BUILD_ENV], ["`logname`@`uname -n`:`pwd` `date`"], 

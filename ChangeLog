@@ -2,7 +2,10 @@
 	Fix timespamp on sparc64 (Gert Doering)
 	Fix dependency in rc-bsd.sh: it's mail, not sendmail
 	Fix crashes when running with -D on some systems (John Thiltges)
+	Fixes for running with Postfix (Nerijus Baliunas)
 3.0
+	Document how to use milter-greylist with Postfix (Nerijus Baliunas)
+	Update .spec for Postfix (Nerijus Baliunas)
 	Fix crashes during dump reloads (AIDA Shinra)
 	Fix DoS in MX sync protocol (AIDA Shinra)
 3.0rc6
