@@ -1,3 +1,5 @@
+3.1.5
+	Fix double free when using content filtering
 3.1.4
 	Add support for switching to a given group (Ralf S. Engelschall)
 	Add substitutions for sendmail macro and strftime in URL checks

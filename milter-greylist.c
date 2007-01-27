@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.156 2007/01/18 15:04:28 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.157 2007/01/27 04:23:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.156 2007/01/18 15:04:28 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.157 2007/01/27 04:23:54 manu Exp $");
 #endif
 #endif
 
@@ -728,6 +728,7 @@ real_body(ctx, chunk, size)
 		if (priv->priv_buf) {
 			memcpy(b->b_lines, priv->priv_buf, priv->priv_buflen);
 			free(priv->priv_buf);
+			priv->priv_buf = NULL;
 		}
 		memcpy(b->b_lines + priv->priv_buflen, chunk, i + 1);
 		b->b_lines[linelen] = '\0';
