@@ -1,7 +1,7 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.55 2007/01/10 10:54:26 manu Exp $
+.\" $Id: greylist.conf.5,v 1.56 2007/01/28 02:16:33 manu Exp $
 .\"
-.\" Copyright (c) 2004 Emmanuel Dreyfus
+.\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -76,6 +76,10 @@ keyword, and by any set of the following clauses:
 .I dnsrbl\fR
 (if built with --enable-dnsrbl).
 A message will match an ACL entry when it complies with all of its clauses.
+.PP
+Clauses can be negated, by prefixing them by the
+.I not
+keyword.
 .TP
 .I addr
 This clause is used to specify a netblock of source IP 

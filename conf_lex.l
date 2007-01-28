@@ -91,6 +91,9 @@ ge		">="
 le		"<="
 gt		">"
 lt		"<"
+no		[Nn][Oo]
+not		[Nn][Oo][Tt]
+neg		"!"
 
 %s S_REGEX
 
@@ -102,7 +105,7 @@ lt		"<"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.63 2007/01/10 10:54:26 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.64 2007/01/28 02:16:33 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -128,6 +131,9 @@ lt		"<"
 {gt}		{	yylval.op = OP_GT; return OP; }
 {le}		{	yylval.op = OP_LE; return OP; }
 {ge}		{	yylval.op = OP_GE; return OP; }
+{no}		{ return NO; }
+{not}		{ return NO; }
+{neg}		{ return NO; }
 {addr}		{ return ADDR; }
 {from}		{ BEGIN(S_REGEX); return FROM; }
 {rcpt}		{ BEGIN(S_REGEX); return RCPT; }

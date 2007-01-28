@@ -1,7 +1,7 @@
-/* $Id: milter-greylist.h,v 1.58 2007/01/16 05:10:38 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.59 2007/01/28 02:16:33 manu Exp $ */
 
 /*
- * Copyright (c) 2004 Emmanuel Dreyfus
+ * Copyright (c) 2004-2007 Emmanuel Dreyfus
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -137,6 +137,7 @@ typedef union {
 
 struct smtp_reply {
 	int sr_whitelist;
+	int sr_nowhitelist;
 	time_t sr_elapsed;
 	time_t sr_remaining;
 	int sr_acl_line;

@@ -1,7 +1,7 @@
-/* $Id: acl.h,v 1.19 2007/01/10 10:54:26 manu Exp $ */
+/* $Id: acl.h,v 1.20 2007/01/28 02:16:33 manu Exp $ */
 
 /*
- * Copyright (c) 2004 Emmanuel Dreyfus
+ * Copyright (c) 2004-2007 Emmanuel Dreyfus
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -165,6 +165,7 @@ struct acl_clause_rec {
 	acl_data_type_t acr_data_type;
 	acl_clause_t acr_list_type;
 	acl_clause_t acr_item_type;
+	int acr_exf;
 	char *(*acr_print)(acl_data_t *, char *, size_t);
 	void (*acr_add)(acl_data_t *, void *data);
 	void (*acr_free)(acl_data_t *);
@@ -174,6 +175,7 @@ struct acl_clause_rec {
 
 struct acl_clause {
 	acl_clause_t ac_type;
+	enum { PLAIN, NEGATED } ac_negation;
 	union acl_data ac_data;
 	struct acl_clause_rec *ac_acr;
 	LIST_ENTRY(acl_clause) ac_list;
@@ -206,6 +208,7 @@ struct acl_clause_rec *acl_list_item_fixup(acl_data_type_t, acl_data_type_t);
 void acl_init(void);
 void acl_clear(void);
 void acl_add_clause(acl_clause_t, void *);
+void acl_negate_clause(void);
 void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
 void acl_add_flushaddr(void);
@@ -214,7 +217,7 @@ void acl_add_ecode(char *);
 void acl_add_msg(char *);
 struct acl_entry *acl_register_entry_first(acl_stage_t, acl_type_t);
 struct acl_entry *acl_register_entry_last(acl_stage_t, acl_type_t);
-int acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *);
+void acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *);
 char *acl_entry(struct acl_entry  *);
 void acl_dump(void);
 int emailcmp(char *, char *);        

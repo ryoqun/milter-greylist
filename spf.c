@@ -1,7 +1,7 @@
-/* $Id: spf.c,v 1.24 2007/01/09 22:22:43 manu Exp $ */
+/* $Id: spf.c,v 1.25 2007/01/28 02:16:33 manu Exp $ */
 
 /*
- * Copyright (c) 2004 Emmanuel Dreyfus
+ * Copyright (c) 2004-2007 Emmanuel Dreyfus
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.24 2007/01/09 22:22:43 manu Exp $");
+__RCSID("$Id: spf.c,v 1.25 2007/01/28 02:16:33 manu Exp $");
 #endif
 #endif
 
@@ -73,7 +73,7 @@ spf_check(ad, as, ap, priv)
 	char *fromp = priv->priv_from;
 	peer_info_t *p = NULL;
 	char addr[IPADDRSTRLEN];
-	int result = EXF_NONE;
+	int result = 0;
 	struct timeval tv1, tv2, tv3;
 
 	if (conf.c_debug)
@@ -97,7 +97,7 @@ spf_check(ad, as, ap, priv)
 		mg_log(LOG_DEBUG, "SPF return code %d", p->RES);
 
 	if (p->RES == SPF_PASS)
-		result = EXF_SPF;
+		result = 1;
 
 	SPF_close(p);
 
@@ -150,7 +150,7 @@ spf_check(ad, as, ap, priv)
 	char addr[IPADDRSTRLEN];
 	char from[NS_MAXDNAME + 1];
 	SPF_output_t out;
-	int result = EXF_NONE;
+	int result = 0;
 	struct timeval tv1, tv2, tv3;
 	size_t len;
 
@@ -211,7 +211,7 @@ spf_check(ad, as, ap, priv)
 	out = SPF_result(spfconf, dnsconf);
 #endif
 	if (out.result == SPF_RESULT_PASS) 
-		result = EXF_SPF;
+		result = 1;
 
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "SPF return code %d", out.result);
@@ -251,7 +251,7 @@ spf_check(ad, as, ap, priv)
 	SPF_request_t *spf_request;
 	SPF_response_t *spf_response;
 	char from[NS_MAXDNAME + 1];
-	int res, result = EXF_NONE;
+	int res, result = 0;
 	struct timeval tv1, tv2, tv3;
 	size_t len;
 
@@ -316,7 +316,7 @@ spf_check(ad, as, ap, priv)
 	 */
 	SPF_request_query_mailfrom(spf_request, &spf_response);
 	if ((res = SPF_response_result(spf_response)) == SPF_RESULT_PASS)
-		result = EXF_SPF;
+		result = 1;
 
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "SPF return code %d", res);

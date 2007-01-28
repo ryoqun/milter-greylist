@@ -1,7 +1,7 @@
-/* $Id: milter-greylist.c,v 1.157 2007/01/27 04:23:54 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.158 2007/01/28 02:16:33 manu Exp $ */
 
 /*
- * Copyright (c) 2004 Emmanuel Dreyfus
+ * Copyright (c) 2004-2007 Emmanuel Dreyfus
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.157 2007/01/27 04:23:54 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.158 2007/01/28 02:16:33 manu Exp $");
 #endif
 #endif
 
@@ -516,8 +516,8 @@ real_envrcpt(ctx, envrcpt)
 	 */
 	reset_acl_values(priv);
 	priv->priv_cur_rcpt = rcpt;
-	if ((priv->priv_sr.sr_whitelist = acl_filter(AS_RCPT, 
-	    ctx, priv)) & EXF_WHITELIST) {
+	acl_filter(AS_RCPT, ctx, priv);
+	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST) {
 		priv->priv_sr.sr_elapsed = 0;
 		goto exit_accept;
 	}
@@ -807,7 +807,7 @@ real_eom(ctx)
 	 * We save data obtained from RCPT and we will restore it afterward
 	 */
 	memcpy(&rcpt_sr, &priv->priv_sr, sizeof(rcpt_sr));
-	priv->priv_sr.sr_whitelist = acl_filter(AS_DATA, ctx, priv);
+	acl_filter(AS_DATA, ctx, priv);
 	if (priv->priv_sr.sr_whitelist & EXF_BLACKLIST) {
 		char aclstr[16];
 		char addrstr[IPADDRSTRLEN];

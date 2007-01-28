@@ -1,7 +1,7 @@
-/* $Id: acl.c,v 1.47 2007/01/16 05:10:37 manu Exp $ */
+/* $Id: acl.c,v 1.48 2007/01/28 02:16:33 manu Exp $ */
 
 /*
- * Copyright (c) 2004 Emmanuel Dreyfus
+ * Copyright (c) 2004-2007 Emmanuel Dreyfus
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.47 2007/01/16 05:10:37 manu Exp $");
+__RCSID("$Id: acl.c,v 1.48 2007/01/28 02:16:33 manu Exp $");
 #endif
 #endif
 
@@ -81,6 +81,7 @@ struct acllist acl_head;
 pthread_rwlock_t acl_lock;
 
 static struct acl_entry *gacl;
+int gneg;
 
 char *acl_print_netblock(acl_data_t *, char *, size_t);
 char *acl_print_string(acl_data_t *, char *, size_t);
@@ -114,156 +115,156 @@ char *acl_print_urlcheck(acl_data_t *, char *, size_t);
 struct acl_clause_rec acl_clause_rec[] = {
 	/* Temporary types for lists */
 	{ AC_LIST, MULTIPLE_OK, AS_NONE, "list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_NONE,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 	{ AC_EMAIL, MULTIPLE_OK, AS_NONE, "email", 
-	  AT_NONE, AC_NONE, AC_NONE,
+	  AT_NONE, AC_NONE, AC_NONE, EXF_NONE,
 	  *acl_print_string, *acl_add_string, 
 	  *acl_free_string, NULL },
 	{ AC_REGEX, MULTIPLE_OK, AS_NONE, "regex", 
-	  AT_NONE, AC_NONE, AC_NONE,
+	  AT_NONE, AC_NONE, AC_NONE, EXF_NONE,
 	  *acl_print_regex, *acl_add_regex, 
 	  *acl_free_regex, NULL },
 	{ AC_STRING, MULTIPLE_OK, AS_NONE, "string", 
-	  AT_NONE, AC_NONE, AC_NONE,
+	  AT_NONE, AC_NONE, AC_NONE, EXF_NONE,
 	  *acl_print_string, *acl_add_string, 
 	  *acl_free_string, NULL },
 
 	/* Real types used in clauses */
 	{ AC_NETBLOCK, UNIQUE, AS_ANY, "net", 
-	  AT_NETBLOCK, AC_NETBLOCK_LIST, AC_NETBLOCK,
+	  AT_NETBLOCK, AC_NETBLOCK_LIST, AC_NETBLOCK, EXF_ADDR,
 	  *acl_print_netblock, *acl_add_netblock,
 	  *acl_free_netblock, *acl_netblock_filter },
 	{ AC_NETBLOCK_LIST, UNIQUE, AS_ANY, "net_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_ADDR,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 	{ AC_DOMAIN, UNIQUE, AS_ANY, "domain", 
-	  AT_STRING, AC_DOMAIN_LIST, AC_DOMAIN,
+	  AT_STRING, AC_DOMAIN_LIST, AC_DOMAIN, EXF_DOMAIN,
 	  *acl_print_string, *acl_add_string,
 	  *acl_free_string, *acl_domain_cmp },
 	{ AC_DOMAIN_RE, UNIQUE, AS_ANY, "domain_re", 
-	  AT_REGEX, AC_DOMAIN_LIST, AC_REGEX,
+	  AT_REGEX, AC_DOMAIN_LIST, AC_REGEX, EXF_DOMAIN,
 	  *acl_print_regex, *acl_add_regex,
 	  *acl_free_regex, *acl_domain_regexec },
 	{ AC_DOMAIN_LIST, UNIQUE, AS_ANY, "domain_list", 
-	  AT_LIST,  AC_NONE, AC_NONE,
+	  AT_LIST,  AC_NONE, AC_NONE, EXF_DOMAIN,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 	{ AC_FROM, UNIQUE, AS_ANY, "from", 
-	  AT_STRING, AC_FROM_LIST, AC_EMAIL,
+	  AT_STRING, AC_FROM_LIST, AC_EMAIL, EXF_FROM,
 	  *acl_print_string, *acl_add_string,
 	  *acl_free_string, *acl_from_cmp },
 	{ AC_FROM_RE, UNIQUE, AS_ANY, "from_re", 
-	  AT_REGEX, AC_FROM_LIST, AC_REGEX,
+	  AT_REGEX, AC_FROM_LIST, AC_REGEX, EXF_FROM,
 	  *acl_print_regex, *acl_add_regex,
 	  *acl_free_regex, *acl_from_regexec },
 	{ AC_FROM_LIST, UNIQUE, AS_ANY, "from_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_FROM,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 	{ AC_RCPT, MULTIPLE_OK, AS_ANY, "rcpt", 
-	  AT_STRING, AC_RCPT_LIST, AC_EMAIL,
+	  AT_STRING, AC_RCPT_LIST, AC_EMAIL, EXF_RCPT,
 	  *acl_print_string, *acl_add_string,
 	  *acl_free_string, *acl_rcpt_cmp },
 	{ AC_RCPT_RE, MULTIPLE_OK, AS_ANY, "rcpt_re", 
-	  AT_REGEX, AC_RCPT_LIST, AC_REGEX,
+	  AT_REGEX, AC_RCPT_LIST, AC_REGEX, EXF_RCPT,
 	  *acl_print_regex, *acl_add_regex,
 	  *acl_free_regex, *acl_rcpt_regexec },
 	{ AC_RCPT_LIST, MULTIPLE_OK, AS_ANY, "rcpt_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_RCPT,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 	{ AC_BODY, MULTIPLE_OK, AS_DATA, "body", 
-	  AT_STRING, AC_BODY_LIST, AC_STRING,
+	  AT_STRING, AC_BODY_LIST, AC_STRING, EXF_BODY,
 	  *acl_print_string, *acl_add_body_string, 
 	  *acl_free_string, *acl_body_strstr },
 	{ AC_BODY_RE, MULTIPLE_OK, AS_DATA, "body_re", 
-	  AT_REGEX, AC_BODY_LIST, AC_REGEX,
+	  AT_REGEX, AC_BODY_LIST, AC_REGEX, EXF_BODY,
 	  *acl_print_regex, *acl_add_body_regex, 
 	  *acl_free_regex, *acl_body_regexec },
 	{ AC_BODY_LIST, MULTIPLE_OK, AS_DATA, "body_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_BODY,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 	{ AC_HEADER, MULTIPLE_OK, AS_DATA, "header", 
-	  AT_STRING, AC_HEADER_LIST, AC_STRING,
+	  AT_STRING, AC_HEADER_LIST, AC_STRING, EXF_HEADER,
 	  *acl_print_string, *acl_add_body_string, 
 	  *acl_free_string, *acl_header_strstr },
 	{ AC_HEADER_RE, MULTIPLE_OK, AS_DATA, "header_re", 
-	  AT_REGEX, AC_HEADER_LIST, AC_REGEX,
+	  AT_REGEX, AC_HEADER_LIST, AC_REGEX, EXF_HEADER,
 	  *acl_print_regex, *acl_add_body_regex, 
 	  *acl_free_regex, *acl_header_regexec },
 	{ AC_HEADER_LIST, MULTIPLE_OK, AS_DATA, "header_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_HEADER,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 	{ AC_MACRO, MULTIPLE_OK, AS_ANY, "macro", 
-	  AT_MACRO, AC_MACRO_LIST, AC_STRING,
+	  AT_MACRO, AC_MACRO_LIST, AC_STRING, EXF_MACRO,
 	  *acl_print_macro, *acl_add_macro,
 	  NULL, *macro_check },
 	{ AC_MACRO_LIST, MULTIPLE_OK, AS_ANY, "macro_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_MACRO,
 	  *acl_print_macro, *acl_add_macro,
 	  NULL, *macro_check },
 #ifdef USE_DNSRBL
 	{ AC_DNSRBL, MULTIPLE_OK, AS_ANY, "macro", 
-	  AT_DNSRBL, AC_DNSRBL_LIST, AC_STRING,
+	  AT_DNSRBL, AC_DNSRBL_LIST, AC_STRING, EXF_DNSRBL,
 	  *acl_print_dnsrbl, *acl_add_dnsrbl,
 	  NULL, *dnsrbl_check_source },
 	{ AC_DNSRBL_LIST, MULTIPLE_OK, AS_ANY, "macro_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_DNSRBL,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 #endif
 #ifdef USE_CURL
 	{ AC_URLCHECK, MULTIPLE_OK, AS_ANY, "urlcheck", 
-	  AT_URLCHECK, AC_URLCHECK_LIST, AC_STRING,
+	  AT_URLCHECK, AC_URLCHECK_LIST, AC_STRING, EXF_URLCHECK,
 	  *acl_print_urlcheck, *acl_add_urlcheck,
 	  NULL, *urlcheck_validate },
 	{ AC_URLCHECK_LIST, MULTIPLE_OK, AS_ANY, "urlcheck_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_URLCHECK,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 #endif
 	{ AC_AUTH, MULTIPLE_OK, AS_ANY, "auth", 
-	  AT_STRING, AC_AUTH_LIST, AC_STRING,
+	  AT_STRING, AC_AUTH_LIST, AC_STRING, EXF_AUTH,
 	  *acl_print_string, *acl_add_string,
 	  *acl_free_string, *acl_auth_strcmp },
 	{ AC_AUTH_RE, MULTIPLE_OK, AS_ANY, "auth_re", 
-	  AT_REGEX, AC_AUTH_LIST, AC_REGEX,
+	  AT_REGEX, AC_AUTH_LIST, AC_REGEX, EXF_AUTH,
 	  *acl_print_regex, *acl_add_regex,
 	  *acl_free_regex, *acl_auth_regexec },
 	{ AC_AUTH_LIST, MULTIPLE_OK, AS_ANY, "auth_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_AUTH,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 	{ AC_TLS, MULTIPLE_OK, AS_ANY, "tls", 
-	  AT_STRING, AC_TLS_LIST, AC_STRING,
+	  AT_STRING, AC_TLS_LIST, AC_STRING, EXF_STARTTLS,
 	  *acl_print_string, *acl_add_string,
 	  *acl_free_string, *acl_tls_strcmp },
 	{ AC_TLS_RE, MULTIPLE_OK, AS_ANY, "tls_re", 
-	  AT_REGEX, AC_TLS_LIST, AC_REGEX,
+	  AT_REGEX, AC_TLS_LIST, AC_REGEX, EXF_STARTTLS,
 	  *acl_print_regex, *acl_add_regex,
 	  *acl_free_regex, *acl_tls_regexec },
 	{ AC_TLS_LIST, MULTIPLE_OK, AS_ANY, "tls_list", 
-	  AT_LIST, AC_NONE, AC_NONE,
+	  AT_LIST, AC_NONE, AC_NONE, EXF_STARTTLS,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
      defined(HAVE_SPF2_10) || defined(HAVE_SPF2)) 
 	{ AC_SPF, UNIQUE, AS_ANY, "spf",
-	  AT_NONE, AC_NONE, AC_SPF, 
+	  AT_NONE, AC_NONE, AC_SPF,  EXF_SPF,
 	  *acl_print_null, NULL,
 	  NULL, *spf_check },
 #endif
 	{ AC_MSGSIZE, MULTIPLE_OK, AS_DATA, "msgsize", 
-	  AT_OPNUM, AC_NONE, AC_MSGSIZE,
+	  AT_OPNUM, AC_NONE, AC_MSGSIZE, EXF_MSGSIZE,
 	  *acl_print_opnum, *acl_add_opnum,
 	  NULL, *acl_msgsize_cmp },
 	{ AC_RCPTCOUNT, MULTIPLE_OK, AS_ANY, "rcptcount", 
-	  AT_OPNUM, AC_NONE, AC_RCPTCOUNT,
+	  AT_OPNUM, AC_NONE, AC_RCPTCOUNT, EXF_RCPTCOUNT,
 	  *acl_print_opnum, *acl_add_opnum_body,
 	  NULL, *acl_rcptcount_cmp },
 };
@@ -337,7 +338,7 @@ acl_rcptcount_cmp(ad, stage, ap, priv)
 	struct mlfi_priv *priv;
 {
 	if (acl_opnum_cmp(priv->priv_rcptcount, ad->opnum.op, ad->opnum.num))
-		return EXF_RCPTCOUNT;
+		return 1;
 
 	return 0;
 }
@@ -350,7 +351,7 @@ acl_msgsize_cmp(ad, stage, ap, priv)
 	struct mlfi_priv *priv;
 {
 	if (acl_opnum_cmp(priv->priv_msgcount, ad->opnum.op, ad->opnum.num))
-		return EXF_MSGSIZE;
+		return 1;
 
 	return 0;
 }
@@ -405,7 +406,7 @@ acl_header_strstr(ad, stage, ap, priv)
 
 	TAILQ_FOREACH(h, &priv->priv_header, h_list)
 		if (strstr(h->h_line, ad->string) != NULL)
-			return EXF_HEADER;
+			return 1;
 	return 0;
 }
 
@@ -425,7 +426,7 @@ acl_body_strstr(ad, stage, ap, priv)
 
 	TAILQ_FOREACH(b, &priv->priv_body, b_list)
 		if (strstr(b->b_lines, ad->string) != NULL)
-			return EXF_BODY;
+			return 1;
 
 	return 0;
 }
@@ -439,7 +440,7 @@ acl_from_regexec(ad, stage, ap, priv)
 {
 	if (regexec(ad->regex.re, 
 	    priv->priv_from, 0, NULL, 0) == 0)
-		return EXF_FROM;
+		return 1;
 	return 0;
 }
 
@@ -457,7 +458,7 @@ acl_auth_regexec(ad, stage, ap, priv)
 		return 0;
 
 	if(regexec(ad->regex.re, auth_authen, 0, NULL, 0) == 0)
-		return EXF_AUTH;
+		return 1;
 	return 0;
 }
 
@@ -477,7 +478,7 @@ acl_tls_regexec(ad, stage, ap, priv)
 		return 0;
 
 	if(regexec(ad->regex.re, dn, 0, NULL, 0) == 0)
-		return EXF_STARTTLS;
+		return 1;
 	return 0;
 }
 
@@ -495,7 +496,7 @@ acl_rcpt_regexec(ad, stage, ap, priv)
 
 	if (regexec(ad->regex.re, 
 	    priv->priv_cur_rcpt, 0, NULL, 0) == 0)
-		return EXF_RCPT;
+		return 1;
 	return 0;
 }
 
@@ -508,7 +509,7 @@ acl_domain_regexec(ad, stage, ap, priv)
 {
 	if (regexec(ad->regex.re, 
 	    priv->priv_hostname, 0, NULL, 0) == 0)
-		return EXF_DOMAIN;
+		return 1;
 	return 0;
 }
 
@@ -529,7 +530,7 @@ acl_header_regexec(ad, stage, ap, priv)
 	TAILQ_FOREACH(h, &priv->priv_header, h_list)
 		if (regexec(ad->regex.re, 
 		    h->h_line, 0, NULL, 0) == 0)
-			return EXF_HEADER;
+			return 1;
 	return 0;
 }
 
@@ -543,7 +544,7 @@ acl_from_cmp(ad, stage, ap, priv)
 	char *from = ad->string;
 
 	if (emailcmp(priv->priv_from, from) == 0) 
-		return EXF_FROM;
+		return 1;
 	return 0;
 }
 
@@ -558,13 +559,13 @@ acl_rcpt_cmp(ad, stage, ap, priv)
 
 	if (stage == AS_RCPT) {
 		if (emailcmp(priv->priv_cur_rcpt, rcpt) == 0)
-			return EXF_RCPT;
+			return 1;
 	} else {
 		struct rcpt *r;
 
 		 LIST_FOREACH(r, &priv->priv_rcpt, r_list)
 			if (emailcmp(r->r_addr, rcpt) == 0)
-				return EXF_RCPT;
+				return 1;
 	}
 
 	return 0;
@@ -584,7 +585,7 @@ acl_auth_strcmp(ad, stage, ap, priv)
 		return 0;
 
 	if (strcmp(auth_authen, ad->string) == 0)
-		return EXF_AUTH;
+		return 1;
 
 	return 0;
 }
@@ -605,7 +606,7 @@ acl_tls_strcmp(ad, stage, ap, priv)
 		return 0;
 
 	if (strcmp(dn, ad->string) == 0)
-		return EXF_STARTTLS;
+		return 1;
 
 	return 0;
 }
@@ -649,7 +650,7 @@ acl_body_regexec(ad, stage, ap, priv)
 	TAILQ_FOREACH(b, &priv->priv_body, b_list)
 		if (regexec(ad->regex.re, 
 		    b->b_lines, 0, NULL, 0) == 0)
-			return EXF_BODY;
+			return 1;
 	return 0;
 }
 
@@ -887,6 +888,7 @@ acl_init(void) {
 		exit(EX_OSERR);
 	}
 	gacl = acl_init_entry();
+	gneg = PLAIN;
 
 	return;
 }
@@ -1012,7 +1014,7 @@ acl_netblock_filter(ad, stage, ap, priv)
 	if (ip_match(sa, 
 		     ad->netblock.addr, 
 		     ad->netblock.mask))
-		return EXF_ADDR;
+		return 1;
 	return 0;
 }
 
@@ -1096,6 +1098,17 @@ acl_print_macro(ad, buf, len)
 }
 
 void
+acl_negate_clause(void)
+{
+	gneg = NEGATED;
+
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load negation");
+
+	return;
+}
+
+void
 acl_add_clause(type, data)
 	acl_clause_t type;
 	void *data;
@@ -1123,6 +1136,8 @@ acl_add_clause(type, data)
 	}
 
 	ac->ac_type = type;
+	ac->ac_negation = gneg;
+	gneg = PLAIN;
 	ac->ac_acr = acr;
 	if (acr->acr_add != NULL)
 		(*acr->acr_add)(&ac->ac_data, data);
@@ -1321,7 +1336,7 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 	return acl;
 }
 
-int 
+void
 acl_filter(stage, ctx, priv)
 	acl_stage_t stage;
 	SMFICTX *ctx;
@@ -1336,7 +1351,10 @@ acl_filter(stage, ctx, priv)
 	char addrstr[IPADDRSTRLEN];
 	char whystr[HDRLEN];
 	char tmpstr[HDRLEN];
-	int retval;
+	int retval = 0;
+	int noretval = 0;
+	char *notstr = " not";
+	char *vstr = "";
 	int found;
 	int testmode = conf.c_testmode;
 	struct acl_param ap;
@@ -1357,6 +1375,7 @@ acl_filter(stage, ctx, priv)
 			continue;
 
 		retval = 0;
+		noretval = 0;
 		found = -1;
 
 		ap.ap_type = acl->a_type;
@@ -1368,11 +1387,19 @@ acl_filter(stage, ctx, priv)
 		ap.ap_msg = acl->a_msg;
 
 		LIST_FOREACH(ac, &acl->a_clause, ac_list) {
-			if ((found = (*ac->ac_acr->acr_filter)
-					(&ac->ac_data, stage, &ap, priv)) == 0)
+			found = (*ac->ac_acr->acr_filter)
+				(&ac->ac_data, stage, &ap, priv);
+
+			if (ac->ac_negation == NEGATED)
+				found = (found == 0) ? 1 : 0;
+
+			if (found == 0)
 				break;
 
-			retval |= found;
+			retval |= ac->ac_acr->acr_exf;
+
+			if (ac->ac_negation == NEGATED)
+				noretval |= ac->ac_acr->acr_exf;
 		}
 		if (found == 0)
 			continue;
@@ -1479,13 +1506,15 @@ acl_filter(stage, ctx, priv)
 		if (retval & EXF_DNSRBL) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
 			snprintf(tmpstr, sizeof(tmpstr),
-			    "address %s is whitelisted by DNSRBL", addrstr);
+			    "address %s is%s in DNSRBL", addrstr,
+			    (noretval & EXF_DNSRBL) ? notstr : vstr);
 			ADD_REASON(whystr, tmpstr);
 		}
 		if (retval & EXF_URLCHECK) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
 			snprintf(tmpstr, sizeof(tmpstr),
-			    "URL check passed");
+			    "URL check%s passed",
+			    (noretval & EXF_URLCHECK) ? notstr : vstr);
 			ADD_REASON(whystr, tmpstr);
 		}
 		if (retval & EXF_DOMAIN) {
@@ -1505,7 +1534,8 @@ acl_filter(stage, ctx, priv)
 		}
 		if (retval & EXF_MACRO) {
 			snprintf(tmpstr, sizeof(tmpstr),
-			     "macro rule is satisfied");
+			     "macro rule is%s satisfied",
+			     (noretval & EXF_MACRO) ? notstr : vstr);
 			ADD_REASON(whystr, tmpstr);
 		}
 		if (retval & EXF_DEFAULT) {
@@ -1522,7 +1552,10 @@ acl_filter(stage, ctx, priv)
 		    queueid, whystr);
 	}
 	ACL_UNLOCK;
-	return retval;
+
+	priv->priv_sr.sr_whitelist = retval;
+
+	return;
 }
 
 
@@ -1655,9 +1688,12 @@ acl_entry(acl)
 	LIST_FOREACH(ac, &acl->a_clause, ac_list) {
 		char tempstr2[HDRLEN];
 		acl_data_t *ad;
+		char *notstr = "not ";
+		char *vstr = "";
 
 		ad = &ac->ac_data;
-		snprintf(tempstr, sizeof(tempstr), "%s %s ",
+		snprintf(tempstr, sizeof(tempstr), "%s%s %s ",
+		    (ac->ac_negation == NEGATED) ? notstr : vstr,
 		    ac->ac_acr->acr_name, 
 		    (*ac->ac_acr->acr_print)(ad, tempstr2, sizeof(tempstr2)));
 		mystrlcat(entrystr, tempstr, sizeof(entrystr));
