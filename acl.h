@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.20 2007/01/28 02:16:33 manu Exp $ */
+/* $Id: acl.h,v 1.21 2007/01/29 04:57:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -128,6 +128,7 @@ struct acl_param {
 	char *ap_code;
 	char *ap_ecode;
 	char *ap_msg;
+	char *ap_report;
 };
 
 /* a_flags */
@@ -135,6 +136,7 @@ struct acl_param {
 #define A_FREE_CODE		0x02
 #define A_FREE_ECODE		0x04
 #define A_FREE_MSG		0x08
+#define A_FREE_REPORT		0x10
 
 struct all_list_entry;
 enum list_type;
@@ -196,6 +198,7 @@ struct acl_entry {
 	char *a_code;
 	char *a_ecode;
 	char *a_msg;
+	char *a_report;
 	TAILQ_ENTRY(acl_entry) a_list;
 };
 
@@ -215,10 +218,11 @@ void acl_add_flushaddr(void);
 void acl_add_code(char *);
 void acl_add_ecode(char *);
 void acl_add_msg(char *);
+void acl_add_report(char *);
 struct acl_entry *acl_register_entry_first(acl_stage_t, acl_type_t);
 struct acl_entry *acl_register_entry_last(acl_stage_t, acl_type_t);
 void acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *);
-char *acl_entry(struct acl_entry  *);
+char *acl_entry(char *, size_t, struct acl_entry *);
 void acl_dump(void);
 int emailcmp(char *, char *);        
 

@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.70 2007/01/28 02:16:33 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.71 2007/01/29 04:57:18 manu Exp $");
 #endif
 #endif
 
@@ -550,6 +550,7 @@ acl_value:	greylist_value
 	|	code_value
 	|	ecode_value
 	|	msg_value
+	|	report_value
 	|	flush_value
 	;
 
@@ -577,6 +578,12 @@ msg_value:		MSG QSTRING {
 				char msg[QSTRLEN + 1];
 
 				acl_add_msg(quotepath(msg, $2, QSTRLEN));
+			}
+	;
+report_value:		REPORT QSTRING {
+				char msg[QSTRLEN + 1];
+
+				acl_add_report(quotepath(msg, $2, QSTRLEN));
 			}
 	;
 no_clause:		NO { acl_negate_clause(); }

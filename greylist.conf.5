@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.56 2007/01/28 02:16:33 manu Exp $
+.\" $Id: greylist.conf.5,v 1.57 2007/01/29 04:57:18 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -197,6 +197,7 @@ An ACL entry can also hold various optional parameter used on match:
 .I flushaddr\fR,
 .I code\fR,
 .I ecode\fR,
+.I report\fR,
 and
 .I msg\fR
 .TP
@@ -237,8 +238,28 @@ reply message for temporary failures and rejects. Example:
 .IP
   racl blacklist dnsrbl "spamstomp" msg "IP caught by spamstomp"
   racl greylist default code "451" ecode "4.7.1"
-.TP
+.IP
+The 
+.I msg
+strings accepts format string substitution as documented in the 
+.B FORMAT STRINGS 
+section. For instance, 
+.I %A
+gets substituted by the ACL line number.
+.IP
 None of the last 3 values makes sense for a whitelist entry. 
+.TP
+.I report
+This value overrides the text displayed in the
+.I X-Greylist 
+header, for messages that 
+.B milter-greylist(8)
+lets pass through, either because they are whitelisted, or because they
+passed greylisting (see 
+.B REPORTING\fR).
+This string can be substituted as documented in the
+.B FORMAT STRINGS
+section.
 .PP
 Entries in the access-list are evaluated sequentially, so order is
 very important. The first matching entry is used to decide if 
@@ -344,6 +365,20 @@ access-lists may lead to unspecified behaviour. Do not mix them.
 test mode (using
 .B -T\fR)
 is also deprecated. Access-list semantics do not depend on this flag.
+.PP 
+.B milter-greylist(8)
+also used to only have a RCPT-stage ACL, which was configured through
+.I acl
+statements. These have been replaced by
+.I racl
+statements (as opposed to
+.I dacl
+statements for DATA-stage ACL). 
+.I acl
+statements are still accepted for backward compatibility and are a 
+synonyl for
+.I racl
+statements.
 .SH MX SYNC
 Synchronization of the greylist among multiple MX is configured using the 
 .I peer 
@@ -518,55 +553,11 @@ The trailing 5 at the end of the
 .I urlcheck
 definition is the maximum number of simultaneous connexions we want to 
 launch on this URL. For each message, the URL will be querried, with  % format 
-tags being subtituted by the following parameters:
-.TP
-.I %r 
-the message recipient e-mail address
-.TP
-.I %f
-the message sender e-mail address
-.TP
-.I %i
-the sender machine IP address
-.TP
-.I %d
-the sender machine DNS address
-.TP
-.I %h
-the SMTP transaction HELO string
-.TP
-.I %mr
-the mailbox part of %r (before the @ sign)
-.TP
-.I %sr
-the site part of %r (after the @ sign)
-.TP
-.I %mf
-the mailbox part of %f (before the @ sign)
-.TP
-.I %sf
-the site part of %f (after the @ sign)
-.TP
-.I %md
-the machine part of %d (before the first . sign)
-.TP
-.I %sd
-the site part of %d (after the first . sign)
-.TP
-.I %M
-a sendmail macro value. Examples: 
-.I %Mj
-or
-.I %M{if_addr}
-.TP
-.I %T
-a brace-enclosed
-.B strftime(3) 
-format string that will be substituted by the system time. Example:
-.I %T{%Y%m%d:%H%M%S}
-.TP
-.I %%
-a single % character
+tags being subtituted. For instance, 
+.I %r
+is substituted by the recipient. See the 
+.B FORMAT STRINGS
+section for the complete list of substitutions.
 .PP
 .B milter-greylist(8) 
 expects an answer containing a list of \\n terminated lines, with  
@@ -651,19 +642,9 @@ then the output is a shell command, like in the example below:
   stat "|logger -p local7.info" "%T{%T},%i,%s,%r,%A\\n"
 .PP
 The format string gets substituted as URL checks format string: %r gets
-substituted by the recipient, %f by the sender, and so on. There are a
-few additionnal substitutions that can be interesting here:
-.TP
-.I %S 
-the action performed:
-.I accept\fR,
-.I tempfail\fR,
-or
-.I reject\fR.
-.TP
-.I %A
-the line number of the ACL that caused the action.
-.PP
+substituted by the recipient, %f by the sender, and so on. See the 
+.B FORMAT STRINGS
+section for a complete list of available substitutions.
 .SH COMMAND-LINE FLAG EQUIVALENTS
 Most 
 .B milter-greylist(8)
@@ -843,6 +824,109 @@ The
 .I dumpfreq
 option can be changed dynamically, but the change will only take effect 
 after the next dump.
+.SH FORMAT STRINGS
+Various statements in the configuration file accept format strings, where
+the following % prefixed tokens are substituted. Here is the complete list
+of available substitutions (Note that some substitutions are not relevant
+in any context).
+.TP
+.I %r 
+the message recipient e-mail address 
+.TP
+.I %f
+the message sender e-mail address
+.TP
+.I %i
+the sender machine IP address
+.TP
+.I %d
+the sender machine DNS address
+.TP
+.I %h
+the SMTP transaction HELO string
+.TP
+.I %mr
+the mailbox part of %r (before the @ sign)
+.TP
+.I %sr
+the site part of %r (after the @ sign)
+.TP
+.I %mf
+the mailbox part of %f (before the @ sign)
+.TP
+.I %sf
+the site part of %f (after the @ sign)
+.TP
+.I %md
+the machine part of %d (before the first . sign)
+.TP
+.I %sd
+the site part of %d (after the first . sign)
+.TP
+.I %M
+a sendmail macro value. Examples: 
+.I %Mj
+or
+.I %M{if_addr}
+.TP
+.I %T
+a brace-enclosed
+.B strftime(3) 
+format string that will be substituted by the system time. Example:
+.I %T{%Y%m%d:%H%M%S}
+.TP
+.I %v
+milter-greylist's version
+.TP
+.I %G
+Offset to GMT (e.g.: -0100)
+.TP
+.I %V
+Shortcut to "milter-greylist-%v (%Mj [%M{if_addr}]); %T{%a, %d %b %Y %T} %G (%T{%Z})"
+.TP
+.I %S 
+the action performed:
+.I accept\fR,
+.I tempfail\fR,
+or
+.I reject\fR.
+.TP
+.I %A
+the line number of the ACL that caused the action.
+.TP
+.I %Et
+total elapsed time in seconds before a greylisted message has been accepted
+.TP
+.I %Eh
+hours elapsed
+.TP
+.I %Em
+minutes elapsed (modulo one hour)
+.TP
+.I %Es
+seconds elapsed (modulo one minute)
+.TP
+.I %E
+shortcut to %Eh:%Em:Es
+.TP
+.I %Rt
+total remaining time in seconds before a greylisted message will be accepted
+.TP
+.I %Rh
+hours remaining
+.TP
+.I %Rm
+minutes remaining (modulo one hour)
+.TP
+.I %Rs
+seconds remaining (modulo one minute)
+.TP
+.I %R
+shortcut to %Rh:%Rm:Rs
+.TP
+.I %%
+a single % character
+.PP
 .SH AUTHORS
 Emmanuel Dreyfus <manu@netbsd.org>
 .PP

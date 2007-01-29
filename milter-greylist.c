@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.158 2007/01/28 02:16:33 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.159 2007/01/29 04:57:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.158 2007/01/28 02:16:33 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.159 2007/01/29 04:57:18 manu Exp $");
 #endif
 #endif
 
@@ -102,6 +102,7 @@ static void writepid(char *);
 static void log_and_report_greylisting(SMFICTX *, struct mlfi_priv *, char *);
 static void reset_acl_values(struct mlfi_priv *);
 static void add_recipient(struct mlfi_priv *, char *);
+static char *local_ipstr(struct mlfi_priv *);
 
 static sfsistat real_connect(SMFICTX *, char *, _SOCK_ADDR *);
 static sfsistat real_helo(SMFICTX *, char *);
@@ -529,7 +530,7 @@ real_envrcpt(ctx, envrcpt)
 		char aclstr[16];
 		char *code = "551";
 		char *ecode = "5.7.1";
-		char *msg = "Go away!";
+		char *msg;
 
 		if (priv->priv_sr.sr_acl_line != 0)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
@@ -544,9 +545,14 @@ real_envrcpt(ctx, envrcpt)
 		    priv->priv_sr.sr_code : code;
 		ecode = (priv->priv_sr.sr_ecode) ? 
 		    priv->priv_sr.sr_ecode : ecode;
-		msg = (priv->priv_sr.sr_msg) ? 
-		    priv->priv_sr.sr_msg : msg;
+		msg =  (priv->priv_sr.sr_msg) ?
+		    priv->priv_sr.sr_msg : "Go away!";
+
+		msg = fstring_expand(priv, rcpt, msg);
+
 		(void)smfi_setreply(ctx, code, ecode, msg);
+
+		free(msg);
 
 		return mg_stat(priv,
 		    *code == '4' ? SMFIS_TEMPFAIL : SMFIS_REJECT);
@@ -757,17 +763,8 @@ real_eom(ctx)
 	SMFICTX *ctx;
 {
 	struct mlfi_priv *priv;
-	char hdr[HDRLEN + 1];
-	int h, mn, s;
-	char *fqdn = NULL;
-	char *ip = NULL;
-	char timestr[HDRLEN + 1];
-	char tzstr[HDRLEN + 1];
-	char tznamestr[HDRLEN + 1];
+	char *hdrstr;
 	char whystr [HDRLEN + 1];
-	char host[ADDRLEN + 1];
-	time_t t;
-	struct tm ltm;
 	struct smtp_reply rcpt_sr;
 	struct rcpt *rcpt;
 
@@ -813,7 +810,7 @@ real_eom(ctx)
 		char addrstr[IPADDRSTRLEN];
 		char *code = "551";
 		char *ecode = "5.7.1";
-		char *msg = "Go away!";
+		char *msg;
 
 		if (priv->priv_sr.sr_acl_line != 0)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
@@ -828,9 +825,14 @@ real_eom(ctx)
 		    priv->priv_sr.sr_code : code;
 		ecode = (priv->priv_sr.sr_ecode) ? 
 		    priv->priv_sr.sr_ecode : ecode;
-		msg = (priv->priv_sr.sr_msg) ? 
-		    priv->priv_sr.sr_msg : msg;
+		msg =  (priv->priv_sr.sr_msg) ?
+		    priv->priv_sr.sr_msg : "Go away!";
+
+		msg = fstring_expand(priv, NULL, msg);
+
 		(void)smfi_setreply(ctx, code, ecode, msg);
+
+		free(msg);
 
 		return mg_stat(priv, 
 		    *code == '4' ? SMFIS_TEMPFAIL : SMFIS_REJECT);
@@ -839,167 +841,131 @@ real_eom(ctx)
 	/* Restore the info collected from RCPT stage */
 	memcpy(&priv->priv_sr, &rcpt_sr, sizeof(rcpt_sr));
 
-	if ((fqdn = smfi_getsymval(ctx, "{j}")) == NULL) {
-		mg_log(LOG_DEBUG, "smfi_getsymval failed for {j}");
-		gethostname(host, ADDRLEN);
-		fqdn = host;
-	}
-
-#ifndef USE_POSTFIX
-	/* 
-	 * Macro {if_addr} does not exist in Postfix 
-	 */
-	ip = smfi_getsymval(ctx, "{if_addr}");
-#endif
-#ifdef AF_INET6
-	/*
-	 * XXX: sendmail doesn't return {if_addr} when connection is
-	 * from ::1
-	 */
-	if (ip == NULL && SA(&priv->priv_addr)->sa_family == AF_INET6) {
-		char buf[IPADDRSTRLEN];
-
-		if (iptostring(SA(&priv->priv_addr), priv->priv_addrlen, buf,
-		    sizeof(buf)) != NULL &&
-		    strcmp(buf, "::1") == 0)
-			ip = "IPv6:::1";
-	}
-#endif
-	if (ip == NULL) {
-#ifndef USE_POSTFIX
-		mg_log(LOG_DEBUG, "smfi_getsymval failed for {if_addr}");
-#endif
-		ip = "0.0.0.0";
-	}
-
-	t = time(NULL);
-	localtime_r(&t, &ltm);
-	strftime(timestr, HDRLEN, "%a, %d %b %Y %T", &ltm);
-	gmtoffset(&t, tzstr, HDRLEN);
-	strftime(tznamestr, HDRLEN, "%Z", &ltm);
-
 	if (priv->priv_sr.sr_elapsed == 0) {
 		if ((conf.c_report & C_NODELAYS) == 0)
-			return SMFIS_CONTINUE;
+			goto out;
 			
-		whystr[0] = '\0';
-		if (priv->priv_sr.sr_whitelist & EXF_DOMAIN) {
-			ADD_REASON(whystr, "Sender DNS name whitelisted");
-			priv->priv_sr.sr_whitelist &= ~EXF_DOMAIN;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_ADDR) {
-			ADD_REASON(whystr, "Sender IP whitelisted");
-			priv->priv_sr.sr_whitelist &= ~EXF_ADDR;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_FROM) {
-			ADD_REASON(whystr, "Sender e-mail whitelisted");
-			priv->priv_sr.sr_whitelist &= ~EXF_FROM;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_AUTH) {
-			ADD_REASON(whystr, 
-			    "Sender succeeded SMTP AUTH authentication");
-			priv->priv_sr.sr_whitelist &= ~EXF_AUTH;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_ACCESSDB) {
-			ADD_REASON(whystr, 
-			    "Message whitelisted by Sendmail access database");
-			priv->priv_sr.sr_whitelist &= ~EXF_ACCESSDB;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_DRAC) {
-			ADD_REASON(whystr, 
-			    "Message whitelisted by DRAC access database");
-			priv->priv_sr.sr_whitelist &= ~EXF_DRAC;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_SPF) {
-			ADD_REASON(whystr, "Sender is SPF-compliant");
-			priv->priv_sr.sr_whitelist &= ~EXF_SPF;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_NONIP) {
+
+		if (priv->priv_sr.sr_report) {
+			hdrstr = fstring_expand(priv, 
+			    NULL, priv->priv_sr.sr_report);
+		} else {
+			whystr[0] = '\0';
+			if (priv->priv_sr.sr_whitelist & EXF_DOMAIN) {
+				ADD_REASON(whystr, 
+				    "Sender DNS name whitelisted");
+				priv->priv_sr.sr_whitelist &= ~EXF_DOMAIN;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_ADDR) {
+				ADD_REASON(whystr, 
+				    "Sender IP whitelisted");
+				priv->priv_sr.sr_whitelist &= ~EXF_ADDR;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_FROM) {
+				ADD_REASON(whystr, 
+				    "Sender e-mail whitelisted");
+				priv->priv_sr.sr_whitelist &= ~EXF_FROM;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_AUTH) {
+				ADD_REASON(whystr, 
+				    "Sender succeeded SMTP AUTH");
+				priv->priv_sr.sr_whitelist &= ~EXF_AUTH;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_ACCESSDB) {
+				ADD_REASON(whystr, 
+				    "Message whitelisted by Sendmail "
+				    "access database");
+				priv->priv_sr.sr_whitelist &= ~EXF_ACCESSDB;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_DRAC) {
+				ADD_REASON(whystr, 
+				    "Message whitelisted by DRAC "
+				    "access database");
+				priv->priv_sr.sr_whitelist &= ~EXF_DRAC;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_SPF) {
+				ADD_REASON(whystr, "Sender is SPF-compliant");
+				priv->priv_sr.sr_whitelist &= ~EXF_SPF;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_NONIP) {
 #ifdef AF_INET6
-			ADD_REASON(whystr, 
-			    "Message not sent from an IPv4 "
-			    "neither IPv6 address");
+				ADD_REASON(whystr, 
+				    "Message not sent from an IPv4 "
+				    "neither IPv6 address");
 #else
-			ADD_REASON(whystr, 
-			    "Message not sent from an IPv4 address");
+				ADD_REASON(whystr, 
+				    "Message not sent from an IPv4 address");
 #endif
-			priv->priv_sr.sr_whitelist &= ~EXF_NONIP;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_STARTTLS) {
-			ADD_REASON(whystr, 
-			    "Sender succeeded STARTTLS authentication");
-			priv->priv_sr.sr_whitelist &= ~EXF_STARTTLS;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_RCPT) {
-			ADD_REASON(whystr, "Recipient e-mail whitelisted");
-			priv->priv_sr.sr_whitelist &= ~EXF_RCPT;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_AUTO) {
-			ADD_REASON(whystr, 
-			    "IP, sender and recipient auto-whitelisted");
-			priv->priv_sr.sr_whitelist &= ~EXF_AUTO;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_DNSRBL) {
-			ADD_REASON(whystr, "Sender IP whitelisted by DNSRBL");
-			priv->priv_sr.sr_whitelist &= ~EXF_DNSRBL;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_URLCHECK) {
-			ADD_REASON(whystr, "URL check passed");
-			priv->priv_sr.sr_whitelist &= ~EXF_URLCHECK;
-		}
-		if (priv->priv_sr.sr_whitelist & EXF_DEFAULT) {
-			ADD_REASON(whystr, "Default is to whitelist mail");
-			priv->priv_sr.sr_whitelist &= ~EXF_DEFAULT;
-		}
-		priv->priv_sr.sr_whitelist &= 
-		    ~(EXF_GREYLIST | EXF_WHITELIST);
-		if (priv->priv_sr.sr_whitelist != 0) {
-			mg_log(LOG_ERR, 
-			    "%s: unexpected priv_sr.sr_whitelist = %d",
-			    priv->priv_queueid, 
-			    priv->priv_sr.sr_whitelist);
-			mystrlcat (whystr, "Internal error ", HDRLEN);
+				priv->priv_sr.sr_whitelist &= ~EXF_NONIP;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_STARTTLS) {
+				ADD_REASON(whystr, 
+				    "Sender succeeded STARTTLS authentication");
+				priv->priv_sr.sr_whitelist &= ~EXF_STARTTLS;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_RCPT) {
+				ADD_REASON(whystr, 
+				    "Recipient e-mail whitelisted");
+				priv->priv_sr.sr_whitelist &= ~EXF_RCPT;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_AUTO) {
+				ADD_REASON(whystr, 
+				    "IP, sender and "
+				    "recipient auto-whitelisted");
+				priv->priv_sr.sr_whitelist &= ~EXF_AUTO;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_DNSRBL) {
+				ADD_REASON(whystr, 
+				    "Sender IP whitelisted by DNSRBL");
+				priv->priv_sr.sr_whitelist &= ~EXF_DNSRBL;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_URLCHECK) {
+				ADD_REASON(whystr, "URL check passed");
+				priv->priv_sr.sr_whitelist &= ~EXF_URLCHECK;
+			}
+			if (priv->priv_sr.sr_whitelist & EXF_DEFAULT) {
+				ADD_REASON(whystr, 
+				    "Default is to whitelist mail");
+				priv->priv_sr.sr_whitelist &= ~EXF_DEFAULT;
+			}
+			priv->priv_sr.sr_whitelist &= 
+			    ~(EXF_GREYLIST | EXF_WHITELIST);
+			if (priv->priv_sr.sr_whitelist != 0) {
+				mg_log(LOG_ERR, 
+				    "%s: unexpected priv_sr.sr_whitelist = %d",
+				    priv->priv_queueid, 
+				    priv->priv_sr.sr_whitelist);
+				mystrlcat (whystr, "Internal error ", HDRLEN);
+			}
+
+			mystrlcat (whystr, ", not delayed by %V", HDRLEN);
+			hdrstr = fstring_expand(priv, NULL, whystr);
 		}
 
-#ifndef USE_POSTFIX
-		snprintf(hdr, HDRLEN, "%s, not delayed by "
-		    "milter-greylist-%s (%s [%s]); %s %s (%s)",
-		    whystr, PACKAGE_VERSION, fqdn, 
-		    ip, timestr, tzstr, tznamestr);
-#else
-		/* don't print ip for Postfix */
-		snprintf(hdr, HDRLEN, "%s, not delayed by "
-		    "milter-greylist-%s (%s); %s %s (%s)",
-		    whystr, PACKAGE_VERSION, fqdn, 
-		    timestr, tzstr, tznamestr);
-#endif
-		smfi_addheader(ctx, HEADERNAME, hdr);
+		smfi_addheader(ctx, HEADERNAME, hdrstr);
 
-		return mg_stat(priv, SMFIS_CONTINUE);
+		free(hdrstr);
+
+		goto out;
 	}
 
-	h = priv->priv_sr.sr_elapsed / 3600;
-	priv->priv_sr.sr_elapsed = priv->priv_sr.sr_elapsed % 3600;
-	mn = (priv->priv_sr.sr_elapsed / 60);
-	priv->priv_sr.sr_elapsed = priv->priv_sr.sr_elapsed % 60;
-	s = priv->priv_sr.sr_elapsed;
 
-#ifndef USE_POSTFIX
-	snprintf(hdr, HDRLEN,
-	    "Delayed for %02d:%02d:%02d by milter-greylist-%s "
-	    "(%s [%s]); %s %s (%s)", 
-	    h, mn, s, PACKAGE_VERSION, fqdn, ip, timestr, tzstr, tznamestr);
-#else
-	/* don't print ip for Postfix */
-	snprintf(hdr, HDRLEN,
-	    "Delayed for %02d:%02d:%02d by milter-greylist-%s "
-	    "(%s); %s %s (%s)",
-	    h, mn, s, PACKAGE_VERSION, fqdn, timestr, tzstr, tznamestr);
-#endif
+	if (conf.c_report & C_DELAYS) {
+		char *hdrstr;
 
-	if (conf.c_report & C_DELAYS)
-		smfi_addheader(ctx, HEADERNAME, hdr);
+		if (priv->priv_sr.sr_report)
+			hdrstr = fstring_expand(priv, 
+			    NULL, priv->priv_sr.sr_report);
+		else
+			hdrstr = fstring_expand(priv, 
+			    NULL, "Delayed for %E by %V");
 
+		smfi_addheader(ctx, HEADERNAME, hdrstr);
+
+		free(hdrstr);
+	}
+
+out:
 	return mg_stat(priv, SMFIS_CONTINUE);
 }
 
@@ -1019,6 +985,8 @@ real_close(ctx)
 			free(priv->priv_sr.sr_ecode);
 		if (priv->priv_sr.sr_msg)
 			free(priv->priv_sr.sr_msg);
+		if (priv->priv_sr.sr_report)
+			free(priv->priv_sr.sr_report);
 		while ((r = LIST_FIRST(&priv->priv_rcpt)) != NULL) {
 			LIST_REMOVE(r, r_list);
 			free(r);
@@ -1706,7 +1674,6 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	char *rcpt;
 {
 	int h, mn, s;
-	char hdr[HDRLEN + 1];
 	char addrstr[IPADDRSTRLEN];
 	time_t remaining;
 	char *delayed_rj;
@@ -1749,18 +1716,18 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	ecode = (priv->priv_sr.sr_ecode) ? 
 	    priv->priv_sr.sr_ecode : ecode;
 
-	if (conf.c_quiet) {
-		msg = (priv->priv_sr.sr_msg) ? 
-		    priv->priv_sr.sr_msg : msg;
-	} else {
-		snprintf(hdr, HDRLEN,
-		    "Greylisting in action, please come "
-		    "back in %02d:%02d:%02d", h, mn, s);
-		msg = (priv->priv_sr.sr_msg) ? 
-		    priv->priv_sr.sr_msg : hdr;
-	}
+	if (priv->priv_sr.sr_msg)
+		msg = priv->priv_sr.sr_msg;
+	else if (conf.c_quiet)
+		msg = "Greylisting in action, please come back in %R";
+	else
+		msg = "Greylisting in action, please come back later";
+
+	msg = fstring_expand(priv, rcpt, msg);
 
 	(void)smfi_setreply(ctx, code, ecode, msg);
+
+	free(msg);
 
 	return;
 }
@@ -1828,6 +1795,10 @@ reset_acl_values(priv)
 	if (priv->priv_sr.sr_msg != NULL) {
 		free(priv->priv_sr.sr_msg);
 		priv->priv_sr.sr_msg = NULL;
+	}
+	if (priv->priv_sr.sr_report != NULL) {
+		free(priv->priv_sr.sr_report);
+		priv->priv_sr.sr_report = NULL;
 	}
 
 	return;
@@ -2048,7 +2019,7 @@ char *
 fstring_expand(priv, rcpt, fstring)
 	struct mlfi_priv *priv;
 	char *rcpt;
-	char *fstring;
+	const char *fstring;
 {
 	size_t offset;
 	char *outstr;
@@ -2060,6 +2031,17 @@ fstring_expand(priv, rcpt, fstring)
 	int fstr_len;	/* format string length, minus the % (eg: %mr -> 2) */
 	int skip_until_brace_close = 0;
 
+	/* 
+	 * Shortcut if there is nothing to substitute 
+	 */
+	if (strchr(fstring, '%') == NULL) {
+		if ((outstr = strdup(fstring)) == NULL) {
+			mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+		return outstr;
+	}
+		
 	if ((outstr = malloc(outmaxlen + 1)) == NULL) {
 		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
@@ -2198,8 +2180,136 @@ fstring_expand(priv, rcpt, fstring)
 			mystrncat(&outstr, ipstr, &outmaxlen);
 			break;
 		}
+
+		case 'v':	/* milter-greylist version */
+			mystrncat(&outstr, PACKAGE_VERSION, &outmaxlen);
+			break;
+
+		case 'G': {	/* GMT offset (e.g.: -0100) */
+			char tzstr[HDRLEN + 1];
+			time_t t;
+
+			t = time(NULL);
+			gmtoffset(&t, tzstr, HDRLEN);
+			mystrncat(&outstr, tzstr, &outmaxlen);
+			break;
+		}
+
+		case 'E': {	/* elapsed time */
+			int h, mn, s;
+			char num[16];
+
+			s = priv->priv_sr.sr_elapsed;	
+			h = s / 3600;
+			s = s % 3600;
+			mn = s / 60;
+			s = s % 60;
+
+			fstr_len = 2;
+
+			switch(*(ptok + 1)) {
+			case 'h':	/* hours */
+				snprintf(num, sizeof(num), "%d", h);
+				break;
+			case 'm':	/* minutes */
+				snprintf(num, sizeof(num), "%d", mn);
+				break;
+			case 's':	/* seconds */
+				snprintf(num, sizeof(num), "%d", s);
+				break;
+			case 't':	/* total in seconds */
+				snprintf(num, sizeof(num), "%d",
+				    (int)priv->priv_sr.sr_elapsed);
+				break;
+			default:	/* hh:mm:ss */
+				fstr_len = 1;
+				snprintf(num, sizeof(num), 
+				    "%02d:%02d:%02d", h, mn, s);
+				break;
+			}
+				
+			mystrncat(&outstr, num, &outmaxlen);
+			break;
+		}
+
+		case 'R': {	/* remaining time */
+			int h, mn, s;
+			char num[16];
+
+			s = priv->priv_sr.sr_remaining;
+			h = s / 3600;
+			s = s % 3600;
+			mn = s / 60;
+			s = s % 60;
+
+			fstr_len = 2;
+
+			switch(*(ptok + 1)) {
+			case 'h':	/* hours */
+				snprintf(num, sizeof(num), "%d", h);
+				break;
+			case 'm':	/* minutes */
+				snprintf(num, sizeof(num), "%d", mn);
+				break;
+			case 's':	/* seconds */
+				snprintf(num, sizeof(num), "%d", s);
+				break;
+			case 't':	/* total in seconds */
+				snprintf(num, sizeof(num), "%d",
+				    (int)priv->priv_sr.sr_remaining);
+				break;
+			default:	/* hh:mm:ss */
+				fstr_len = 1;
+				snprintf(num, sizeof(num), 
+				    "%02d:%02d:%02d", h, mn, s);
+				break;
+			}
+
+			mystrncat(&outstr, num, &outmaxlen);
+			break;
+		}
+
+		case 'V': {	/* milter-greylist-<version> <complete date> */
+			char host[ADDRLEN + 1];
+			char timestr[HDRLEN + 1];
+			char tzstr[HDRLEN + 1];
+			char tznamestr[HDRLEN + 1];
+			char output[HDRLEN + 1];
+			char *fqdn;
+			time_t t;
+			struct tm ltm;
+			
+			t = time(NULL);
+			localtime_r(&t, &ltm);
+			strftime(timestr, HDRLEN, "%a, %d %b %Y %T", &ltm);
+			gmtoffset(&t, tzstr, HDRLEN);
+			strftime(tznamestr, HDRLEN, "%Z", &ltm);
+
+			fqdn = smfi_getsymval(priv->priv_ctx, "{j}");
+			if (fqdn == NULL) {
+				mg_log(LOG_DEBUG, 
+				    "smfi_getsymval failed for {j}");
+				gethostname(host, ADDRLEN);
+				fqdn = host;
+			}
+
+			snprintf(output, HDRLEN, 
+#ifndef USE_POSTFIX
+			    "milter-greylist-%s (%s [%s]); %s %s (%s)",
+#else
+			    "milter-greylist-%s (%s); %s %s (%s)",
+#endif
+			    PACKAGE_VERSION, fqdn,
+#ifndef USE_POSTFIX
+			    local_ipstr(priv),
+#endif
+			    timestr, tzstr, tznamestr);
+			mystrncat(&outstr, output, &outmaxlen);
+			break;
+		}
+
 		case 'T': {	/* current time %T{strftime_string} */
-			char *cp;
+			const char *cp;
 			time_t now;
 			struct tm tm;
 			char *format;
@@ -2489,4 +2599,40 @@ fstring_escape(fstring)
 	}
 
 	return fstring;
+}
+
+static char *
+local_ipstr(priv)
+	struct mlfi_priv *priv;
+{
+	char *ip;
+
+#ifndef USE_POSTFIX
+	/* 
+	 * Macro {if_addr} does not exist in Postfix 
+	 */
+	ip = smfi_getsymval(priv->priv_ctx, "{if_addr}");
+#endif
+#ifdef AF_INET6
+	/*
+	 * XXX: sendmail doesn't return {if_addr} when connection is
+	 * from ::1
+	 */
+	if (ip == NULL && SA(&priv->priv_addr)->sa_family == AF_INET6) {
+		char buf[IPADDRSTRLEN];
+
+		if (iptostring(SA(&priv->priv_addr), priv->priv_addrlen, buf,
+		    sizeof(buf)) != NULL &&
+		    strcmp(buf, "::1") == 0)
+			ip = "IPv6:::1";
+	}
+#endif
+	if (ip == NULL) {
+#ifndef USE_POSTFIX
+		mg_log(LOG_DEBUG, "smfi_getsymval failed for {if_addr}");
+#endif
+		ip = "0.0.0.0";
+	}
+
+	return ip;
 }

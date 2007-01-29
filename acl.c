@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.48 2007/01/28 02:16:33 manu Exp $ */
+/* $Id: acl.c,v 1.49 2007/01/29 04:57:18 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.48 2007/01/28 02:16:33 manu Exp $");
+__RCSID("$Id: acl.c,v 1.49 2007/01/29 04:57:18 manu Exp $");
 #endif
 #endif
 
@@ -1385,6 +1385,7 @@ acl_filter(stage, ctx, priv)
 		ap.ap_code = acl->a_code;
 		ap.ap_ecode = acl->a_ecode;
 		ap.ap_msg = acl->a_msg;
+		ap.ap_report = acl->a_report;
 
 		LIST_FOREACH(ac, &acl->a_clause, ac_list) {
 			found = (*ac->ac_acr->acr_filter)
@@ -1457,8 +1458,14 @@ acl_filter(stage, ctx, priv)
 		if (ap.ap_msg) {
 			priv->priv_sr.sr_msg = strdup(ap.ap_msg);
 			if (priv->priv_sr.sr_msg == NULL) {
-				mg_log(LOG_ERR, "strdup failed: %s", 
-				    strerror(errno));
+				mg_log(LOG_ERR, "strdup failed");
+				exit(EX_OSERR);
+			}
+		}
+		if (ap.ap_report) {
+			priv->priv_sr.sr_report = strdup(ap.ap_report);
+			if (priv->priv_sr.sr_report == NULL) {
+				mg_log(LOG_ERR, "strdup failed");
 				exit(EX_OSERR);
 			}
 		}
@@ -1470,16 +1477,20 @@ acl_filter(stage, ctx, priv)
 			free(ap.ap_ecode);
 		if (ap.ap_flags & A_FREE_MSG)
 			free(ap.ap_msg);
+		if (ap.ap_flags & A_FREE_REPORT)
+			free(ap.ap_report);
 
 		if (ap.ap_flags & A_FLUSHADDR)
 			pending_del_addr(sa, salen, queueid, acl->a_line);
 
 		if (conf.c_debug || conf.c_acldebug) {
+			char aclstr[HDRLEN + 1];
+
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
 			mg_log(LOG_DEBUG, "Mail from=%s, rcpt=%s, addr=%s[%s] "
 			    "is matched by entry %s", from, 
 			    (cur_rcpt != NULL) ? cur_rcpt : "(nil)",
-			    hostname, addrstr, acl_entry(acl));
+			    hostname, addrstr, acl_entry(aclstr, HDRLEN, acl));
 		}
 	} else {
 		/*
@@ -1641,6 +1652,8 @@ acl_clear(void) {	/* acllist must be write locked */
 			free(acl->a_ecode);
 		if (acl->a_msg != NULL)
 			free(acl->a_msg);
+		if (acl->a_report != NULL)
+			free(acl->a_report);
 		free(acl);
 	}
 
@@ -1648,20 +1661,21 @@ acl_clear(void) {	/* acllist must be write locked */
 }
 
 char *
-acl_entry(acl)
+acl_entry(entrystr, len, acl)
+	char *entrystr;
+	size_t len;
 	struct acl_entry *acl;
 {
-	static char entrystr[HDRLEN];
 	char tempstr[HDRLEN];
 	int def = 1;
 	struct acl_clause *ac;
 
 	switch (acl->a_stage) {
 	case AS_RCPT:
-		snprintf(entrystr, HDRLEN, "racl %d ", acl->a_line);
+		snprintf(entrystr, len, "racl %d ", acl->a_line);
 		break;
 	case AS_DATA:
-		snprintf(entrystr, HDRLEN, "dacl %d ", acl->a_line);
+		snprintf(entrystr, len, "dacl %d ", acl->a_line);
 		break;
 	default:
 		mg_log(LOG_ERR, "unexpected stage %d", acl->a_stage);
@@ -1671,13 +1685,13 @@ acl_entry(acl)
 
 	switch (acl->a_type) {
 	case A_GREYLIST:
-		mystrlcat(entrystr, "greylist ", sizeof(entrystr));
+		mystrlcat(entrystr, "greylist ", len);
 		break;
 	case A_WHITELIST:
-		mystrlcat(entrystr, "whitelist ", sizeof(entrystr));
+		mystrlcat(entrystr, "whitelist ", len);
 		break;
 	case A_BLACKLIST:
-		mystrlcat(entrystr, "blacklist ", sizeof(entrystr));
+		mystrlcat(entrystr, "blacklist ", len);
 		break;
 	default:
 		mg_log(LOG_ERR, "corrupted acl list");
@@ -1696,47 +1710,53 @@ acl_entry(acl)
 		    (ac->ac_negation == NEGATED) ? notstr : vstr,
 		    ac->ac_acr->acr_name, 
 		    (*ac->ac_acr->acr_print)(ad, tempstr2, sizeof(tempstr2)));
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, len);
 		def = 0;
 	}
 
 	if (acl->a_delay != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[delay %ld] ", (long)acl->a_delay);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, len);
 	}
 
 	if (acl->a_autowhite != -1) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[aw %ld] ", (long)acl->a_autowhite);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, len);
 	}
 
 	if (acl->a_flags & A_FLUSHADDR) {
 		snprintf(tempstr, sizeof(tempstr), "[flushaddr] ");
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, len);
 	}
 
 	if (acl->a_code) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[code \"%s\"] ", acl->a_code);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, len);
 	}
 
 	if (acl->a_ecode) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[ecode \"%s\"] ", acl->a_ecode);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, len);
 	}
 
 	if (acl->a_msg) {
 		snprintf(tempstr, sizeof(tempstr), 
 		    "[msg \"%s\"] ", acl->a_msg);
-		mystrlcat(entrystr, tempstr, sizeof(entrystr));
+		mystrlcat(entrystr, tempstr, len);
+	}
+
+	if (acl->a_report) {
+		snprintf(tempstr, sizeof(tempstr), 
+		    "[report \"%s\"] ", acl->a_report);
+		mystrlcat(entrystr, tempstr, len);
 	}
 
 	if (def)
-		mystrlcat(entrystr, "default", sizeof(entrystr));
+		mystrlcat(entrystr, "default", len);
 	return entrystr;
 }
 
@@ -1761,7 +1781,9 @@ acl_dump (void) {	/* acllist must be write locked */
 	ACL_RDLOCK;
 	mg_log(LOG_INFO, "Access list dump:");
 	TAILQ_FOREACH(acl, &acl_head, a_list) {
-		entry = acl_entry(acl);
+		char aclstr[HDRLEN + 11];
+
+		entry = acl_entry(aclstr, HDRLEN, acl);
 		mg_log(LOG_INFO, "%s", entry);
 		if (debug != NULL)
 			fprintf(debug, "%s", entry);
@@ -1925,6 +1947,28 @@ acl_add_msg(msg)
 		
 	if (conf.c_debug || conf.c_acldebug)
 		mg_log(LOG_DEBUG, "load acl msg \"%s\"", msg);
+
+	return;
+}
+
+void 
+acl_add_report(report)
+	char *report;
+{
+	if (gacl->a_report) {
+		mg_log(LOG_ERR,
+		    "report specified twice in ACL line %d", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	if ((gacl->a_report = strdup(report)) == NULL) {
+		mg_log(LOG_ERR,
+		    "malloc failed in ACL line %d", conf_line);
+		exit(EX_OSERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl report \"%s\"", report);
 
 	return;
 }

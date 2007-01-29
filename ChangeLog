@@ -1,6 +1,8 @@
 3.1.5
 	Fix double free when using content filtering
 	ACL clauses can now be negated
+	msg clauses in ACL can use format strings substitution
+	Add an ACL clause to customize X-Greylist header
 3.1.4
 	Add support for switching to a given group (Ralf S. Engelschall)
 	Add substitutions for sendmail macro and strftime in URL checks

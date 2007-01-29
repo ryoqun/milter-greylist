@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.12 2007/01/22 14:08:16 manu Exp $ */
+/* $Id: urlcheck.c,v 1.13 2007/01/29 04:57:18 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.12 2007/01/22 14:08:16 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.13 2007/01/29 04:57:18 manu Exp $");
 #endif
 #endif
 
@@ -863,6 +863,16 @@ answer_getline(key, value, ap)
 			exit(EX_OSERR);
 		}
 		ap->ap_flags |= A_FREE_MSG;
+		goto out;
+	}
+
+	if (strcasecmp(key, "milterGreylistReport") == 0) {
+		if ((ap->ap_report = strdup(value)) == NULL) {
+			mg_log(LOG_ERR, "strdup(\"%s\") failed: %s",
+			    key, strerror(errno));
+			exit(EX_OSERR);
+		}
+		ap->ap_flags |= A_FREE_REPORT;
 		goto out;
 	}
 
