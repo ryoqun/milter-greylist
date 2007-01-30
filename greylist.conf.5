@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.57 2007/01/29 04:57:18 manu Exp $
+.\" $Id: greylist.conf.5,v 1.58 2007/01/30 14:36:53 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -766,7 +766,8 @@ It must be enclosed in quotes:
   socket "/var/milter-greylist/milter-greylist.sock"
 .TP
 .I user
-This keyword should be followed by a quoted user login. Like the 
+This keyword should be followed by a quoted user login and optionally a coloon followed by a groupname.
+Like the 
 .B -u
 option, this is used to run
 .B milter-greylist(8)
