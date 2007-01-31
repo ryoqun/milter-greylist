@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.49 2007/01/29 04:57:18 manu Exp $ */
+/* $Id: acl.c,v 1.50 2007/01/31 06:07:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.49 2007/01/29 04:57:18 manu Exp $");
+__RCSID("$Id: acl.c,v 1.50 2007/01/31 06:07:50 manu Exp $");
 #endif
 #endif
 
@@ -994,7 +994,7 @@ acl_print_netblock(ad, buf, len)
 	iptostring(ad->netblock.addr, ad->netblock.salen,
 		   addrstr, sizeof(addrstr));
 	inet_ntop(ad->netblock.addr->sa_family,
-		  &ad->netblock.mask,
+		  ad->netblock.mask,
 		  maskstr, sizeof(maskstr));
 	snprintf(buf, len, "%s/%s", addrstr, maskstr);
 	return buf;
