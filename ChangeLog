@@ -4,6 +4,7 @@
 	msg clauses in ACL can use format strings substitution
 	Add an ACL clause to customize X-Greylist header
 	Fix a bug in DNSRBL code (Jacques Beigbeder)
+	Fix a display bug for netblocks
 3.1.4
 	Add support for switching to a given group (Ralf S. Engelschall)
 	Add substitutions for sendmail macro and strftime in URL checks
