@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.21 2007/01/31 03:56:00 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.22 2007/02/01 03:54:48 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.21 2007/01/31 03:56:00 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.22 2007/02/01 03:54:48 manu Exp $");
 #endif
 #endif
 
@@ -118,6 +118,7 @@ dnsrbl_check_source(ad, stage, ap, priv)
 	struct sockaddr_storage result;
 	int retval = 0;
 	char *addr;
+	uint32_t *saddr;
 	size_t len;
 
 	sa = SA(&priv->priv_addr);
@@ -201,16 +202,18 @@ dnsrbl_check_source(ad, stage, ap, priv)
 		case AF_INET:
 			if (rr.type != T_A)
 				continue;
-			memcpy(&result, rr.rdata, len);
-			SADDR4(&result)->s_addr &= source->d_mask.in4.s_addr;
+			saddr = (uint32_t *)&(SADDR4(&result)->s_addr);
+			memcpy(saddr, &rr.rdata, len);
+			*saddr &= source->d_mask.in4.s_addr;
 			break;
 #ifdef AF_INET6
 		case AF_INET6:
 			if (rr.type != T_AAAA)
 				continue;
-			memcpy(&result, rr.rdata, len);
+			saddr = (uint32_t *)&(SADDR6(&result)->s6_addr);
+			memcpy(saddr, &rr.rdata, len);
 			for (i = 0; i < 16; i += 4)
-				*(uint32_t *)&SADDR6(&result)->s6_addr[i] &=
+				saddr[i] &=
 				    *(uint32_t *)&source->d_mask.in6.s6_addr[i];
 			break;
 #endif
@@ -220,7 +223,7 @@ dnsrbl_check_source(ad, stage, ap, priv)
 			break;
 		}
 
-		if (memcmp(addr, &result, len) == 0) {
+		if (memcmp(addr, saddr, len) == 0) {
 			retval = 1;
 			goto end;
 		}
