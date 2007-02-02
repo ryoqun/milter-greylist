@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.22 2007/02/01 03:54:48 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.23 2007/02/02 01:45:56 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.22 2007/02/01 03:54:48 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.23 2007/02/02 01:45:56 manu Exp $");
 #endif
 #endif
 
@@ -203,7 +203,7 @@ dnsrbl_check_source(ad, stage, ap, priv)
 			if (rr.type != T_A)
 				continue;
 			saddr = (uint32_t *)&(SADDR4(&result)->s_addr);
-			memcpy(saddr, &rr.rdata, len);
+			memcpy(saddr, rr.rdata, len);
 			*saddr &= source->d_mask.in4.s_addr;
 			break;
 #ifdef AF_INET6
@@ -211,7 +211,7 @@ dnsrbl_check_source(ad, stage, ap, priv)
 			if (rr.type != T_AAAA)
 				continue;
 			saddr = (uint32_t *)&(SADDR6(&result)->s6_addr);
-			memcpy(saddr, &rr.rdata, len);
+			memcpy(saddr, rr.rdata, len);
 			for (i = 0; i < 16; i += 4)
 				saddr[i] &=
 				    *(uint32_t *)&source->d_mask.in6.s6_addr[i];
