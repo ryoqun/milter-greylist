@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.59 2007/01/31 06:08:55 manu Exp $
+.\" $Id: greylist.conf.5,v 1.60 2007/02/02 02:10:23 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -67,6 +67,7 @@ keyword, and by any set of the following clauses:
 .I rcpt\fR,
 .I rcptcount\fR,
 .I sm_macro\fR,
+.I time\fR,
 .I auth\fR,
 .I tls\fR,
 .I spf\fR
@@ -133,6 +134,15 @@ amount of recipients. Example:
 .I sm_macro 
 This is used to select a Sendmail macro value. See the section on that
 topic for more information.
+.TP
+.I time
+This is used to specify a time set. It should be followed by a quoted string
+of 
+.B crontab(5)\fR-like
+time specification. Here is an example that whitelists mail addressed to a 
+single recipient during office hours (from 8:00 to 16:59 from monday to friday):
+.IP
+  racl whitelist time "* 8-16 * * 1-5" rcpt info@example.net
 .TP
 .I auth
 This is used to select a user that succeeded SMTP AUTH. In order to select
@@ -592,6 +602,11 @@ The SMTP extended code to return (e.g.: 5.7.1)
 .TP
 .I milterGreylistMsg
 The string to return with SMTP codes.
+.TP
+.I milterGreylistReport
+The string to display in the
+.I X-Greylist 
+header.
 .TP
 .I milterGreylistAction
 This feature is nifty but use it with caution, as it makes the access

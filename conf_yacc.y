@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.71 2007/01/29 04:57:18 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.72 2007/02/02 02:10:23 manu Exp $");
 #endif
 #endif
 
@@ -26,6 +26,7 @@ __RCSID("$Id: conf_yacc.y,v 1.71 2007/01/29 04:57:18 manu Exp $");
 #include "urlcheck.h"
 #endif
 #include "stat.h"
+#include "clock.h"
 #include "milter-greylist.h"
 
 #define LEN4 sizeof(struct sockaddr_in)
@@ -539,6 +540,7 @@ acl_clause:	fromaddr_clause
 	|	msgsize_clause
 	|	rcptcount_clause
 	|	no_clause
+	|	time_clause
 	;
 
 acl_values:	acl_value
@@ -587,6 +589,10 @@ report_value:		REPORT QSTRING {
 			}
 	;
 no_clause:		NO { acl_negate_clause(); }
+	;
+
+time_clause:		TIME clockspec clockspec clockspec clockspec clockspec
+			{ acl_add_clause(AC_CLOCKSPEC, register_clock()); }
 	;
 
 fromaddr_clause:	FROM EMAIL { acl_add_clause(AC_FROM, $2); }
@@ -890,6 +896,23 @@ macrodef_unset:		SM_MACRO QSTRING QSTRING UNSET {
 				macro_add_unset(quotepath(name, $2, QSTRLEN),
 				    quotepath(macro, $3, QSTRLEN));
 			}
+	;
+
+clockspec:	clockspec_item COMMA clockspec
+	|	clockspec_item	{ next_clock_spec(); }
+	;
+clockspec_item:	TNUMBER			
+			{ add_clock_item(atoi($1), atoi($1), 0); }
+	|	TNUMBER SLASH TNUMBER	
+			{ add_clock_item(atoi($1), atoi($1), atoi($3));  }
+	|	TNUMBER MINUS TNUMBER	
+			{ add_clock_item(atoi($1), atoi($3), 0); }
+	|	TNUMBER MINUS TNUMBER SLASH TNUMBER 
+			{ add_clock_item(atoi($1), atoi($3), atoi($5)); }
+	|	STAR			
+			{ add_clock_item(-1, -1, 0);  }
+	|	STAR SLASH TNUMBER	
+			{ add_clock_item(-1, -1, atoi($3)); }
 	;
 
 listdef:	LIST QSTRING list_clause {

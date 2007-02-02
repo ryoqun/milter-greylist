@@ -53,6 +53,7 @@ qstring		"\""[^"\n]+"\""
 regex		"/"[^/\n]+"/"
 dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
 timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
+time		[Tt][Ii][Mm][Ee]
 domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 syncaddr	[Ss][Yy][Nn][Cc][Aa][Dd][Dd][Rr]:?
 syncsrcaddr	[Ss][Yy][Nn][Cc][Ss][Rr][Cc][Aa][Dd][Dd][Rr]:?
@@ -85,6 +86,9 @@ openlist	"{"
 closelist	"}"
 nextln		"\\".*"\n"
 star		"*"
+slash		"/"
+minus		"-"
+comma		","
 eq		"=="
 ne		"!="
 ge		">="
@@ -95,7 +99,8 @@ no		[Nn][Oo]
 not		[Nn][Oo][Tt]
 neg		"!"
 
-%s S_REGEX
+%s S_REGEX 
+%x S_CLOCKSPEC1 S_CLOCKSPEC2
 
 
 %{
@@ -105,7 +110,7 @@ neg		"!"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.64 2007/01/28 02:16:33 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.65 2007/02/02 02:10:23 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -123,7 +128,7 @@ neg		"!"
 %}
 
 %%
-{blank}
+<*>{blank}
 {comment}
 {eq}		{	yylval.op = OP_EQ; return OP; }
 {ne}		{	yylval.op = OP_NE; return OP; }
@@ -185,6 +190,7 @@ neg		"!"
 {all}		{ return ALL; }
 {dumpfreq}	{ return GLDUMPFREQ; }
 {timeout}	{ return GLTIMEOUT; }
+{time}		{ BEGIN(S_CLOCKSPEC1); return TIME; }
 {domain}	{ BEGIN(S_REGEX); return DOMAIN; }
 {syncaddr}	{ return SYNCADDR; }
 {syncsrcaddr}	{ return SYNCSRCADDR; }
@@ -195,16 +201,22 @@ neg		"!"
 {whitelist}	{ return WHITELIST; }
 {blacklist}	{ return BLACKLIST; }
 {default}	{ return DEFAULT; }
-{star}		{ return STAR; }
+<INITIAL>{star}		{ return STAR; }
+<S_CLOCKSPEC2>{star}	{ return STAR; }
+<S_CLOCKSPEC2>{slash}	{ return SLASH; }
+<S_CLOCKSPEC2>{minus}	{ return MINUS; }
+<S_CLOCKSPEC2>{comma}	{ return COMMA; }
 {drac}		{ return DRAC; }
 {nodrac}	{ return NODRAC; }
 {db}		{ return DB; }
-{qstring}	{
+<INITIAL,S_REGEX>{qstring}	{
 			strncpy(yylval.qstring, yytext, QSTRLEN);
 			yylval.qstring[QSTRLEN] = '\0';
 			return QSTRING;
 		}
-{number}	{
+<S_CLOCKSPEC1>"\""	{ BEGIN(S_CLOCKSPEC2); }
+<S_CLOCKSPEC2>"\""	{ BEGIN(0); }
+<*>{number}	{
 			strncpy(yylval.delay, yytext, NUMLEN);
 			yylval.delay[NUMLEN] = '\0';
 			return TNUMBER;
@@ -253,7 +265,7 @@ neg		"!"
 		}
 {openlist}	{	return OPENLIST; }
 {closelist}	{	return CLOSELIST; }
-\n		{ 
+<*>\n		{ 
 			BEGIN(0);
 			conf_line++; 
 			return yytext[0]; 

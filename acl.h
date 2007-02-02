@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.21 2007/01/29 04:57:18 manu Exp $ */
+/* $Id: acl.h,v 1.22 2007/02/02 02:10:23 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -51,7 +51,8 @@
 typedef enum { A_GREYLIST, A_WHITELIST, A_BLACKLIST, } acl_type_t;
 typedef enum { AS_NONE, AS_RCPT, AS_DATA, AS_ANY, } acl_stage_t;
 typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK, AT_OPNUM, 
-	       AT_DNSRBL, AT_URLCHECK, AT_MACRO, AT_LIST } acl_data_type_t;
+	       AT_CLOCKSPEC, AT_DNSRBL, AT_URLCHECK, AT_MACRO, 
+	       AT_LIST } acl_data_type_t;
 
 typedef enum {
 	AC_NONE,
@@ -92,6 +93,8 @@ typedef enum {
 	AC_SPF,
 	AC_MSGSIZE,
 	AC_RCPTCOUNT,
+	AC_CLOCKSPEC,
+	AC_CLOCKSPEC_LIST,
 } acl_clause_t;
 
 struct acl_clause;
@@ -157,6 +160,7 @@ typedef union acl_data {
 	struct urlcheck_entry *urlcheck;
 #endif
 	struct acl_opnum_data opnum;
+	struct clockspec *clockspec;
 } acl_data_t;
 
 struct acl_clause_rec {
@@ -289,4 +293,5 @@ int acl_msgsize_cmp(acl_data_t *, acl_stage_t,
 #define EXF_BODY	(1 << 20)
 #define EXF_MSGSIZE	(1 << 21)
 #define EXF_RCPTCOUNT	(1 << 22)
+#define EXF_CLOCKSPEC	(1 << 23)
 #endif /* _ACL_H_ */

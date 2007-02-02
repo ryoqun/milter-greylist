@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.50 2007/01/31 06:07:50 manu Exp $ */
+/* $Id: acl.c,v 1.51 2007/02/02 02:10:23 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.50 2007/01/31 06:07:50 manu Exp $");
+__RCSID("$Id: acl.c,v 1.51 2007/02/02 02:10:23 manu Exp $");
 #endif
 #endif
 
@@ -75,6 +75,7 @@ __RCSID("$Id: acl.c,v 1.50 2007/01/31 06:07:50 manu Exp $");
 #include "spf.h"
 #endif
 #include "macro.h"
+#include "clock.h"
 #include "milter-greylist.h"
 
 struct acllist acl_head;
@@ -267,6 +268,14 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  AT_OPNUM, AC_NONE, AC_RCPTCOUNT, EXF_RCPTCOUNT,
 	  *acl_print_opnum, *acl_add_opnum_body,
 	  NULL, *acl_rcptcount_cmp },
+	{ AC_CLOCKSPEC, MULTIPLE_OK, AS_ANY, "time",
+	  AT_CLOCKSPEC, AC_NONE, AC_CLOCKSPEC, EXF_CLOCKSPEC,
+	  *print_clockspec, *add_clockspec,
+	  *clockspec_free, *clockspec_filter },
+	{ AC_CLOCKSPEC_LIST, MULTIPLE_OK, AS_ANY, "time_list",
+	  AT_LIST, AC_NONE, AC_NONE, EXF_CLOCKSPEC,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
 };
 
 struct {
