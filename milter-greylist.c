@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.161 2007/02/02 07:00:06 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.162 2007/02/02 07:01:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.161 2007/02/02 07:00:06 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.162 2007/02/02 07:01:48 manu Exp $");
 #endif
 #endif
 
@@ -1726,9 +1726,9 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	if (priv->priv_sr.sr_msg)
 		msg = priv->priv_sr.sr_msg;
 	else if (conf.c_quiet)
-		msg = "Greylisting in action, please come back in %R";
-	else
 		msg = "Greylisting in action, please come back later";
+	else
+		msg = "Greylisting in action, please come back in %R";
 
 	msg = fstring_expand(priv, rcpt, msg);
 
