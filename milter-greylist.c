@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.160 2007/02/02 02:10:23 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.161 2007/02/02 07:00:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.160 2007/02/02 02:10:23 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.161 2007/02/02 07:00:06 manu Exp $");
 #endif
 #endif
 
@@ -94,6 +94,9 @@ static int check_drac(char *dotted_ip);
 #endif
 #ifdef USE_CURL
 #include "urlcheck.h"
+#endif
+#ifdef USE_GEOIP
+#include "geoip.h"
 #endif
 #include "macro.h"
 
@@ -302,6 +305,9 @@ real_connect(ctx, hostname, addr)
 		priv->priv_sr.sr_whitelist = EXF_WHITELIST | EXF_NONIP;
 	}
 
+#ifdef USE_GEOIP
+	geoip_set_ccode(priv);
+#endif
 	return SMFIS_CONTINUE;
 }
 
@@ -2195,7 +2201,15 @@ fstring_expand(priv, rcpt, fstring)
 			mystrncat(&outstr, tzstr, &outmaxlen);
 			break;
 		}
-
+		
+		case 'C': {	/* Country code from GeoIP */
+#ifdef USE_GEOIP
+			mystrncat(&outstr, priv->priv_ccode, &outmaxlen);
+#else
+			fstr_len =  0;
+#endif
+			break;
+		}
 		case 'E': {	/* elapsed time */
 			int h, mn, s;
 			char num[16];

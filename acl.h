@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.22 2007/02/02 02:10:23 manu Exp $ */
+/* $Id: acl.h,v 1.23 2007/02/02 07:00:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -95,6 +95,8 @@ typedef enum {
 	AC_RCPTCOUNT,
 	AC_CLOCKSPEC,
 	AC_CLOCKSPEC_LIST,
+	AC_GEOIP,
+	AC_GEOIP_LIST,
 } acl_clause_t;
 
 struct acl_clause;
@@ -294,4 +296,5 @@ int acl_msgsize_cmp(acl_data_t *, acl_stage_t,
 #define EXF_MSGSIZE	(1 << 21)
 #define EXF_RCPTCOUNT	(1 << 22)
 #define EXF_CLOCKSPEC	(1 << 23)
+#define EXF_GEOIP	(1 << 24)
 #endif /* _ACL_H_ */

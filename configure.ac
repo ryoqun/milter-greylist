@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.198 2007/01/22 14:08:16 manu Exp $
+# $Id: configure.ac,v 1.199 2007/02/02 07:00:06 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -63,6 +63,11 @@ AC_ARG_WITH(libcurl,
 	[  --with-libcurl=DIR  Find libcurl in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_CURL" 
 	    LIBS="-lcurl $LIBS"
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
+AC_ARG_WITH(libGeoIP, 
+	[  --with-libGeoIP=DIR  Find libGeoIP in DIR],
+	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_GEOIP" 
+	    LIBS="-lGeoIP $LIBS"
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
 
 # Checks for header files.

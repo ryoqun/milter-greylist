@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.60 2007/02/02 02:10:23 manu Exp $
+.\" $Id: greylist.conf.5,v 1.61 2007/02/02 07:00:06 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -72,6 +72,8 @@ keyword, and by any set of the following clauses:
 .I tls\fR,
 .I spf\fR
 (if build with SPF support), 
+.I geoip\fR
+(if build with GeoIP support),
 .I urlcheck\fR
 (if built with --with-libcurl), and 
 .I dnsrbl\fR
@@ -143,6 +145,14 @@ time specification. Here is an example that whitelists mail addressed to a
 single recipient during office hours (from 8:00 to 16:59 from monday to friday):
 .IP
   racl whitelist time "* 8-16 * * 1-5" rcpt info@example.net
+.TP
+.I geoip
+This is used to specify a country, ad reported by GeoIP. The country code
+must be upper case, and is only available if 
+.B milter-greylist
+was built with GeoIP support. The 
+.I geoipdb 
+statement can be used to specify the location of GeoIP database. 
 .TP
 .I auth
 This is used to select a user that succeeded SMTP AUTH. In order to select
@@ -897,6 +907,11 @@ milter-greylist's version
 .TP
 .I %G
 Offset to GMT (e.g.: -0100)
+.TP
+.I %C
+Sender IP country code, as reported by GeoIP. This is only available if
+.B milter-greylist
+was built with GeoIP support
 .TP
 .I %V
 Shortcut to "milter-greylist-%v (%Mj [%M{if_addr}]); %T{%a, %d %b %Y %T} %G (%T{%Z})"

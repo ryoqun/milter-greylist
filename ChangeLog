@@ -6,6 +6,7 @@
 	Fix serious bugs in DNSRBL code (Jacques Beigbeder)
 	Fix a display bug for netblocks
 	Add a time clause to match against time sets
+	GeoIP support, through the geoip clause
 3.1.4
 	Add support for switching to a given group (Ralf S. Engelschall)
 	Add substitutions for sendmail macro and strftime in URL checks

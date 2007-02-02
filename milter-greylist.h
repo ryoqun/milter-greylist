@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.60 2007/01/29 04:57:18 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.61 2007/02/02 07:00:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -177,6 +177,9 @@ struct mlfi_priv {
 	int priv_rcptcount;
 	TAILQ_HEAD(, header) priv_header;
 	TAILQ_HEAD(, body) priv_body;
+#ifdef USE_GEOIP
+	const char *priv_ccode;
+#endif
 	size_t priv_msgcount;
 	char *priv_buf;
 	size_t priv_buflen;

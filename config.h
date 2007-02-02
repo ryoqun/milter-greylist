@@ -2,7 +2,7 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
-#define BUILD_ENV "manu@plan:/wd1a/home/manu/milter-greylist-313 Mon Jan 22 07:16:53 CET 2007"
+#define BUILD_ENV "manu@plan:/wd1a/home/manu/milter-greylist-current Thu Feb  1 23:56:55 CET 2007"
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define HAVE_ARPA_INET_H 1

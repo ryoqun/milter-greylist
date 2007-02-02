@@ -856,6 +856,7 @@ Optional Packages:
   --with-libpthread=DIR  Find libpthread in DIR
   --with-libbind=DIR	Find libbind in DIR
   --with-libcurl=DIR  Find libcurl in DIR
+  --with-libGeoIP=DIR  Find libGeoIP in DIR
   --with-libspf2=DIR  Find libspf2 in DIR
   --with-libspf2_10=DIR  Find libspf2 1.0 in DIR
   --with-libspf_alt=DIR  Find libspf_alt in DIR
@@ -3072,6 +3073,14 @@ if test "${with_libcurl+set}" = set; then
   withval="$with_libcurl"
   CFLAGS=$CFLAGS" -I$withval/include -DUSE_CURL"
 	    LIBS="-lcurl $LIBS"
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+fi;
+
+# Check whether --with-libGeoIP or --without-libGeoIP was given.
+if test "${with_libGeoIP+set}" = set; then
+  withval="$with_libGeoIP"
+  CFLAGS=$CFLAGS" -I$withval/include -DUSE_GEOIP"
+	    LIBS="-lGeoIP $LIBS"
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
 fi;
 

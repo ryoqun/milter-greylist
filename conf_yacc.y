@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME GEOIPDB GEOIP
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.72 2007/02/02 02:10:23 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.73 2007/02/02 07:00:06 manu Exp $");
 #endif
 #endif
 
@@ -24,6 +24,9 @@ __RCSID("$Id: conf_yacc.y,v 1.72 2007/02/02 02:10:23 manu Exp $");
 #endif
 #ifdef USE_CURL
 #include "urlcheck.h"
+#endif
+#ifdef USE_GEOIP
+#include "geoip.h"
 #endif
 #include "stat.h"
 #include "clock.h"
@@ -92,6 +95,7 @@ lines	:	lines netblock '\n'
 	|	lines subnetmatch6 '\n'
 	|	lines socket '\n'
 	|	lines user '\n'
+	|	lines geoipdb '\n'
 	|	lines nodetach '\n'
 	|	lines lazyaw '\n'
 	|	lines report '\n'
@@ -318,6 +322,18 @@ user:		USER QSTRING	{ if (C_NOTFORCED(C_USER))
 					    quotepath(conf.c_user_storage, $2, QSTRLEN);
 				}
 	;	
+geoipdb:	GEOIPDB QSTRING	{
+#ifdef USE_GEOIP
+				char path[QSTRLEN + 1];
+
+				geoip_set_db(quotepath(path, $2, QSTRLEN));
+#else
+				mg_log(LOG_INFO, 
+				    "GeoIP support not compiled in line %d", 
+				    conf_line);
+#endif
+				}
+	;
 report:		REPORT NONE	{ conf.c_report = C_GLNONE; }
 	|	REPORT DELAYS	{ conf.c_report = C_DELAYS; }
 	|	REPORT NODELAYS	{ conf.c_report = C_NODELAYS; }
@@ -541,6 +557,7 @@ acl_clause:	fromaddr_clause
 	|	rcptcount_clause
 	|	no_clause
 	|	time_clause
+	|	geoip_clause
 	;
 
 acl_values:	acl_value
@@ -593,6 +610,20 @@ no_clause:		NO { acl_negate_clause(); }
 
 time_clause:		TIME clockspec clockspec clockspec clockspec clockspec
 			{ acl_add_clause(AC_CLOCKSPEC, register_clock()); }
+	;
+
+geoip_clause:		GEOIP QSTRING {
+#ifdef USE_GEOIP
+				char ccode[IPADDRSTRLEN + 1];
+
+				acl_add_clause(AC_GEOIP, 
+				    quotepath(ccode, $2, IPADDRSTRLEN));
+#else
+				mg_log(LOG_INFO, 
+				    "GeoIP support not compiled in line %d", 
+				    conf_line);
+#endif
+			}
 	;
 
 fromaddr_clause:	FROM EMAIL { acl_add_clause(AC_FROM, $2); }
@@ -945,6 +976,10 @@ list_clause:	FROM OPENLIST email_list CLOSELIST
 			{ all_list_settype(glist, AC_AUTH_LIST); }
 	|	TLS OPENLIST qstring_list CLOSELIST
 			{ all_list_settype(glist, AC_TLS_LIST); }
+	|	TIME OPENLIST qstring_list CLOSELIST
+			{ all_list_settype(glist, AC_CLOCKSPEC_LIST); }
+	|	GEOIP OPENLIST qstring_list CLOSELIST
+			{ all_list_settype(glist, AC_GEOIP_LIST); }
 	;
 
 email_list:	email_item

@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.51 2007/02/02 02:10:23 manu Exp $ */
+/* $Id: acl.c,v 1.52 2007/02/02 07:00:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.51 2007/02/02 02:10:23 manu Exp $");
+__RCSID("$Id: acl.c,v 1.52 2007/02/02 07:00:06 manu Exp $");
 #endif
 #endif
 
@@ -69,6 +69,9 @@ __RCSID("$Id: acl.c,v 1.51 2007/02/02 02:10:23 manu Exp $");
 #endif
 #ifdef USE_CURL
 #include "urlcheck.h"
+#endif
+#ifdef USE_GEOIP
+#include "geoip.h"
 #endif
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
      defined(HAVE_SPF2_10) || defined(HAVE_SPF2)) 
@@ -276,6 +279,16 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  AT_LIST, AC_NONE, AC_NONE, EXF_CLOCKSPEC,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
+#ifdef USE_GEOIP
+	{ AC_GEOIP, MULTIPLE_OK, AS_ANY, "geoip", 
+	  AT_STRING, AC_GEOIP_LIST, AC_STRING, EXF_GEOIP,
+	  *acl_print_string, *acl_add_string,
+	  *acl_free_string, *geoip_filter },
+	{ AC_GEOIP_LIST, MULTIPLE_OK, AS_ANY, "geoip_list", 
+	  AT_LIST, AC_NONE, AC_NONE, EXF_GEOIP,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+#endif
 };
 
 struct {

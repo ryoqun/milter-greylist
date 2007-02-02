@@ -82,6 +82,8 @@ msg		[Mm][Ss][Gg]
 header		[Hh][Ee][Aa][Dd][Ee][Rr]
 body		[Bb][Oo][Dd][Yy]
 maxpeek		[Mm][Aa][Xx][Pp][Ee][Ee][Kk]
+geoipdb		[Gg][Ee][Oo][Ii][Pp][Dd][Bb]
+geoip		[Gg][Ee][Oo][Ii][Pp]
 openlist	"{"
 closelist	"}"
 nextln		"\\".*"\n"
@@ -110,7 +112,7 @@ neg		"!"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.65 2007/02/02 02:10:23 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.66 2007/02/02 07:00:06 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -174,6 +176,8 @@ neg		"!"
 {header}	{ BEGIN(S_REGEX); return HEADER; }
 {body}		{ BEGIN(S_REGEX); return BODY; }
 {maxpeek}	{ return MAXPEEK; }
+{geoipdb}	{ return GEOIPDB; }
+{geoip}		{ return GEOIP; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }

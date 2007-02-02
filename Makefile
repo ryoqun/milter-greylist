@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.90 2007/02/02 02:10:23 manu Exp $
+# $Id: Makefile,v 1.91 2007/02/02 07:00:06 manu Exp $
 
 #
 # Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -54,11 +54,11 @@ TRUE=		true
 
 OBJ= 		milter-greylist.o pending.o sync.o dnsrbl.o list.o macro.o \
 		conf_yacc.o dump_yacc.o conf.o autowhite.o dump.o spf.o \
-		acl.o urlcheck.o stat.o clock.o
+		acl.o urlcheck.o stat.o clock.o geoip.o
 SRC= 		milter-greylist.c pending.c sync.c conf.c macro.c stat.c \
 		clock.c autowhite.c dump.c spf.c acl.c dnsrbl.c list.c \
-		urlcheck.c 
-GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c 
+		urlcheck.c geoip.c
+GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c  
 
 all:		milter-greylist rc-bsd.sh rc-redhat.sh \
 		rc-solaris.sh rc-debian.sh rc-gentoo.sh rc-suse.sh
