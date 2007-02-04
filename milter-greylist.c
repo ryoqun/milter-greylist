@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.162 2007/02/02 07:01:48 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.163 2007/02/04 13:59:38 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.162 2007/02/02 07:01:48 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.163 2007/02/04 13:59:38 manu Exp $");
 #endif
 #endif
 
@@ -105,7 +105,9 @@ static void writepid(char *);
 static void log_and_report_greylisting(SMFICTX *, struct mlfi_priv *, char *);
 static void reset_acl_values(struct mlfi_priv *);
 static void add_recipient(struct mlfi_priv *, char *);
+#ifndef USE_POSTFIX
 static char *local_ipstr(struct mlfi_priv *);
+#endif
 
 static sfsistat real_connect(SMFICTX *, char *, _SOCK_ADDR *);
 static sfsistat real_helo(SMFICTX *, char *);
@@ -2616,18 +2618,17 @@ fstring_escape(fstring)
 	return fstring;
 }
 
+#ifndef USE_POSTFIX
 static char *
 local_ipstr(priv)
 	struct mlfi_priv *priv;
 {
 	char *ip;
 
-#ifndef USE_POSTFIX
 	/* 
 	 * Macro {if_addr} does not exist in Postfix 
 	 */
 	ip = smfi_getsymval(priv->priv_ctx, "{if_addr}");
-#endif
 #ifdef AF_INET6
 	/*
 	 * XXX: sendmail doesn't return {if_addr} when connection is
@@ -2641,13 +2642,12 @@ local_ipstr(priv)
 		    strcmp(buf, "::1") == 0)
 			ip = "IPv6:::1";
 	}
-#endif
+#endif /*Â AF_INET6 */
 	if (ip == NULL) {
-#ifndef USE_POSTFIX
 		mg_log(LOG_DEBUG, "smfi_getsymval failed for {if_addr}");
-#endif
 		ip = "0.0.0.0";
 	}
 
 	return ip;
 }
+#endif /* !USE_POSTFIX */
