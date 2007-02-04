@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.61 2007/02/02 07:00:06 manu Exp $
+.\" $Id: greylist.conf.5,v 1.62 2007/02/04 05:44:41 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -147,7 +147,7 @@ single recipient during office hours (from 8:00 to 16:59 from monday to friday):
   racl whitelist time "* 8-16 * * 1-5" rcpt info@example.net
 .TP
 .I geoip
-This is used to specify a country, ad reported by GeoIP. The country code
+This is used to specify a country, as reported by GeoIP. The country code
 must be upper case, and is only available if 
 .B milter-greylist
 was built with GeoIP support. The 
