@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.23 2007/02/02 07:00:06 manu Exp $ */
+/* $Id: acl.h,v 1.24 2007/02/05 06:05:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -134,6 +134,8 @@ struct acl_param {
 	char *ap_ecode;
 	char *ap_msg;
 	char *ap_report;
+	int ap_nmatch;
+	char **ap_pmatch;
 };
 
 /* a_flags */
@@ -152,6 +154,7 @@ typedef union acl_data {
 	struct {
 		regex_t *re;
 		char *re_copy;
+		int nmatch;
 	} regex;
 	struct all_list_entry *list;
 	struct macro_entry *macro;

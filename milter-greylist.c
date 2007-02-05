@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.163 2007/02/04 13:59:38 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.164 2007/02/05 06:05:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.163 2007/02/04 13:59:38 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.164 2007/02/05 06:05:34 manu Exp $");
 #endif
 #endif
 
@@ -262,6 +262,8 @@ real_connect(ctx, hostname, addr)
 	priv->priv_ctx = ctx;
 	priv->priv_sr.sr_whitelist = EXF_UNSET;
 	priv->priv_sr.sr_retcode = -1;
+	priv->priv_sr.sr_nmatch = 0;
+	priv->priv_sr.sr_pmatch = NULL;
 	LIST_INIT(&priv->priv_rcpt);
 	priv->priv_cur_rcpt = NULL;
 	priv->priv_rcptcount = 0;
@@ -995,6 +997,16 @@ real_close(ctx)
 			free(priv->priv_sr.sr_msg);
 		if (priv->priv_sr.sr_report)
 			free(priv->priv_sr.sr_report);
+
+		if (priv->priv_sr.sr_pmatch) {
+			int i;		
+
+			for (i = 0; i < priv->priv_sr.sr_nmatch; i++)
+				if (priv->priv_sr.sr_pmatch[i] != NULL)
+					free(priv->priv_sr.sr_pmatch[i]);
+			free(priv->priv_sr.sr_pmatch);
+		}
+
 		while ((r = LIST_FIRST(&priv->priv_rcpt)) != NULL) {
 			LIST_REMOVE(r, r_list);
 			free(r);
@@ -2182,10 +2194,84 @@ fstring_expand(priv, rcpt, fstring)
 			}
 			break;
 		case 'i': {	/* Sender machine IP address */
-			char ipstr[IPADDRSTRLEN];
+			char ipstr[IPADDRSTRLEN + 1];
 
 			iptostring(SA(&priv->priv_addr),
 			    priv->priv_addrlen, ipstr, sizeof(ipstr));
+			mystrncat(&outstr, ipstr, &outmaxlen);
+			break;
+		}
+
+		case 'I': {	/* Sender machine / cidr, eg: %I{/24} */
+			char ipstr[IPADDRSTRLEN + 1];
+			struct sockaddr_storage addr;
+			socklen_t salen;
+			int cidr = 0;
+			ipaddr mask;
+			int i;
+
+			fstr_len = 0;
+
+			if ((ptok[1] != '{') || (ptok[1] == '\0'))
+				break;
+
+			if ((ptok[2] != '/') || (ptok[2] == '\0'))
+				break;
+
+			for (i = 3; ptok[i] != '\0'; i++) {
+				if (ptok[i] == '}') {
+					fstr_len = i + 1;
+					break;
+				}
+
+				if (!isdigit((int)(ptok[i])))
+					break;
+
+				cidr = (10 * cidr) + (ptok[i] - '0');
+			}
+
+			if (fstr_len == 0)
+				break;
+
+			if (cidr < 0)
+				break;
+
+			switch (SA(&priv->priv_addr)->sa_family) {
+			case AF_INET:
+				salen = sizeof(struct sockaddr_in);
+
+				if (cidr > 32)
+					break;
+
+				memcpy(&addr, &priv->priv_addr, 
+				    sizeof(struct sockaddr_in));
+				prefix2mask4(cidr, &mask.in4);
+				SADDR4(&addr)->s_addr &= mask.in4.s_addr;
+
+				break;
+#ifdef AF_INET6
+			case AF_INET6:
+				salen = sizeof(struct sockaddr_in6);
+
+				if (cidr > 128)
+					break;
+
+				memcpy(&addr, &priv->priv_addr, 
+				    sizeof(struct sockaddr_in6));
+				prefix2mask6(cidr, &mask.in6);
+				for (i = 0; i < 16; i += 4)
+					*(uint32_t *)&SADDR6(&addr)->s6_addr[i] 
+					&= *(uint32_t *)&mask.in6.s6_addr[i];
+
+				break;
+#endif
+			default:
+				mg_log(LOG_ERR, "unepxected sa_family");
+				exit(EX_SOFTWARE);
+				break;
+			}
+
+			iptostring(SA(&addr), salen, ipstr, sizeof(ipstr));
 			mystrncat(&outstr, ipstr, &outmaxlen);
 			break;
 		}
@@ -2322,6 +2408,47 @@ fstring_expand(priv, rcpt, fstring)
 #endif
 			    timestr, tzstr, tznamestr);
 			mystrncat(&outstr, output, &outmaxlen);
+			break;
+		}
+
+		case 'g': {	/* regex match %g{\1} */
+			int i;
+			int nmatch = 0;
+
+			fstr_len = 0;
+
+			if ((ptok[1] != '{') || (ptok[1] == '\0'))
+				break;
+
+			if ((ptok[2] != '\\') || (ptok[2] == '\0'))
+				break;
+
+			for (i = 3; ptok[i] != '\0'; i++) {
+				if (ptok[i] == '}') {
+					fstr_len = i + 1;
+					break;
+				}
+
+				if (!isdigit((int)(ptok[i])))
+					break;
+
+				nmatch = (10 * nmatch) + (ptok[i] - '0');
+			}
+
+			if (fstr_len == 0)
+				break;
+
+			if (nmatch == 0)
+				break;
+
+			if (nmatch > priv->priv_sr.sr_nmatch)
+				break;
+
+			if (priv->priv_sr.sr_pmatch[nmatch - 1] != NULL)
+				mystrncat(&outstr, 
+				    priv->priv_sr.sr_pmatch[nmatch - 1],
+				    &outmaxlen);
+
 			break;
 		}
 

@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.62 2007/02/04 05:44:41 manu Exp $
+.\" $Id: greylist.conf.5,v 1.63 2007/02/05 06:05:34 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -866,6 +866,10 @@ the message sender e-mail address
 .I %i
 the sender machine IP address
 .TP
+.I %I
+the sender machine IP address masked by a CIDR. Example: 
+.I %I{/24}
+.TP
 .I %d
 the sender machine DNS address
 .TP
@@ -895,6 +899,12 @@ a sendmail macro value. Examples:
 .I %Mj
 or
 .I %M{if_addr}
+.TP
+.I %g
+a regex backreference. For instance,
+.I %g{\\\\2}
+is substituted by the string maching the second parenthesis group in all 
+ACL regex clauses
 .TP
 .I %T
 a brace-enclosed

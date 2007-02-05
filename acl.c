@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.52 2007/02/02 07:00:06 manu Exp $ */
+/* $Id: acl.c,v 1.53 2007/02/05 06:05:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.52 2007/02/02 07:00:06 manu Exp $");
+__RCSID("$Id: acl.c,v 1.53 2007/02/05 06:05:34 manu Exp $");
 #endif
 #endif
 
@@ -453,6 +453,97 @@ acl_body_strstr(ad, stage, ap, priv)
 	return 0;
 }
 
+static int
+myregexec(priv, ad, ap, string)
+	struct mlfi_priv *priv;
+	acl_data_t *ad;
+	struct acl_param *ap;
+	const char *string;
+{
+	size_t len;
+	int nmatch;
+	regmatch_t *pmatch = NULL;
+	int retval;
+	int i;
+
+	/* 
+	 * Add room for matched strings
+	 */
+	len = (ap->ap_nmatch + ad->regex.nmatch) * sizeof(*ap->ap_pmatch);;
+	if ((ap->ap_pmatch = realloc(ap->ap_pmatch, len)) == NULL) {
+		mg_log(LOG_ERR, "realloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	/* Move the previous matches to the end of the array */
+	if (ap->ap_nmatch != 0) {
+		memmove(&ap->ap_pmatch[ad->regex.nmatch], 
+		    &ap->ap_pmatch[0], ap->ap_nmatch * sizeof(char *));
+		bzero(&ap->ap_pmatch[0], ad->regex.nmatch * sizeof(char *));
+	}
+
+	/* 
+	 * Placeholder for information from regexec, +1 for \0 
+	 */
+	nmatch = ad->regex.nmatch + 1;
+	if ((pmatch = malloc(nmatch * sizeof(*pmatch))) == NULL) {
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	bzero(pmatch, nmatch * sizeof(*pmatch));
+
+	/*
+	 * The real regexec
+	 */
+	retval = regexec(ad->regex.re, string, nmatch, pmatch, 0);
+	if (retval != 0)	/* No match */
+		goto out;
+
+	/* 
+	 * Gather the strings, skiping the first one (\0) 
+	 */
+	for (i = 1; i < nmatch; i++) {
+		if (pmatch[i].rm_so == -1) {
+			mg_log(LOG_ERR, "unexpected void backreference no %d "
+			    "in regex %s against \"%s\"", 
+			    i, ad->regex.re_copy, string);
+			exit(EX_SOFTWARE);
+		}	
+
+		len = pmatch[i].rm_eo - pmatch[i].rm_so + 1;
+		if ((ap->ap_pmatch[i - 1] = malloc(len)) == NULL) {
+			mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		memcpy(ap->ap_pmatch[i - 1], string + pmatch[i].rm_so, len - 1);
+		ap->ap_pmatch[i - 1][len - 1] = '\0';
+
+		if (conf.c_debug)
+			mg_log(LOG_DEBUG, 
+			    "regex /%s/ against \"%s\": match[%d] = \"%s\"",
+			    ad->regex.re_copy, string, i, ap->ap_pmatch[i - 1]);
+	}
+out:
+	ap->ap_nmatch += ad->regex.nmatch;
+
+	if (pmatch != NULL)
+		free(pmatch);
+
+#if 0
+	if (conf.c_debug) {
+		int i;
+
+		for (i = 0; i < ap->ap_nmatch; i++)
+			mg_log(LOG_DEBUG, 
+			    "  match[%d] = \"%s\"",
+			    i, ap->ap_pmatch[i]);
+	}
+#endif
+
+	return retval;
+	
+}
+
 int
 acl_from_regexec(ad, stage, ap, priv)
 	acl_data_t *ad;
@@ -460,8 +551,7 @@ acl_from_regexec(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
-	if (regexec(ad->regex.re, 
-	    priv->priv_from, 0, NULL, 0) == 0)
+	if (myregexec(priv, ad, ap, priv->priv_from) == 0)
 		return 1;
 	return 0;
 }
@@ -479,7 +569,7 @@ acl_auth_regexec(ad, stage, ap, priv)
 	if (auth_authen == NULL)
 		return 0;
 
-	if(regexec(ad->regex.re, auth_authen, 0, NULL, 0) == 0)
+	if (myregexec(priv, ad, ap, auth_authen) == 0)
 		return 1;
 	return 0;
 }
@@ -499,7 +589,7 @@ acl_tls_regexec(ad, stage, ap, priv)
 	    ((dn = smfi_getsymval(priv->priv_ctx, "{cert_subject}")) == NULL))
 		return 0;
 
-	if(regexec(ad->regex.re, dn, 0, NULL, 0) == 0)
+	if (myregexec(priv, ad, ap, dn) == 0)
 		return 1;
 	return 0;
 }
@@ -516,8 +606,7 @@ acl_rcpt_regexec(ad, stage, ap, priv)
 		exit(EX_SOFTWARE);
 	}
 
-	if (regexec(ad->regex.re, 
-	    priv->priv_cur_rcpt, 0, NULL, 0) == 0)
+	if (myregexec(priv, ad, ap, priv->priv_cur_rcpt) == 0)
 		return 1;
 	return 0;
 }
@@ -529,8 +618,7 @@ acl_domain_regexec(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
-	if (regexec(ad->regex.re, 
-	    priv->priv_hostname, 0, NULL, 0) == 0)
+	if (myregexec(priv, ad, ap, priv->priv_hostname) == 0)
 		return 1;
 	return 0;
 }
@@ -550,8 +638,7 @@ acl_header_regexec(ad, stage, ap, priv)
 	}
 
 	TAILQ_FOREACH(h, &priv->priv_header, h_list)
-		if (regexec(ad->regex.re, 
-		    h->h_line, 0, NULL, 0) == 0)
+		if (myregexec(priv, ad, ap, h->h_line) == 0)
 			return 1;
 	return 0;
 }
@@ -670,8 +757,7 @@ acl_body_regexec(ad, stage, ap, priv)
 	}
 
 	TAILQ_FOREACH(b, &priv->priv_body, b_list)
-		if (regexec(ad->regex.re, 
-		    b->b_lines, 0, NULL, 0) == 0)
+		if (myregexec(priv, ad, ap, b->b_lines) == 0)
 			return 1;
 	return 0;
 }
@@ -835,6 +921,8 @@ acl_add_regex(ad, data)
 	char *regexstr = data;	
 	regex_t *regex;
 	char errstr[ERRLEN + 1];
+	char *cp;
+	int skip;
 	int error;
 
 	if ((regex = malloc(sizeof(*regex))) == NULL) {
@@ -859,6 +947,16 @@ acl_add_regex(ad, data)
 		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
 		    regexstr, errstr);
 		exit(EX_OSERR);
+	}
+
+	/* Cout how many back-references we have */
+	skip = 0;
+	ad->regex.nmatch = 0;
+	for (cp = regexstr; *cp; cp++) {
+		if (skip)
+			continue;
+		if ((cp[0] == '\\') && (cp[0] != '\0') && (cp[1] == '(')) 
+			ad->regex.nmatch++;
 	}
 
 	return;
@@ -1408,6 +1506,8 @@ acl_filter(stage, ctx, priv)
 		ap.ap_ecode = acl->a_ecode;
 		ap.ap_msg = acl->a_msg;
 		ap.ap_report = acl->a_report;
+		ap.ap_nmatch = 0;
+		ap.ap_pmatch = NULL;
 
 		LIST_FOREACH(ac, &acl->a_clause, ac_list) {
 			found = (*ac->ac_acr->acr_filter)
@@ -1491,6 +1591,9 @@ acl_filter(stage, ctx, priv)
 				exit(EX_OSERR);
 			}
 		}
+
+		priv->priv_sr.sr_nmatch = ap.ap_nmatch;
+		priv->priv_sr.sr_pmatch = ap.ap_pmatch;
 			
 		/* Free temporary memory if nescessary */
 		if (ap.ap_flags & A_FREE_CODE)

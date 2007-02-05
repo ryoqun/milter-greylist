@@ -8,6 +8,8 @@
 	Add a time clause to match against time sets
 	GeoIP support, through the geoip clause
 	Fix warning for Postfix build (Nerijus Baliunas)
+	%g for substitution by regex back references
+	%I for susbtitution by sender IP masked by a CIDR
 3.1.4
 	Add support for switching to a given group (Ralf S. Engelschall)
 	Add substitutions for sendmail macro and strftime in URL checks
