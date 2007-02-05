@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.164 2007/02/05 06:05:34 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.165 2007/02/05 06:06:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.164 2007/02/05 06:05:34 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.165 2007/02/05 06:06:26 manu Exp $");
 #endif
 #endif
 
@@ -2769,7 +2769,7 @@ local_ipstr(priv)
 		    strcmp(buf, "::1") == 0)
 			ip = "IPv6:::1";
 	}
-#endif /*Â AF_INET6 */
+#endif /* AF_INET6 */
 	if (ip == NULL) {
 		mg_log(LOG_DEBUG, "smfi_getsymval failed for {if_addr}");
 		ip = "0.0.0.0";
