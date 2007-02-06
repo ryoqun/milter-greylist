@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.73 2007/02/02 07:00:06 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.74 2007/02/06 14:29:55 manu Exp $");
 #endif
 #endif
 
@@ -312,10 +312,32 @@ subnetmatch6:	SUBNETMATCH6 CIDR{
 #endif
 				}
 	;
-socket:		SOCKET QSTRING	{ if (C_NOTFORCED(C_SOCKET)) 
+socket:		SOCKET QSTRING	{ if (C_NOTFORCED(C_SOCKET))
 					conf.c_socket = 
-					    quotepath(conf.c_socket_storage, $2, QSTRLEN);
+					    quotepath(conf.c_socket_storage, 
+					    $2, QSTRLEN);
 				}
+	|	SOCKET QSTRING TNUMBER 	{
+				int mode = atoi($3);
+
+				if (C_NOTFORCED(C_SOCKET))
+					conf.c_socket = 
+					    quotepath(conf.c_socket_storage, 
+					    $2, QSTRLEN);
+
+				switch(mode) {
+				case 666:
+				case 660:
+				case 600:
+					conf.c_socket_mode = mode;
+					break;
+				default:
+					mg_log(LOG_ERR, "socket mode %d is "
+					    "not allowed, Use either 666, "
+					    "660, or 600", mode);
+					exit(EX_DATAERR);
+				}
+			}
 	;
 user:		USER QSTRING	{ if (C_NOTFORCED(C_USER))
 					conf.c_user =

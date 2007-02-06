@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.165 2007/02/05 06:06:26 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.166 2007/02/06 14:29:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.165 2007/02/05 06:06:26 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.166 2007/02/06 14:29:55 manu Exp $");
 #endif
 #endif
 
@@ -1288,6 +1288,28 @@ main(argc, argv)
 		usage(argv[0]);
 	}
 	cleanup_sock(conf.c_socket);
+
+	/*
+	 * Set socket permission
+	 */
+	if (conf.c_socket_mode) {
+		switch(conf.c_socket_mode) {
+		case 666:
+			umask(000);
+			break;
+		case 660:
+			umask(007);
+			break;
+		case 600:
+			umask(077);
+			break;
+		default:
+			mg_log(LOG_ERR, "unexpected socket mode %d",
+			    conf.c_socket_mode);
+			exit(EX_SOFTWARE);
+			break;
+		}
+	}
 	(void)smfi_setconn(conf.c_socket);
 
 	/*

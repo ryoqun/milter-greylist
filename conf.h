@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.39 2006/12/26 21:21:52 manu Exp $ */
+/* $Id: conf.h,v 1.40 2007/02/06 14:29:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -79,6 +79,7 @@ struct conf_rec {
 	struct in6_addr c_match_mask6;
 #endif
 	char *c_socket;
+	int c_socket_mode;
 	char *c_user;
 	char *c_syncaddr;
 	char *c_syncport;
