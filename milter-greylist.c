@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.166 2007/02/06 14:29:55 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.167 2007/02/07 00:16:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.166 2007/02/06 14:29:55 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.167 2007/02/07 00:16:03 manu Exp $");
 #endif
 #endif
 
@@ -1382,9 +1382,9 @@ main(argc, argv)
 		writepid(conf.c_pidfile);
 
 	/*
-	 * Drop root privs
+	 * Drop root privs, if we run as root
 	 */
-	if (conf.c_user != NULL) {
+	if ((geteuid() == 0) && (conf.c_user != NULL)) {
 		struct passwd *pw = NULL;
 		struct group *gr = NULL;
 		char *c_group = NULL;

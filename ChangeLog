@@ -12,6 +12,7 @@
 	%I for susbtitution by sender IP masked by a CIDR
 	Allow specifying socket mode in config file
 	Set default user to root for .spec file
+	Do not drop root privs if we do not run as root
 3.1.4
 	Add support for switching to a given group (Ralf S. Engelschall)
 	Add substitutions for sendmail macro and strftime in URL checks
