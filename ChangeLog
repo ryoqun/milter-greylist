@@ -1,6 +1,7 @@
 3.1.6
 	More format strings, for SMTP code, extended code, message, header
 	Fix a crash when using regex without grouping ()
+	Document the CVS location in README
 3.1.5
 	Fix double free when using content filtering
 	ACL clauses can now be negated

@@ -1,9 +1,9 @@
-# $Id: README,v 1.49 2007/01/04 05:04:13 manu Exp $
+# $Id: README,v 1.50 2007/02/14 17:16:29 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/01/04 05:04:13 $
+		       $Date: 2007/02/14 17:16:29 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -36,6 +36,13 @@ Run this command to regenerate a table of contents:
  1 Building and installing milter-greylist 
  =========================================
 
+First, download the sources. You can get a tarball from
+http://ftp.espci.fr/pub/milter-greylist
+
+or you can check out bleeding edge source from milter-greylist CVS:
+cvs -danoncvs@anoncvs.fr.netbsd.org:/milter-greylist co -P milter-greylist
+Don't forget to set CVS_RSH=ssh if this is not your system default.
+
 Build dependencies: 
 - flex (AT&T lex cannot build milter-greylist sources)
 - yacc or bison
@@ -43,7 +50,11 @@ Build dependencies:
 - Any POSIX threads library (Provided by libc on some systems)
 
 Optional dependencies: 
-- libspf2, libspf_alt or libspf.
+- libspf2, libspf_alt or libspf, for SPF support
+- libcurl, for URL checks support
+- libGeoIP, for GeoIP support
+- libbind from BIND 9, for DNSRBL support, except if your system has a 
+  thread-safe DNS resolver built-in.
 
 Before building milter-greylist, it might be wise to view the
 configuration options by running:
