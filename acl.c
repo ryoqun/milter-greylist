@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.53 2007/02/05 06:05:34 manu Exp $ */
+/* $Id: acl.c,v 1.54 2007/02/14 05:39:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.53 2007/02/05 06:05:34 manu Exp $");
+__RCSID("$Id: acl.c,v 1.54 2007/02/14 05:39:16 manu Exp $");
 #endif
 #endif
 
@@ -470,9 +470,11 @@ myregexec(priv, ad, ap, string)
 	 * Add room for matched strings
 	 */
 	len = (ap->ap_nmatch + ad->regex.nmatch) * sizeof(*ap->ap_pmatch);;
-	if ((ap->ap_pmatch = realloc(ap->ap_pmatch, len)) == NULL) {
-		mg_log(LOG_ERR, "realloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
+	if (len > 0) {
+		if ((ap->ap_pmatch = realloc(ap->ap_pmatch, len)) == NULL) {
+			mg_log(LOG_ERR, "realloc failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
 	}
 	/* Move the previous matches to the end of the array */
 	if (ap->ap_nmatch != 0) {
