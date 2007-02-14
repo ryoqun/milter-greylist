@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.167 2007/02/07 00:16:03 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.168 2007/02/14 05:12:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.167 2007/02/07 00:16:03 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.168 2007/02/14 05:12:40 manu Exp $");
 #endif
 #endif
 
@@ -105,10 +105,11 @@ static void writepid(char *);
 static void log_and_report_greylisting(SMFICTX *, struct mlfi_priv *, char *);
 static void reset_acl_values(struct mlfi_priv *);
 static void add_recipient(struct mlfi_priv *, char *);
+static void set_sr_defaults(struct mlfi_priv *, char *, char *, char *);
+static sfsistat stat_from_code(char *);
 #ifndef USE_POSTFIX
 static char *local_ipstr(struct mlfi_priv *);
 #endif
-
 static sfsistat real_connect(SMFICTX *, char *, _SOCK_ADDR *);
 static sfsistat real_helo(SMFICTX *, char *);
 static sfsistat real_envfrom(SMFICTX *, char **);
@@ -540,7 +541,7 @@ real_envrcpt(ctx, envrcpt)
 		char aclstr[16];
 		char *code = "551";
 		char *ecode = "5.7.1";
-		char *msg;
+		char *msg = "Go away!";
 
 		if (priv->priv_sr.sr_acl_line != 0)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
@@ -551,21 +552,18 @@ real_envrcpt(ctx, envrcpt)
 		    priv->priv_queueid, priv->priv_hostname, addrstr, 
 		    priv->priv_from, rcpt, aclstr);
 
-		code = (priv->priv_sr.sr_code) ? 
-		    priv->priv_sr.sr_code : code;
-		ecode = (priv->priv_sr.sr_ecode) ? 
-		    priv->priv_sr.sr_ecode : ecode;
-		msg =  (priv->priv_sr.sr_msg) ?
-		    priv->priv_sr.sr_msg : "Go away!";
+		set_sr_defaults(priv, code, ecode, msg);
 
-		msg = fstring_expand(priv, rcpt, msg);
+		msg = fstring_expand(priv, rcpt, priv->priv_sr.sr_msg);
+		free(priv->priv_sr.sr_msg);
+		priv->priv_sr.sr_msg = msg;
 
-		(void)smfi_setreply(ctx, code, ecode, msg);
+		(void)smfi_setreply(ctx, 
+			priv->priv_sr.sr_code, 
+			priv->priv_sr.sr_ecode, 
+			msg);
 
-		free(msg);
-
-		return mg_stat(priv,
-		    *code == '4' ? SMFIS_TEMPFAIL : SMFIS_REJECT);
+		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
 	/* 
@@ -820,7 +818,7 @@ real_eom(ctx)
 		char addrstr[IPADDRSTRLEN];
 		char *code = "551";
 		char *ecode = "5.7.1";
-		char *msg;
+		char *msg = "Go away!";
 
 		if (priv->priv_sr.sr_acl_line != 0)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
@@ -831,21 +829,18 @@ real_eom(ctx)
 		    priv->priv_queueid, priv->priv_hostname, addrstr, 
 		    priv->priv_from, aclstr);
 
-		code = (priv->priv_sr.sr_code) ? 
-		    priv->priv_sr.sr_code : code;
-		ecode = (priv->priv_sr.sr_ecode) ? 
-		    priv->priv_sr.sr_ecode : ecode;
-		msg =  (priv->priv_sr.sr_msg) ?
-		    priv->priv_sr.sr_msg : "Go away!";
+		set_sr_defaults(priv, code, ecode, msg);
 
-		msg = fstring_expand(priv, NULL, msg);
+		msg = fstring_expand(priv, NULL, priv->priv_sr.sr_msg);
+		free(priv->priv_sr.sr_msg);
+		priv->priv_sr.sr_msg = msg;
 
-		(void)smfi_setreply(ctx, code, ecode, msg);
+		(void)smfi_setreply(ctx, 
+			priv->priv_sr.sr_code, 
+			priv->priv_sr.sr_ecode, 
+			msg);
 
-		free(msg);
-
-		return mg_stat(priv, 
-		    *code == '4' ? SMFIS_TEMPFAIL : SMFIS_REJECT);
+		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
 	/* Restore the info collected from RCPT stage */
@@ -2298,6 +2293,35 @@ fstring_expand(priv, rcpt, fstring)
 			break;
 		}
 
+		case 'X': {
+			char *string = NULL;
+
+			fstr_len =  2;
+			switch (ptok[1]) {
+			case 'm':	/* SMTP message */
+				string = priv->priv_sr.sr_msg;
+				break;
+			case 'c':	/* SMTP code */
+				string = priv->priv_sr.sr_code;
+				break;
+			case 'e':	/* SMTP extended code */
+				string = priv->priv_sr.sr_ecode;
+				break;
+			case 'h':	/* X-Greylist header */
+				string = priv->priv_sr.sr_report;
+				break;
+			default:
+				fstr_len = 0;
+				break;
+			}
+
+			if (string == NULL)
+				fstr_len = 0;
+			else
+				mystrncat(&outstr, string, &outmaxlen);
+			break;
+		}
+
 		case 'v':	/* milter-greylist version */
 			mystrncat(&outstr, PACKAGE_VERSION, &outmaxlen);
 			break;
@@ -2800,3 +2824,58 @@ local_ipstr(priv)
 	return ip;
 }
 #endif /* !USE_POSTFIX */
+
+static void
+set_sr_defaults(priv, code, ecode, msg)
+	struct mlfi_priv *priv;
+	char *code;
+	char *ecode;
+	char *msg;
+{	
+	if (priv->priv_sr.sr_code == NULL) {
+		if ((priv->priv_sr.sr_code = strdup(code)) == NULL) {
+			mg_log(LOG_ERR, 
+			    "strdup() failed: %s", 
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
+	}
+
+	if (priv->priv_sr.sr_ecode == NULL) {
+		if ((priv->priv_sr.sr_ecode = strdup(ecode)) == NULL) {
+			mg_log(LOG_ERR, 
+			    "strdup() failed: %s", 
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
+	}
+
+	if (priv->priv_sr.sr_msg == NULL) {
+		if ((priv->priv_sr.sr_msg = strdup(msg)) == NULL) {
+			mg_log(LOG_ERR, 
+			    "strdup() failed: %s", 
+			    strerror(errno));
+			exit(EX_OSERR);
+		}
+	}
+
+	return;
+}
+
+static sfsistat 
+stat_from_code(code)
+	char *code;
+{
+	switch (*code) {
+	case '5':
+		return SMFIS_REJECT;
+		break;	
+	case '4':
+	default:
+		return SMFIS_TEMPFAIL;
+		break;	
+	}
+
+	/* NOTREACHED */
+	return SMFIS_TEMPFAIL;
+}
