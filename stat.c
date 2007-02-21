@@ -1,4 +1,4 @@
-/* $Id: stat.c,v 1.1 2007/01/01 17:29:29 manu Exp $ */
+/* $Id: stat.c,v 1.2 2007/02/21 21:46:36 manu Exp $ */
 
 /*
  * Copyright (c) 2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: stat.c,v 1.1 2007/01/01 17:29:29 manu Exp $");
+__RCSID("$Id: stat.c,v 1.2 2007/02/21 21:46:36 manu Exp $");
 #endif
 #endif
 
@@ -139,13 +139,24 @@ mg_stat(priv, stat)
 	if (outfp == NULL)
 		return stat;
 
+	/* 
+	 * Wipe out the header if the message was not accepted
+	 */
+	if ((stat != SMFIS_CONTINUE) && (priv->priv_sr.sr_report)) {
+		free(priv->priv_sr.sr_report);
+		priv->priv_sr.sr_report = NULL;
+	}
+
+
 	if (pthread_mutex_lock(outlock) != 0) {
 		mg_log(LOG_ERR, "pthread_mutex_lock failed "
 		    "in mg_stat: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
-	/* Keep track of it in fstring_expand */
+	/* 
+	 * Keep track of it in fstring_expand 
+	 */
 	priv->priv_sr.sr_retcode = stat; 
 
 	if (priv->priv_cur_rcpt == NULL) {
