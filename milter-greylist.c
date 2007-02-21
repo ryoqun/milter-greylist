@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.168 2007/02/14 05:12:40 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.169 2007/02/21 17:41:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.168 2007/02/14 05:12:40 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.169 2007/02/21 17:41:50 manu Exp $");
 #endif
 #endif
 
@@ -949,7 +949,10 @@ real_eom(ctx)
 
 		smfi_addheader(ctx, HEADERNAME, hdrstr);
 
-		free(hdrstr);
+		/* Keep track of this in case the stat feature wants it */
+		if (priv->priv_sr.sr_report != NULL)
+			free(priv->priv_sr.sr_report);
+		priv->priv_sr.sr_report = hdrstr;
 
 		goto out;
 	}
@@ -967,7 +970,10 @@ real_eom(ctx)
 
 		smfi_addheader(ctx, HEADERNAME, hdrstr);
 
-		free(hdrstr);
+		/* Keep track of this in case the stat feature wants it */
+		if (priv->priv_sr.sr_report != NULL)
+			free(priv->priv_sr.sr_report);
+		priv->priv_sr.sr_report = hdrstr;
 	}
 
 out:
@@ -1765,7 +1771,24 @@ log_and_report_greylisting(ctx, priv, rcpt)
 
 	(void)smfi_setreply(ctx, code, ecode, msg);
 
-	free(msg);
+	/* 
+	 * Keep track of it for the stat feature 
+	 */
+	if (priv->priv_sr.sr_code == NULL)
+		if ((priv->priv_sr.sr_code = strdup(code)) == NULL) {
+			mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+	if (priv->priv_sr.sr_ecode == NULL) 
+		if ((priv->priv_sr.sr_ecode = strdup(ecode)) == NULL) {
+			mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+	if (priv->priv_sr.sr_msg)
+		free(priv->priv_sr.sr_msg);
+	priv->priv_sr.sr_msg = msg;
 
 	return;
 }
@@ -2315,9 +2338,7 @@ fstring_expand(priv, rcpt, fstring)
 				break;
 			}
 
-			if (string == NULL)
-				fstr_len = 0;
-			else
+			if (string != NULL)
 				mystrncat(&outstr, string, &outmaxlen);
 			break;
 		}
