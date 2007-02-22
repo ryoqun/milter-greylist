@@ -1,9 +1,9 @@
-# $Id: README,v 1.50 2007/02/14 17:16:29 manu Exp $
+# $Id: README,v 1.51 2007/02/22 14:44:45 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/02/14 17:16:29 $
+		       $Date: 2007/02/22 14:44:45 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -438,14 +438,14 @@ yet.
 It is possible to monitor milter-greylist activity with a custom log
 format. You can choose where the output is sent (file or external
 command), and the output format. If you have this in greylist.conf:
-stat ">>/var/log/milter-greylist.log" "%T{%T}    %i:%s:%f:%S\n"
+stat ">>/var/log/milter-greylist.log" "%T{%T}    %i:%f:%r:%S\n"
 
 On each mail, this will give you a line like this in milter-greylist.log:
 10:08:04    192.0.2.16:spammer@evil.com:postmaster@example.net:reject
 
 Another example, to send the data to the local7 facility of syslog,
 using the external command logger:
-stat "|logger -p local7.info" "%i:%s:%f:%S\n" 
+stat "|logger -p local7.info" "%i:%f:%r:%S\n" 
 
 Substitutions are the same as in URL checks (%i becomes sender IP, %s
 becomes sender e-mail, %r becomes recipient, and so on). A few nifty

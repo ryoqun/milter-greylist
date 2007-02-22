@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.66 2007/02/21 17:41:50 manu Exp $
+.\" $Id: greylist.conf.5,v 1.67 2007/02/22 14:44:45 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -650,7 +650,7 @@ keyword can be used to specify a custom report for milter-greylist activity.
 It should be supplied with an output (either file or external command) and
 a format string. Here is an example:
 .IP
-  stat ">>/var/log/milter-greylist.log" "%T{%T},%i,%s,%r,%A\\n"
+  stat ">>/var/log/milter-greylist.log" "%T{%T},%i,%f,%r,%A\\n"
 .PP
 If the output starts by 
 .I >>
@@ -664,7 +664,7 @@ to overwrite it. If the output starts by a
 .I |
 then the output is a shell command, like in the example below:
 .IP
-  stat "|logger -p local7.info" "%T{%T},%i,%s,%r,%A\\n"
+  stat "|logger -p local7.info" "%T{%T},%i,%f,%r,%A\\n"
 .PP
 The format string gets substituted as URL checks format string: %r gets
 substituted by the recipient, %f by the sender, and so on. See the 

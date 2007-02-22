@@ -2,6 +2,7 @@
 	Fix wrong display of %Xc %Xe and %Xh substitutions 
 	Fix documentation: %Xh instead of %Xr
 	stat should not report X-Greylist header is message was rejected
+	Fix a documentation bug: sender e-mail is %f, not %s
 3.1.6
 	More format strings, for SMTP code, extended code, message, header
 	Fix a crash when using regex without grouping ()
