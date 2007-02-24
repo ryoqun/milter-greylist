@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.68 2007/02/24 22:10:21 manu Exp $
+.\" $Id: greylist.conf.5,v 1.69 2007/02/24 22:16:01 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -659,9 +659,7 @@ attribute of a LDAP directory.
   dnsrbl "RBL2" "rbl.example.net" "127.0.0.2"
   dnsrbl "RBL3" "rbl.example.net" "127.0.0.3"
   dnsrbl "RBL4" "rbl.example.net" "127.0.0.4"
-  urlcheck "userconf" \\
-     "ldap://localhost/dc=example,dc=net?dnsrbl?one?mail=%r" \\
-     5 getprop
+  urlcheck "userconf" "ldap://localhost/dc=example,dc=net?milterGreylistStatus,dnsrbl?one?mail=%r" 5 getprop
 
   racl blacklist urlcheck "userconf" $dnsrbl "RBL2" dnsrbl "RBL2"
   racl blacklist $dnsrbl "RBL3" dnsrbl "RBL3"
