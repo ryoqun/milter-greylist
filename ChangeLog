@@ -1,4 +1,5 @@
 3.1.7
+	Allow reusing in the ACL of properties gathered from urlcheck
 	Fix wrong display of %Xc %Xe and %Xh substitutions 
 	Fix documentation: %Xh instead of %Xr
 	stat should not report X-Greylist header is message was rejected

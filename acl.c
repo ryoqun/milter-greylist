@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.54 2007/02/14 05:39:16 manu Exp $ */
+/* $Id: acl.c,v 1.55 2007/02/24 22:10:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.54 2007/02/14 05:39:16 manu Exp $");
+__RCSID("$Id: acl.c,v 1.55 2007/02/24 22:10:21 manu Exp $");
 #endif
 #endif
 
@@ -114,6 +114,12 @@ char *acl_print_dnsrbl(acl_data_t *, char *, size_t);
 #ifdef USE_CURL
 void acl_add_urlcheck(acl_data_t *, void *);
 char *acl_print_urlcheck(acl_data_t *, char *, size_t);
+void acl_add_prop_string(acl_data_t *, void *);
+void acl_add_prop_regex(acl_data_t *, void *);
+char *acl_print_prop_string(acl_data_t *, char *, size_t);
+char *acl_print_prop_regex(acl_data_t *, char *, size_t);
+void acl_free_prop_string(acl_data_t *);
+void acl_free_prop_regex(acl_data_t *);
 #endif
 
 struct acl_clause_rec acl_clause_rec[] = {
@@ -231,6 +237,14 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  AT_LIST, AC_NONE, AC_NONE, EXF_URLCHECK,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
+	{ AC_PROP, MULTIPLE_OK, AS_ANY, "prop", 
+	  AT_PROP, AC_NONE, AC_PROP, EXF_PROP,
+	  *acl_print_prop_string, *acl_add_prop_string,
+	  acl_free_prop_string, *urlcheck_prop_string_validate },
+	{ AC_PROP, MULTIPLE_OK, AS_ANY, "propre", 
+	  AT_PROP, AC_NONE, AC_PROPRE, EXF_PROP,
+	  *acl_print_prop_regex, *acl_add_prop_regex,
+	  acl_free_prop_regex, *urlcheck_prop_regex_validate },
 #endif
 	{ AC_AUTH, MULTIPLE_OK, AS_ANY, "auth", 
 	  AT_STRING, AC_AUTH_LIST, AC_STRING, EXF_AUTH,
@@ -453,7 +467,7 @@ acl_body_strstr(ad, stage, ap, priv)
 	return 0;
 }
 
-static int
+int
 myregexec(priv, ad, ap, string)
 	struct mlfi_priv *priv;
 	acl_data_t *ad;
@@ -994,7 +1008,7 @@ acl_init_entry(void)
 	memset(acl, 0, sizeof(*acl));
 	acl->a_delay = -1;
 	acl->a_autowhite = -1;
-	LIST_INIT(&acl->a_clause);
+	TAILQ_INIT(&acl->a_clause);
 
 	return acl;
 }
@@ -1192,6 +1206,105 @@ acl_print_urlcheck(ad, buf, len)
 	snprintf(buf, len, "\"%s\"", ad->urlcheck->u_name);
 	return buf;
 }
+
+void
+acl_add_prop_string(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	struct urlcheck_prop_data *upd;
+
+	upd = (struct urlcheck_prop_data *)data;
+
+	if ((ad->prop = malloc(sizeof(*ad->prop))) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if ((ad->prop->upd_name = strdup(upd->upd_name + 1)) == NULL) {
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	acl_add_string((acl_data_t *)ad->prop->upd_data, upd->upd_data);
+
+	return;
+}
+void 
+acl_add_prop_regex(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	struct urlcheck_prop_data *upd;
+
+	upd = (struct urlcheck_prop_data *)data;
+
+	if ((ad->prop = malloc(sizeof(*ad->prop))) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if ((ad->prop->upd_name = strdup(upd->upd_name + 1)) == NULL) {
+		mg_log(LOG_ERR, "acl strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	acl_add_regex((acl_data_t *)ad->prop->upd_data, upd->upd_data);
+
+	return;
+}
+
+char *
+acl_print_prop_string(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	size_t written;
+
+	written = snprintf(buf, len, "$%s ", ad->prop->upd_name);
+	acl_print_string((acl_data_t *)ad->prop->upd_data, 
+	    buf + written, len - written);
+
+	return buf;
+}
+
+char *
+acl_print_prop_regex(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	size_t written;
+
+	written = snprintf(buf, len, "$%s ", ad->prop->upd_name);
+	acl_print_regex((acl_data_t *)ad->prop->upd_data, 
+	    buf + written, len - written);
+
+	return buf;
+}
+
+void 
+acl_free_prop_string(ad)
+	acl_data_t *ad;
+{
+	free(ad->prop->upd_name);
+	acl_free_string((acl_data_t *)ad->prop->upd_data);
+	free(ad->prop);
+
+	return;
+}
+void 
+acl_free_prop_regex(ad)
+	acl_data_t *ad;
+{
+	free(ad->prop->upd_name);
+	acl_free_regex((acl_data_t *)ad->prop->upd_data);
+	free(ad->prop);
+
+	return;
+}
+
 #endif
 
 void
@@ -1247,7 +1360,7 @@ acl_add_clause(type, data)
 	}
 
 	if (acr->acr_unicity == UNIQUE) {
-		LIST_FOREACH(cac, &gacl->a_clause, ac_list) {
+		TAILQ_FOREACH(cac, &gacl->a_clause, ac_list) {
 			if (cac->ac_type == type) {
 				mg_log(LOG_ERR, 
 				    "Multiple %s clauses in ACL line %d",
@@ -1263,7 +1376,7 @@ acl_add_clause(type, data)
 	ac->ac_acr = acr;
 	if (acr->acr_add != NULL)
 		(*acr->acr_add)(&ac->ac_data, data);
-	LIST_INSERT_HEAD(&gacl->a_clause, ac, ac_list);
+	TAILQ_INSERT_TAIL(&gacl->a_clause, ac, ac_list);
 		
 	/* 
 	 * Lists deserve a special treatment: the clause is parsed with 
@@ -1306,7 +1419,7 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 	struct acl_entry *acl;
 	struct acl_clause *ac;
 
-	LIST_FOREACH(ac, &gacl->a_clause, ac_list) {
+	TAILQ_FOREACH(ac, &gacl->a_clause, ac_list) {
 		if (ac->ac_acr->acr_stage == AS_ANY)
 			continue;
 		if (ac->ac_acr->acr_stage != acl_stage) {
@@ -1388,7 +1501,7 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 	struct acl_entry *acl;
 	struct acl_clause *ac;
 
-	LIST_FOREACH(ac, &gacl->a_clause, ac_list) {
+	TAILQ_FOREACH(ac, &gacl->a_clause, ac_list) {
 		if (ac->ac_acr->acr_stage == AS_ANY)
 			continue;
 		if (ac->ac_acr->acr_stage != acl_stage) {
@@ -1511,7 +1624,7 @@ acl_filter(stage, ctx, priv)
 		ap.ap_nmatch = 0;
 		ap.ap_pmatch = NULL;
 
-		LIST_FOREACH(ac, &acl->a_clause, ac_list) {
+		TAILQ_FOREACH(ac, &acl->a_clause, ac_list) {
 			found = (*ac->ac_acr->acr_filter)
 				(&ac->ac_data, stage, &ap, priv);
 
@@ -1765,9 +1878,9 @@ acl_clear(void) {	/* acllist must be write locked */
 		acl = TAILQ_FIRST(&acl_head);
 		TAILQ_REMOVE(&acl_head, acl, a_list);
 
-		while (!LIST_EMPTY(&acl->a_clause)) {
-			ac = LIST_FIRST(&acl->a_clause);
-			LIST_REMOVE(ac, ac_list);
+		while (!TAILQ_EMPTY(&acl->a_clause)) {
+			ac = TAILQ_FIRST(&acl->a_clause);
+			TAILQ_REMOVE(&acl->a_clause, ac, ac_list);
 			if (ac->ac_acr->acr_free)
 				(*ac->ac_acr->acr_free)(&ac->ac_data);
 			free(ac);
@@ -1826,7 +1939,7 @@ acl_entry(entrystr, len, acl)
 		break;
 	}
 
-	LIST_FOREACH(ac, &acl->a_clause, ac_list) {
+	TAILQ_FOREACH(ac, &acl->a_clause, ac_list) {
 		char tempstr2[HDRLEN];
 		acl_data_t *ad;
 		char *notstr = "not ";
@@ -1971,7 +2084,7 @@ acl_add_list(ad, data)
 		exit(EX_DATAERR);
 	}
 
-	LIST_FOREACH(cac, &gacl->a_clause, ac_list) {
+	TAILQ_FOREACH(cac, &gacl->a_clause, ac_list) {
 		if (cac->ac_acr->acr_list_type != ale->al_acr->acr_type)
 			continue;
 		if (cac->ac_acr->acr_unicity == UNIQUE) {

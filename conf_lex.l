@@ -73,6 +73,7 @@ dnsrbl		[Dd][Nn][Ss][Rr][Bb][Ll]
 sm_macro	[Ss][Mm]_[Mm][Aa][Cc][Rr][Oo]
 urlcheck	[Uu][Rr][Ll][Cc][Hh][Ee][Cc][Kk]
 postmsg		[Pp][Oo][Ss][Tt][Mm][Ss][Gg]
+getprop		[Gg][Ee][Tt][Pp][Rr][Oo][Pp]
 unset		[Uu][Nn][Ss][Ee][Tt]
 list		[Ll][Ii][Ss][Tt]
 flushaddr	[Ff][Ll][Uu][Ss][Hh][Aa][Dd][Dd][Rr]
@@ -100,6 +101,7 @@ lt		"<"
 no		[Nn][Oo]
 not		[Nn][Oo][Tt]
 neg		"!"
+prop		"$"[-_A-Za-z0-9]+
 
 %s S_REGEX 
 %x S_CLOCKSPEC1 S_CLOCKSPEC2
@@ -112,7 +114,7 @@ neg		"!"
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.66 2007/02/02 07:00:06 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.67 2007/02/24 22:10:21 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -141,6 +143,11 @@ neg		"!"
 {no}		{ return NO; }
 {not}		{ return NO; }
 {neg}		{ return NO; }
+{prop}		{ 
+			strncpy(yylval.prop, yytext, QSTRLEN);
+			yylval.qstring[QSTRLEN] = '\0';
+			return PROP;
+		}
 {addr}		{ return ADDR; }
 {from}		{ BEGIN(S_REGEX); return FROM; }
 {rcpt}		{ BEGIN(S_REGEX); return RCPT; }
@@ -167,6 +174,7 @@ neg		"!"
 {sm_macro}  	{ BEGIN(S_REGEX); return SM_MACRO; }
 {urlcheck}  	{ return URLCHECK; }
 {postmsg}	{ return POSTMSG; }
+{getprop}	{ return GETPROP; }
 {unset}  	{ return UNSET; }
 {list}  	{ return LIST; }
 {flushaddr}  	{ return FLUSHADDR; }

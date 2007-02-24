@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.24 2007/02/05 06:05:34 manu Exp $ */
+/* $Id: acl.h,v 1.25 2007/02/24 22:10:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -52,7 +52,7 @@ typedef enum { A_GREYLIST, A_WHITELIST, A_BLACKLIST, } acl_type_t;
 typedef enum { AS_NONE, AS_RCPT, AS_DATA, AS_ANY, } acl_stage_t;
 typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK, AT_OPNUM, 
 	       AT_CLOCKSPEC, AT_DNSRBL, AT_URLCHECK, AT_MACRO, 
-	       AT_LIST } acl_data_type_t;
+	       AT_LIST, AT_PROP } acl_data_type_t;
 
 typedef enum {
 	AC_NONE,
@@ -84,6 +84,8 @@ typedef enum {
 	AC_MACRO_LIST,
 	AC_URLCHECK,
 	AC_URLCHECK_LIST,
+	AC_PROP,
+	AC_PROPRE,
 	AC_AUTH,
 	AC_AUTH_RE,
 	AC_AUTH_LIST,
@@ -163,6 +165,7 @@ typedef union acl_data {
 #endif
 #ifdef USE_CURL
 	struct urlcheck_entry *urlcheck;
+	struct urlcheck_prop_data *prop;
 #endif
 	struct acl_opnum_data opnum;
 	struct clockspec *clockspec;
@@ -189,7 +192,7 @@ struct acl_clause {
 	enum { PLAIN, NEGATED } ac_negation;
 	union acl_data ac_data;
 	struct acl_clause_rec *ac_acr;
-	LIST_ENTRY(acl_clause) ac_list;
+	TAILQ_ENTRY(acl_clause) ac_list;
 };
 
 #define a_addr a_netblock.nb_addr
@@ -200,7 +203,7 @@ struct acl_entry {
 	int a_line;
 	acl_type_t a_type;
 	acl_stage_t a_stage;
-	LIST_HEAD(,acl_clause) a_clause;
+	TAILQ_HEAD(,acl_clause) a_clause;
 	time_t a_delay;
 	time_t a_autowhite;
 	int a_flags;
@@ -271,6 +274,8 @@ int acl_rcptcount_cmp(acl_data_t *, acl_stage_t,
 		      struct acl_param *, struct mlfi_priv *);
 int acl_msgsize_cmp(acl_data_t *, acl_stage_t, 
 		    struct acl_param *, struct mlfi_priv *);
+int myregexec(struct mlfi_priv *, acl_data_t *, 
+	      struct acl_param *, const char *);
 
 /* acl_filter() return codes */
 #define	EXF_UNSET	0
@@ -300,4 +305,5 @@ int acl_msgsize_cmp(acl_data_t *, acl_stage_t,
 #define EXF_RCPTCOUNT	(1 << 22)
 #define EXF_CLOCKSPEC	(1 << 23)
 #define EXF_GEOIP	(1 << 24)
+#define EXF_PROP	(1 << 25)
 #endif /* _ACL_H_ */

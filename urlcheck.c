@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.13 2007/01/29 04:57:18 manu Exp $ */
+/* $Id: urlcheck.c,v 1.14 2007/02/24 22:10:21 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.13 2007/01/29 04:57:18 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.14 2007/02/24 22:10:21 manu Exp $");
 #endif
 #endif
 
@@ -84,7 +84,7 @@ char post_trailer_templ[] =
 char post_header[sizeof(post_header_templ) - 2 + BOUNDARY_LEN];
 char post_trailer[sizeof(post_trailer_templ) - 2 + BOUNDARY_LEN];
 
-
+int urlcheck_gflags = 0;
 
 
 /* 
@@ -96,9 +96,10 @@ struct urlchecklist urlcheck_head;
 static size_t curl_outlet(void *, size_t, size_t, void *);
 static int find_boundary(struct mlfi_priv *, char *);
 static size_t curl_post(void *, size_t, size_t, void *);
-static int answer_parse(struct iovec *, struct acl_param *);
+static int answer_parse(struct iovec *, struct acl_param *, struct mlfi_priv *);
 static int answer_getline(char *, char *, struct acl_param *);
 static struct urlcheck_cnx *get_cnx(struct urlcheck_entry *);
+static void urlcheck_push_prop(char *, char *, struct mlfi_priv *);
 
 #define URLCHECK_ANSWER_MAX	4096
 
@@ -111,14 +112,19 @@ urlcheck_init(void) {
 
 
 void
-urlcheck_def_add(name, url, max_cnx, postmsg) /* acllist must be write locked */
+urlcheck_def_add(name, url, max_cnx, flags) /* acllist must be write locked */
 	char *name;
 	char *url;
 	int max_cnx;
-	int postmsg;
+	int flags;
 {
 	struct urlcheck_entry *ue;
 	struct urlcheck_cnx *uc;
+	int postmsg;
+	int getprop;
+
+	postmsg = flags & U_POSTMSG;
+	getprop = flags & U_GETPROP;
 
 	if (urlcheck_byname(name) != NULL) {
 		mg_log(LOG_ERR, "urlcheck \"%s\" defined twice at line %d",
@@ -138,7 +144,8 @@ urlcheck_def_add(name, url, max_cnx, postmsg) /* acllist must be write locked */
 	ue->u_url[sizeof(ue->u_url) - 1] = '\0';
 
 	ue->u_maxcnx = max_cnx;
-	ue->u_postmsg = postmsg;
+	ue->u_flags = flags;
+
 	if (postmsg && conf.c_maxpeek == 0)
 		conf.c_maxpeek = -1;
 
@@ -165,10 +172,13 @@ urlcheck_def_add(name, url, max_cnx, postmsg) /* acllist must be write locked */
 	LIST_INSERT_HEAD(&urlcheck_head, ue, u_list);
 
 	if (conf.c_debug || conf.c_acldebug) {
-		mg_log(LOG_DEBUG, "load URL check \"%s\" \"%s\" %d", 
-		    ue->u_name, ue->u_url, ue->u_maxcnx);
+		mg_log(LOG_DEBUG, "load URL check \"%s\" \"%s\" %d%s%s", 
+		    ue->u_name, ue->u_url, ue->u_maxcnx,
+		    getprop ? " getprop" : "", 
+		    postmsg ? " postmsg" : "");
 	}
 
+	urlcheck_gflags = 0;
 	return;
 }
 
@@ -590,7 +600,7 @@ urlcheck_validate(ad, stage, ap, priv)
 	}
 
 	if ((stage == AS_DATA) &&
-	    ue->u_postmsg && 
+	    (ue->u_flags & U_POSTMSG) && 
 	    !TAILQ_EMPTY(&priv->priv_header)) {
 		struct post_data pd;
 		size_t len;
@@ -671,7 +681,8 @@ urlcheck_validate(ad, stage, ap, priv)
 		goto out;
 	}
 
-	retval = answer_parse(&data, ap);
+	retval = answer_parse(&data, ap, 
+	    (ue->u_flags & U_GETPROP) ? priv : NULL);
 out:
 	if (headers != NULL)
 		curl_slist_free_all(headers);
@@ -687,9 +698,10 @@ out:
 }
 
 static int
-answer_parse(data, ap)
-struct iovec *data;
+answer_parse(data, ap, priv)
+	struct iovec *data;
 	struct acl_param *ap;
+	struct mlfi_priv *priv;
 {
 	int idx;
 	char *buf;
@@ -697,6 +709,12 @@ struct iovec *data;
 	char *linep;
 	char *valp;
 	int retval = 0;
+	int getprop;
+
+	if (priv == NULL)
+		getprop = 0;
+	else
+		getprop = 1;
 
 	buf = data->iov_base;
 	len = data->iov_len;
@@ -779,13 +797,17 @@ struct iovec *data;
 		idx++;
 
 		if (answer_getline(linep, valp, ap) == -1) {
-			mg_log(LOG_DEBUG, 
-			    "ignoring unepxected \"%s\" => \"%s\"",
-			    linep, valp);
+			if (!getprop) 
+				mg_log(LOG_DEBUG, 
+				    "ignoring unepxected \"%s\" => \"%s\"",
+				    linep, valp);
 		} else {
 			/* We have a match! */
 			retval = 1;
 		}
+
+		if (getprop)
+			urlcheck_push_prop(linep, valp, priv);
 	}
 
 	return retval;
@@ -881,4 +903,113 @@ out:
 	return 0;
 }
 
-#endif /* USE_URLCHECK */
+static void
+urlcheck_push_prop(linep, valp, priv)
+	char *linep;
+	char *valp;
+	struct mlfi_priv *priv;
+{
+	struct urlcheck_prop *up;
+
+	if ((up = malloc(sizeof(*up))) == NULL) {
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if ((up->up_name = strdup(linep)) == NULL) {
+		mg_log(LOG_ERR, "strup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if ((up->up_value = strdup(valp)) == NULL) {
+		mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	LIST_INSERT_HEAD(&priv->priv_prop, up, up_list);
+
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "got prop $%s = \"%s\"", linep, valp);
+
+	return;
+}
+
+void
+urlcheck_prop_cleanup(priv)
+	struct mlfi_priv *priv;
+{
+	struct urlcheck_prop *up;
+
+	while ((up = LIST_FIRST(&priv->priv_prop)) != NULL) {
+		free(up->up_name);
+		free(up->up_value);
+		LIST_REMOVE(up, up_list);
+		free(up);
+	}
+
+	return;
+}
+
+int 
+urlcheck_prop_string_validate(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv; 
+{
+	struct urlcheck_prop *up;
+	acl_data_t *upd;
+	char *string;
+	int retval = 0;
+
+	upd = (acl_data_t *)ad->prop->upd_data;
+	string = fstring_expand(priv, NULL, upd->string);
+
+	LIST_FOREACH(up, &priv->priv_prop, up_list) {
+		if (strcmp(ad->prop->upd_name, up->up_name) != 0)
+			continue;
+
+		if (conf.c_debug)
+			mg_log(LOG_DEBUG, "test $%s = \"%s\" vs \"%s\"",
+			    up->up_name, up->up_value, string);
+
+		if (strcmp(up->up_value, string) == 0) {
+			retval = 1;
+			break;
+		}
+	}
+
+	free(string);	
+	return retval;
+}
+
+int 
+urlcheck_prop_regex_validate(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv; 
+{
+	struct urlcheck_prop *up;
+	acl_data_t *upd;
+	int retval = 0;
+
+	upd = (acl_data_t *)ad->prop->upd_data;
+
+	LIST_FOREACH(up, &priv->priv_prop, up_list) {
+		if (strcmp(ad->prop->upd_name, up->up_name) != 0)
+			continue;
+
+		if (conf.c_debug)
+			mg_log(LOG_DEBUG, "test $%s = \"%s\" vs %s",
+			    up->up_name, up->up_value, upd->regex.re_copy);
+
+		if (myregexec(priv, upd, ap, up->up_value) == 0) {
+			retval = 1;
+			break;
+		}
+	}
+
+	return retval;
+}
+#endif /* USE_CURL */

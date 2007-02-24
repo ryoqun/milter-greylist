@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME GEOIPDB GEOIP
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL HEADER BODY MAXPEEK STAT POSTMSG GETPROP PROP AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME GEOIPDB GEOIP
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.74 2007/02/06 14:29:55 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.75 2007/02/24 22:10:21 manu Exp $");
 #endif
 #endif
 
@@ -57,6 +57,7 @@ void conf_error(char *);
 	char delay[NUMLEN + 1];
 	char regex[REGEXLEN + 1];
 	enum operator op; 
+	char prop[QSTRLEN + 1];
 	}
 %type <ipaddr> IPADDR;
 %type <ip6addr> IP6ADDR;
@@ -68,6 +69,7 @@ void conf_error(char *);
 %type <qstring> QSTRING;
 %type <regex> REGEX;
 %type <op> OP;
+%type <prop> PROP;
 
 %%
 lines	:	lines netblock '\n' 
@@ -580,6 +582,8 @@ acl_clause:	fromaddr_clause
 	|	no_clause
 	|	time_clause
 	|	geoip_clause
+	|	prop_clause
+	|	propregex_clause
 	;
 
 acl_values:	acl_value
@@ -765,6 +769,39 @@ urlcheck_clause:	URLCHECK QSTRING {
 #endif
 			}
 	;
+
+prop_clause:		PROP QSTRING {
+#ifdef USE_CURL
+			struct urlcheck_prop_data upd;
+			char qstring[QSTRLEN + 1];
+
+			upd.upd_name = $1;
+			upd.upd_data = quotepath(qstring, $2, QSTRLEN);
+
+			acl_add_clause(AC_PROP, &upd);
+#else
+			mg_log(LOG_INFO, 
+			    "CURL support not compiled in line %d", 
+			    conf_line);
+#endif
+		}
+	;
+
+propregex_clause:	PROP REGEX {
+#ifdef USE_CURL
+			struct urlcheck_prop_data upd;
+
+			upd.upd_name = $1;
+			upd.upd_data = $2;
+			acl_add_clause(AC_PROPRE, &upd);
+#else
+			mg_log(LOG_INFO, 
+			    "CURL support not compiled in line %d", 
+			    conf_line);
+#endif
+		}
+	;
+
 list_clause:		LIST QSTRING { 
 				char path[QSTRLEN + 1];
 
@@ -903,13 +940,15 @@ macrodef_string:	SM_MACRO QSTRING QSTRING QSTRING {
 			}
 	;
 
-urlcheckdef:	URLCHECK QSTRING QSTRING TNUMBER {
+urlcheckdef:	URLCHECK QSTRING QSTRING TNUMBER urlcheckdef_flags {
 #ifdef USE_CURL
 			char path1[QSTRLEN + 1];
 			char path2[QSTRLEN + 1];
 
+			printf("urlcheckdef\n");
 			urlcheck_def_add(quotepath(path1, $2, QSTRLEN), 
-			    quotepath(path2, $3, QSTRLEN), atoi($4), 0);
+			    quotepath(path2, $3, QSTRLEN), atoi($4), 
+			    urlcheck_gflags);
 #else
 			mg_log(LOG_INFO, 
 			    "CURL support not compiled in line %d", 
@@ -918,20 +957,27 @@ urlcheckdef:	URLCHECK QSTRING QSTRING TNUMBER {
 		}
 	;
 
-urlcheckdef:	URLCHECK QSTRING QSTRING TNUMBER POSTMSG {
+urlcheckdef_flags:	POSTMSG	{ 
 #ifdef USE_CURL
-			char path1[QSTRLEN + 1];
-			char path2[QSTRLEN + 1];
-
-			urlcheck_def_add(quotepath(path1, $2, QSTRLEN), 
-			    quotepath(path2, $3, QSTRLEN), atoi($4), 1);
+				urlcheck_gflags |= U_POSTMSG; 
 #else
 			mg_log(LOG_INFO, 
 			    "CURL support not compiled in line %d", 
 			    conf_line);
 #endif
-		}
+			}
+	|		GETPROP	{ 
+#ifdef USE_CURL
+				urlcheck_gflags |= U_GETPROP; 
+#else
+			mg_log(LOG_INFO, 
+			    "CURL support not compiled in line %d", 
+			    conf_line);
+#endif
+			}
+	|
 	;
+
 
 macrodef_regex:		SM_MACRO QSTRING QSTRING REGEX {
 				char name[QSTRLEN + 1];

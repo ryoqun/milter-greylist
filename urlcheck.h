@@ -1,4 +1,4 @@
-/* $Id: urlcheck.h,v 1.8 2007/01/04 23:01:46 manu Exp $ */
+/* $Id: urlcheck.h,v 1.9 2007/02/24 22:10:21 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -41,10 +41,27 @@ struct urlcheck_entry {
 	char u_name[QSTRLEN + 1];
 	char u_url[QSTRLEN + 1];
 	int u_maxcnx;
-	int u_postmsg;
+	int u_flags;
 	struct urlcheck_cnx *u_cnxpool;
 	LIST_ENTRY(urlcheck_entry) u_list;
 };
+
+/* For u_flags */
+#define U_POSTMSG	0x1
+#define U_GETPROP	0x2
+
+struct urlcheck_prop_data {
+	char *upd_name;
+	void *upd_data;
+};
+
+struct urlcheck_prop {
+	char *up_name;
+	char *up_value;
+	LIST_ENTRY(urlcheck_prop) up_list;
+};
+
+extern int urlcheck_gflags;
 
 struct urlcheck_entry *urlcheck_byname(char *);
 void urlcheck_init(void);
@@ -52,3 +69,9 @@ void urlcheck_def_add(char *, char *, int, int);
 void urlcheck_clear(void);
 int urlcheck_validate(acl_data_t *, acl_stage_t,
 		      struct acl_param *, struct mlfi_priv *);
+char *urlcheck_prop_byname(struct mlfi_priv *, char *);
+void urlcheck_prop_cleanup(struct mlfi_priv *);
+int urlcheck_prop_string_validate(acl_data_t *, acl_stage_t,
+				  struct acl_param *, struct mlfi_priv *); 
+int urlcheck_prop_regex_validate(acl_data_t *, acl_stage_t,
+				 struct acl_param *, struct mlfi_priv *); 
