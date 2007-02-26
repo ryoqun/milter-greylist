@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.h,v 1.8 2006/12/29 18:32:44 manu Exp $ */
+/* $Id: dnsrbl.h,v 1.9 2007/02/26 04:27:50 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -45,6 +45,11 @@ struct dnsrbl_entry {
 	LIST_ENTRY(dnsrbl_entry) d_list;
 };
 
+struct dnsrbl_list {
+	struct dnsrbl_entry *dl_dnsrbl;
+	LIST_ENTRY(dnsrbl_list) dl_list;
+};
+
 void dnsrbl_init(void);
 int dnsrbl_check_source(acl_data_t *, acl_stage_t,
 			struct acl_param *, struct mlfi_priv *);
@@ -52,3 +57,5 @@ void reverse_endian(struct sockaddr *, struct sockaddr *);
 void dnsrbl_source_add(char *, char *, struct sockaddr *, int);
 struct dnsrbl_entry *dnsrbl_byname(char *);
 void dnsrbl_clear(void);
+void dnsrbl_list_cleanup(struct mlfi_priv *);
+char *dnsrbl_dump_matches(struct mlfi_priv *, char *, size_t);

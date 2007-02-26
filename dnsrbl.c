@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.23 2007/02/02 01:45:56 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.24 2007/02/26 04:27:50 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.23 2007/02/02 01:45:56 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.24 2007/02/26 04:27:50 manu Exp $");
 #endif
 #endif
 
@@ -87,6 +87,8 @@ __RCSID("$Id: dnsrbl.c,v 1.23 2007/02/02 01:45:56 manu Exp $");
  */
 struct dnsrbllist dnsrbl_head;
 
+static int dnsrbl_matched(struct mlfi_priv *, struct dnsrbl_entry *);
+
 void
 dnsrbl_init(void) {
 	LIST_INIT(&dnsrbl_head);
@@ -125,6 +127,11 @@ dnsrbl_check_source(ad, stage, ap, priv)
 	salen = priv->priv_addrlen;
 	source = ad->dnsrbl;
 	dnsrbl = source->d_domain;
+
+	/* Avoid performing a DNS check multiple times */
+	if (dnsrbl_matched(priv, source))
+		return 1;
+
 	/* No IPv6 DNSRBL exists right now */
 	if (sa->sa_family != AF_INET)
 		return 0;
@@ -230,12 +237,24 @@ dnsrbl_check_source(ad, stage, ap, priv)
 	}
 
 end:
-	if (retval == 1 && conf.c_debug) {
-		char addrstr[NS_MAXDNAME + 1];
+	if (retval == 1) {
+		struct dnsrbl_list *dl;
 
-		iptostring(sa, salen, addrstr, sizeof(addrstr));
-		mg_log(LOG_DEBUG, "Host %s exists in DNSRBL \"%s\"", 
+		if ((dl = malloc(sizeof(*dl))) == NULL) {
+			mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		dl->dl_dnsrbl = source;
+		LIST_INSERT_HEAD(&priv->priv_dnsrbl, dl, dl_list);
+
+		if (conf.c_debug) {
+			char addrstr[NS_MAXDNAME + 1];
+
+			iptostring(sa, salen, addrstr, sizeof(addrstr));
+			mg_log(LOG_DEBUG, "Host %s exists in DNSRBL \"%s\"", 
 				addrstr, source->d_name);
+		}
 	}
 	free(ans);
 	res_ndestroy(&res);
@@ -381,4 +400,55 @@ dnsrbl_clear(void)	/* acllist must be write locked */
 	return;
 }
 
+void
+dnsrbl_list_cleanup(priv)
+	struct mlfi_priv *priv;
+{
+	struct dnsrbl_list *dl;
+
+	while ((dl = LIST_FIRST(&priv->priv_dnsrbl)) != NULL) {
+		LIST_REMOVE(dl, dl_list);
+		free(dl);
+	}
+
+	return;
+}
+
+char *
+dnsrbl_dump_matches(priv, buf, len)
+	struct mlfi_priv *priv;
+	char *buf;
+	size_t len;
+{
+	struct dnsrbl_list *dl;
+	int begin = 1;
+	size_t written = 0;
+
+	*buf = '\0';
+
+	LIST_FOREACH(dl, &priv->priv_dnsrbl, dl_list) {
+		written += snprintf(buf + written, 
+				    len - written, 
+				    "%s%s",
+				    begin ? "" : ",",
+				    dl->dl_dnsrbl->d_name);
+		begin = 0;	
+	}
+
+	return buf;
+}
+
+static int
+dnsrbl_matched(priv, source)
+	struct mlfi_priv *priv;
+	struct dnsrbl_entry *source;
+{
+	struct dnsrbl_list *dl;
+
+	LIST_FOREACH(dl, &priv->priv_dnsrbl, dl_list)
+		if (dl->dl_dnsrbl == source)
+			return 1;
+
+	return 0;
+}
 #endif /* USE_DNSRBL */

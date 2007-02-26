@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.69 2007/02/24 22:16:01 manu Exp $
+.\" $Id: greylist.conf.5,v 1.70 2007/02/26 04:27:50 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -931,6 +931,9 @@ the SMTP message returned
 .TP
 .I %Xh
 the message displayed in the X-Greylist header
+.TP
+.I %D
+Comma-separated list of DNSRBL for which the sender host matched
 .TP
 .I %M
 a sendmail macro value. Examples: 

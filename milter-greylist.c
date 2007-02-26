@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.170 2007/02/24 22:10:21 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.171 2007/02/26 04:27:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.170 2007/02/24 22:10:21 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.171 2007/02/26 04:27:50 manu Exp $");
 #endif
 #endif
 
@@ -2244,6 +2244,16 @@ fstring_expand(priv, rcpt, fstring)
 			mystrncat(&outstr, ipstr, &outmaxlen);
 			break;
 		}
+		case 'D': {
+#ifdef USE_DNSRBL
+			char dnsrbl[QSTRLEN + 1];
+
+			mystrncat(&outstr, 
+				  dnsrbl_dump_matches(priv, dnsrbl, QSTRLEN),
+				  &outmaxlen);
+#endif
+			break;
+		}
 
 		case 'I': {	/* Sender machine / cidr, eg: %I{/24} */
 			char ipstr[IPADDRSTRLEN + 1];
@@ -2318,7 +2328,6 @@ fstring_expand(priv, rcpt, fstring)
 			mystrncat(&outstr, ipstr, &outmaxlen);
 			break;
 		}
-
 		case 'X': {
 			char *string = NULL;
 
@@ -2362,7 +2371,10 @@ fstring_expand(priv, rcpt, fstring)
 		
 		case 'C': {	/* Country code from GeoIP */
 #ifdef USE_GEOIP
-			mystrncat(&outstr, priv->priv_ccode, &outmaxlen);
+			if (priv->priv_ccode != NULL)
+				mystrncat(&outstr, 
+					  priv->priv_ccode, 
+					  &outmaxlen);
 #else
 			fstr_len =  0;
 #endif
