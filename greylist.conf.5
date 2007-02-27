@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.70 2007/02/26 04:27:50 manu Exp $
+.\" $Id: greylist.conf.5,v 1.71 2007/02/27 04:39:49 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -650,6 +650,11 @@ keyword at the end of
 .I urlcheck 
 definition. If this option is enabled, the gathered properties can be 
 accessed in the current and following ACL by prefixing them by a dollar ($).
+If the 
+.I 
+clear
+keyword is added, then properties will be cleaned up before handling a new
+recipient. This avoids properties for several recipients to mix.
 .PP
 Here is an example that will use various DNSRBL depending on a per-recipient
 setting stored in the 
@@ -659,7 +664,7 @@ attribute of a LDAP directory.
   dnsrbl "RBL2" "rbl.example.net" "127.0.0.2"
   dnsrbl "RBL3" "rbl.example.net" "127.0.0.3"
   dnsrbl "RBL4" "rbl.example.net" "127.0.0.4"
-  urlcheck "userconf" "ldap://localhost/dc=example,dc=net?milterGreylistStatus,dnsrbl?one?mail=%r" 5 getprop
+  urlcheck "userconf" "ldap://localhost/dc=example,dc=net?milterGreylistStatus,dnsrbl?one?mail=%r" 5 getprop clear
 
   racl blacklist urlcheck "userconf" $dnsrbl "RBL2" dnsrbl "RBL2"
   racl blacklist $dnsrbl "RBL3" dnsrbl "RBL3"

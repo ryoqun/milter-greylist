@@ -1,4 +1,5 @@
 3.1.7
+	Option to clear urlcheck prop before handling a new recipient
 	%D format string for getting the list of matching DNSRBL
 	Avoid performing multiple DNSRBL checks for the same IP
 	Allow reusing in the ACL of properties gathered from urlcheck

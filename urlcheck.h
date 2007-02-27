@@ -1,4 +1,4 @@
-/* $Id: urlcheck.h,v 1.9 2007/02/24 22:10:21 manu Exp $ */
+/* $Id: urlcheck.h,v 1.10 2007/02/27 04:39:49 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -49,6 +49,7 @@ struct urlcheck_entry {
 /* For u_flags */
 #define U_POSTMSG	0x1
 #define U_GETPROP	0x2
+#define U_CLEARPROP	0x4
 
 struct urlcheck_prop_data {
 	char *upd_name;
@@ -58,6 +59,7 @@ struct urlcheck_prop_data {
 struct urlcheck_prop {
 	char *up_name;
 	char *up_value;
+	int up_flags;
 	LIST_ENTRY(urlcheck_prop) up_list;
 };
 
@@ -70,7 +72,8 @@ void urlcheck_clear(void);
 int urlcheck_validate(acl_data_t *, acl_stage_t,
 		      struct acl_param *, struct mlfi_priv *);
 char *urlcheck_prop_byname(struct mlfi_priv *, char *);
-void urlcheck_prop_cleanup(struct mlfi_priv *);
+void urlcheck_prop_clear_all(struct mlfi_priv *);
+void urlcheck_prop_clear(struct mlfi_priv *);
 int urlcheck_prop_string_validate(acl_data_t *, acl_stage_t,
 				  struct acl_param *, struct mlfi_priv *); 
 int urlcheck_prop_regex_validate(acl_data_t *, acl_stage_t,

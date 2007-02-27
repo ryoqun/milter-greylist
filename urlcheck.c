@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.14 2007/02/24 22:10:21 manu Exp $ */
+/* $Id: urlcheck.c,v 1.15 2007/02/27 04:39:49 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.14 2007/02/24 22:10:21 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.15 2007/02/27 04:39:49 manu Exp $");
 #endif
 #endif
 
@@ -96,10 +96,11 @@ struct urlchecklist urlcheck_head;
 static size_t curl_outlet(void *, size_t, size_t, void *);
 static int find_boundary(struct mlfi_priv *, char *);
 static size_t curl_post(void *, size_t, size_t, void *);
-static int answer_parse(struct iovec *, struct acl_param *, struct mlfi_priv *);
+static int answer_parse(struct iovec *, struct acl_param *, int, 
+			struct mlfi_priv *);
 static int answer_getline(char *, char *, struct acl_param *);
 static struct urlcheck_cnx *get_cnx(struct urlcheck_entry *);
-static void urlcheck_push_prop(char *, char *, struct mlfi_priv *);
+static void urlcheck_push_prop(char *, char *, int, struct mlfi_priv *);
 
 #define URLCHECK_ANSWER_MAX	4096
 
@@ -681,7 +682,7 @@ urlcheck_validate(ad, stage, ap, priv)
 		goto out;
 	}
 
-	retval = answer_parse(&data, ap, 
+	retval = answer_parse(&data, ap, ue->u_flags, 
 	    (ue->u_flags & U_GETPROP) ? priv : NULL);
 out:
 	if (headers != NULL)
@@ -698,9 +699,10 @@ out:
 }
 
 static int
-answer_parse(data, ap, priv)
+answer_parse(data, ap, flags, priv)
 	struct iovec *data;
 	struct acl_param *ap;
+	int flags;
 	struct mlfi_priv *priv;
 {
 	int idx;
@@ -709,12 +711,6 @@ answer_parse(data, ap, priv)
 	char *linep;
 	char *valp;
 	int retval = 0;
-	int getprop;
-
-	if (priv == NULL)
-		getprop = 0;
-	else
-		getprop = 1;
 
 	buf = data->iov_base;
 	len = data->iov_len;
@@ -797,7 +793,7 @@ answer_parse(data, ap, priv)
 		idx++;
 
 		if (answer_getline(linep, valp, ap) == -1) {
-			if (!getprop) 
+			if (!(flags & U_GETPROP))
 				mg_log(LOG_DEBUG, 
 				    "ignoring unepxected \"%s\" => \"%s\"",
 				    linep, valp);
@@ -806,8 +802,8 @@ answer_parse(data, ap, priv)
 			retval = 1;
 		}
 
-		if (getprop)
-			urlcheck_push_prop(linep, valp, priv);
+		if (flags & U_GETPROP)
+			urlcheck_push_prop(linep, valp, flags, priv);
 	}
 
 	return retval;
@@ -904,9 +900,10 @@ out:
 }
 
 static void
-urlcheck_push_prop(linep, valp, priv)
+urlcheck_push_prop(linep, valp, flags, priv)
 	char *linep;
 	char *valp;
+	int flags;
 	struct mlfi_priv *priv;
 {
 	struct urlcheck_prop *up;
@@ -926,6 +923,10 @@ urlcheck_push_prop(linep, valp, priv)
 		exit(EX_OSERR);
 	}
 
+	up->up_flags = 0;
+	if (flags & U_CLEARPROP);
+		up->up_flags |= U_CLEARPROP;
+
 	LIST_INSERT_HEAD(&priv->priv_prop, up, up_list);
 
 	if (conf.c_debug)
@@ -935,7 +936,7 @@ urlcheck_push_prop(linep, valp, priv)
 }
 
 void
-urlcheck_prop_cleanup(priv)
+urlcheck_prop_clear_all(priv)
 	struct mlfi_priv *priv;
 {
 	struct urlcheck_prop *up;
@@ -981,6 +982,28 @@ urlcheck_prop_string_validate(ad, stage, ap, priv)
 
 	free(string);	
 	return retval;
+}
+
+void
+urlcheck_prop_clear(priv)
+	struct mlfi_priv *priv; 
+{
+	struct urlcheck_prop *up;
+	struct urlcheck_prop *nup;
+
+	up = LIST_FIRST(&priv->priv_prop); 
+
+	while (up != NULL) {
+		nup = LIST_NEXT(up, up_list);
+		if (up->up_flags & U_CLEARPROP) {
+			free(up->up_name);
+			free(up->up_value);
+			LIST_REMOVE(up, up_list);
+			free(up);
+		}
+		up = nup;
+	}
+	return;
 }
 
 int 

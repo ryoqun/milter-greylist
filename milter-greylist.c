@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.171 2007/02/26 04:27:50 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.172 2007/02/27 04:39:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.171 2007/02/26 04:27:50 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.172 2007/02/27 04:39:49 manu Exp $");
 #endif
 #endif
 
@@ -466,6 +466,13 @@ real_envrcpt(ctx, envrcpt)
 		    priv->priv_queueid, priv->priv_hostname, 
 		    addrstr, priv->priv_from, *envrcpt);
 
+#ifdef USE_CURL
+	/*
+	 * Avoid properties gathered by urlcheck 
+	 * to mix for multiple recipients.
+	 */
+	urlcheck_prop_clear(priv);
+#endif
 	/*
 	 * For multiple-recipients messages, if the sender IP or the
 	 * sender e-mail address is whitelisted, authenticated, or
@@ -1025,7 +1032,7 @@ real_close(ctx)
 		if (priv->priv_buf)
 			free(priv->priv_buf);
 #ifdef USE_CURL
-		urlcheck_prop_cleanup(priv);
+		urlcheck_prop_clear_all(priv);
 #endif
 		free(priv);
 		smfi_setpriv(ctx, NULL);
