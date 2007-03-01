@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.15 2007/02/27 04:39:49 manu Exp $ */
+/* $Id: urlcheck.c,v 1.16 2007/03/01 17:34:24 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.15 2007/02/27 04:39:49 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.16 2007/03/01 17:34:24 manu Exp $");
 #endif
 #endif
 
@@ -100,7 +100,9 @@ static int answer_parse(struct iovec *, struct acl_param *, int,
 			struct mlfi_priv *);
 static int answer_getline(char *, char *, struct acl_param *);
 static struct urlcheck_cnx *get_cnx(struct urlcheck_entry *);
-static void urlcheck_push_prop(char *, char *, int, struct mlfi_priv *);
+static void urlcheck_prop_push(char *, char *, int, struct mlfi_priv *);
+static void urlcheck_prop_clear_tmp(struct mlfi_priv *);
+static void urlcheck_prop_untmp(struct mlfi_priv *);
 
 #define URLCHECK_ANSWER_MAX	4096
 
@@ -803,8 +805,17 @@ answer_parse(data, ap, flags, priv)
 		}
 
 		if (flags & U_GETPROP)
-			urlcheck_push_prop(linep, valp, flags, priv);
+			urlcheck_prop_push(linep, valp, flags, priv);
 	}
+
+	/* 
+	 * If we did not match, toss the gathered properties
+	 * otherwise clear the tmp flag
+	 */
+	if ((retval == 0) && (flags & U_GETPROP))
+		urlcheck_prop_clear_tmp(priv);
+	else
+		urlcheck_prop_untmp(priv);
 
 	return retval;
 }
@@ -900,7 +911,7 @@ out:
 }
 
 static void
-urlcheck_push_prop(linep, valp, flags, priv)
+urlcheck_prop_push(linep, valp, flags, priv)
 	char *linep;
 	char *valp;
 	int flags;
@@ -923,9 +934,9 @@ urlcheck_push_prop(linep, valp, flags, priv)
 		exit(EX_OSERR);
 	}
 
-	up->up_flags = 0;
+	up->up_flags = UP_TMPPROP;
 	if (flags & U_CLEARPROP);
-		up->up_flags |= U_CLEARPROP;
+		up->up_flags |= UP_CLEARPROP;
 
 	LIST_INSERT_HEAD(&priv->priv_prop, up, up_list);
 
@@ -995,7 +1006,7 @@ urlcheck_prop_clear(priv)
 
 	while (up != NULL) {
 		nup = LIST_NEXT(up, up_list);
-		if (up->up_flags & U_CLEARPROP) {
+		if (up->up_flags & UP_CLEARPROP) {
 			free(up->up_name);
 			free(up->up_value);
 			LIST_REMOVE(up, up_list);
@@ -1003,6 +1014,39 @@ urlcheck_prop_clear(priv)
 		}
 		up = nup;
 	}
+	return;
+}
+
+static void
+urlcheck_prop_clear_tmp(priv)
+	struct mlfi_priv *priv; 
+{
+	struct urlcheck_prop *up;
+	struct urlcheck_prop *nup;
+
+	up = LIST_FIRST(&priv->priv_prop); 
+
+	while (up != NULL) {
+		nup = LIST_NEXT(up, up_list);
+		if (up->up_flags & UP_TMPPROP) {
+			free(up->up_name);
+			free(up->up_value);
+			LIST_REMOVE(up, up_list);
+			free(up);
+		}
+		up = nup;
+	}
+	return;
+}
+
+static void
+urlcheck_prop_untmp(priv)
+	struct mlfi_priv *priv; 
+{
+	struct urlcheck_prop *up;
+
+	LIST_FOREACH(up, &priv->priv_prop, up_list)
+		up->up_flags &= ~UP_TMPPROP;
 	return;
 }
 

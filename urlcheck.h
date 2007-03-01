@@ -1,4 +1,4 @@
-/* $Id: urlcheck.h,v 1.10 2007/02/27 04:39:49 manu Exp $ */
+/* $Id: urlcheck.h,v 1.11 2007/03/01 17:34:24 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -62,6 +62,9 @@ struct urlcheck_prop {
 	int up_flags;
 	LIST_ENTRY(urlcheck_prop) up_list;
 };
+
+#define UP_CLEARPROP	0x4
+#define UP_TMPPROP	0x8
 
 extern int urlcheck_gflags;
 
