@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.16 2007/03/01 17:34:24 manu Exp $ */
+/* $Id: urlcheck.c,v 1.17 2007/03/01 18:42:17 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.16 2007/03/01 17:34:24 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.17 2007/03/01 18:42:17 manu Exp $");
 #endif
 #endif
 
@@ -974,7 +974,7 @@ urlcheck_prop_string_validate(ad, stage, ap, priv)
 	char *string;
 	int retval = 0;
 
-	upd = (acl_data_t *)ad->prop->upd_data;
+	upd = (acl_data_t *)&ad->prop->upd_data;
 	string = fstring_expand(priv, NULL, upd->string);
 
 	LIST_FOREACH(up, &priv->priv_prop, up_list) {
@@ -1061,7 +1061,7 @@ urlcheck_prop_regex_validate(ad, stage, ap, priv)
 	acl_data_t *upd;
 	int retval = 0;
 
-	upd = (acl_data_t *)ad->prop->upd_data;
+	upd = (acl_data_t *)&ad->prop->upd_data;
 
 	LIST_FOREACH(up, &priv->priv_prop, up_list) {
 		if (strcmp(ad->prop->upd_name, up->up_name) != 0)
