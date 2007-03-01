@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.55 2007/02/24 22:10:21 manu Exp $ */
+/* $Id: acl.c,v 1.56 2007/03/01 04:07:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.55 2007/02/24 22:10:21 manu Exp $");
+__RCSID("$Id: acl.c,v 1.56 2007/03/01 04:07:57 manu Exp $");
 #endif
 #endif
 
@@ -1226,7 +1226,7 @@ acl_add_prop_string(ad, data)
 		exit(EX_OSERR);
 	}
 
-	acl_add_string((acl_data_t *)ad->prop->upd_data, upd->upd_data);
+	acl_add_string((acl_data_t *)&ad->prop->upd_data, upd->upd_data);
 
 	return;
 }
@@ -1249,7 +1249,7 @@ acl_add_prop_regex(ad, data)
 		exit(EX_OSERR);
 	}
 
-	acl_add_regex((acl_data_t *)ad->prop->upd_data, upd->upd_data);
+	acl_add_regex((acl_data_t *)&ad->prop->upd_data, upd->upd_data);
 
 	return;
 }
@@ -1263,7 +1263,7 @@ acl_print_prop_string(ad, buf, len)
 	size_t written;
 
 	written = snprintf(buf, len, "$%s ", ad->prop->upd_name);
-	acl_print_string((acl_data_t *)ad->prop->upd_data, 
+	acl_print_string((acl_data_t *)&ad->prop->upd_data, 
 	    buf + written, len - written);
 
 	return buf;
@@ -1278,7 +1278,7 @@ acl_print_prop_regex(ad, buf, len)
 	size_t written;
 
 	written = snprintf(buf, len, "$%s ", ad->prop->upd_name);
-	acl_print_regex((acl_data_t *)ad->prop->upd_data, 
+	acl_print_regex((acl_data_t *)&ad->prop->upd_data, 
 	    buf + written, len - written);
 
 	return buf;
@@ -1289,7 +1289,7 @@ acl_free_prop_string(ad)
 	acl_data_t *ad;
 {
 	free(ad->prop->upd_name);
-	acl_free_string((acl_data_t *)ad->prop->upd_data);
+	acl_free_string((acl_data_t *)&ad->prop->upd_data);
 	free(ad->prop);
 
 	return;
@@ -1299,7 +1299,7 @@ acl_free_prop_regex(ad)
 	acl_data_t *ad;
 {
 	free(ad->prop->upd_name);
-	acl_free_regex((acl_data_t *)ad->prop->upd_data);
+	acl_free_regex((acl_data_t *)&ad->prop->upd_data);
 	free(ad->prop);
 
 	return;

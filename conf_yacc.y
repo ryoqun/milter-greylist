@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.76 2007/02/27 04:39:49 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.77 2007/03/01 04:07:57 manu Exp $");
 #endif
 #endif
 
@@ -1085,6 +1085,7 @@ qstring_item:	QSTRING		{
 			list_add(glist, AC_STRING, 
 			    quotepath(tmpstr, $1, QSTRLEN));
 		}
+	|	REGEX		{ list_add(glist, AC_REGEX, $1); }
 	;
 
 addr_list:	addr_item
