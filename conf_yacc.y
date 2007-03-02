@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.77 2007/03/01 04:07:57 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.78 2007/03/02 21:18:22 manu Exp $");
 #endif
 #endif
 
@@ -945,7 +945,6 @@ urlcheckdef:	URLCHECK QSTRING QSTRING TNUMBER urlcheckdef_flags {
 			char path1[QSTRLEN + 1];
 			char path2[QSTRLEN + 1];
 
-			printf("urlcheckdef\n");
 			urlcheck_def_add(quotepath(path1, $2, QSTRLEN), 
 			    quotepath(path2, $3, QSTRLEN), atoi($4), 
 			    urlcheck_gflags);
