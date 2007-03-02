@@ -1,4 +1,6 @@
 3.1.7
+	Fix memory leaks when using urlchecks
+	Makes urlcheck properties and values case insensitives
 	Do not retain urlcheck properties if the urlcheck clause did not match
 	Allow loading regex in lists of body clauses
 	Option to clear urlcheck prop before handling a new recipient

@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.17 2007/03/01 18:42:17 manu Exp $ */
+/* $Id: urlcheck.c,v 1.18 2007/03/02 01:24:31 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.17 2007/03/01 18:42:17 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.18 2007/03/02 01:24:31 manu Exp $");
 #endif
 #endif
 
@@ -192,7 +192,7 @@ urlcheck_byname(urlcheck)	/* acllist must be read locked */
 	struct urlcheck_entry *ue;	
 
 	LIST_FOREACH(ue, &urlcheck_head, u_list) {
-		if (strcmp(ue->u_name, urlcheck) == 0)
+		if (strcasecmp(ue->u_name, urlcheck) == 0)
 			break;
 	}
 
@@ -690,11 +690,18 @@ out:
 	if (headers != NULL)
 		curl_slist_free_all(headers);
 
+	if (cnx->uc_hdl)
+		curl_easy_cleanup(cnx->uc_hdl);
+	cnx->uc_hdl = NULL;
+
 	if (pthread_mutex_unlock(&cnx->uc_lock) != 0) {
 		mg_log(LOG_ERR, "pthread_mutex_unlock failed: %s",
 		    strerror(errno));
 		exit(EX_OSERR);
 	}
+
+	if (data.iov_base)
+		free(data.iov_base);
 
 	free(url);
 	return retval;
@@ -978,14 +985,14 @@ urlcheck_prop_string_validate(ad, stage, ap, priv)
 	string = fstring_expand(priv, NULL, upd->string);
 
 	LIST_FOREACH(up, &priv->priv_prop, up_list) {
-		if (strcmp(ad->prop->upd_name, up->up_name) != 0)
+		if (strcasecmp(ad->prop->upd_name, up->up_name) != 0)
 			continue;
 
 		if (conf.c_debug)
 			mg_log(LOG_DEBUG, "test $%s = \"%s\" vs \"%s\"",
 			    up->up_name, up->up_value, string);
 
-		if (strcmp(up->up_value, string) == 0) {
+		if (strcasecmp(up->up_value, string) == 0) {
 			retval = 1;
 			break;
 		}
@@ -1064,7 +1071,7 @@ urlcheck_prop_regex_validate(ad, stage, ap, priv)
 	upd = (acl_data_t *)&ad->prop->upd_data;
 
 	LIST_FOREACH(up, &priv->priv_prop, up_list) {
-		if (strcmp(ad->prop->upd_name, up->up_name) != 0)
+		if (strcasecmp(ad->prop->upd_name, up->up_name) != 0)
 			continue;
 
 		if (conf.c_debug)
