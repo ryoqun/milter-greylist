@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.172 2007/02/27 04:39:49 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.173 2007/03/04 03:49:57 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.172 2007/02/27 04:39:49 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.173 2007/03/04 03:49:57 manu Exp $");
 #endif
 #endif
 
@@ -941,13 +941,12 @@ real_eom(ctx)
 				priv->priv_sr.sr_whitelist &= ~EXF_DEFAULT;
 			}
 			priv->priv_sr.sr_whitelist &= 
-			    ~(EXF_GREYLIST | EXF_WHITELIST);
+			    ~(EXF_GREYLIST | EXF_WHITELIST | EXF_BLACKLIST);
+
+			/* Silently ignore other codes, just report ACL */	
 			if (priv->priv_sr.sr_whitelist != 0) {
-				mg_log(LOG_ERR, 
-				    "%s: unexpected priv_sr.sr_whitelist = %d",
-				    priv->priv_queueid, 
-				    priv->priv_sr.sr_whitelist);
-				mystrlcat (whystr, "Internal error ", HDRLEN);
+				priv->priv_sr.sr_whitelist = 0;
+				mystrlcat (whystr, "ACL %A matched", HDRLEN);
 			}
 
 			mystrlcat (whystr, ", not delayed by %V", HDRLEN);

@@ -1,4 +1,5 @@
 3.1.7
+	Fix spurious warning about unknown whitelisting conditions
 	Fix memory leaks when using urlchecks
 	Makes urlcheck properties and values case insensitives
 	Do not retain urlcheck properties if the urlcheck clause did not match
