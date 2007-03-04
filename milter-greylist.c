@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.174 2007/03/04 05:28:50 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.175 2007/03/04 15:24:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.174 2007/03/04 05:28:50 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.175 2007/03/04 15:24:39 manu Exp $");
 #endif
 #endif
 
@@ -657,8 +657,10 @@ real_header(ctx, name, value)
 	priv->priv_msgcount += len;
 
 	if (priv->priv_msgcount > conf.c_maxpeek) {
-		mg_log(LOG_DEBUG, "ignoring message beyond maxpeek = %d", 
-		    conf.c_maxpeek);
+		if (conf.c_debug)
+			mg_log(LOG_DEBUG, 
+			    "ignoring message beyond maxpeek = %d", 
+			    conf.c_maxpeek);
 		return SMFIS_CONTINUE;
 	}
 
@@ -692,7 +694,8 @@ real_body(ctx, chunk, size)
 {
 	struct mlfi_priv *priv;
 	struct body *b;
-	char *nextlf;
+	size_t linelen;
+	int i;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 
@@ -724,83 +727,40 @@ real_body(ctx, chunk, size)
 		priv->priv_msgcount += strlen(crlf);
 	}
 
-	/* 
-	 * Store each line 
-	 */
-	while ((nextlf = memchr(chunk, (int)'\n', size)) != NULL) {
-		size_t linelen;
-		char *bp;
-		size_t blen;
 
+	for (i = size - 1; i >= 0; i--) {
+		if (chunk[i] == '\n')
+			break;
+	}
+
+	if (chunk[i] == '\n') { /* We have a newline */
 		if ((b = malloc(sizeof(*b))) == NULL) {
 			mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
 			exit(EX_OSERR);
 		}
 	
-		/*
-		 * Compute line length. +1 for including the \n
-		 */
-		linelen = (u_long)nextlf - (u_long)chunk + 1;
-#ifdef HEAVY_DEBUG
-		mg_log(LOG_ERR, "chunk %p, nextlf %p, linelen %ld\n", 
-		    chunk, nextlf, linelen);
-#endif
-
-		/* 
-		 * If there was some data remaining from the last chunk,
-		 * we add it to this line.
-		 */
-		if (priv->priv_buf != NULL)
-			linelen += priv->priv_buflen;
+		i++; /* Include the \n in this chunk */
+		linelen = priv->priv_buflen + i;
 
 		if ((b->b_lines = malloc(linelen + 1)) == NULL) {
 			mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
 			exit(EX_OSERR);
 		}
 
-		/* 
-		 * Gather data saved from a previous call 
-		 */
-		bp = b->b_lines;
-		blen = linelen;
-		if (priv->priv_buf != NULL) {
-			memcpy(bp, priv->priv_buf, priv->priv_buflen);
-			bp += priv->priv_buflen;
-			blen -= priv->priv_buflen;
-
+		/* Gather data saved from a previous call */
+		if (priv->priv_buf) {
+			memcpy(b->b_lines, priv->priv_buf, priv->priv_buflen);
 			free(priv->priv_buf);
 			priv->priv_buf = NULL;
-			priv->priv_buflen = 0;
 		}
-
-		/* 
-		 * Copy the line from the current chunk
-		 */
-		memcpy(bp, chunk, blen);
+		memcpy(b->b_lines + priv->priv_buflen, chunk, i + 1);
 		b->b_lines[linelen] = '\0';
+		priv->priv_buflen = 0;
+
 		TAILQ_INSERT_TAIL(&priv->priv_body, b, b_list);
-#ifdef HEAVY_DEBUG
-		mg_log(LOG_ERR, "got \"%s\"\n", b->b_lines);
-#endif
 
-		/*
-		 * Move to the next line, count the bytes seen so far
-		 */
-		chunk += blen;
-		size -= blen;
 		priv->priv_msgcount += linelen;
-#ifdef HEAVY_DEBUG
-		mg_log(LOG_ERR, "new chunk = %p, *chunk = %d\n", chunk, *chunk);
-		mg_log(LOG_ERR, "size remaining = %ld\n", size);
-#endif
-
-	}
-
-	/* keep the remaining for later */
-	if (size > 0) {
-#ifdef HEAVY_DEBUG
-		mg_log(LOG_ERR, "saving %ld bytes for later\n", size);
-#endif
+	} else { /* No newline in chunk, keep it for later */
 		if ((priv->priv_buf = realloc(priv->priv_buf, 
 		    priv->priv_buflen + size)) == NULL) {
 			mg_log(LOG_ERR, 

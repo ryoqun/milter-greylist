@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.56 2007/03/01 04:07:57 manu Exp $ */
+/* $Id: acl.c,v 1.57 2007/03/04 15:24:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.56 2007/03/01 04:07:57 manu Exp $");
+__RCSID("$Id: acl.c,v 1.57 2007/03/04 15:24:39 manu Exp $");
 #endif
 #endif
 
@@ -940,6 +940,7 @@ acl_add_regex(ad, data)
 	char *cp;
 	int skip;
 	int error;
+	int flags;
 
 	if ((regex = malloc(sizeof(*regex))) == NULL) {
 		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
@@ -957,8 +958,11 @@ acl_add_regex(ad, data)
 	if ((strlen(regexstr) > 0) && (regexstr[strlen(regexstr) - 1] == '/'))
 		regexstr[strlen(regexstr) - 1] = '\0';
 
-	if ((error = regcomp(regex, regexstr, 
-	    (conf.c_extendedregex ? REG_EXTENDED : 0) | REG_ICASE)) != 0) {
+	flags = (REG_ICASE | REG_NEWLINE);
+	if (conf.c_extendedregex)
+		flags |= REG_EXTENDED;
+
+	if ((error = regcomp(regex, regexstr, flags)) != 0) {
 		regerror(error, regex, errstr, ERRLEN);
 		mg_log(LOG_ERR, "bad regular expression \"%s\": %s", 
 		    regexstr, errstr);
