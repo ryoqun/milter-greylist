@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.18 2007/03/02 01:24:31 manu Exp $ */
+/* $Id: urlcheck.c,v 1.19 2007/03/07 12:24:36 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.18 2007/03/02 01:24:31 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.19 2007/03/07 12:24:36 manu Exp $");
 #endif
 #endif
 
@@ -469,6 +469,7 @@ curl_outlet(buffer, size, nmemb, userp)
 		mg_log(LOG_WARNING, "urlcheck answer too big, abort");
 		if (iov->iov_base != NULL)
 			free(iov->iov_base);
+		iov->iov_base = NULL;
 		iov->iov_len = 0;
 		return 0;
 	}
@@ -819,10 +820,12 @@ answer_parse(data, ap, flags, priv)
 	 * If we did not match, toss the gathered properties
 	 * otherwise clear the tmp flag
 	 */
-	if ((retval == 0) && (flags & U_GETPROP))
-		urlcheck_prop_clear_tmp(priv);
-	else
-		urlcheck_prop_untmp(priv);
+	if (flags & U_GETPROP) {
+		if (retval == 0)
+			urlcheck_prop_clear_tmp(priv);
+		else
+			urlcheck_prop_untmp(priv);
+	}
 
 	return retval;
 }
