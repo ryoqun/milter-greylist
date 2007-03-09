@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.175 2007/03/04 15:24:39 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.176 2007/03/09 04:37:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.175 2007/03/04 15:24:39 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.176 2007/03/09 04:37:00 manu Exp $");
 #endif
 #endif
 
@@ -512,11 +512,13 @@ real_envrcpt(ctx, envrcpt)
 
 	 /*
 	  * If sendmail rules have defined a ${greylist} macro
-	  * with value WHITE, then it is whitelisted
+	  * with value WHITE (or RELAY or OK), then it is whitelisted
 	  */
 	if ((conf.c_noaccessdb == 0) &&
 	    ((greylist = smfi_getsymval(ctx, "{greylist}")) != NULL) &&
-	    (strcmp(greylist, "WHITE") == 0)) {
+	    ((strcmp(greylist, "WHITE") == 0) ||
+	    (strcmp(greylist, "RELAY") == 0) ||
+	    (strcmp(greylist, "OK") == 0))) {
 		mg_log(LOG_DEBUG, 
 		    "whitelisted by {greylist}");
 		priv->priv_sr.sr_elapsed = 0;

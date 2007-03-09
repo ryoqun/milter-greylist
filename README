@@ -1,9 +1,9 @@
-# $Id: README,v 1.51 2007/02/22 14:44:45 manu Exp $
+# $Id: README,v 1.52 2007/03/09 04:37:00 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/02/22 14:44:45 $
+		       $Date: 2007/03/09 04:37:00 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -119,6 +119,15 @@ will need {greylist} too. milter-greylist will whitelist a message
 when the {greylist} macro is defined and set as WHITE.
 O Milter.macros.envrcpt={greylist}
 
+When using access DB as a whitelisting source, you will also need some
+rules for the ruleset "Local_check_rcpt" which assign a value to the
+macro {greylist}.
+Kstorage macro
+SLocal_check_rcpt
+R$+		$: $(storage {greylist} $) $&{client_addr}
+R$+		$: $>A <$1> <?> <+Connect> <$1>
+R<$+> <$*>	$: $(storage {greylist} $@ $1 $) $2
+
 Alternatively, you can use the following m4 macro definitions 
 if you build sendmail.cf with m4 (contributed by Hubert Ulliac).
 Here again, confMILTER_MACROS_* are shared with other milters,
@@ -138,6 +147,18 @@ thoses definitions and will take care of adding the macros required by
 milter-greylist instead of overwriting what has already been done. This 
 should simplify an automatic generation of sendmail.cf.
 
+To add the rules for defining the {greylist} macro via m4, add the following
+lines to your m4 input file:
+
+LOCAL_CONFIG
+Kstorage macro
+LOCAL_RULESETS
+SLocal_check_rcpt
+R$+		$: $(storage {greylist} $) $&{client_addr}
+R$+		$: $>A <$1> <?> <+Connect> <$1>
+R<$+> <$*>	$: $(storage {greylist} $@ $1 $) $2
+
+Note that there must be tabs and no spaces before the "$:"!
 
  3 Configuring Postfix with milter-greylist
  ==========================================

@@ -1,4 +1,5 @@
 3.1.7
+	Fix whitelisting using access.db (Georg Horn)
 	Fix NULL pointer referencing in urlcheck code
 	Fix body storage so that locators (^ and $) work for body regex
 	Fix spurious warning about unknown whitelisting conditions
