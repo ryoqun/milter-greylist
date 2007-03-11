@@ -49,8 +49,8 @@ gldelay		[Dd][Ee][Ll][Aa][Yy]
 lazyaw		[Ll][Aa][Zz][Yy][Aa][Ww]
 all		[Aa][Ll][Ll]
 delay		-?[0-9]+[smhdw]?
-qstring		"\""[^"\n]+"\""
-regex		"/"[^/\n]+"/"
+qstring		"\""([^"\n]|\\\")+"\""
+regex		"/"([^/\n]|\\"/")+"/"
 dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
 timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
 time		[Tt][Ii][Mm][Ee]
@@ -115,7 +115,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.68 2007/02/27 04:39:48 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.69 2007/03/11 13:24:24 manu Exp $");
 	#endif
 	#endif
 	#endif

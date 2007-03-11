@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.57 2007/03/04 15:24:39 manu Exp $ */
+/* $Id: acl.c,v 1.58 2007/03/11 13:24:24 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.57 2007/03/04 15:24:39 manu Exp $");
+__RCSID("$Id: acl.c,v 1.58 2007/03/11 13:24:24 manu Exp $");
 #endif
 #endif
 
@@ -953,11 +953,18 @@ acl_add_regex(ad, data)
 		exit(EX_OSERR);
 	}
 
+	/* Remove leading and trailing / */
 	if (regexstr[0] == '/')
 		regexstr++;
 	if ((strlen(regexstr) > 0) && (regexstr[strlen(regexstr) - 1] == '/'))
 		regexstr[strlen(regexstr) - 1] = '\0';
 
+	/* Change escaped / into / */
+	for (cp = regexstr; *cp; cp++) {
+		if ((*cp == '\\') && (*(cp + 1) == '/'))
+			memmove(cp, cp + 1, strlen(cp + 1) + 1);
+	}
+	
 	flags = (REG_ICASE | REG_NEWLINE);
 	if (conf.c_extendedregex)
 		flags |= REG_EXTENDED;
