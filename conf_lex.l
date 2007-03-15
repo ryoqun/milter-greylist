@@ -74,6 +74,7 @@ sm_macro	[Ss][Mm]_[Mm][Aa][Cc][Rr][Oo]
 urlcheck	[Uu][Rr][Ll][Cc][Hh][Ee][Cc][Kk]
 postmsg		[Pp][Oo][Ss][Tt][Mm][Ss][Gg]
 getprop		[Gg][Ee][Tt][Pp][Rr][Oo][Pp]
+fork		[Ff][Oo][Rr][Kk]
 clear		[Cc][Ll][Ee][Aa][Rr]
 unset		[Uu][Nn][Ss][Ee][Tt]
 list		[Ll][Ii][Ss][Tt]
@@ -115,7 +116,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.69 2007/03/11 13:24:24 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.70 2007/03/15 04:55:45 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -177,6 +178,7 @@ prop		"$"[-_A-Za-z0-9]+
 {postmsg}	{ return POSTMSG; }
 {getprop}	{ return GETPROP; }
 {clear}		{ return CLEAR; }
+{fork}		{ return FORK; }
 {unset}  	{ return UNSET; }
 {list}  	{ return LIST; }
 {flushaddr}  	{ return FLUSHADDR; }

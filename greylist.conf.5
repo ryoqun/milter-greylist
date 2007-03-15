@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.71 2007/02/27 04:39:49 manu Exp $
+.\" $Id: greylist.conf.5,v 1.72 2007/03/15 04:55:45 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -651,10 +651,18 @@ keyword at the end of
 definition. If this option is enabled, the gathered properties can be 
 accessed in the current and following ACL by prefixing them by a dollar ($).
 If the 
-.I 
-clear
+.I clear
 keyword is added, then properties will be cleaned up before handling a new
 recipient. This avoids properties for several recipients to mix.
+Finally, the
+.I fork
+keyword instructs 
+.B milter-greylist(8)
+to fork a separate instance of itself for performing the queries. Use it if 
+you encounter thread-safety problems. 
+.I fork
+is not compatible with
+.I postmsg\fR.
 .PP
 Here is an example that will use various DNSRBL depending on a per-recipient
 setting stored in the 

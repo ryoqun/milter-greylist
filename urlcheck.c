@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.19 2007/03/07 12:24:36 manu Exp $ */
+/* $Id: urlcheck.c,v 1.20 2007/03/15 04:55:45 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,17 +36,19 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.19 2007/03/07 12:24:36 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.20 2007/03/15 04:55:45 manu Exp $");
 #endif
 #endif
 
 #include <stdio.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
 #include <errno.h>
 #include <ctype.h>
 #include <sysexits.h>
+#include <signal.h>
 
 #ifdef HAVE_OLD_QUEUE_H 
 #include "queue.h"
@@ -103,6 +105,16 @@ static struct urlcheck_cnx *get_cnx(struct urlcheck_entry *);
 static void urlcheck_prop_push(char *, char *, int, struct mlfi_priv *);
 static void urlcheck_prop_clear_tmp(struct mlfi_priv *);
 static void urlcheck_prop_untmp(struct mlfi_priv *);
+
+static void urlcheck_validate_pipe(struct iovec *, struct urlcheck_entry *, 
+				   struct urlcheck_cnx *, char *);
+static void urlcheck_validate_internal(struct iovec *, struct urlcheck_entry *, 
+				       struct urlcheck_cnx *, char *, 
+				       acl_stage_t, struct mlfi_priv *);
+static void urlcheck_validate_helper(struct urlcheck_entry *, 
+				     struct urlcheck_cnx *);
+static void urlcheck_cleanup_pipe(struct urlcheck_cnx *);
+void urlcheck_helper_timeout(int);
 
 #define URLCHECK_ANSWER_MAX	4096
 
@@ -162,6 +174,11 @@ urlcheck_def_add(name, url, max_cnx, flags) /* acllist must be write locked */
 	while (max_cnx > 0) {
 		uc->uc_hdl = NULL;
 		uc->uc_old = 0;
+		uc->uc_pipe_req[0] = -1;
+		uc->uc_pipe_req[1] = -1;
+		uc->uc_pipe_rep[0] = -1;
+		uc->uc_pipe_rep[1] = -1;
+		uc->uc_pid = -1;
 		if (pthread_mutex_init(&uc->uc_lock, NULL) != 0) {
 			mg_log(LOG_ERR, "pthread_mutex_init() failed: %s",
 			    strerror(errno));
@@ -175,9 +192,11 @@ urlcheck_def_add(name, url, max_cnx, flags) /* acllist must be write locked */
 	LIST_INSERT_HEAD(&urlcheck_head, ue, u_list);
 
 	if (conf.c_debug || conf.c_acldebug) {
-		mg_log(LOG_DEBUG, "load URL check \"%s\" \"%s\" %d%s%s", 
+		mg_log(LOG_DEBUG, "load URL check \"%s\" \"%s\" %d%s%s%s%s", 
 		    ue->u_name, ue->u_url, ue->u_maxcnx,
 		    getprop ? " getprop" : "", 
+		    (ue->u_flags & U_CLEARPROP) ? " clear" : "", 
+		    (ue->u_flags & U_FORK) ? " fork" : "", 
 		    postmsg ? " postmsg" : "");
 	}
 
@@ -231,6 +250,8 @@ urlcheck_clear(void)	/* acllist must be write locked */
 
 			if (uc->uc_hdl != NULL)
 				curl_easy_cleanup(uc->uc_hdl);
+
+			urlcheck_cleanup_pipe(uc);
 
 			pthread_mutex_destroy(&uc->uc_lock);
 
@@ -539,16 +560,9 @@ get_cnx(ue)
 
 	/* 
 	 * We now have a lock on a connexion 
-	 * Record the time and initialize it if needed
+	 * Record the time 
 	 */
 	cnx->uc_old = time(NULL);
-
-	if (cnx->uc_hdl == NULL) {
-		if ((cnx->uc_hdl = curl_easy_init()) == NULL) {
-			mg_log(LOG_ERR, "curl_easy_init() failed");
-			exit(EX_SOFTWARE);
-		}
-	}
 
 	return cnx;
 }
@@ -563,13 +577,10 @@ urlcheck_validate(ad, stage, ap, priv)
 {
 	char *rcpt;
 	struct urlcheck_entry *ue;
-	CURL *ch;
-	CURLcode cerr;
 	char *url;
 	int retval = 0;
 	struct iovec data;
 	struct urlcheck_cnx *cnx;
-	struct curl_slist *headers = NULL;
 
 	rcpt = priv->priv_cur_rcpt;
 	ue = ad->urlcheck;
@@ -579,6 +590,246 @@ urlcheck_validate(ad, stage, ap, priv)
 		mg_log(LOG_DEBUG, "checking \"%s\"\n", url);
 
 	cnx = get_cnx(ue);
+
+	data.iov_base = NULL;
+	data.iov_len = 0;
+
+	if (ue->u_flags & U_FORK)
+		urlcheck_validate_pipe(&data, ue, cnx, url);
+	else
+		urlcheck_validate_internal(&data, ue, cnx, url, stage, priv);
+
+	if (data.iov_base == NULL) {
+		mg_log(LOG_WARNING, "urlcheck failed: no answer");
+		goto out;
+	}
+
+out:
+	free(url);
+
+	if (pthread_mutex_unlock(&cnx->uc_lock) != 0) {
+		mg_log(LOG_ERR, "pthread_mutex_unlock failed: %s",
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if (data.iov_base) {
+		retval = answer_parse(&data, ap, ue->u_flags, 
+		    (ue->u_flags & U_GETPROP) ? priv : NULL);
+		free(data.iov_base);
+	}
+
+	return retval;
+}
+
+static void
+urlcheck_validate_pipe(data, ue, cnx, url)
+	struct iovec *data;
+	struct urlcheck_entry *ue;
+	struct urlcheck_cnx *cnx;
+	char *url;
+{
+	ssize_t size;
+
+	if (cnx->uc_pid == -1) {
+		/* Fork a new helper */
+
+		if (pipe(cnx->uc_pipe_req) == -1) {
+			mg_log(LOG_ERR, "pipe() failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+		if (pipe(cnx->uc_pipe_rep) == -1) {
+			mg_log(LOG_ERR, "pipe() failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+
+		switch(cnx->uc_pid = fork()) {
+		case -1:
+			mg_log(LOG_ERR, "fork() failed: %s", strerror(errno));
+			exit(EX_OSERR);
+			break;
+		case 0:
+			if (signal(SIGALRM, 
+			    *urlcheck_helper_timeout) == SIG_ERR)
+				mg_log(LOG_ERR, 
+				    "signal(SIGALRM) failed: %s",
+				    strerror(errno));
+
+			if (conf.c_debug)
+				mg_log(LOG_DEBUG,
+				    "started urlcheck helper (pid %d)",
+				    getpid());
+			while (1)
+				urlcheck_validate_helper(ue, cnx);
+			/* NOTREACHED */
+			break;
+		default:
+			break;
+		}
+	}
+
+	size = strlen(url) + 1;
+
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "%s: %d bytes to write", __func__, size);
+
+	if ((write(cnx->uc_pipe_req[1], &size, sizeof(size)) != sizeof(size))) {
+		urlcheck_cleanup_pipe(cnx);
+		goto out;
+	}
+
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "%s: write \"%s\"", __func__, url);
+
+	if (write(cnx->uc_pipe_req[1], url, size) != size) {
+		urlcheck_cleanup_pipe(cnx);
+		goto out;
+	}
+
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "%s: awaiting reply", __func__);
+
+	if (read(cnx->uc_pipe_rep[0], &size, sizeof(size)) != sizeof(size)) {
+		urlcheck_cleanup_pipe(cnx);
+		goto out;
+	}
+
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "%s: %d bytes to read", __func__, size);
+
+	data->iov_len = size;
+	if ((data->iov_base = malloc(size)) == NULL) {
+		mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if (read(cnx->uc_pipe_rep[0], data->iov_base, size) != size) {
+		urlcheck_cleanup_pipe(cnx);
+		goto out;
+	}
+out:
+	return;
+}
+
+void
+urlcheck_helper_timeout(sig)
+	int sig;
+{
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "urlcheck_helper_timeout");
+
+	if (getppid() == 1) {
+		mg_log(LOG_INFO, 
+		    "parent died, urlcheck helper exit (pid %d)",
+		    getpid());
+		exit(EX_OK);
+	}
+
+	(void)alarm(URLCHECK_HELPER_TIMEOUT);
+
+	return;
+}
+
+static void
+urlcheck_validate_helper(ue, cnx)
+	struct urlcheck_entry *ue;
+	struct urlcheck_cnx *cnx;
+{
+	ssize_t size;
+	char *url;
+	struct iovec data;
+
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "%s", __func__);
+
+	(void)alarm(URLCHECK_HELPER_TIMEOUT);
+
+	if (read(cnx->uc_pipe_req[0], &size, sizeof(size)) != sizeof(size)) {
+		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		exit(EX_OSERR);
+	}
+
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "%s: %d bytes to read", __func__, size);
+
+	if ((url = malloc(size)) == NULL) {
+		mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if (read(cnx->uc_pipe_req[0], url, size) != size) {
+		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		exit(EX_OSERR);
+	}
+
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, "%s: url = \"%s\"", __func__, url);
+
+	data.iov_base = NULL;
+	data.iov_len = 0;
+
+	/*
+	 * stage and priv are used for the postmsg option. For now 
+	 * it is not compatible with the fork option, so we just lie
+	 * about it being AS_RCPT/NULL so that they are not used.
+	 */
+	urlcheck_validate_internal(&data, ue, cnx, url, AS_RCPT, NULL);
+
+	size = data.iov_len;
+	if (write(cnx->uc_pipe_rep[1], &size, sizeof(size)) != sizeof(size)) {
+		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		exit(EX_OSERR);
+	}
+
+	if (write(cnx->uc_pipe_rep[1], data.iov_base, size) != size) {
+		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		exit(EX_OSERR);
+	}
+
+	if (data.iov_base != NULL)
+		free(data.iov_base);
+	free(url);
+	return;
+}
+
+static void
+urlcheck_cleanup_pipe(cnx)
+	struct urlcheck_cnx *cnx;
+{
+	mg_log(LOG_ERR, "urlcheck I/O failed: %s", strerror(errno));
+
+	close(cnx->uc_pipe_req[0]);
+	close(cnx->uc_pipe_req[1]);
+	close(cnx->uc_pipe_rep[0]);
+	close(cnx->uc_pipe_rep[1]);
+
+	kill(cnx->uc_pid, SIGTERM);
+	cnx->uc_pid = -1;
+
+	return;
+}
+
+
+static void
+urlcheck_validate_internal(data, ue, cnx, url, stage, priv)
+	struct iovec *data;
+	struct urlcheck_entry *ue;
+	struct urlcheck_cnx *cnx;
+	char *url;
+	acl_stage_t stage;
+	struct mlfi_priv *priv;
+{
+	CURL *ch;
+	CURLcode cerr;
+	struct curl_slist *headers = NULL;
+
+	if (cnx->uc_hdl == NULL) {
+		if ((cnx->uc_hdl = curl_easy_init()) == NULL) {
+			mg_log(LOG_ERR, "curl_easy_init() failed");
+			exit(EX_SOFTWARE);
+		}
+	}
+
 	ch = cnx->uc_hdl;
 
 	if ((cerr = curl_easy_setopt(ch, CURLOPT_URL, url)) != CURLE_OK) {
@@ -594,10 +845,8 @@ urlcheck_validate(ad, stage, ap, priv)
 		goto out;
 	}
 
-	data.iov_base = NULL;
-	data.iov_len = 0;
 	if ((cerr = curl_easy_setopt(ch, 
-	    CURLOPT_WRITEDATA, (void *)&data)) != CURLE_OK) {
+	    CURLOPT_WRITEDATA, (void *)data)) != CURLE_OK) {
 		mg_log(LOG_WARNING, "curl_easy_setopt(CURLOPT_WRITEDATA) "
 		    "failed; %s", curl_easy_strerror(cerr));
 		goto out;
@@ -680,13 +929,11 @@ urlcheck_validate(ad, stage, ap, priv)
 		goto out;
 	}
 
-	if (data.iov_base == NULL) {
+	if (data->iov_base == NULL) {
 		mg_log(LOG_WARNING, "urlcheck failed: no answer");
 		goto out;
 	}
 
-	retval = answer_parse(&data, ap, ue->u_flags, 
-	    (ue->u_flags & U_GETPROP) ? priv : NULL);
 out:
 	if (headers != NULL)
 		curl_slist_free_all(headers);
@@ -695,17 +942,7 @@ out:
 		curl_easy_cleanup(cnx->uc_hdl);
 	cnx->uc_hdl = NULL;
 
-	if (pthread_mutex_unlock(&cnx->uc_lock) != 0) {
-		mg_log(LOG_ERR, "pthread_mutex_unlock failed: %s",
-		    strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	if (data.iov_base)
-		free(data.iov_base);
-
-	free(url);
-	return retval;
+	return;
 }
 
 static int
@@ -927,6 +1164,7 @@ urlcheck_prop_push(linep, valp, flags, priv)
 	int flags;
 	struct mlfi_priv *priv;
 {
+	char *cp;
 	struct urlcheck_prop *up;
 
 	if ((up = malloc(sizeof(*up))) == NULL) {
@@ -943,6 +1181,15 @@ urlcheck_prop_push(linep, valp, flags, priv)
 		mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
+
+	/*
+	 * Convert everything to lower-case
+	 */
+	for (cp = up->up_name; *cp; cp++)
+		*cp = (char)tolower((int)*cp);
+
+	for (cp = up->up_value; *cp; cp++)
+		*cp = (char)tolower((int)*cp);
 
 	up->up_flags = UP_TMPPROP;
 	if (flags & U_CLEARPROP);

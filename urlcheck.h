@@ -1,4 +1,4 @@
-/* $Id: urlcheck.h,v 1.11 2007/03/01 17:34:24 manu Exp $ */
+/* $Id: urlcheck.h,v 1.12 2007/03/15 04:55:45 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -33,6 +33,9 @@
 
 struct urlcheck_cnx {
 	CURL *uc_hdl;
+	int uc_pipe_req[2];
+	int uc_pipe_rep[2];
+	pid_t uc_pid;
 	time_t uc_old;
 	pthread_mutex_t uc_lock;
 };
@@ -50,6 +53,9 @@ struct urlcheck_entry {
 #define U_POSTMSG	0x1
 #define U_GETPROP	0x2
 #define U_CLEARPROP	0x4
+#define U_FORK		0x10
+
+#define URLCHECK_HELPER_TIMEOUT 60
 
 struct urlcheck_prop_data {
 	char *upd_name;
