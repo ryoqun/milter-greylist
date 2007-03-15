@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.20 2007/03/15 04:55:45 manu Exp $ */
+/* $Id: urlcheck.c,v 1.21 2007/03/15 05:33:00 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.20 2007/03/15 04:55:45 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.21 2007/03/15 05:33:00 manu Exp $");
 #endif
 #endif
 
@@ -796,6 +796,9 @@ static void
 urlcheck_cleanup_pipe(cnx)
 	struct urlcheck_cnx *cnx;
 {
+	if (cnx->uc_pid == -1)
+		return;
+
 	mg_log(LOG_ERR, "urlcheck I/O failed: %s", strerror(errno));
 
 	close(cnx->uc_pipe_req[0]);
@@ -803,7 +806,9 @@ urlcheck_cleanup_pipe(cnx)
 	close(cnx->uc_pipe_rep[0]);
 	close(cnx->uc_pipe_rep[1]);
 
-	kill(cnx->uc_pid, SIGTERM);
+	mg_log(LOG_ERR, "killing helper at pid = %d", cnx->uc_pid);
+
+	kill(cnx->uc_pid, SIGKILL);
 	cnx->uc_pid = -1;
 
 	return;
