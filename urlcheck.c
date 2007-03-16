@@ -1,7 +1,7 @@
-/* $Id: urlcheck.c,v 1.21 2007/03/15 05:33:00 manu Exp $ */
+/* $Id: urlcheck.c,v 1.22 2007/03/16 03:58:04 manu Exp $ */
 
 /*
- * Copyright (c) 2006 Emmanuel Dreyfus
+ * Copyright (c) 2006-2007 Emmanuel Dreyfus
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.21 2007/03/15 05:33:00 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.22 2007/03/16 03:58:04 manu Exp $");
 #endif
 #endif
 
@@ -62,6 +62,7 @@ __RCSID("$Id: urlcheck.c,v 1.21 2007/03/15 05:33:00 manu Exp $");
 #include "acl.h"
 #include "conf.h"
 #include "urlcheck.h"
+#include "sync.h"
 
 #define BOUNDARY_LEN	4
 struct post_data {
@@ -111,6 +112,8 @@ static void urlcheck_validate_pipe(struct iovec *, struct urlcheck_entry *,
 static void urlcheck_validate_internal(struct iovec *, struct urlcheck_entry *, 
 				       struct urlcheck_cnx *, char *, 
 				       acl_stage_t, struct mlfi_priv *);
+static void urlcheck_helper_init(struct urlcheck_entry *, 
+				 struct urlcheck_cnx *);
 static void urlcheck_validate_helper(struct urlcheck_entry *, 
 				     struct urlcheck_cnx *);
 static void urlcheck_cleanup_pipe(struct urlcheck_cnx *);
@@ -649,18 +652,7 @@ urlcheck_validate_pipe(data, ue, cnx, url)
 			exit(EX_OSERR);
 			break;
 		case 0:
-			if (signal(SIGALRM, 
-			    *urlcheck_helper_timeout) == SIG_ERR)
-				mg_log(LOG_ERR, 
-				    "signal(SIGALRM) failed: %s",
-				    strerror(errno));
-
-			if (conf.c_debug)
-				mg_log(LOG_DEBUG,
-				    "started urlcheck helper (pid %d)",
-				    getpid());
-			while (1)
-				urlcheck_validate_helper(ue, cnx);
+			urlcheck_helper_init(ue, cnx);
 			/* NOTREACHED */
 			break;
 		default:
@@ -709,6 +701,34 @@ urlcheck_validate_pipe(data, ue, cnx, url)
 	}
 out:
 	return;
+}
+
+static void
+urlcheck_helper_init(ue, cnx)
+	struct urlcheck_entry *ue;
+	struct urlcheck_cnx *cnx;
+{
+	/* 
+	 * Close the MX sync socket so that we don't hold them 
+	 * if milter-greylist main process exits, thus preventing
+	 * it from restarting
+	 */
+	sync_master_stop();
+
+	if (signal(SIGALRM, 
+	    *urlcheck_helper_timeout) == SIG_ERR)
+		mg_log(LOG_ERR, 
+		    "signal(SIGALRM) failed: %s",
+		    strerror(errno));
+
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG,
+		    "started urlcheck helper (pid %d)",
+		    getpid());
+	while (1)
+		urlcheck_validate_helper(ue, cnx);
+
+	/* NOTREACHED */
 }
 
 void

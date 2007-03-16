@@ -1,7 +1,7 @@
-/* $Id: urlcheck.h,v 1.12 2007/03/15 04:55:45 manu Exp $ */
+/* $Id: urlcheck.h,v 1.13 2007/03/16 03:58:04 manu Exp $ */
 
 /*
- * Copyright (c) 2006 Emmanuel Dreyfus
+ * Copyright (c) 2006-2007 Emmanuel Dreyfus
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without

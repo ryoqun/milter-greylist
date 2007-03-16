@@ -1,8 +1,8 @@
-/* $Id: sync.h,v 1.19 2006/08/30 04:57:58 manu Exp $ */
+/* $Id: sync.h,v 1.20 2007/03/16 03:58:04 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
- * Copyright (c) 2004 Emmanuel Dreyfus
+ * Copyright (c) 2004-2007 Emmanuel Dreyfus
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -100,6 +100,7 @@ void sync_free(struct sync *);
 
 void sync_sender(void *);
 void sync_master_restart(void);
+void sync_master_stop(void);
 void *sync_master(void *);
 void sync_server(void *);
 void sync_help(FILE *);

@@ -1,7 +1,7 @@
-/* $Id: sync.c,v 1.69 2006/11/07 05:12:01 manu Exp $ */
+/* $Id: sync.c,v 1.70 2007/03/16 03:58:04 manu Exp $ */
 
 /*
- * Copyright (c) 2004 Emmanuel Dreyfus
+ * Copyright (c) 2004-2007 Emmanuel Dreyfus
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.69 2006/11/07 05:12:01 manu Exp $");
+__RCSID("$Id: sync.c,v 1.70 2007/03/16 03:58:04 manu Exp $");
 #endif
 #endif
 
@@ -590,6 +590,19 @@ bad:
 	peer->p_stream = NULL;
 
 	return -1;
+}
+
+void
+sync_master_stop(void) {
+	if (sync_master4.sock != 1) {
+		close(sync_master4.sock);
+		sync_master4.sock = -1;
+	}
+
+	if (sync_master6.sock != 1) {
+		close(sync_master6.sock);
+		sync_master6.sock = -1;
+	}
 }
 
 void
