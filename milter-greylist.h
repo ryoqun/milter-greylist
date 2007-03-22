@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.64 2007/02/26 04:27:50 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.65 2007/03/22 05:39:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -226,13 +226,6 @@ char *fstring_escape(char *);
 #else
 size_t mystrlcat(char *, const char *src, size_t size);
 #endif
-
-#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT))
-#define MLFI_HELO mlfi_helo
-#else
-#define MLFI_HELO NULL
-#endif
-
 
 /*
  * Locking management

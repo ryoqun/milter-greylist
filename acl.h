@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.25 2007/02/24 22:10:21 manu Exp $ */
+/* $Id: acl.h,v 1.26 2007/03/22 05:39:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -60,6 +60,9 @@ typedef enum {
 	AC_EMAIL,
 	AC_REGEX,
 	AC_STRING,
+	AC_HELO,
+	AC_HELO_RE,
+	AC_HELO_LIST,
 	AC_FROM,
 	AC_FROM_RE,
 	AC_FROM_LIST,
@@ -242,6 +245,10 @@ int acl_netblock_filter(acl_data_t *, acl_stage_t,
 			struct acl_param *, struct mlfi_priv *);
 int acl_list_filter(acl_data_t *, acl_stage_t, 
 		    struct acl_param *, struct mlfi_priv *);
+int acl_helo_strstr(acl_data_t *, acl_stage_t, 
+		    struct acl_param *, struct mlfi_priv *);
+int acl_helo_regexec(acl_data_t *, acl_stage_t, 
+		     struct acl_param *, struct mlfi_priv *);
 int acl_from_cmp(acl_data_t *, acl_stage_t, 
 		 struct acl_param *, struct mlfi_priv *);
 int acl_from_regexec(acl_data_t *, acl_stage_t, 
@@ -306,4 +313,5 @@ int myregexec(struct mlfi_priv *, acl_data_t *,
 #define EXF_CLOCKSPEC	(1 << 23)
 #define EXF_GEOIP	(1 << 24)
 #define EXF_PROP	(1 << 25)
+#define EXF_HELO	(1 << 26)
 #endif /* _ACL_H_ */

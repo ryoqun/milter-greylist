@@ -15,6 +15,7 @@ email		{mailbox}"\@"{domainname}
 comment		#.*$
 blank		[ \t]+
 addr		[Aa][Dd][Dd][Rr]:?
+helo		[Hh][Ee][Ll][Oo]
 from		[Ff][Rr][Oo][Mm]:?
 rcpt		[Rr][Cc][Pp][Tt]:?
 peer		[Pp][Ee][Ee][Rr]:?
@@ -116,7 +117,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.70 2007/03/15 04:55:45 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.71 2007/03/22 05:39:16 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -151,6 +152,7 @@ prop		"$"[-_A-Za-z0-9]+
 			return PROP;
 		}
 {addr}		{ return ADDR; }
+{helo}		{ BEGIN(S_REGEX); return HELO; }
 {from}		{ BEGIN(S_REGEX); return FROM; }
 {rcpt}		{ BEGIN(S_REGEX); return RCPT; }
 {peer}		{ return PEER; }

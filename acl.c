@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.58 2007/03/11 13:24:24 manu Exp $ */
+/* $Id: acl.c,v 1.59 2007/03/22 05:39:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.58 2007/03/11 13:24:24 manu Exp $");
+__RCSID("$Id: acl.c,v 1.59 2007/03/22 05:39:16 manu Exp $");
 #endif
 #endif
 
@@ -160,6 +160,18 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  *acl_free_regex, *acl_domain_regexec },
 	{ AC_DOMAIN_LIST, UNIQUE, AS_ANY, "domain_list", 
 	  AT_LIST,  AC_NONE, AC_NONE, EXF_DOMAIN,
+	  *acl_print_list, *acl_add_list, 
+	  NULL, *acl_list_filter },
+	{ AC_HELO, UNIQUE, AS_RCPT, "helo", 
+	  AT_STRING, AC_HELO_LIST, AC_STRING, EXF_HELO,
+	  *acl_print_string, *acl_add_string, 
+	  *acl_free_string, *acl_helo_strstr },
+	{ AC_HELO_RE, UNIQUE, AS_RCPT, "helo_re", 
+	  AT_REGEX, AC_HELO_LIST, AC_REGEX, EXF_HELO,
+	  *acl_print_regex, *acl_add_regex, 
+	  *acl_free_regex, *acl_helo_regexec },
+	{ AC_HELO_LIST, UNIQUE, AS_RCPT, "helo_list", 
+	  AT_LIST, AC_NONE, AC_NONE, EXF_HELO,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },
 	{ AC_FROM, UNIQUE, AS_ANY, "from", 
@@ -561,6 +573,18 @@ out:
 }
 
 int
+acl_helo_regexec(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	if (myregexec(priv, ad, ap, priv->priv_helo) == 0)
+		return 1;
+	return 0;
+}
+
+int
 acl_from_regexec(ad, stage, ap, priv)
 	acl_data_t *ad;
 	acl_stage_t stage;
@@ -656,6 +680,21 @@ acl_header_regexec(ad, stage, ap, priv)
 	TAILQ_FOREACH(h, &priv->priv_header, h_list)
 		if (myregexec(priv, ad, ap, h->h_line) == 0)
 			return 1;
+	return 0;
+}
+
+int
+acl_helo_strstr(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	char *helo = ad->string;
+
+	printf("-> %s/%s\n", priv->priv_helo, helo);
+	if (strstr(priv->priv_helo, helo) != NULL) 
+		return 1;
 	return 0;
 }
 
