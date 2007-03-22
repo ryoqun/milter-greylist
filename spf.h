@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.12 2007/01/09 22:22:43 manu Exp $ */
+/* $Id: spf.h,v 1.13 2007/03/22 23:11:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -47,7 +47,7 @@ int spf_check(acl_data_t *, acl_stage_t,
 		  struct acl_param *, struct mlfi_priv *);
 #define SPF_CHECK(priv) spf_check(NULL, AS_RCPT, NULL, (priv))
 #else
-#define SPF_CHECK(priv) EXF_NONE
+#define SPF_CHECK(priv) 0
 
 #endif
 

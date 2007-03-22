@@ -1,8 +1,10 @@
+3.1.9
+	Fix again an accept-all-bug when built with SPF (AIDA Shinra)
 3.1.8
 	Allow filtering on the HELO string
 	Back out previous SPF fix, it caused accept-all with SPF-less builds
 3.1.7
-	Fix a accept-all-bug when built with SPF (AIDA Shinra)
+	Fix an accept-all-bug when built with SPF (AIDA Shinra)
 	Option to perform urlchecks in forked instance to avoid thread-unsafety
 	Allow escaping of " in strings and / in regex
 	Fix whitelisting using access.db (Georg Horn)
