@@ -1,5 +1,6 @@
 3.1.8
 	Allow filtering on the HELO string
+	Back out previous SPF fix, it caused accept-all with SPF-less builds
 3.1.7
 	Fix a accept-all-bug when built with SPF (AIDA Shinra)
 	Option to perform urlchecks in forked instance to avoid thread-unsafety
