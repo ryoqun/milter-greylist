@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.59 2007/03/22 05:39:16 manu Exp $ */
+/* $Id: acl.c,v 1.60 2007/03/26 19:29:04 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.59 2007/03/22 05:39:16 manu Exp $");
+__RCSID("$Id: acl.c,v 1.60 2007/03/26 19:29:04 manu Exp $");
 #endif
 #endif
 
@@ -228,14 +228,14 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  NULL, *macro_check },
 	{ AC_MACRO_LIST, MULTIPLE_OK, AS_ANY, "macro_list", 
 	  AT_LIST, AC_NONE, AC_NONE, EXF_MACRO,
-	  *acl_print_macro, *acl_add_macro,
-	  NULL, *macro_check },
+	  *acl_print_list, *acl_add_list,
+	  NULL, *acl_list_filter },
 #ifdef USE_DNSRBL
-	{ AC_DNSRBL, MULTIPLE_OK, AS_ANY, "macro", 
+	{ AC_DNSRBL, MULTIPLE_OK, AS_ANY, "dnsrbl", 
 	  AT_DNSRBL, AC_DNSRBL_LIST, AC_STRING, EXF_DNSRBL,
 	  *acl_print_dnsrbl, *acl_add_dnsrbl,
 	  NULL, *dnsrbl_check_source },
-	{ AC_DNSRBL_LIST, MULTIPLE_OK, AS_ANY, "macro_list", 
+	{ AC_DNSRBL_LIST, MULTIPLE_OK, AS_ANY, "dnsrbl_list", 
 	  AT_LIST, AC_NONE, AC_NONE, EXF_DNSRBL,
 	  *acl_print_list, *acl_add_list, 
 	  NULL, *acl_list_filter },

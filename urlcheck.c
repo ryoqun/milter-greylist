@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.22 2007/03/16 03:58:04 manu Exp $ */
+/* $Id: urlcheck.c,v 1.23 2007/03/26 19:29:04 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.22 2007/03/16 03:58:04 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.23 2007/03/26 19:29:04 manu Exp $");
 #endif
 #endif
 
@@ -990,7 +990,7 @@ answer_parse(data, ap, flags, priv)
 
 	if (len == 0) {
 		mg_log(LOG_DEBUG, "ignoring blank reply");
-		return -1;
+		return 0;
 	}
 	buf[len - 1] = '\0';	/* Prevent run-away printf */
 	len--;			/* Stop before trailing 0 */

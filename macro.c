@@ -1,4 +1,4 @@
-/* $Id: macro.c,v 1.4 2006/12/29 18:32:44 manu Exp $ */
+/* $Id: macro.c,v 1.5 2007/03/26 19:29:04 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: macro.c,v 1.4 2006/12/29 18:32:44 manu Exp $");
+__RCSID("$Id: macro.c,v 1.5 2007/03/26 19:29:04 manu Exp $");
 #endif
 #endif
 
@@ -81,7 +81,7 @@ macro_check(ad, stage, ap, priv)
 	struct macro_entry *me;
 	char *value;
 	int extended;
-	int retval;
+	int retval = 0;
 
 	ctx = priv->priv_ctx;
 	me = ad->macro;
@@ -90,20 +90,18 @@ macro_check(ad, stage, ap, priv)
 							 
 	switch (me->m_type) {
 	case M_UNSET:
-		retval = (value == NULL) ? 0 : 1;
+		if (value == NULL)
+			retval = 1;
 		break;
 	case M_STRING:
-		if (value == NULL)
-			retval = -1;
-		else
-			retval = strcmp(value, me->m_string);
+		if (value != NULL && strcmp(value, me->m_string) == 0)
+			retval = 1;
 		break;
 	case M_REGEX:
-		if (value == NULL) {
-			retval = -1;
-		} else {
+		if (value != NULL) {
 			extended = (conf.c_extendedregex ? REG_EXTENDED : 0);
-			retval = regexec(me->m_regex, value, 0, NULL, 0);
+			if (regexec(me->m_regex, value, 0, NULL, 0) == 0)
+				retval = 1;
 		}
 		break;
 	default:
@@ -113,10 +111,9 @@ macro_check(ad, stage, ap, priv)
 	}
 
 	if (conf.c_debug) {
-		mg_log(LOG_DEBUG, "sm_macro \"%s\" match", me->m_name);
 		mg_log(LOG_DEBUG, "sm_macro \"%s\" %s=%s %s", me->m_name,
 		    me->m_macro, value ? value : "(null)",
-		    retval ? "nomatch" : "match");
+		    retval ? "match" : "nomatch");
 	}
 
 	return retval;

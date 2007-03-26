@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.24 2007/02/26 04:27:50 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.25 2007/03/26 19:29:04 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.24 2007/02/26 04:27:50 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.25 2007/03/26 19:29:04 manu Exp $");
 #endif
 #endif
 
@@ -163,14 +163,13 @@ dnsrbl_check_source(ad, stage, ap, priv)
 #endif
 	if (res_ninit(&res) != 0) {
 		mg_log(LOG_ERR, "res_ninit failed: %s", strerror(errno));
-		return -1;
+		return 0;
 	}
 
 	reverse_endian(SA(&ss), sa);
 
 	if ((iptostring(SA(&ss), salen, req, NS_MAXDNAME)) == NULL){
 		mg_log(LOG_ERR, "iptostring failed: %s", strerror(errno));
-		retval = -1;
 		goto end;
 	}
 
@@ -187,7 +186,6 @@ dnsrbl_check_source(ad, stage, ap, priv)
 
 	if (ns_initparse(ans, anslen, &handle) < 0) {
 		mg_log(LOG_ERR, "ns_initparse failed: %s", strerror(errno));
-		retval = -1;
 		goto end;
 	}
 
@@ -195,7 +193,6 @@ dnsrbl_check_source(ad, stage, ap, priv)
 		if ((ns_parserr(&handle, ns_s_an, i, &rr)) != 0) {
 			mg_log(LOG_ERR, "ns_parserr failed: %s", 
 			    strerror(errno));
-			retval = -1;
 			goto end;
 		}
 
