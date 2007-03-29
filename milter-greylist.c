@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.180 2007/03/22 23:11:35 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.181 2007/03/29 03:58:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.180 2007/03/22 23:11:35 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.181 2007/03/29 03:58:51 manu Exp $");
 #endif
 #endif
 
@@ -104,9 +104,12 @@ static char *gmtoffset(time_t *, char *, size_t);
 static void writepid(char *);
 static void log_and_report_greylisting(SMFICTX *, struct mlfi_priv *, char *);
 static void reset_acl_values(struct mlfi_priv *);
+static void smtp_reply_init(struct smtp_reply *);
+static void smtp_reply_free(struct smtp_reply *);
 static void add_recipient(struct mlfi_priv *, char *);
 static void set_sr_defaults(struct mlfi_priv *, char *, char *, char *);
 static sfsistat stat_from_code(char *);
+static int mg_setreply(SMFICTX *, struct mlfi_priv *, char *);
 #ifndef USE_POSTFIX
 static char *local_ipstr(struct mlfi_priv *);
 #endif
@@ -261,10 +264,7 @@ real_connect(ctx, hostname, addr)
 	smfi_setpriv(ctx, priv);
 	bzero((void *)priv, sizeof(*priv));
 	priv->priv_ctx = ctx;
-	priv->priv_sr.sr_whitelist = EXF_UNSET;
-	priv->priv_sr.sr_retcode = -1;
-	priv->priv_sr.sr_nmatch = 0;
-	priv->priv_sr.sr_pmatch = NULL;
+	smtp_reply_init(&priv->priv_sr);
 	LIST_INIT(&priv->priv_rcpt);
 	priv->priv_cur_rcpt = NULL;
 	priv->priv_rcptcount = 0;
@@ -470,29 +470,10 @@ real_envrcpt(ctx, envrcpt)
 	 */
 	urlcheck_prop_clear(priv);
 #endif
-	/*
-	 * For multiple-recipients messages, if the sender IP or the
-	 * sender e-mail address is whitelisted, authenticated, or
-	 * SPF compliant, then there is no need to check again, 
-	 * it is whitelisted for all the recipients.
-	 * 
-	 * Moreover, this will prevent a wrong X-Greylist header display
-	 * if the {IP, sender e-mail} address was whitelisted and the
-	 * last recipient was also whitelisted. If we would set 
-	 * priv_sr.sr_whitelist on the last recipient, all recipient 
-	 * would have a X-Greylist header explaining that they were 
-	 * whitelisted, whereas some of them would not.
-	 */
-	if ((priv->priv_sr.sr_whitelist & EXF_ADDR) ||
-	    (priv->priv_sr.sr_whitelist & EXF_DOMAIN) ||
-	    (priv->priv_sr.sr_whitelist & EXF_FROM) ||
-	    (priv->priv_sr.sr_whitelist & EXF_AUTH) ||
-	    (priv->priv_sr.sr_whitelist & EXF_SPF) ||
-	    (priv->priv_sr.sr_whitelist & EXF_NONIP) ||
-	    (priv->priv_sr.sr_whitelist & EXF_DRAC) ||
-	    (priv->priv_sr.sr_whitelist & EXF_ACCESSDB) ||
-	    (priv->priv_sr.sr_whitelist & EXF_MACRO) ||
-	    (priv->priv_sr.sr_whitelist & EXF_STARTTLS))
+
+	if ((priv->priv_sr.sr_whitelist & EXF_WHITELIST) &&
+	    (priv->priv_sr.sr_whitelist &
+	     (EXF_NONIP | EXF_AUTH | EXF_STARTTLS | EXF_SPF)))
 		goto exit_accept;
 
 #ifdef USE_DRAC
@@ -501,7 +482,7 @@ real_envrcpt(ctx, envrcpt)
 	    check_drac(addrstr)) {
 		mg_log(LOG_DEBUG, "whitelisted by DRAC");
 		priv->priv_sr.sr_elapsed = 0;
-		priv->priv_sr.sr_whitelist = EXF_DRAC;
+		priv->priv_sr.sr_whitelist = EXF_WHITELIST | EXF_DRAC;
 
 		goto exit_accept;
 	}
@@ -519,7 +500,7 @@ real_envrcpt(ctx, envrcpt)
 		mg_log(LOG_DEBUG, 
 		    "whitelisted by {greylist}");
 		priv->priv_sr.sr_elapsed = 0;
-		priv->priv_sr.sr_whitelist = EXF_ACCESSDB;
+		priv->priv_sr.sr_whitelist = EXF_WHITELIST | EXF_ACCESSDB;
  
 		goto exit_accept;
 	}
@@ -559,16 +540,7 @@ real_envrcpt(ctx, envrcpt)
 		    priv->priv_from, rcpt, aclstr);
 
 		set_sr_defaults(priv, code, ecode, msg);
-
-		msg = fstring_expand(priv, rcpt, priv->priv_sr.sr_msg);
-		free(priv->priv_sr.sr_msg);
-		priv->priv_sr.sr_msg = msg;
-
-		(void)smfi_setreply(ctx, 
-			priv->priv_sr.sr_code, 
-			priv->priv_sr.sr_ecode, 
-			msg);
-
+		mg_setreply(ctx, priv, rcpt);
 		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
@@ -779,7 +751,6 @@ real_eom(ctx)
 	SMFICTX *ctx;
 {
 	struct mlfi_priv *priv;
-	char *hdrstr;
 	char whystr [HDRLEN + 1];
 	struct smtp_reply rcpt_sr;
 	struct rcpt *rcpt;
@@ -820,6 +791,7 @@ real_eom(ctx)
 	 * We save data obtained from RCPT and we will restore it afterward
 	 */
 	memcpy(&rcpt_sr, &priv->priv_sr, sizeof(rcpt_sr));
+	smtp_reply_init(&priv->priv_sr);
 	acl_filter(AS_DATA, ctx, priv);
 	if (priv->priv_sr.sr_whitelist & EXF_BLACKLIST) {
 		char aclstr[16];
@@ -828,6 +800,7 @@ real_eom(ctx)
 		char *ecode = "5.7.1";
 		char *msg = "Go away!";
 
+		smtp_reply_free(&rcpt_sr);
 		if (priv->priv_sr.sr_acl_line != 0)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
 			    priv->priv_sr.sr_acl_line);
@@ -838,23 +811,17 @@ real_eom(ctx)
 		    priv->priv_from, aclstr);
 
 		set_sr_defaults(priv, code, ecode, msg);
-
-		msg = fstring_expand(priv, NULL, priv->priv_sr.sr_msg);
-		free(priv->priv_sr.sr_msg);
-		priv->priv_sr.sr_msg = msg;
-
-		(void)smfi_setreply(ctx, 
-			priv->priv_sr.sr_code, 
-			priv->priv_sr.sr_ecode, 
-			msg);
-
+		mg_setreply(ctx, priv, NULL);
 		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
 	/* Restore the info collected from RCPT stage */
+	smtp_reply_free(&priv->priv_sr);
 	memcpy(&priv->priv_sr, &rcpt_sr, sizeof(rcpt_sr));
 
-	if (priv->priv_sr.sr_elapsed == 0) {
+	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST) {
+		char *hdrstr = NULL;
+
 		if ((conf.c_report & C_NODELAYS) == 0)
 			goto out;
 			
@@ -955,11 +922,7 @@ real_eom(ctx)
 		}
 
 		smfi_addheader(ctx, HEADERNAME, hdrstr);
-
-		/* Keep track of this in case the stat feature wants it */
-		if (priv->priv_sr.sr_report != NULL)
-			free(priv->priv_sr.sr_report);
-		priv->priv_sr.sr_report = hdrstr;
+		priv->priv_sr.sr_report_x = hdrstr;
 
 		goto out;
 	}
@@ -976,11 +939,7 @@ real_eom(ctx)
 			    NULL, "Delayed for %E by %V");
 
 		smfi_addheader(ctx, HEADERNAME, hdrstr);
-
-		/* Keep track of this in case the stat feature wants it */
-		if (priv->priv_sr.sr_report != NULL)
-			free(priv->priv_sr.sr_report);
-		priv->priv_sr.sr_report = hdrstr;
+		priv->priv_sr.sr_report_x = hdrstr;
 	}
 
 out:
@@ -997,23 +956,7 @@ real_close(ctx)
 	struct body *b;
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) != NULL) {
-		if (priv->priv_sr.sr_code)
-			free(priv->priv_sr.sr_code);
-		if (priv->priv_sr.sr_ecode)
-			free(priv->priv_sr.sr_ecode);
-		if (priv->priv_sr.sr_msg)
-			free(priv->priv_sr.sr_msg);
-		if (priv->priv_sr.sr_report)
-			free(priv->priv_sr.sr_report);
-
-		if (priv->priv_sr.sr_pmatch) {
-			int i;		
-
-			for (i = 0; i < priv->priv_sr.sr_nmatch; i++)
-				if (priv->priv_sr.sr_pmatch[i] != NULL)
-					free(priv->priv_sr.sr_pmatch[i]);
-			free(priv->priv_sr.sr_pmatch);
-		}
+		smtp_reply_free(&priv->priv_sr);
 
 		while ((r = LIST_FIRST(&priv->priv_rcpt)) != NULL) {
 			LIST_REMOVE(r, r_list);
@@ -1734,7 +1677,9 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	char aclstr[16];
 	char *code = "451";
 	char *ecode = "4.7.1";
-	char *msg = "Greylisting in action, please come back later";
+	char *msg = conf.c_quiet ?
+		"Greylisting in action, please come back later" :
+		"Greylisting in action, please come back in %R";
 
 	/*
 	 * The message has been added to the greylist and will be delayed.
@@ -1766,40 +1711,8 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	    priv->priv_queueid, priv->priv_hostname, addrstr, 
 	    priv->priv_from, rcpt, delayed_rj, h, mn, s, aclstr);
 
-	code = (priv->priv_sr.sr_code) ? priv->priv_sr.sr_code : code;
-	ecode = (priv->priv_sr.sr_ecode) ? 
-	    priv->priv_sr.sr_ecode : ecode;
-
-	if (priv->priv_sr.sr_msg)
-		msg = priv->priv_sr.sr_msg;
-	else if (conf.c_quiet)
-		msg = "Greylisting in action, please come back later";
-	else
-		msg = "Greylisting in action, please come back in %R";
-
-	msg = fstring_expand(priv, rcpt, msg);
-
-	(void)smfi_setreply(ctx, code, ecode, msg);
-
-	/* 
-	 * Keep track of it for the stat feature 
-	 */
-	if (priv->priv_sr.sr_code == NULL)
-		if ((priv->priv_sr.sr_code = strdup(code)) == NULL) {
-			mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
-			exit(EX_OSERR);
-		}
-
-	if (priv->priv_sr.sr_ecode == NULL) 
-		if ((priv->priv_sr.sr_ecode = strdup(ecode)) == NULL) {
-			mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
-			exit(EX_OSERR);
-		}
-
-	if (priv->priv_sr.sr_msg)
-		free(priv->priv_sr.sr_msg);
-	priv->priv_sr.sr_msg = msg;
-
+	set_sr_defaults(priv, code, ecode, msg);
+	mg_setreply(ctx, priv, rcpt);
 	return;
 }
 
@@ -1849,28 +1762,47 @@ check_drac(dotted_ip)
 #endif	/* USE_DRAC */
 
 static void 
+smtp_reply_init(sr)
+	struct smtp_reply *sr;
+{
+	memset(sr, 0, sizeof(*sr));
+	sr->sr_retcode = -1;
+	/* sr->sr_elapsed = (time_t)0xdeadbeefU; */
+	sr->sr_delay = conf.c_delay;
+	sr->sr_autowhite = conf.c_autowhite_validity;
+
+	return;
+}
+
+static void 
+smtp_reply_free(sr)
+	struct smtp_reply *sr;
+{
+	free(sr->sr_code);
+	free(sr->sr_ecode);
+	free(sr->sr_msg);
+	free(sr->sr_msg_x);
+	free(sr->sr_report);
+	free(sr->sr_report_x);
+
+	if (sr->sr_pmatch) {
+		int i;		
+
+		for (i = 0; i < sr->sr_nmatch; i++)
+			if (sr->sr_pmatch[i] != NULL)
+				free(sr->sr_pmatch[i]);
+		free(sr->sr_pmatch);
+	}
+
+	return;
+}
+
+static void 
 reset_acl_values(priv)
 	struct mlfi_priv *priv;
 {
-	priv->priv_sr.sr_delay = conf.c_delay;
-	priv->priv_sr.sr_autowhite = conf.c_autowhite_validity;
-
-	if (priv->priv_sr.sr_code != NULL) {
-		free(priv->priv_sr.sr_code);
-		priv->priv_sr.sr_code = NULL;
-	}
-	if (priv->priv_sr.sr_ecode != NULL) {
-		free(priv->priv_sr.sr_ecode);
-		priv->priv_sr.sr_ecode = NULL;
-	}
-	if (priv->priv_sr.sr_msg != NULL) {
-		free(priv->priv_sr.sr_msg);
-		priv->priv_sr.sr_msg = NULL;
-	}
-	if (priv->priv_sr.sr_report != NULL) {
-		free(priv->priv_sr.sr_report);
-		priv->priv_sr.sr_report = NULL;
-	}
+	smtp_reply_free(&priv->priv_sr);
+	smtp_reply_init(&priv->priv_sr);
 
 	return;
 }
@@ -2341,7 +2273,7 @@ fstring_expand(priv, rcpt, fstring)
 			fstr_len =  2;
 			switch (ptok[1]) {
 			case 'm':	/* SMTP message */
-				string = priv->priv_sr.sr_msg;
+				string = priv->priv_sr.sr_msg_x;
 				break;
 			case 'c':	/* SMTP code */
 				string = priv->priv_sr.sr_code;
@@ -2350,7 +2282,7 @@ fstring_expand(priv, rcpt, fstring)
 				string = priv->priv_sr.sr_ecode;
 				break;
 			case 'h':	/* X-Greylist header */
-				string = priv->priv_sr.sr_report;
+				string = priv->priv_sr.sr_report_x;
 				break;
 			default:
 				fstr_len = 0;
@@ -2670,11 +2602,18 @@ fstring_expand(priv, rcpt, fstring)
 		case 'A': {	/* Line number for matching ACL */
 			char buf[16];
 
-			snprintf(buf, sizeof(buf), "%d", 
-			   priv->priv_sr.sr_acl_line); 
-			mystrncat(&outstr, buf, &outmaxlen);
+			if (priv->priv_sr.sr_acl_line) {
+				snprintf(buf, sizeof(buf), "%d", 
+				   priv->priv_sr.sr_acl_line); 
+				mystrncat(&outstr, buf, &outmaxlen);
+			} else {
+				mystrncat(&outstr, "(none)", &outmaxlen);
+			}
 			break;
 		}	
+		case '%':	/* Literal '%' */
+			mystrncat(&outstr, "%", &outmaxlen);
+			break;
 			
 		default:
 			fstr_len = 0;
@@ -2922,3 +2861,24 @@ stat_from_code(code)
 	/* NOTREACHED */
 	return SMFIS_TEMPFAIL;
 }
+
+static int
+mg_setreply(ctx, priv, rcpt)
+	SMFICTX *ctx;
+	struct mlfi_priv *priv;
+	char *rcpt;
+{
+	int r;
+
+	if (priv->priv_sr.sr_msg_x != NULL) {
+		mg_log(LOG_ERR, "mg_setreply(): invoked twice");
+		exit(EX_SOFTWARE);
+	}
+	priv->priv_sr.sr_msg_x =
+		fstring_expand(priv, rcpt, priv->priv_sr.sr_msg);
+	r = smfi_setreply(ctx,
+			priv->priv_sr.sr_code, priv->priv_sr.sr_ecode,
+			priv->priv_sr.sr_msg_x);
+	return r;
+}
+
