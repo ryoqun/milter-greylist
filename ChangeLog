@@ -1,4 +1,4 @@
-3.1.9
+4.0a1
 	Fix again an accept-all-bug when built with SPF (AIDA Shinra)
 	Fix macro handling in ACL (AIDA Shinra)
 	%% syntax in format strings (AIDA Shinra)
