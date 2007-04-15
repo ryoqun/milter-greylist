@@ -117,7 +117,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.71 2007/03/22 05:39:16 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.72 2007/04/15 01:47:59 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -187,7 +187,7 @@ prop		"$"[-_A-Za-z0-9]+
 {code}  	{ return CODE; }
 {ecode}  	{ return ECODE; }
 {msg}	  	{ return MSG; }
-{header}	{ BEGIN(S_REGEX); return HEADER; }
+{header}	{ BEGIN(S_REGEX); return GLHEADER; }
 {body}		{ BEGIN(S_REGEX); return BODY; }
 {maxpeek}	{ return MAXPEEK; }
 {geoipdb}	{ return GEOIPDB; }
