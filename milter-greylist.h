@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.66 2007/03/29 03:58:51 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.67 2007/04/16 02:47:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -190,6 +190,8 @@ struct mlfi_priv {
 	char *priv_queueid;
 	int priv_delayed_reject;
 	struct smtp_reply priv_sr;
+	time_t priv_max_elapsed;
+	int priv_last_whitelist;
 #ifdef USE_CURL
 	LIST_HEAD(, urlcheck_prop) priv_prop;
 #endif

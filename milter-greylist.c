@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.182 2007/04/16 02:44:04 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.183 2007/04/16 02:47:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.182 2007/04/16 02:44:04 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.183 2007/04/16 02:47:52 manu Exp $");
 #endif
 #endif
 
@@ -273,6 +273,8 @@ real_connect(ctx, hostname, addr)
 	priv->priv_msgcount = 0;
 	priv->priv_buf = NULL;
 	priv->priv_buflen = 0;
+	priv->priv_max_elapsed = 0;
+	priv->priv_last_whitelist = EXF_NONE;
 
 	strncpy(priv->priv_hostname, hostname, ADDRLEN);
 	priv->priv_hostname[ADDRLEN] = '\0';
@@ -558,21 +560,6 @@ real_envrcpt(ctx, envrcpt)
 	}
 
 	/*
-	 * On a multi-recipient message, one message can be whitelisted,
-	 * and the next ones be greylisted. The first one would
-	 * pass through immediatly (priv->priv_sr.sr_delay = 0) with a 
-	 * priv->priv_sr.sr_whitelist = EXF_NONE. This would cause improper
-	 * X-Greylist header display in mlfi_eom()
-	 *
-	 * The fix: if we make it to mlfi_eom() with priv_sr.sr_elapsed = 0
-	 * this means that some recipients were whitelisted. 
-	 * We can set priv_sr.sr_whitelist now, because if the message 
-	 * is greylisted for everyone, it will not go to mlfi_eom(), 
-	 * and priv_sr.sr_whitelist will not be used.
-	 */
-	priv->priv_sr.sr_whitelist = EXF_WHITELIST | EXF_RCPT;
-
-	/*
 	 * Check if the tuple {sender IP, sender e-mail, recipient e-mail}
 	 * is in the greylist and if it ca now be accepted. If it is not
 	 * in the greylist, it will be added.
@@ -580,8 +567,11 @@ real_envrcpt(ctx, envrcpt)
 	if (pending_check(SA(&priv->priv_addr), priv->priv_addrlen,
 	    priv->priv_from, rcpt, &remaining, &priv->priv_sr.sr_elapsed,
 	    priv->priv_queueid, priv->priv_sr.sr_delay, 
-	    priv->priv_sr.sr_autowhite) != 0)
+	    priv->priv_sr.sr_autowhite) != 0) {
+		if (priv->priv_sr.sr_elapsed > priv->priv_max_elapsed)
+			priv->priv_max_elapsed = priv->priv_sr.sr_elapsed;
 		goto exit_accept;
+	}
 
 	priv->priv_sr.sr_remaining = remaining;
 
@@ -595,7 +585,6 @@ real_envrcpt(ctx, envrcpt)
 	if ((conf.c_delayedreject == 1) && 
 	    (strcmp(priv->priv_from, "<>") == 0)) {
 		priv->priv_delayed_reject = 1;
-		add_recipient(priv, rcpt);
 		goto exit_accept;
 	}
 
@@ -607,6 +596,8 @@ real_envrcpt(ctx, envrcpt)
 
 exit_accept:
 	add_recipient(priv, rcpt);
+	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST)
+		priv->priv_last_whitelist = priv->priv_sr.sr_whitelist;
 	return SMFIS_CONTINUE;
 }
 
@@ -757,6 +748,8 @@ real_eom(ctx)
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
 	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
+        /* we want fstring_expand to expand %E to priv_max_elapsed here */
+	priv->priv_sr.sr_elapsed = priv->priv_max_elapsed;
 
 	/* 
 	 * If we got no newline at all, at least 
@@ -792,6 +785,7 @@ real_eom(ctx)
 	 */
 	memcpy(&rcpt_sr, &priv->priv_sr, sizeof(rcpt_sr));
 	smtp_reply_init(&priv->priv_sr);
+	priv->priv_sr.sr_elapsed = priv->priv_max_elapsed;
 	acl_filter(AS_DATA, ctx, priv);
 	if (priv->priv_sr.sr_whitelist & EXF_BLACKLIST) {
 		char aclstr[16];
@@ -822,7 +816,8 @@ real_eom(ctx)
 	smtp_reply_free(&priv->priv_sr);
 	memcpy(&priv->priv_sr, &rcpt_sr, sizeof(rcpt_sr));
 
-	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST) {
+	if (priv->priv_max_elapsed == 0) {
+		/* All recipients are whitelisted */
 		char *hdrstr = NULL;
 
 		if ((conf.c_report & C_NODELAYS) == 0)
@@ -834,43 +829,43 @@ real_eom(ctx)
 			    NULL, priv->priv_sr.sr_report);
 		} else {
 			whystr[0] = '\0';
-			if (priv->priv_sr.sr_whitelist & EXF_DOMAIN) {
+			if (priv->priv_last_whitelist & EXF_DOMAIN) {
 				ADD_REASON(whystr, 
 				    "Sender DNS name whitelisted");
-				priv->priv_sr.sr_whitelist &= ~EXF_DOMAIN;
+				priv->priv_last_whitelist &= ~EXF_DOMAIN;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_ADDR) {
+			if (priv->priv_last_whitelist & EXF_ADDR) {
 				ADD_REASON(whystr, 
 				    "Sender IP whitelisted");
-				priv->priv_sr.sr_whitelist &= ~EXF_ADDR;
+				priv->priv_last_whitelist &= ~EXF_ADDR;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_FROM) {
+			if (priv->priv_last_whitelist & EXF_FROM) {
 				ADD_REASON(whystr, 
 				    "Sender e-mail whitelisted");
-				priv->priv_sr.sr_whitelist &= ~EXF_FROM;
+				priv->priv_last_whitelist &= ~EXF_FROM;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_AUTH) {
+			if (priv->priv_last_whitelist & EXF_AUTH) {
 				ADD_REASON(whystr, 
 				    "Sender succeeded SMTP AUTH");
-				priv->priv_sr.sr_whitelist &= ~EXF_AUTH;
+				priv->priv_last_whitelist &= ~EXF_AUTH;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_ACCESSDB) {
+			if (priv->priv_last_whitelist & EXF_ACCESSDB) {
 				ADD_REASON(whystr, 
 				    "Message whitelisted by Sendmail "
 				    "access database");
-				priv->priv_sr.sr_whitelist &= ~EXF_ACCESSDB;
+				priv->priv_last_whitelist &= ~EXF_ACCESSDB;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_DRAC) {
+			if (priv->priv_last_whitelist & EXF_DRAC) {
 				ADD_REASON(whystr, 
 				    "Message whitelisted by DRAC "
 				    "access database");
-				priv->priv_sr.sr_whitelist &= ~EXF_DRAC;
+				priv->priv_last_whitelist &= ~EXF_DRAC;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_SPF) {
+			if (priv->priv_last_whitelist & EXF_SPF) {
 				ADD_REASON(whystr, "Sender is SPF-compliant");
-				priv->priv_sr.sr_whitelist &= ~EXF_SPF;
+				priv->priv_last_whitelist &= ~EXF_SPF;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_NONIP) {
+			if (priv->priv_last_whitelist & EXF_NONIP) {
 #ifdef AF_INET6
 				ADD_REASON(whystr, 
 				    "Message not sent from an IPv4 "
@@ -879,44 +874,44 @@ real_eom(ctx)
 				ADD_REASON(whystr, 
 				    "Message not sent from an IPv4 address");
 #endif
-				priv->priv_sr.sr_whitelist &= ~EXF_NONIP;
+				priv->priv_last_whitelist &= ~EXF_NONIP;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_STARTTLS) {
+			if (priv->priv_last_whitelist & EXF_STARTTLS) {
 				ADD_REASON(whystr, 
 				    "Sender succeeded STARTTLS authentication");
-				priv->priv_sr.sr_whitelist &= ~EXF_STARTTLS;
+				priv->priv_last_whitelist &= ~EXF_STARTTLS;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_RCPT) {
+			if (priv->priv_last_whitelist & EXF_RCPT) {
 				ADD_REASON(whystr, 
 				    "Recipient e-mail whitelisted");
-				priv->priv_sr.sr_whitelist &= ~EXF_RCPT;
+				priv->priv_last_whitelist &= ~EXF_RCPT;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_AUTO) {
+			if (priv->priv_last_whitelist & EXF_AUTO) {
 				ADD_REASON(whystr, 
 				    "IP, sender and "
 				    "recipient auto-whitelisted");
-				priv->priv_sr.sr_whitelist &= ~EXF_AUTO;
+				priv->priv_last_whitelist &= ~EXF_AUTO;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_DNSRBL) {
+			if (priv->priv_last_whitelist & EXF_DNSRBL) {
 				ADD_REASON(whystr, 
 				    "Sender IP whitelisted by DNSRBL");
-				priv->priv_sr.sr_whitelist &= ~EXF_DNSRBL;
+				priv->priv_last_whitelist &= ~EXF_DNSRBL;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_URLCHECK) {
+			if (priv->priv_last_whitelist & EXF_URLCHECK) {
 				ADD_REASON(whystr, "URL check passed");
-				priv->priv_sr.sr_whitelist &= ~EXF_URLCHECK;
+				priv->priv_last_whitelist &= ~EXF_URLCHECK;
 			}
-			if (priv->priv_sr.sr_whitelist & EXF_DEFAULT) {
+			if (priv->priv_last_whitelist & EXF_DEFAULT) {
 				ADD_REASON(whystr, 
 				    "Default is to whitelist mail");
-				priv->priv_sr.sr_whitelist &= ~EXF_DEFAULT;
+				priv->priv_last_whitelist &= ~EXF_DEFAULT;
 			}
-			priv->priv_sr.sr_whitelist &= 
+			priv->priv_last_whitelist &= 
 			    ~(EXF_GREYLIST | EXF_WHITELIST | EXF_BLACKLIST);
 
 			/* Silently ignore other codes, just report ACL */	
-			if (priv->priv_sr.sr_whitelist != 0) {
-				priv->priv_sr.sr_whitelist = 0;
+			if (priv->priv_last_whitelist != 0) {
+				priv->priv_last_whitelist = 0;
 				mystrlcat (whystr, "ACL %A matched", HDRLEN);
 			}
 
