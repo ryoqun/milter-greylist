@@ -1,4 +1,5 @@
 4.0a2
+	Fix garbled log (Bernhard Schneider)
 	Fix build on Tru64 (Attila Bruncsak)
 4.0a1
 	Fix again an accept-all-bug when built with SPF (AIDA Shinra)

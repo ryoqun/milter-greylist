@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.181 2007/03/29 03:58:51 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.182 2007/04/16 02:44:04 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.181 2007/03/29 03:58:51 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.182 2007/04/16 02:44:04 manu Exp $");
 #endif
 #endif
 
@@ -804,6 +804,9 @@ real_eom(ctx)
 		if (priv->priv_sr.sr_acl_line != 0)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
 			    priv->priv_sr.sr_acl_line);
+
+		iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
+		    sizeof(addrstr));
 
 		mg_log(LOG_INFO, 
 		    "%s: addr %s[%s] from %s blacklisted%s",
