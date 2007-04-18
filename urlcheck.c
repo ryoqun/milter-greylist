@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.24 2007/04/18 03:22:00 manu Exp $ */
+/* $Id: urlcheck.c,v 1.25 2007/04/18 03:24:06 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.24 2007/04/18 03:22:00 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.25 2007/04/18 03:24:06 manu Exp $");
 #endif
 #endif
 
@@ -1065,12 +1065,9 @@ answer_parse(data, ap, flags, priv)
 
 		/* Look for end of line */
 		while ((idx < len) && 
-		       (buf[idx] != '\n')) {
-			printf("-> buf[%d] = %d\n", idx, buf[idx]);
+		       (buf[idx] != '\n'))
 			idx++;
-		}
 
-		printf("idx = %d, len = %d, buf[idx] = %d\n", idx, len, buf[idx]);
 		if (idx == len) {
 			buf[idx] = '\0';
 			mg_log(LOG_DEBUG, 
