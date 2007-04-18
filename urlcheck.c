@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.23 2007/03/26 19:29:04 manu Exp $ */
+/* $Id: urlcheck.c,v 1.24 2007/04/18 03:22:00 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.23 2007/03/26 19:29:04 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.24 2007/04/18 03:22:00 manu Exp $");
 #endif
 #endif
 
@@ -487,7 +487,16 @@ curl_outlet(buffer, size, nmemb, userp)
 
 	iov = (struct iovec *)userp;
 
-	newlen = iov->iov_len + (size * nmemb);
+	newlen = iov->iov_len;
+
+	/*
+	 * On first pass, add extra chars for adding 
+	 * a trailing \n\0 at the end of the buffer. 
+	 */
+	if (newlen == 0)
+		newlen += 2;
+
+	newlen += (size * nmemb);
 
 	if (newlen > URLCHECK_ANSWER_MAX) {
 		mg_log(LOG_WARNING, "urlcheck answer too big, abort");
@@ -847,6 +856,7 @@ urlcheck_validate_internal(data, ue, cnx, url, stage, priv)
 	CURL *ch;
 	CURLcode cerr;
 	struct curl_slist *headers = NULL;
+	char *data_trailer;
 
 	if (cnx->uc_hdl == NULL) {
 		if ((cnx->uc_hdl = curl_easy_init()) == NULL) {
@@ -959,6 +969,12 @@ urlcheck_validate_internal(data, ue, cnx, url, stage, priv)
 		goto out;
 	}
 
+	/* 
+	 * Set a trailing \n\0
+	 */
+	data_trailer = (char *)data->iov_base + data->iov_len - 2;
+	data_trailer[0] = '\n';
+	data_trailer[1] = '\0';
 out:
 	if (headers != NULL)
 		curl_slist_free_all(headers);
@@ -1049,9 +1065,12 @@ answer_parse(data, ap, flags, priv)
 
 		/* Look for end of line */
 		while ((idx < len) && 
-		       (buf[idx] != '\n'))
+		       (buf[idx] != '\n')) {
+			printf("-> buf[%d] = %d\n", idx, buf[idx]);
 			idx++;
+		}
 
+		printf("idx = %d, len = %d, buf[idx] = %d\n", idx, len, buf[idx]);
 		if (idx == len) {
 			buf[idx] = '\0';
 			mg_log(LOG_DEBUG, 
