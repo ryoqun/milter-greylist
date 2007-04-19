@@ -1,3 +1,5 @@
+4.0a3
+	Add an urlcheck reply which is ignored: milterGreylistIgnore 
 4.0a2
 	For urlcheck answer, cope with a trailing line not terminated by CR
 	Fix X-Greylist lossage (AIDA Shinra)

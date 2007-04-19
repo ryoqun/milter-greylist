@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.72 2007/03/15 04:55:45 manu Exp $
+.\" $Id: greylist.conf.5,v 1.73 2007/04/19 02:47:44 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -617,6 +617,9 @@ The string to return with SMTP codes.
 The string to display in the
 .I X-Greylist 
 header.
+.TP
+.I milterGreylistIgnore
+This line will be ignored, without warnings in the logs.
 .TP
 .I milterGreylistAction
 This feature is nifty but use it with caution, as it makes the access
