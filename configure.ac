@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.206 2007/04/18 14:40:07 manu Exp $
+# $Id: configure.ac,v 1.207 2007/04/19 03:11:59 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -10,6 +10,14 @@ AC_CONFIG_HEADER([config.h])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_LEX
+# taken from http://abstrakraft.org/cwiid/svn/tags/cwiid-0.5.02/configure.ac
+if test "$LEX" != "flex"; then
+       AC_MSG_ERROR([flex not found])
+fi
+if test -z "`echo %%|$LEX -t --noyywrap|grep yypop_buffer_state`"; then
+       AC_MSG_ERROR([flex missing yypop_buffer_state - upgrade to version 2.5.33 or later])
+fi
+
 AC_PROG_YACC
 AC_PROG_INSTALL
 AC_CHECK_PROGS(MKDEP, mkdep)
@@ -636,6 +644,17 @@ AC_ARG_ENABLE(dnsrbl,
 	[  --enable-dnsrbl	Enable DNSRBL support],
 	[if test x$enableval = xyes -a $rdns = yes; then
 		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
+		# For Debian Sarge
+		if test x$use_libbind = xno; then
+			AC_CHECK_LIB([resolv], [ns_initparse],
+			    [LIBS="$LIBS -lresolv"], [
+				if test -r /usr/lib/libresolv.a; then
+					LIBS="$LIBS /usr/lib/libresolv.a"
+				else
+					AC_MSG_WARN([ns_initparse not found])
+				fi
+			    ])
+		fi
 	 else
 		echo "--enable-dnsrbl used but DNS resolver is not thread safe";
 		echo "Try installing BIND9 and using --with-libbind, or if you";
@@ -644,7 +663,7 @@ AC_ARG_ENABLE(dnsrbl,
 	 fi
 	])
 
-# We disable some features for Postfix
+# We enable some features for Postfix
 AC_ARG_ENABLE(postfix,
 	[  --enable-postfix	Enable Postfix support],
 	[if test x$enableval = xyes; then
