@@ -2538,6 +2538,18 @@ _ACEOF
 fi
 
 fi
+# taken from http://abstrakraft.org/cwiid/svn/tags/cwiid-0.5.02/configure.ac
+if test "$LEX" != "flex"; then
+       { { echo "$as_me:$LINENO: error: flex not found" >&5
+echo "$as_me: error: flex not found" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+if test -z "`echo %%|$LEX -t --noyywrap|grep yypop_buffer_state`"; then
+       { { echo "$as_me:$LINENO: error: flex missing yypop_buffer_state - upgrade to version 2.5.33 or later" >&5
+echo "$as_me: error: flex missing yypop_buffer_state - upgrade to version 2.5.33 or later" >&2;}
+   { (exit 1); exit 1; }; }
+fi
+
 for ac_prog in 'bison -y' byacc
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
@@ -8930,6 +8942,86 @@ if test "${enable_dnsrbl+set}" = set; then
   enableval="$enable_dnsrbl"
   if test x$enableval = xyes -a $rdns = yes; then
 		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
+		# For Debian
+		if test x$use_libbind = xno; then
+			echo "$as_me:$LINENO: checking for ns_initparse in -lresolv" >&5
+echo $ECHO_N "checking for ns_initparse in -lresolv... $ECHO_C" >&6
+if test "${ac_cv_lib_resolv_ns_initparse+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lresolv  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char ns_initparse ();
+int
+main ()
+{
+ns_initparse ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_resolv_ns_initparse=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_resolv_ns_initparse=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_resolv_ns_initparse" >&5
+echo "${ECHO_T}$ac_cv_lib_resolv_ns_initparse" >&6
+if test $ac_cv_lib_resolv_ns_initparse = yes; then
+  LIBS="$LIBS -lresolv"
+else
+
+				if test -r /usr/lib/libresolv.a; then
+					LIBS="$LIBS /usr/lib/libresolv.a"
+				else
+					{ echo "$as_me:$LINENO: WARNING: ns_initparse not found" >&5
+echo "$as_me: WARNING: ns_initparse not found" >&2;}
+				fi
+
+fi
+
+		fi
 	 else
 		echo "--enable-dnsrbl used but DNS resolver is not thread safe";
 		echo "Try installing BIND9 and using --with-libbind, or if you";
@@ -8939,7 +9031,7 @@ if test "${enable_dnsrbl+set}" = set; then
 
 fi;
 
-# We disable some features for Postfix
+# We enable some features for Postfix
 # Check whether --enable-postfix or --disable-postfix was given.
 if test "${enable_postfix+set}" = set; then
   enableval="$enable_postfix"

@@ -1,4 +1,4 @@
-/* $Id: clock.c,v 1.1 2007/02/02 02:10:23 manu Exp $ */
+/* $Id: clock.c,v 1.2 2007/04/20 02:36:50 manu Exp $ */
 
 /*
  * Copyright (c) 2007 Emmanuel Dreyfus
@@ -34,10 +34,11 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: clock.c,v 1.1 2007/02/02 02:10:23 manu Exp $");
+__RCSID("$Id: clock.c,v 1.2 2007/04/20 02:36:50 manu Exp $");
 #endif
 #endif
 
+#include <string.h>
 #include <strings.h>
 #include <syslog.h>
 #include <stdlib.h>

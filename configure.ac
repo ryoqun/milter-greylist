@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.207 2007/04/19 03:11:59 manu Exp $
+# $Id: configure.ac,v 1.208 2007/04/20 02:36:50 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -644,7 +644,7 @@ AC_ARG_ENABLE(dnsrbl,
 	[  --enable-dnsrbl	Enable DNSRBL support],
 	[if test x$enableval = xyes -a $rdns = yes; then
 		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
-		# For Debian Sarge
+		# For Debian
 		if test x$use_libbind = xno; then
 			AC_CHECK_LIB([resolv], [ns_initparse],
 			    [LIBS="$LIBS -lresolv"], [

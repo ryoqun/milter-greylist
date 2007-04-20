@@ -1,6 +1,6 @@
 4.0a3
 	Add an urlcheck reply which is ignored: milterGreylistIgnore 
-	Build fixes for Debian Sarge (Bernhard Schneider)
+	Build fixes for Debian (Bernhard Schneider)
 4.0a2
 	For urlcheck answer, cope with a trailing line not terminated by CR
 	Fix X-Greylist lossage (AIDA Shinra)
