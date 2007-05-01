@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.183 2007/04/16 02:47:52 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.184 2007/05/01 14:14:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.183 2007/04/16 02:47:52 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.184 2007/05/01 14:14:20 manu Exp $");
 #endif
 #endif
 
@@ -1240,6 +1240,7 @@ main(argc, argv)
 		usage(argv[0]);
 	}
 	cleanup_sock(conf.c_socket);
+	cleanup_pidfile(conf.c_pidfile);
 
 	/*
 	 * Set socket permission
@@ -1328,12 +1329,6 @@ main(argc, argv)
 	}
 
 	/* 
-	 * Write down our PID to a file
-	 */
-	if (conf.c_pidfile != NULL)
-		writepid(conf.c_pidfile);
-
-	/*
 	 * Drop root privs, if we run as root
 	 */
 	if ((geteuid() == 0) && (conf.c_user != NULL)) {
@@ -1383,6 +1378,12 @@ main(argc, argv)
 			exit(EX_OSERR);
 		}
 	}
+
+	/*
+	 * Write down our PID to a file
+	 */
+	if (conf.c_pidfile != NULL)
+		writepid(conf.c_pidfile);
 
 	/*
 	 * Block signals before all other threads start.
@@ -1456,6 +1457,22 @@ cleanup_sock(path)
 		return;
 
 	/* Remove the beast */
+	(void)unlink(path);
+	return;
+}
+
+void
+cleanup_pidfile(path)
+	char *path;
+{
+	struct stat st;
+	
+	if (stat(path, &st) != 0)
+		return;          /* pidfile does not exist */
+
+	if ((st.st_mode & S_IFREG) == 0)
+		return;    /* not a regular file */
+
 	(void)unlink(path);
 	return;
 }
