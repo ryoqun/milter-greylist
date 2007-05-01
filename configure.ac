@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.208 2007/04/20 02:36:50 manu Exp $
+# $Id: configure.ac,v 1.209 2007/05/01 04:35:24 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 4.0a2, manu@netbsd.org)
+AC_INIT(milter-greylist, 4.0a3, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -36,6 +36,8 @@ AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])],
     [wall="yes"; SAVEDCFLAGS=$CFLAGS; efl=$efl" -Wall"])
 AC_MSG_RESULT([$wall])
 CFLAGS=$SAVEDCFLAGS
+
+NORPSAVEDLDFLAGS=$LDFLAGS
 
 # Check if the linker accepts --rpath (for Darwin)
 AC_MSG_CHECKING([if ld accepts --rpath])
@@ -223,6 +225,12 @@ AC_ARG_WITH(libspf,
 ])
 LDFLAGS=$SAVEDLDFLAGS
 CFLAGS=$SAVEDCFLAGS
+
+AC_ARG_ENABLE(rpath,
+	[  --disable-rpath	do not hardcode runtime library paths],
+	[if test x$enableval = xno; then
+		LDFLAGS=$NORPSAVEDLDFLAGS
+	fi])
 
 # Check for socket functions linking. On Solaris, -lsocket -lnsl is required
 AC_CHECK_LIB([socket], [socket], [LIBS="$LIBS -lsocket"], 
@@ -642,11 +650,14 @@ AC_ARG_WITH(thread-safe-resolver,
 # Check for DNSRBL
 AC_ARG_ENABLE(dnsrbl,
 	[  --enable-dnsrbl	Enable DNSRBL support],
-	[if test x$enableval = xyes -a $rdns = yes; then
-		CFLAGS=$CFLAGS" -DUSE_DNSRBL"
+	[if test x$enableval = xyes; then
+		SAVEDCFLAGS=$CFLAGS" -DUSE_DNSRBL"
 		# For Debian
-		if test x$use_libbind = xno; then
-			AC_CHECK_LIB([resolv], [ns_initparse],
+		CFLAGS=
+		AC_TRY_LINK([#include <stdio.h>
+		             #include <arpa/nameser.h>
+			], [ int result = ns_initparse(NULL, 0, NULL); ],
+			[],[ AC_CHECK_LIB([resolv], [ns_initparse],
 			    [LIBS="$LIBS -lresolv"], [
 				if test -r /usr/lib/libresolv.a; then
 					LIBS="$LIBS /usr/lib/libresolv.a"
@@ -654,7 +665,8 @@ AC_ARG_ENABLE(dnsrbl,
 					AC_MSG_WARN([ns_initparse not found])
 				fi
 			    ])
-		fi
+		])
+		CFLAGS=$SAVEDCFLAGS
 	 else
 		echo "--enable-dnsrbl used but DNS resolver is not thread safe";
 		echo "Try installing BIND9 and using --with-libbind, or if you";
