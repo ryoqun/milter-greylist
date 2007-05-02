@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.184 2007/05/01 14:14:20 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.185 2007/05/02 03:36:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.184 2007/05/01 14:14:20 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.185 2007/05/02 03:36:50 manu Exp $");
 #endif
 #endif
 
@@ -109,6 +109,8 @@ static void smtp_reply_free(struct smtp_reply *);
 static void add_recipient(struct mlfi_priv *, char *);
 static void set_sr_defaults(struct mlfi_priv *, char *, char *, char *);
 static sfsistat stat_from_code(char *);
+static void cleanup_pidfile(char *);
+static void cleanup_sock(char *);
 static int mg_setreply(SMFICTX *, struct mlfi_priv *, char *);
 #ifndef USE_POSTFIX
 static char *local_ipstr(struct mlfi_priv *);
@@ -1442,7 +1444,7 @@ usage(progname)
 	exit(EX_USAGE);
 }
 
-void
+static void
 cleanup_sock(path)
 	char *path;
 {
@@ -1461,7 +1463,7 @@ cleanup_sock(path)
 	return;
 }
 
-void
+static void
 cleanup_pidfile(path)
 	char *path;
 {

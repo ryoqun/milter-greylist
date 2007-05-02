@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.67 2007/04/16 02:47:52 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.68 2007/05/02 03:36:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -214,7 +214,6 @@ struct in_addr *prefix2mask4(int, struct in_addr *);
 #ifdef AF_INET6
 struct in6_addr *prefix2mask6(int, struct in6_addr *);
 #endif
-void cleanup_sock(char *);
 void unmappedaddr(struct sockaddr *, socklen_t *);
 void final_dump(void);
 int main(int, char **);
