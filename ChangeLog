@@ -3,6 +3,7 @@
 	Build fixes for Debian (Bernhard Schneider)
 	Add a configure flag to not use --rpath (Bernhard Schneider)
 	Cleanup stale PID file on startup (Bernhard Schneider)
+	Fix memory leak with DNSRBL (Michael Fromme)
 4.0a2
 	For urlcheck answer, cope with a trailing line not terminated by CR
 	Fix X-Greylist lossage (AIDA Shinra)
