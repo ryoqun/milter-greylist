@@ -1,3 +1,5 @@
+4.0a4
+	Fix upgrade pitfal, where write access to the PID file is missing
 4.0a3
 	Add an urlcheck reply which is ignored: milterGreylistIgnore 
 	Build fixes for Debian (Bernhard Schneider)

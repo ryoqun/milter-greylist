@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.186 2007/05/04 20:29:50 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.187 2007/05/06 04:49:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.186 2007/05/04 20:29:50 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.187 2007/05/06 04:49:29 manu Exp $");
 #endif
 #endif
 
@@ -1334,6 +1334,12 @@ main(argc, argv)
 	}
 
 	/* 
+	 * Write down our PID to a file
+	 */
+	if (conf.c_pidfile != NULL)
+		writepid(conf.c_pidfile);
+
+	/*
 	 * Drop root privs, if we run as root
 	 */
 	if ((geteuid() == 0) && (conf.c_user != NULL)) {
@@ -1368,6 +1374,18 @@ main(argc, argv)
 		}
 #endif
 
+		/* 
+		 * Make sure we keep write access to the PID file
+		 * so that we can remove it later
+		 */
+		if (conf.c_pidfile != NULL) {
+			if (chown(conf.c_pidfile, pw->pw_uid, pw->pw_gid) != 0)
+				mg_log(LOG_WARNING, "%s: cannot change \"%s\""
+				    " ownership to %s/%s: %s", argv[0], 
+				    conf.c_pidfile, pw->pw_name, gr->gr_name,
+				    strerror(errno));
+		}
+
 		if (setgid(pw->pw_gid) != 0 ||
 		    setegid(pw->pw_gid) != 0) {
 			mg_log(LOG_ERR, "%s: cannot change GID: %s",
@@ -1383,12 +1401,6 @@ main(argc, argv)
 			exit(EX_OSERR);
 		}
 	}
-
-	/*
-	 * Write down our PID to a file
-	 */
-	if (conf.c_pidfile != NULL)
-		writepid(conf.c_pidfile);
 
 	/*
 	 * Block signals before all other threads start.
