@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.210 2007/05/06 04:49:29 manu Exp $
+# $Id: configure.ac,v 1.211 2007/05/07 23:23:46 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -10,14 +10,6 @@ AC_CONFIG_HEADER([config.h])
 # Checks for programs.
 AC_PROG_CC
 AC_PROG_LEX
-# taken from http://abstrakraft.org/cwiid/svn/tags/cwiid-0.5.02/configure.ac
-if test "$LEX" != "flex"; then
-       AC_MSG_ERROR([flex not found])
-fi
-if test -z "`echo %%|$LEX -t --noyywrap|grep yypop_buffer_state`"; then
-       AC_MSG_ERROR([flex missing yypop_buffer_state - upgrade to version 2.5.33 or later])
-fi
-
 AC_PROG_YACC
 AC_PROG_INSTALL
 AC_CHECK_PROGS(MKDEP, mkdep)
