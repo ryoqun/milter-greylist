@@ -1,3 +1,5 @@
+4.0a5
+	Check that flex supports YY_FLUSH_BUFFER	
 4.0a4
 	Fix upgrade pitfal, where write access to the PID file is missing
 	Back out a Debian build fix that broke other systems

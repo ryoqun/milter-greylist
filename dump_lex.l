@@ -24,7 +24,7 @@ auto		[Aa][Uu][Tt][Oo]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.18 2006/11/07 05:12:01 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.19 2007/05/08 04:56:57 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -89,6 +89,10 @@ yyerror(err)
 	mg_log(LOG_DEBUG, "dump error at line %d: %s\n", dump_line, err);
 	return;
 }
+
+#if !defined(YY_FLUSH_BUFFER)
+#error Your flex version is broken, try a newer or an older (2.5.4 should work).
+#endif
 
 void
 dump_dispose_input_file(void) {
