@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.26 2007/03/22 05:39:16 manu Exp $ */
+/* $Id: acl.h,v 1.27 2007/05/09 19:55:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -222,7 +222,7 @@ extern pthread_rwlock_t acl_lock;
 
 char *stage_string(acl_stage_t);
 struct acl_clause_rec *get_acl_clause_rec(acl_clause_t);
-struct acl_clause_rec *acl_list_item_fixup(acl_data_type_t, acl_data_type_t);
+struct acl_clause_rec *acl_list_item_fixup(acl_clause_t, acl_clause_t);
 void acl_init(void);
 void acl_clear(void);
 void acl_add_clause(acl_clause_t, void *);

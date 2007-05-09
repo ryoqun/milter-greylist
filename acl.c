@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.62 2007/05/09 19:46:40 manu Exp $ */
+/* $Id: acl.c,v 1.63 2007/05/09 19:55:29 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.62 2007/05/09 19:46:40 manu Exp $");
+__RCSID("$Id: acl.c,v 1.63 2007/05/09 19:55:29 manu Exp $");
 #endif
 #endif
 
@@ -821,8 +821,8 @@ acl_body_regexec(ad, stage, ap, priv)
 
 struct acl_clause_rec *
 acl_list_item_fixup(item_type, list_type)
-	acl_data_type_t item_type;
-	acl_data_type_t list_type;
+	acl_clause_t item_type;
+	acl_clause_t list_type;
 {
 	struct acl_clause_rec *cur_acr;
 	int i;
