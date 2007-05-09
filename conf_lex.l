@@ -117,7 +117,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.73 2007/05/08 04:56:57 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.74 2007/05/09 19:59:53 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -305,11 +305,7 @@ yyerror(err)
 	return;
 }
 
-#if !defined(YY_FLUSH_BUFFER)
-#error Your flex version is broken, try a newer or an older (2.5.4 should work).
-#endif
-
 void
 conf_dispose_input_file(void) {
-	YY_FLUSH_BUFFER;
+	conf__flush_buffer(YY_CURRENT_BUFFER);
 }
