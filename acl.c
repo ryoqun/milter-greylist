@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.61 2007/04/16 02:39:10 manu Exp $ */
+/* $Id: acl.c,v 1.62 2007/05/09 19:46:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.61 2007/04/16 02:39:10 manu Exp $");
+__RCSID("$Id: acl.c,v 1.62 2007/05/09 19:46:40 manu Exp $");
 #endif
 #endif
 
@@ -954,7 +954,8 @@ acl_add_body_string(ad, data)
 	if (conf.c_maxpeek == 0)
 		conf.c_maxpeek = -1;
 
-	return acl_add_string(ad, data);
+	acl_add_string(ad, data);
+	return;
 }
 
 void 
@@ -965,7 +966,8 @@ acl_add_body_regex(ad, data)
 	if (conf.c_maxpeek == 0)
 		conf.c_maxpeek = -1;
 
-	return acl_add_regex(ad, data);
+	acl_add_regex(ad, data);
+	return;
 }
 #define ERRLEN 1024
 void
