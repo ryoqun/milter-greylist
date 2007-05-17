@@ -1,4 +1,4 @@
-/* $Id: geoip.c,v 1.1 2007/02/02 07:00:06 manu Exp $ */
+/* $Id: geoip.c,v 1.2 2007/05/17 03:09:02 manu Exp $ */
 
 /*
  * Copyright (c) 2007 Emmanuel Dreyfus
@@ -116,7 +116,7 @@ geoip_set_ccode(priv)
 		return;
 	}
 
-	cid = GeoIP_id_by_name(geoip_handle, priv->priv_hostname);
+	cid = GeoIP_id_by_name(geoip_handle, ipstr);
 
 	priv->priv_ccode = GeoIP_country_code[cid];	
 
