@@ -1,5 +1,6 @@
 4.0a6
 	Avoid GeoIP reporting "--" for broken domain (Bernhard Schneider )
+	Fix run-away string (AIDA Shinra)
 4.0a5
 	Don't use YY_FLUSH_BUFFER, use flush_buffer() instead (AIDA Shinra)
 4.0a4

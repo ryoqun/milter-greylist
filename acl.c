@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.63 2007/05/09 19:55:29 manu Exp $ */
+/* $Id: acl.c,v 1.64 2007/05/21 00:22:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.63 2007/05/09 19:55:29 manu Exp $");
+__RCSID("$Id: acl.c,v 1.64 2007/05/21 00:22:55 manu Exp $");
 #endif
 #endif
 
@@ -892,6 +892,8 @@ acl_print_null(ad, buf, len)
 	char *buf;
 	size_t len;
 {
+	if (len > 0)
+		buf[0] = '\0';
 	return buf;
 }
 
