@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.212 2007/05/11 02:45:54 manu Exp $
+# $Id: configure.ac,v 1.213 2007/05/23 04:20:38 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -54,13 +54,28 @@ AC_ARG_WITH(libpthread,
 	[CFLAGS=$CFLAGS" -I$withval/include" 
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
 use_libbind=no
+SAVEDLDFLAGS=$LDFLAGS
+SAVEDCFLAGS=$CFLAGS
 AC_ARG_WITH(libbind, 
 	[  --with-libbind=DIR	Find libbind in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include/bind -I$withval/include"
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+	    AC_CHECK_LIB(bind, bind9_getaddresses, [
+		SAVEDLDFLAGS=$LDFLAGS
+		SAVEDCFLAGS=$CFLAGS
 	    LIBS="-lbind $LIBS"
 	    use_libbind=yes
+	    ], [AC_CHECK_LIB(bind9, bind9_getaddresses, [
+                SAVEDLDFLAGS=$LDFLAGS
+                SAVEDCFLAGS=$CFLAGS
+                LIBS="-lbind9 $LIBS"
+                use_libbind=yes
+	    ], [echo "neither -lbind nor -lbind9 worked. check config.log for details"
+		exit 1;])
 	 ])
+])
+LDFLAGS=$SAVEDLDFLAGS
+CFLAGS=$SAVEDCFLAGS
 AC_ARG_WITH(libcurl, 
 	[  --with-libcurl=DIR  Find libcurl in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_CURL" 

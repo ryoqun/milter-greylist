@@ -3060,16 +3060,169 @@ if test "${with_libpthread+set}" = set; then
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
 fi;
 use_libbind=no
+SAVEDLDFLAGS=$LDFLAGS
+SAVEDCFLAGS=$CFLAGS
 
 # Check whether --with-libbind or --without-libbind was given.
 if test "${with_libbind+set}" = set; then
   withval="$with_libbind"
   CFLAGS=$CFLAGS" -I$withval/include/bind -I$withval/include"
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+	    echo "$as_me:$LINENO: checking for bind9_getaddresses in -lbind" >&5
+echo $ECHO_N "checking for bind9_getaddresses in -lbind... $ECHO_C" >&6
+if test "${ac_cv_lib_bind_bind9_getaddresses+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lbind  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char bind9_getaddresses ();
+int
+main ()
+{
+bind9_getaddresses ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_bind_bind9_getaddresses=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_bind_bind9_getaddresses=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_bind_bind9_getaddresses" >&5
+echo "${ECHO_T}$ac_cv_lib_bind_bind9_getaddresses" >&6
+if test $ac_cv_lib_bind_bind9_getaddresses = yes; then
+
+		SAVEDLDFLAGS=$LDFLAGS
+		SAVEDCFLAGS=$CFLAGS
 	    LIBS="-lbind $LIBS"
 	    use_libbind=yes
 
+else
+  echo "$as_me:$LINENO: checking for bind9_getaddresses in -lbind9" >&5
+echo $ECHO_N "checking for bind9_getaddresses in -lbind9... $ECHO_C" >&6
+if test "${ac_cv_lib_bind9_bind9_getaddresses+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lbind9  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char bind9_getaddresses ();
+int
+main ()
+{
+bind9_getaddresses ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_bind9_bind9_getaddresses=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_bind9_bind9_getaddresses=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_bind9_bind9_getaddresses" >&5
+echo "${ECHO_T}$ac_cv_lib_bind9_bind9_getaddresses" >&6
+if test $ac_cv_lib_bind9_bind9_getaddresses = yes; then
+
+                SAVEDLDFLAGS=$LDFLAGS
+                SAVEDCFLAGS=$CFLAGS
+                LIBS="-lbind9 $LIBS"
+                use_libbind=yes
+
+else
+  echo "neither -lbind nor -lbind9 worked. check config.log for details"
+		exit 1;
+fi
+
+
+fi
+
+
 fi;
+LDFLAGS=$SAVEDLDFLAGS
+CFLAGS=$SAVEDCFLAGS
 
 # Check whether --with-libcurl or --without-libcurl was given.
 if test "${with_libcurl+set}" = set; then
