@@ -1,9 +1,9 @@
-# $Id: README,v 1.52 2007/03/09 04:37:00 manu Exp $
+# $Id: README,v 1.53 2007/05/25 03:46:06 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/03/09 04:37:00 $
+		       $Date: 2007/05/25 03:46:06 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -24,11 +24,12 @@ Table of contents:
  11 Building with SPF
  12 Using DRAC
  13 Using URL checks
- 14 Custom logs
- 15 Packaging
- 16 Things to look at if things get wrong
- 17 Known problems
- 18 License
+ 14 Using TLS
+ 15 Custom logs
+ 16 Packaging
+ 17 Things to look at if things get wrong
+ 18 Known problems
+ 19 License
 
 Run this command to regenerate a table of contents:
  sed '/^.====/{g;p;};h;d' README
@@ -453,7 +454,36 @@ the URL could be a ldap:// query, though this has not been experimented
 yet. 
 
 
- 14 Custom logs
+ 14 Using TLS
+ ==============
+
+Using the "tls" clause, an ACL could match any email that succeeded TLS
+check in sendmail (STARTTLS giving "verify=OK"). This assumes you already
+have TLS working in sendmail.
+
+acl whitelist tls "DN1"
+acl whitelist tls "DN2"
+
+or
+
+list "trusted" tls { "DN1" "DN2" }
+acl whitelist list "trusted"
+
+A DN has a special syntax.
+If you used the 'update_tls' script provided with sendmail to generate
+your certificates, your DN should look like this:
+
+"/O=Sendmail/OU=Sendmail+20Client/CN=machine.example.net/emailAddress=admin@machine.example.net"
+
+Note that it's the "client" certificate (of the remote server) that is used
+as (the local) sendmail is acting as server during that transaction.
+
+To find the DN of any certificate, you can use the openssl command:
+
+$ openssl x509 -noout -issuer < some.crt | cut -d' ' -f2- | sed -e 's/ /+20/g'
+
+
+ 15 Custom logs
  ==============
 
 It is possible to monitor milter-greylist activity with a custom log
@@ -479,7 +509,7 @@ or reject
 %A is substituted by the line number of the ACL that caused the decision
 
 
- 15 Packaging
+ 16 Packaging
  ============
 
 milter-greylist is available from NetBSD pkgsrc and FreeBSD ports.
@@ -492,7 +522,7 @@ milter-greylist, use
 rpmbuild --define "build_user smmsp" --define "build_dnsrbl 1" -tb milter-greylist-3.1.4.tgz
 
 
- 16 Things to look at if things get wrong
+ 17 Things to look at if things get wrong
  ========================================
 
 First, read the milter-greylist(8) and greylist.conf(5) man page! :-)
@@ -542,7 +572,7 @@ Examining the tail of this file may reveal problems with domains which
 use multiple MX servers or whose mail is actually served by another site.
 
 
- 17 Known problems
+ 18 Known problems
  =================
 
 If milter-greylist terminates during its operation, first check your
@@ -584,7 +614,7 @@ configure with the CC environment variable set to cc. This
 incompatibility may be fixed in gcc 3.4.
 
 
- 18 License
+ 19 License
  ==========
 
 This software is available under a 3 clauses BSD license:
