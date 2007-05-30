@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.187 2007/05/06 04:49:29 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.188 2007/05/30 23:32:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.187 2007/05/06 04:49:29 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.188 2007/05/30 23:32:06 manu Exp $");
 #endif
 #endif
 
@@ -2903,7 +2903,8 @@ mg_setreply(ctx, priv, rcpt)
 	int r;
 
 	if (priv->priv_sr.sr_msg_x != NULL) {
-		mg_log(LOG_ERR, "mg_setreply(): invoked twice");
+		mg_log(LOG_ERR, "%s: mg_setreply(): invoked twice",
+		    priv->priv_queueid);
 		exit(EX_SOFTWARE);
 	}
 	priv->priv_sr.sr_msg_x =
