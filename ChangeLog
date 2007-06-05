@@ -3,6 +3,7 @@
 	Fix run-away string (AIDA Shinra)
 	Check for libbind9 if libbind cannot be found (Fabien Tassin)
 	Document ACL on TLS DN (Fabien Tassin)
+	Avoid spurious exit on DATA stage ACL match for multiple recipients
 4.0a5
 	Don't use YY_FLUSH_BUFFER, use flush_buffer() instead (AIDA Shinra)
 4.0a4
