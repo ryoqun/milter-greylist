@@ -1,3 +1,5 @@
+4.0a7
+	Add google pools to default greylist.conf
 4.0a6
 	Avoid GeoIP reporting "--" for broken domain (Bernhard Schneider )
 	Fix run-away string (AIDA Shinra)
