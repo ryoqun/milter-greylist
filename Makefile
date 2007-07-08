@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.101 2007/06/05 03:20:22 manu Exp $
+# $Id: Makefile,v 1.102 2007/07/08 21:02:28 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,16 +29,16 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE
-LDFLAGS=	
-LIBS= 		 -lpthread -lresolv -lmilter
+CFLAGS= 	-g -O2 -Wall -I/usr/pkg/include -DUSE_CURL -I/usr/pkg/include -DUSE_DMALLOC -D_BSD_SOURCE
+LDFLAGS=	 -L/usr/pkg/lib -Wl,--rpath=/usr/pkg/lib -L/usr/pkg/lib -Wl,--rpath=/usr/pkg/lib
+LIBS= 		-ldmalloc -lcurl  -lpthread -lresolv -lmilter
 prefix=		/usr/local
 exec_prefix=	${prefix}
 SYSCONFDIR=	${prefix}/etc
 LOCALSTATEDIR=	${prefix}/var
 BINDIR=		${exec_prefix}/bin
 SBINDIR=        ${exec_prefix}/sbin
-MANDIR=		${prefix}/man
+MANDIR=		${prefix}/share/man
 USER=		root
 
 CC=		gcc
@@ -49,7 +49,7 @@ TEST=		test
 SED=		sed
 INSTALL=	/usr/bin/install -c
 LEX=		flex
-YACC=		bison -y
+YACC=		yacc
 TRUE=		true
 
 OBJ= 		milter-greylist.o pending.o sync.o dnsrbl.o list.o macro.o \

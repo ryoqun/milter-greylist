@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.26 2007/04/19 02:47:44 manu Exp $ */
+/* $Id: urlcheck.c,v 1.27 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.26 2007/04/19 02:47:44 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.27 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -63,6 +63,10 @@ __RCSID("$Id: urlcheck.c,v 1.26 2007/04/19 02:47:44 manu Exp $");
 #include "conf.h"
 #include "urlcheck.h"
 #include "sync.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 #define BOUNDARY_LEN	4
 struct post_data {

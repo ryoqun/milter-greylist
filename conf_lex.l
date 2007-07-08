@@ -117,7 +117,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.74 2007/05/09 19:59:53 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.75 2007/07/08 21:02:28 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -125,6 +125,9 @@ prop		"$"[-_A-Za-z0-9]+
 	#include <string.h>
 	#include <errno.h>
 	#include <sysexits.h>
+	#ifdef USE_DMALLOC
+	#include <dmalloc.h> 
+	#endif
 
 	#define YY_NO_UNPUT
 

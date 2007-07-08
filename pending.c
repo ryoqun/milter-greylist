@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.83 2007/01/22 14:08:16 manu Exp $ */
+/* $Id: pending.c,v 1.84 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.83 2007/01/22 14:08:16 manu Exp $");
+__RCSID("$Id: pending.c,v 1.84 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -69,6 +69,10 @@ __RCSID("$Id: pending.c,v 1.83 2007/01/22 14:08:16 manu Exp $");
 #include "pending.h"
 #include "autowhite.h"
 #include "milter-greylist.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 struct pending_bucket *pending_buckets;
 struct pendinglist pending_head;

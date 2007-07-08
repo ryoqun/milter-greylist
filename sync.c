@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.70 2007/03/16 03:58:04 manu Exp $ */
+/* $Id: sync.c,v 1.71 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.70 2007/03/16 03:58:04 manu Exp $");
+__RCSID("$Id: sync.c,v 1.71 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -58,6 +58,10 @@ __RCSID("$Id: sync.c,v 1.70 2007/03/16 03:58:04 manu Exp $");
 #include "conf.h"
 #include "autowhite.h"
 #include "milter-greylist.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 #define SYNC_PROTO_CURRENT 3
 

@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.81 2007/04/15 01:47:59 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.82 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -14,6 +14,9 @@ __RCSID("$Id: conf_yacc.y,v 1.81 2007/04/15 01:47:59 manu Exp $");
 #include <string.h>
 #include <syslog.h>
 #include <sysexits.h>
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 #include "conf.h"
 #include "acl.h"
 #include "sync.h"

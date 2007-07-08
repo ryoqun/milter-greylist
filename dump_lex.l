@@ -24,7 +24,7 @@ auto		[Aa][Uu][Tt][Oo]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID  
-	__RCSID("$Id: dump_lex.l,v 1.20 2007/05/09 19:59:53 manu Exp $");
+	__RCSID("$Id: dump_lex.l,v 1.21 2007/07/08 21:02:28 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -33,6 +33,9 @@ auto		[Aa][Uu][Tt][Oo]
 	#include <errno.h>
 	#include <syslog.h>
 	#include <sysexits.h>
+	#ifdef USE_DMALLOC
+	#include <dmalloc.h> 
+	#endif
 
 	#define YY_NO_UNPUT
 

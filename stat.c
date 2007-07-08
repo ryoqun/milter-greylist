@@ -1,4 +1,4 @@
-/* $Id: stat.c,v 1.2 2007/02/21 21:46:36 manu Exp $ */
+/* $Id: stat.c,v 1.3 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: stat.c,v 1.2 2007/02/21 21:46:36 manu Exp $");
+__RCSID("$Id: stat.c,v 1.3 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -56,6 +56,10 @@ __RCSID("$Id: stat.c,v 1.2 2007/02/21 21:46:36 manu Exp $");
 
 #include "milter-greylist.h"
 #include "conf.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 static FILE *outfp = NULL;
 static int (*outfp_close)(FILE *) = NULL;

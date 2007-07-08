@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.189 2007/06/05 03:18:21 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.190 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.189 2007/06/05 03:18:21 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.190 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -99,6 +99,10 @@ static int check_drac(char *dotted_ip);
 #include "geoip.h"
 #endif
 #include "macro.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 static char *gmtoffset(time_t *, char *, size_t);
 static void writepid(char *);

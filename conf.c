@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.46 2007/02/06 14:29:55 manu Exp $ */
+/* $Id: conf.c,v 1.47 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.46 2007/02/06 14:29:55 manu Exp $");
+__RCSID("$Id: conf.c,v 1.47 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -76,6 +76,10 @@ __RCSID("$Id: conf.c,v 1.46 2007/02/06 14:29:55 manu Exp $");
 #include "list.h"
 #include "macro.h"
 #include "milter-greylist.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 /* #define CONF_DEBUG */
 

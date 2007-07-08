@@ -1,4 +1,4 @@
-/* $Id: clock.c,v 1.2 2007/04/20 02:36:50 manu Exp $ */
+/* $Id: clock.c,v 1.3 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: clock.c,v 1.2 2007/04/20 02:36:50 manu Exp $");
+__RCSID("$Id: clock.c,v 1.3 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -50,11 +50,14 @@ __RCSID("$Id: clock.c,v 1.2 2007/04/20 02:36:50 manu Exp $");
 #else 
 #include <sys/queue.h>
 #endif
-
 #include "conf.h"
 #include "acl.h"
 #include "milter-greylist.h"
 #include "clock.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 static int clock_validate(int *, int *, int);
 static int clock_dump(char *, size_t, struct clockspec *, int);

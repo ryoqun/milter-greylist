@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.14 2006/12/29 18:32:44 manu Exp $ */
+/* $Id: list.c,v 1.15 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.14 2006/12/29 18:32:44 manu Exp $");
+__RCSID("$Id: list.c,v 1.15 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -67,6 +67,10 @@ __RCSID("$Id: list.c,v 1.14 2006/12/29 18:32:44 manu Exp $");
 #include "macro.h"
 #include "list.h"
 #include "acl.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 struct all_list all_list_head;
 struct all_list_entry *glist;

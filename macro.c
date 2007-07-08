@@ -1,4 +1,4 @@
-/* $Id: macro.c,v 1.5 2007/03/26 19:29:04 manu Exp $ */
+/* $Id: macro.c,v 1.6 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: macro.c,v 1.5 2007/03/26 19:29:04 manu Exp $");
+__RCSID("$Id: macro.c,v 1.6 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -57,6 +57,10 @@ __RCSID("$Id: macro.c,v 1.5 2007/03/26 19:29:04 manu Exp $");
 #include "pending.h"
 #include "conf.h"
 #include "macro.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 /* 
  * locking is done through the same lock as acllist: both are static 

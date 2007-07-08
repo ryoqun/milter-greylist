@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.214 2007/06/05 03:20:22 manu Exp $
+# $Id: configure.ac,v 1.215 2007/07/08 21:02:28 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -85,6 +85,11 @@ AC_ARG_WITH(libGeoIP,
 	[  --with-libGeoIP=DIR  Find libGeoIP in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_GEOIP" 
 	    LIBS="-lGeoIP $LIBS"
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
+AC_ARG_WITH(libdmalloc,
+	[  --with-libdmalloc=DIR  Find libdmalloc in DIR],
+	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_DMALLOC" 
+	    LIBS="-ldmalloc $LIBS"
 	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
 
 # Checks for header files.

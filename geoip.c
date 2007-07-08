@@ -1,4 +1,4 @@
-/* $Id: geoip.c,v 1.2 2007/05/17 03:09:02 manu Exp $ */
+/* $Id: geoip.c,v 1.3 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2007 Emmanuel Dreyfus
@@ -45,7 +45,6 @@ __RCSID("$Id");
 #include <string.h>
 #include <syslog.h>
 #include <errno.h>
-
 #include <sys/param.h>
 
 #include <GeoIP.h>
@@ -53,6 +52,10 @@ __RCSID("$Id");
 #include "milter-greylist.h"
 #include "conf.h"
 #include "geoip.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
 
 static GeoIP *geoip_handle = NULL;
 static char geoip_database[MAXPATHLEN + 1];

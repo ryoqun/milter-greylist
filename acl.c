@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.64 2007/05/21 00:22:55 manu Exp $ */
+/* $Id: acl.c,v 1.65 2007/07/08 21:02:28 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.64 2007/05/21 00:22:55 manu Exp $");
+__RCSID("$Id: acl.c,v 1.65 2007/07/08 21:02:28 manu Exp $");
 #endif
 #endif
 
@@ -80,6 +80,10 @@ __RCSID("$Id: acl.c,v 1.64 2007/05/21 00:22:55 manu Exp $");
 #include "macro.h"
 #include "clock.h"
 #include "milter-greylist.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h>
+#endif
 
 struct acllist acl_head;
 pthread_rwlock_t acl_lock;
