@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.65 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: acl.c,v 1.66 2007/07/14 03:49:22 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.65 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: acl.c,v 1.66 2007/07/14 03:49:22 manu Exp $");
 #endif
 #endif
 
@@ -1653,6 +1653,9 @@ acl_filter(stage, ctx, priv)
 	struct acl_param ap;
 	char *cur_rcpt;
 	struct acl_clause *ac;
+#ifdef USE_GEOIP
+	const char *ccode = "??";
+#endif
 
 	sa = SA(&priv->priv_addr);
 	salen = priv->priv_addrlen;
@@ -1660,6 +1663,11 @@ acl_filter(stage, ctx, priv)
 	from = priv->priv_from;
 	queueid = priv->priv_queueid;
 	cur_rcpt = priv->priv_cur_rcpt;
+#ifdef USE_GEOIP
+	if (priv->priv_ccode != NULL) {
+		ccode = priv->priv_ccode;
+	}
+#endif
 
 	ACL_RDLOCK;
 
@@ -1847,6 +1855,13 @@ acl_filter(stage, ctx, priv)
 			     (noretval & EXF_MACRO) ? notstr : vstr);
 			ADD_REASON(whystr, tmpstr);
 		}
+#ifdef USE_GEOIP
+		if (retval & EXF_GEOIP) {
+			snprintf(tmpstr, sizeof(tmpstr),
+			     "geoip ccode %s is whitelisted", ccode);
+			ADD_REASON(whystr, tmpstr);
+		}
+#endif
 		if (retval & EXF_DEFAULT) {
 			ADD_REASON(whystr, "this is the default action");
 		}
