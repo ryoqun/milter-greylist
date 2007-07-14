@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.66 2007/07/14 03:49:22 manu Exp $ */
+/* $Id: acl.c,v 1.67 2007/07/14 16:03:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.66 2007/07/14 03:49:22 manu Exp $");
+__RCSID("$Id: acl.c,v 1.67 2007/07/14 16:03:43 manu Exp $");
 #endif
 #endif
 
@@ -1858,7 +1858,8 @@ acl_filter(stage, ctx, priv)
 #ifdef USE_GEOIP
 		if (retval & EXF_GEOIP) {
 			snprintf(tmpstr, sizeof(tmpstr),
-			     "geoip ccode %s is whitelisted", ccode);
+			     "geoip ccode %s is%s whitelisted", 
+			     ccode, (noretval & EXF_GEOIP) ? notstr : vstr);
 			ADD_REASON(whystr, tmpstr);
 		}
 #endif
