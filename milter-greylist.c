@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.190 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.191 2007/07/14 03:45:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.190 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.191 2007/07/14 03:45:00 manu Exp $");
 #endif
 #endif
 
@@ -429,9 +429,10 @@ real_envfrom(ctx, envfrom)
 		if (iptostring(SA(&priv->priv_addr),
 		    priv->priv_addrlen, ipstr, sizeof(ipstr))) {
 
-			mg_log(LOG_DEBUG, 
-			    "Sender IP %s and address %s are SPF-compliant, "
-			    "bypassing greylist", ipstr, *envfrom);
+			mg_log(LOG_INFO,
+			    "%s: Sender IP %s and address %s are "
+			    "SPF-compliant, bypassing greylist", 
+			    priv->priv_queueid, ipstr, *envfrom);
 		}
 
 		priv->priv_sr.sr_elapsed = 0;

@@ -1,6 +1,7 @@
 4.0a7
 	Add google pools to default greylist.conf
 	Add hooks for libdmalloc
+	Improve debug message (Yaroslav Boychuk)
 4.0a6
 	Avoid GeoIP reporting "--" for broken domain (Bernhard Schneider )
 	Fix run-away string (AIDA Shinra)
