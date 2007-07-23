@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.67 2007/07/14 16:03:43 manu Exp $ */
+/* $Id: acl.c,v 1.68 2007/07/23 20:12:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.67 2007/07/14 16:03:43 manu Exp $");
+__RCSID("$Id: acl.c,v 1.68 2007/07/23 20:12:26 manu Exp $");
 #endif
 #endif
 
@@ -645,13 +645,17 @@ acl_rcpt_regexec(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
-	if (stage != AS_RCPT) {
-		mg_log(LOG_ERR, "rcpt filter called at non RCPT stage");
-		exit(EX_SOFTWARE);
+	if (stage == AS_RCPT) {
+		if (myregexec(priv, ad, ap, priv->priv_cur_rcpt) == 0)
+			return 1;
+	} else {
+		struct rcpt *r;
+
+		 LIST_FOREACH(r, &priv->priv_rcpt, r_list)
+			if (myregexec(priv, ad, ap, r->r_addr) == 0)
+				return 1;
 	}
 
-	if (myregexec(priv, ad, ap, priv->priv_cur_rcpt) == 0)
-		return 1;
 	return 0;
 }
 

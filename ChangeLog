@@ -1,4 +1,5 @@
 4.0a7
+	Allow rcpt clause in dacl statement, as documented
 	Add google pools to default greylist.conf
 	Add hooks for libdmalloc
 	Improve debug message (Yaroslav Boychuk)
