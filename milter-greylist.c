@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.191 2007/07/14 03:45:00 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.192 2007/08/03 04:08:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.191 2007/07/14 03:45:00 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.192 2007/08/03 04:08:26 manu Exp $");
 #endif
 #endif
 
@@ -264,8 +264,10 @@ real_connect(ctx, hostname, addr)
 {
 	struct mlfi_priv *priv;
 
-	if ((priv = malloc(sizeof(*priv))) == NULL)
+	if ((priv = malloc(sizeof(*priv))) == NULL) {
+		mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
 		return SMFIS_TEMPFAIL;	
+	}
 
 	smfi_setpriv(ctx, priv);
 	bzero((void *)priv, sizeof(*priv));
@@ -351,9 +353,41 @@ real_envfrom(ctx, envfrom)
 	char *auth_authen;
 	char *verify;
 	char *cert_subject;
+	struct rcpt *r;
+	struct header *h;
+	struct body *b;
 
-	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) == NULL) {
+		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
+		return SMFIS_TEMPFAIL;
+	}
 
+	/* 
+	 * First cleanup anything we still know about a previous
+	 * message we received in the same SMTP session.
+	 */
+	reset_acl_values(priv);
+
+	while ((r = LIST_FIRST(&priv->priv_rcpt)) != NULL) {
+		LIST_REMOVE(r, r_list);
+		free(r);
+	}
+	while ((h = TAILQ_FIRST(&priv->priv_header)) != NULL) {
+		free(h->h_line);
+		TAILQ_REMOVE(&priv->priv_header, h,  h_list);
+		free(h);
+	}
+	while ((b = TAILQ_FIRST(&priv->priv_body)) != NULL) {
+		free(b->b_lines);
+		TAILQ_REMOVE(&priv->priv_body, b, b_list);
+		free(b);
+	}
+	if (priv->priv_buf)
+		free(priv->priv_buf);
+
+	/* 
+	 * Now let's handle this new message...
+	 */
 	if ((priv->priv_queueid = smfi_getsymval(ctx, "{i}")) == NULL) {
 #ifndef USE_POSTFIX
 		/* 
@@ -461,7 +495,10 @@ real_envrcpt(ctx, envrcpt)
 	strncpy_rmsp(rcpt, *envrcpt, ADDRLEN);
 	rcpt[ADDRLEN] = '\0';
 
-	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) == NULL) {
+		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
+		return SMFIS_TEMPFAIL;
+	}
 
 	if (!iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
 	    sizeof(addrstr)))
@@ -620,7 +657,10 @@ real_header(ctx, name, value)
 	const char crlf[] = "\r\n";
 	size_t len;
 
-	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) == NULL) {
+		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
+		return SMFIS_TEMPFAIL;
+	}
 
 	len = strlen(name) + strlen(sep) + strlen(value) + strlen(crlf);
 	priv->priv_msgcount += len;
@@ -666,7 +706,10 @@ real_body(ctx, chunk, size)
 	size_t linelen;
 	int i;
 
-	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) == NULL) {
+		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
+		return SMFIS_TEMPFAIL;
+	}
 
 	/* Avoid copying the whole message to save CPU */
 	if ((priv->priv_msgcount > conf.c_maxpeek) || 
@@ -753,7 +796,11 @@ real_eom(ctx)
 	struct smtp_reply rcpt_sr;
 	struct rcpt *rcpt;
 
-	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
+	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) == NULL) {
+		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
+		return SMFIS_TEMPFAIL;
+	}
+
 	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
         /* we want fstring_expand to expand %E to priv_max_elapsed here */
 	priv->priv_sr.sr_elapsed = priv->priv_max_elapsed;

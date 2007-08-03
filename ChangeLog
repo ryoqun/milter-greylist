@@ -1,4 +1,6 @@
 4.0a7
+	Add checks against libmilter giving us NULL private structure
+	Properly reset message filters when handling MAIL FROM after DATA
 	Allow rcpt clause in dacl statement, as documented
 	Add google pools to default greylist.conf
 	Add hooks for libdmalloc
