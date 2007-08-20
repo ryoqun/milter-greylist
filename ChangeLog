@@ -1,4 +1,4 @@
-4.0a7
+4.0b1
 	Add checks against libmilter giving us NULL private structure
 	Properly reset message filters when handling MAIL FROM after DATA
 	Allow rcpt clause in dacl statement, as documented
