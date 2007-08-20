@@ -420,5 +420,4 @@
 	Use setsid() to detach from the terminal
 	Fix the mising units in ps output for -a and -w
 	Fix typos
-
 1.0: First stable release
