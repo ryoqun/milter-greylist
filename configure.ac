@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.216 2007/08/20 13:14:12 manu Exp $
+# $Id: configure.ac,v 1.217 2007/08/23 10:54:13 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -36,7 +36,7 @@ AC_MSG_CHECKING([if ld accepts --rpath])
 SAVEDLDFLAGS=$LDFLAGS
 LDFLAGS=$LDFLAGS" -Wl,--rpath=/"
 AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], 
-    [rpath="--rpath="; ldrpath=yes], [rpath="-L"; ldrpath=no])
+    [rpath="--rpath="; ldrpath=yes], [rpath="-R"; ldrpath=no])
 LDFLAGS=$SAVEDLDFLAGS
 AC_MSG_RESULT([$ldrpath])
 

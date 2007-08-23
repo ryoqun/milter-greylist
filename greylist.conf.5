@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.73 2007/04/19 02:47:44 manu Exp $
+.\" $Id: greylist.conf.5,v 1.74 2007/08/23 10:54:13 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -159,7 +159,7 @@ This is used to select a user that succeeded SMTP AUTH. In order to select
 any user that succeeds SMTP AUTH, you can use a regular expression matching, 
 like below;
 .IP
-  racl whiteliste auth /.*/
+  racl whitelist auth /.*/
 .IP
 Using such a clause automatically disable global STARTTLS and
 SMTP AUTH whitelisting, like if the
