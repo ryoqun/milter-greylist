@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.71 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: sync.c,v 1.72 2007/08/24 03:32:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.71 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: sync.c,v 1.72 2007/08/24 03:32:49 manu Exp $");
 #endif
 #endif
 
@@ -1433,10 +1433,14 @@ local_addr(sa, salen)
 		return -1;
 	}
 
+	errno = 0;	 /* Solaris' bind() does not set errno... */
 	if (bind(sfd, sa, salen) == -1) {
 		if (errno != EADDRNOTAVAIL && 
 #ifdef __FreeBSD__
 		    errno != EINVAL &&
+#endif
+#ifdef __sun__
+		    errno != 0
 #endif
 		    1) {
 			mg_log(LOG_ERR, "local_addr: bind failed: %s",

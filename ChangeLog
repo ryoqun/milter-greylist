@@ -1,5 +1,6 @@
 4.0b2
 	Fix configure LDFLAG generation, -R was missing (Mattheu Herrb)
+	Fix MX sync on Solaris (Mattheu Herrb)
 4.0b1
 	Add checks against libmilter giving us NULL private structure
 	Properly reset message filters when handling MAIL FROM after DATA
