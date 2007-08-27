@@ -1,4 +1,5 @@
 4.0b2
+	Allow building objects outside of source directory (Mattheu Herrb)
 	Fix configure LDFLAG generation, -R was missing (Mattheu Herrb)
 	Fix MX sync on Solaris (Mattheu Herrb)
 4.0b1
