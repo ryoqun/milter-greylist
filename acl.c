@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.68 2007/07/23 20:12:26 manu Exp $ */
+/* $Id: acl.c,v 1.69 2007/09/13 02:58:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.68 2007/07/23 20:12:26 manu Exp $");
+__RCSID("$Id: acl.c,v 1.69 2007/09/13 02:58:25 manu Exp $");
 #endif
 #endif
 
@@ -1866,6 +1866,15 @@ acl_filter(stage, ctx, priv)
 			     ccode, (noretval & EXF_GEOIP) ? notstr : vstr);
 			ADD_REASON(whystr, tmpstr);
 		}
+#endif
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
+     defined(HAVE_SPF2_10) || defined(HAVE_SPF2)) 
+		if (retval & EXF_SPF) {
+			snprintf(tmpstr, sizeof(tmpstr),
+			     "sender is%s SPF-compliant",
+			    (noretval & EXF_SPF) ? notstr : vstr);
+			ADD_REASON(whystr, tmpstr);
+		}		
 #endif
 		if (retval & EXF_DEFAULT) {
 			ADD_REASON(whystr, "this is the default action");
