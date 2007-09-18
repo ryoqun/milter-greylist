@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.192 2007/08/03 04:08:26 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.193 2007/09/18 20:43:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.192 2007/08/03 04:08:26 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.193 2007/09/18 20:43:16 manu Exp $");
 #endif
 #endif
 
@@ -561,7 +561,10 @@ real_envrcpt(ctx, envrcpt)
 	 */
 	reset_acl_values(priv);
 	priv->priv_cur_rcpt = rcpt;
-	acl_filter(AS_RCPT, ctx, priv);
+	if (acl_filter(AS_RCPT, ctx, priv) != 0) {
+		mg_log(LOG_ERR, "ACL evaluation failire");
+		return SMFIS_TEMPFAIL;
+	}
 	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST) {
 		priv->priv_sr.sr_elapsed = 0;
 		goto exit_accept;
@@ -840,7 +843,11 @@ real_eom(ctx)
 	memcpy(&rcpt_sr, &priv->priv_sr, sizeof(rcpt_sr));
 	smtp_reply_init(&priv->priv_sr);
 	priv->priv_sr.sr_elapsed = priv->priv_max_elapsed;
-	acl_filter(AS_DATA, ctx, priv);
+	if (acl_filter(AS_DATA, ctx, priv) != 0) {
+		mg_log(LOG_ERR, "ACL evaluation failure");
+		return SMFIS_TEMPFAIL;
+	}
+
 	if (priv->priv_sr.sr_whitelist & EXF_BLACKLIST) {
 		char aclstr[16];
 		char addrstr[IPADDRSTRLEN];
@@ -2958,6 +2965,7 @@ mg_setreply(ctx, priv, rcpt)
 		free(priv->priv_sr.sr_msg_x);
 		priv->priv_sr.sr_msg_x = NULL;
 	}
+
 	priv->priv_sr.sr_msg_x =
 		fstring_expand(priv, rcpt, priv->priv_sr.sr_msg);
 	r = smfi_setreply(ctx,

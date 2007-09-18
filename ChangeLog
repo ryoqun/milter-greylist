@@ -1,4 +1,5 @@
 4.0b2
+	Treat protocol errors in urlcheck clauses as temporary failures
 	Report missing SPF reasons in X-Greylist (Benoit Branciard)
 	Allow building objects outside of source directory (Mattheu Herrb)
 	Fix configure LDFLAG generation, -R was missing (Mattheu Herrb)

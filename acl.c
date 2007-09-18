@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.69 2007/09/13 02:58:25 manu Exp $ */
+/* $Id: acl.c,v 1.70 2007/09/18 20:43:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.69 2007/09/13 02:58:25 manu Exp $");
+__RCSID("$Id: acl.c,v 1.70 2007/09/18 20:43:16 manu Exp $");
 #endif
 #endif
 
@@ -1633,7 +1633,7 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 	return acl;
 }
 
-void
+int
 acl_filter(stage, ctx, priv)
 	acl_stage_t stage;
 	SMFICTX *ctx;
@@ -1648,6 +1648,7 @@ acl_filter(stage, ctx, priv)
 	char addrstr[IPADDRSTRLEN];
 	char whystr[HDRLEN];
 	char tmpstr[HDRLEN];
+	int error = -1;
 	int retval = 0;
 	int noretval = 0;
 	char *notstr = " not";
@@ -1695,8 +1696,9 @@ acl_filter(stage, ctx, priv)
 		ap.ap_pmatch = NULL;
 
 		TAILQ_FOREACH(ac, &acl->a_clause, ac_list) {
-			found = (*ac->ac_acr->acr_filter)
-				(&ac->ac_data, stage, &ap, priv);
+			if ((found = (*ac->ac_acr->acr_filter)
+			    (&ac->ac_data, stage, &ap, priv)) == -1)
+				goto out;
 
 			if (ac->ac_negation == NEGATED)
 				found = (found == 0) ? 1 : 0;
@@ -1889,11 +1891,13 @@ acl_filter(stage, ctx, priv)
 		mg_log(LOG_INFO, "%s: skipping greylist because %s",
 		    queueid, whystr);
 	}
+	error = 0;
+out:
 	ACL_UNLOCK;
 
 	priv->priv_sr.sr_whitelist = retval;
 
-	return;
+	return error;
 }
 
 

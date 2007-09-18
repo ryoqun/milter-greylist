@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.27 2007/05/09 19:55:29 manu Exp $ */
+/* $Id: acl.h,v 1.28 2007/09/18 20:43:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -236,7 +236,7 @@ void acl_add_msg(char *);
 void acl_add_report(char *);
 struct acl_entry *acl_register_entry_first(acl_stage_t, acl_type_t);
 struct acl_entry *acl_register_entry_last(acl_stage_t, acl_type_t);
-void acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *);
+int acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *);
 char *acl_entry(char *, size_t, struct acl_entry *);
 void acl_dump(void);
 int emailcmp(char *, char *);        

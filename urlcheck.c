@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.27 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: urlcheck.c,v 1.28 2007/09/18 20:43:16 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.27 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.28 2007/09/18 20:43:16 manu Exp $");
 #endif
 #endif
 
@@ -67,6 +67,11 @@ __RCSID("$Id: urlcheck.c,v 1.27 2007/07/08 21:02:28 manu Exp $");
 #ifdef USE_DMALLOC
 #include <dmalloc.h> 
 #endif
+
+struct urlcheck_data {
+	struct iovec ud_iov;
+	int ud_error;
+};
 
 #define BOUNDARY_LEN	4
 struct post_data {
@@ -111,9 +116,11 @@ static void urlcheck_prop_push(char *, char *, int, struct mlfi_priv *);
 static void urlcheck_prop_clear_tmp(struct mlfi_priv *);
 static void urlcheck_prop_untmp(struct mlfi_priv *);
 
-static void urlcheck_validate_pipe(struct iovec *, struct urlcheck_entry *, 
+static void urlcheck_validate_pipe(struct urlcheck_data *, 
+				   struct urlcheck_entry *, 
 				   struct urlcheck_cnx *, char *);
-static void urlcheck_validate_internal(struct iovec *, struct urlcheck_entry *, 
+static void urlcheck_validate_internal(struct urlcheck_data *, 
+				       struct urlcheck_entry *, 
 				       struct urlcheck_cnx *, char *, 
 				       acl_stage_t, struct mlfi_priv *);
 static void urlcheck_helper_init(struct urlcheck_entry *, 
@@ -485,13 +492,13 @@ curl_outlet(buffer, size, nmemb, userp)
 	size_t nmemb;
 	void *userp;
 {
-	struct iovec *iov;
+	struct urlcheck_data *ud;
 	void *newbuf;
 	size_t newlen;
 
-	iov = (struct iovec *)userp;
+	ud = (struct urlcheck_data *)userp;
 
-	newlen = iov->iov_len;
+	newlen = ud->ud_iov.iov_len;
 
 	/*
 	 * On first pass, add extra chars for adding 
@@ -504,21 +511,21 @@ curl_outlet(buffer, size, nmemb, userp)
 
 	if (newlen > URLCHECK_ANSWER_MAX) {
 		mg_log(LOG_WARNING, "urlcheck answer too big, abort");
-		if (iov->iov_base != NULL)
-			free(iov->iov_base);
-		iov->iov_base = NULL;
-		iov->iov_len = 0;
+		if (ud->ud_iov.iov_base != NULL)
+			free(ud->ud_iov.iov_base);
+		ud->ud_iov.iov_base = NULL;
+		ud->ud_iov.iov_len = 0;
 		return 0;
 	}
 
-	if ((newbuf = realloc(iov->iov_base, newlen)) == NULL) {
+	if ((newbuf = realloc(ud->ud_iov.iov_base, newlen)) == NULL) {
 		mg_log(LOG_ERR, "realloc() failed");
 		exit(EX_OSERR);
 	}
-	iov->iov_base = newbuf;
+	ud->ud_iov.iov_base = newbuf;
 	
-	memcpy(iov->iov_base + iov->iov_len, buffer, size * nmemb);
-	iov->iov_len = newlen;
+	memcpy(ud->ud_iov.iov_base + ud->ud_iov.iov_len, buffer, size * nmemb);
+	ud->ud_iov.iov_len = newlen;
 
 	return (size * nmemb);
 }
@@ -595,7 +602,7 @@ urlcheck_validate(ad, stage, ap, priv)
 	struct urlcheck_entry *ue;
 	char *url;
 	int retval = 0;
-	struct iovec data;
+	struct urlcheck_data ud;
 	struct urlcheck_cnx *cnx;
 
 	rcpt = priv->priv_cur_rcpt;
@@ -607,15 +614,16 @@ urlcheck_validate(ad, stage, ap, priv)
 
 	cnx = get_cnx(ue);
 
-	data.iov_base = NULL;
-	data.iov_len = 0;
+	ud.ud_iov.iov_base = NULL;
+	ud.ud_iov.iov_len = 0;
+	ud.ud_error = -1;
 
 	if (ue->u_flags & U_FORK)
-		urlcheck_validate_pipe(&data, ue, cnx, url);
+		urlcheck_validate_pipe(&ud, ue, cnx, url);
 	else
-		urlcheck_validate_internal(&data, ue, cnx, url, stage, priv);
+		urlcheck_validate_internal(&ud, ue, cnx, url, stage, priv);
 
-	if (data.iov_base == NULL) {
+	if (ud.ud_iov.iov_base == NULL) {
 		mg_log(LOG_WARNING, "urlcheck failed: no answer");
 		goto out;
 	}
@@ -629,18 +637,20 @@ out:
 		exit(EX_OSERR);
 	}
 
-	if (data.iov_base) {
-		retval = answer_parse(&data, ap, ue->u_flags, 
+	if (ud.ud_iov.iov_base) {
+		retval = answer_parse(&ud.ud_iov, ap, ue->u_flags, 
 		    (ue->u_flags & U_GETPROP) ? priv : NULL);
-		free(data.iov_base);
+		free(ud.ud_iov.iov_base);
 	}
 
+	if (ud.ud_error != 0)
+		retval = ud.ud_error;
 	return retval;
 }
 
 static void
-urlcheck_validate_pipe(data, ue, cnx, url)
-	struct iovec *data;
+urlcheck_validate_pipe(ud, ue, cnx, url)
+	struct urlcheck_data *ud;
 	struct urlcheck_entry *ue;
 	struct urlcheck_cnx *cnx;
 	char *url;
@@ -694,6 +704,12 @@ urlcheck_validate_pipe(data, ue, cnx, url)
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "%s: awaiting reply", __func__);
 
+	if (read(cnx->uc_pipe_rep[0], 
+	    &ud->ud_error, sizeof(ud->ud_error)) != sizeof(size)) {
+		urlcheck_cleanup_pipe(cnx);
+		goto out;
+	}
+
 	if (read(cnx->uc_pipe_rep[0], &size, sizeof(size)) != sizeof(size)) {
 		urlcheck_cleanup_pipe(cnx);
 		goto out;
@@ -702,13 +718,13 @@ urlcheck_validate_pipe(data, ue, cnx, url)
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "%s: %d bytes to read", __func__, size);
 
-	data->iov_len = size;
-	if ((data->iov_base = malloc(size)) == NULL) {
+	ud->ud_iov.iov_len = size;
+	if ((ud->ud_iov.iov_base = malloc(size)) == NULL) {
 		mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
 		exit(EX_OSERR);
 	}
 
-	if (read(cnx->uc_pipe_rep[0], data->iov_base, size) != size) {
+	if (read(cnx->uc_pipe_rep[0], ud->ud_iov.iov_base, size) != size) {
 		urlcheck_cleanup_pipe(cnx);
 		goto out;
 	}
@@ -770,7 +786,7 @@ urlcheck_validate_helper(ue, cnx)
 {
 	ssize_t size;
 	char *url;
-	struct iovec data;
+	struct urlcheck_data ud;
 
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "%s", __func__);
@@ -798,29 +814,36 @@ urlcheck_validate_helper(ue, cnx)
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "%s: url = \"%s\"", __func__, url);
 
-	data.iov_base = NULL;
-	data.iov_len = 0;
+	ud.ud_iov.iov_base = NULL;
+	ud.ud_iov.iov_len = 0;
+	ud.ud_error = -1;
 
 	/*
 	 * stage and priv are used for the postmsg option. For now 
 	 * it is not compatible with the fork option, so we just lie
 	 * about it being AS_RCPT/NULL so that they are not used.
 	 */
-	urlcheck_validate_internal(&data, ue, cnx, url, AS_RCPT, NULL);
+	urlcheck_validate_internal(&ud, ue, cnx, url, AS_RCPT, NULL);
 
-	size = data.iov_len;
+	size = ud.ud_iov.iov_len;
+	if (write(cnx->uc_pipe_rep[1], 
+	    &ud.ud_error, sizeof(ud.ud_error)) != sizeof(size)) {
+		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		exit(EX_OSERR);
+	}
+
 	if (write(cnx->uc_pipe_rep[1], &size, sizeof(size)) != sizeof(size)) {
 		mg_log(LOG_ERR, "urlcheck helper I/O error");
 		exit(EX_OSERR);
 	}
 
-	if (write(cnx->uc_pipe_rep[1], data.iov_base, size) != size) {
+	if (write(cnx->uc_pipe_rep[1], ud.ud_iov.iov_base, size) != size) {
 		mg_log(LOG_ERR, "urlcheck helper I/O error");
 		exit(EX_OSERR);
 	}
 
-	if (data.iov_base != NULL)
-		free(data.iov_base);
+	if (ud.ud_iov.iov_base != NULL)
+		free(ud.ud_iov.iov_base);
 	free(url);
 	return;
 }
@@ -849,8 +872,8 @@ urlcheck_cleanup_pipe(cnx)
 
 
 static void
-urlcheck_validate_internal(data, ue, cnx, url, stage, priv)
-	struct iovec *data;
+urlcheck_validate_internal(ud, ue, cnx, url, stage, priv)
+	struct urlcheck_data *ud;
 	struct urlcheck_entry *ue;
 	struct urlcheck_cnx *cnx;
 	char *url;
@@ -885,7 +908,7 @@ urlcheck_validate_internal(data, ue, cnx, url, stage, priv)
 	}
 
 	if ((cerr = curl_easy_setopt(ch, 
-	    CURLOPT_WRITEDATA, (void *)data)) != CURLE_OK) {
+	    CURLOPT_WRITEDATA, (void *)ud)) != CURLE_OK) {
 		mg_log(LOG_WARNING, "curl_easy_setopt(CURLOPT_WRITEDATA) "
 		    "failed; %s", curl_easy_strerror(cerr));
 		goto out;
@@ -968,7 +991,8 @@ urlcheck_validate_internal(data, ue, cnx, url, stage, priv)
 		goto out;
 	}
 
-	if (data->iov_base == NULL) {
+	if (ud->ud_iov.iov_base == NULL) {
+		ud->ud_error = 0;
 		mg_log(LOG_WARNING, "urlcheck failed: no answer");
 		goto out;
 	}
@@ -976,9 +1000,11 @@ urlcheck_validate_internal(data, ue, cnx, url, stage, priv)
 	/* 
 	 * Set a trailing \n\0
 	 */
-	data_trailer = (char *)data->iov_base + data->iov_len - 2;
+	data_trailer = (char *)ud->ud_iov.iov_base + ud->ud_iov.iov_len - 2;
 	data_trailer[0] = '\n';
 	data_trailer[1] = '\0';
+
+	ud->ud_error = 0;
 out:
 	if (headers != NULL)
 		curl_slist_free_all(headers);
