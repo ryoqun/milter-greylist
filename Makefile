@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.103 2007/07/08 21:06:51 manu Exp $
+# $Id: Makefile,v 1.104 2007/09/19 03:01:07 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,13 +29,14 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE
+CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE -I${SRCDIR} -I.
 LDFLAGS=	
 LIBS= 		 -lpthread -lresolv -lmilter
 prefix=		/usr/local
 exec_prefix=	${prefix}
 SYSCONFDIR=	${prefix}/etc
 LOCALSTATEDIR=	${prefix}/var
+SRCDIR=		.
 BINDIR=		${exec_prefix}/bin
 SBINDIR=        ${exec_prefix}/sbin
 MANDIR=		${prefix}/man
@@ -60,6 +61,8 @@ SRC= 		milter-greylist.c pending.c sync.c conf.c macro.c stat.c \
 		urlcheck.c geoip.c
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c  
 
+VPATH=		${SRCDIR}
+
 all:		milter-greylist rc-bsd.sh rc-redhat.sh \
 		rc-solaris.sh rc-debian.sh rc-gentoo.sh rc-suse.sh
 
@@ -73,17 +76,17 @@ dump_yacc.o:	dump_yacc.c dump_lex.c
 sed_subst = "s|@BINDIR[@]|${BINDIR}|g; s|@SBINDIR[@]|${SBINDIR}|g; s|@USER[@]|${USER}|g"
 
 rc-bsd.sh:      rc-bsd.sh.in
-	${SED} ${sed_subst} rc-bsd.sh.in > rc-bsd.sh
+	${SED} ${sed_subst} ${SRCDIR}/rc-bsd.sh.in > rc-bsd.sh
 rc-redhat.sh:    rc-redhat.sh.in
-	${SED} ${sed_subst} rc-redhat.sh.in > rc-redhat.sh
+	${SED} ${sed_subst} ${SRCDIR}/rc-redhat.sh.in > rc-redhat.sh
 rc-solaris.sh:    rc-solaris.sh.in
-	${SED} ${sed_subst} rc-solaris.sh.in > rc-solaris.sh
+	${SED} ${sed_subst} ${SRCDIR}/rc-solaris.sh.in > rc-solaris.sh
 rc-debian.sh:    rc-debian.sh.in
-	${SED} ${sed_subst} rc-debian.sh.in > rc-debian.sh
+	${SED} ${sed_subst} ${SRCDIR}/rc-debian.sh.in > rc-debian.sh
 rc-gentoo.sh:    rc-gentoo.sh.in
-	${SED} ${sed_subst} rc-gentoo.sh.in > rc-gentoo.sh
+	${SED} ${sed_subst} ${SRCDIR}/rc-gentoo.sh.in > rc-gentoo.sh
 rc-suse.sh:	 rc-suse.sh.in
-	${SED} ${sed_subst} rc-suse.sh.in > rc-suse.sh
+	${SED} ${sed_subst} ${SRCDIR}/rc-suse.sh.in > rc-suse.sh
 
 install-daemon-to-bin: milter-greylist
 	${INSTALL} -d -m 755 ${DESTDIR}${BINDIR}
@@ -96,14 +99,15 @@ install-sbin: milter-greylist
 install-man:
 	${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/man8
 	${INSTALL} -d -m 755 ${DESTDIR}${MANDIR}/man5
-	${INSTALL} -m 644 milter-greylist.8 ${DESTDIR}${MANDIR}/man8
-	${INSTALL} -m 644 greylist.conf.5 ${DESTDIR}${MANDIR}/man5
+	${INSTALL} -m 644 ${SRCDIR}/milter-greylist.8 ${DESTDIR}${MANDIR}/man8
+	${INSTALL} -m 644 ${SRCDIR}/greylist.conf.5 ${DESTDIR}${MANDIR}/man5
 
 install-conf:
 	${INSTALL} -d -m 755 ${DESTDIR}/etc/mail
-	${TEST} -f ${DESTDIR}/etc/mail/greylist.conf -o -f ${DESTDIR}/etc/mail/greylist.except || \
-	     ${INSTALL} -m 644 greylist.conf ${DESTDIR}/etc/mail
-	@${TEST} -f ${DESTDIR}/etc/mail/greylist.except && (		 	   \
+	${TEST} -f ${DESTDIR}/etc/mail/greylist.conf -o 	\
+		-f ${DESTDIR}/etc/mail/greylist.except || 	\
+	     ${INSTALL} -m 644 ${SRCDIR}/greylist.conf ${DESTDIR}/etc/mail
+	@${TEST} -f ${DESTDIR}/etc/mail/greylist.except && (	 	   \
 		echo "	================================================"; \
 		echo "	 WARNING: the config file name has changed,     "; \
 		echo "	 Please rename /etc/mail/greylist.except, the   "; \
