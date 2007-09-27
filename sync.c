@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.72 2007/08/24 03:32:49 manu Exp $ */
+/* $Id: sync.c,v 1.73 2007/09/27 03:37:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.72 2007/08/24 03:32:49 manu Exp $");
+__RCSID("$Id: sync.c,v 1.73 2007/09/27 03:37:50 manu Exp $");
 #endif
 #endif
 
@@ -708,9 +708,34 @@ sync_master(arg)
 			mg_log(LOG_ERR, "incoming connexion "
 			    "failed: %s", strerror(errno));
 
-			if (errno != ECONNABORTED)
-				exit(EX_OSERR);
-			continue;
+                        if ( 0
+#ifdef EAGAIN
+                            || errno == EAGAIN
+#endif /* EAGAIN */
+#ifdef ECONNABORTED
+                            || errno == ECONNABORTED
+#endif /* ECONNABORTED */
+#ifdef EMFILE
+                            || errno == EMFILE
+#endif /* EMFILE */
+#ifdef ENFILE
+                            || errno == ENFILE
+#endif /* ENFILE */
+#ifdef ENOBUFS
+                            || errno == ENOBUFS
+#endif /* ENOBUFS */
+#ifdef ENOMEM
+                            || errno == ENOMEM
+#endif /* ENOMEM */
+#ifdef ENOSR
+                            || errno == ENOSR
+#endif /* ENOSR */
+#ifdef EWOULDBLOCK
+                            || errno == EWOULDBLOCK
+#endif /* EWOULDBLOCK */
+                        ) continue;
+                        exit(EX_OSERR);
+
 		}
 		unmappedaddr(SA(&raddr), &raddrlen);
 

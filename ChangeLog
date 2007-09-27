@@ -1,4 +1,5 @@
 4.0b3	
+	Do not quit on non fatal errors (Johann E. Klasek)
 	Display ACL when matching whitelist ACL (Benoit Branciard)
 	Add troubleshooting in README (Rogier Maas)
 4.0b2
