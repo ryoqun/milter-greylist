@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.30 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: dump.c,v 1.31 2007/09/27 03:45:30 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.30 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: dump.c,v 1.31 2007/09/27 03:45:30 manu Exp $");
 #endif
 #endif
 
@@ -249,9 +249,11 @@ dump_perform(final)
 		exit(EX_OSERR);
 	}
 
+	errno = 0;
 	if ((dump = fdopen(dumpfd, "w")) == NULL) {
 		mg_log(LOG_ERR, "cannot write dumpfile \"%s\": %s", 
-		    newdumpfile, strerror(errno));
+		    newdumpfile, 
+		    (errno == 0) ? "out of stdio streams" : strerror(errno));
 		exit(EX_OSERR);
 	}
 	

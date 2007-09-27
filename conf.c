@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.47 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: conf.c,v 1.48 2007/09/27 03:45:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.47 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: conf.c,v 1.48 2007/09/27 03:45:03 manu Exp $");
 #endif
 #endif
 
@@ -161,9 +161,11 @@ conf_load_internal(timestamp)
 		mg_log(LOG_INFO, "%sloading config file \"%s\"", 
 		    conf_cold ? "" : "re", conffile);
 
+	errno = 0;
 	if ((stream = fopen(conffile, "r")) == NULL) {
 		mg_log(LOG_ERR, "cannot open config file %s: %s", 
-		    conffile, strerror(errno));
+		    conffile, 
+		    (errno == 0) ? "out of stdio streams" : strerror(errno));
 
 		if (conf_cold)
 			exit(EX_OSERR);

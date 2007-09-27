@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.73 2007/09/27 03:37:50 manu Exp $ */
+/* $Id: sync.c,v 1.74 2007/09/27 03:45:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.73 2007/09/27 03:37:50 manu Exp $");
+__RCSID("$Id: sync.c,v 1.74 2007/09/27 03:45:03 manu Exp $");
 #endif
 #endif
 
@@ -537,10 +537,13 @@ peer_connect(peer)	/* peer list is read-locked */
 		    peer->p_name, strerror(errno));
 	}
 
+	errno = 0;
 	if ((stream = fdopen(s, "w+")) == NULL) {
 		mg_log(LOG_ERR, "cannot sync with peer %s, "
 		    "fdopen failed: %s (%d entries queued)", 
-		    peer->p_name, strerror(errno), peer->p_qlen);
+		    peer->p_name, 
+		    (errno == 0) ? "out of stdio streams" : strerror(errno),
+		    peer->p_qlen);
 		close(s);
 		return -1;
 	}
