@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.31 2007/09/27 03:45:30 manu Exp $ */
+/* $Id: dump.c,v 1.32 2007/09/27 03:47:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.31 2007/09/27 03:45:30 manu Exp $");
+__RCSID("$Id: dump.c,v 1.32 2007/09/27 03:47:25 manu Exp $");
 #endif
 #endif
 
@@ -246,6 +246,8 @@ dump_perform(final)
 	if ((dumpfd = mkstemp(newdumpfile)) == -1) {
 		mg_log(LOG_ERR, "mkstemp(\"%s\") failed: %s", 
 		    newdumpfile, strerror(errno));
+		close(dumpfd);
+		unlink(newdumpfile);		/* clean up ... */
 		exit(EX_OSERR);
 	}
 
@@ -282,6 +284,7 @@ dump_perform(final)
 	if (rename(newdumpfile, conf.c_dumpfile) != 0) {
 		mg_log(LOG_ERR, "cannot replace \"%s\" by \"%s\": %s\n",
 		    conf.c_dumpfile, newdumpfile, strerror(errno));
+		unlink(newdumpfile);		/* clean up ... */
 		exit(EX_OSERR);
 	}
 

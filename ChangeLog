@@ -1,4 +1,5 @@
 4.0b3	
+	Cleanup temporary file after DB dump failure (Johann E. Klasek)
 	Handle libc that fails stdio without setting errno (Johann E. Klasek)
 	Fixes the usage of the thread-proof resolver library (Johann E. Klasek)
 	Do not quit on non fatal errors (Johann E. Klasek)
