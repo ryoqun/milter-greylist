@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.74 2007/09/27 03:45:03 manu Exp $ */
+/* $Id: sync.c,v 1.75 2007/09/27 10:43:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.74 2007/09/27 03:45:03 manu Exp $");
+__RCSID("$Id: sync.c,v 1.75 2007/09/27 10:43:49 manu Exp $");
 #endif
 #endif
 
@@ -70,6 +70,35 @@ struct sync_master_sock {
 	int sock;
 };
 
+/* errors returned by stdio that should not cause an exit */
+static int sync_ignored_errno[] = { 
+#ifdef EAGAIN
+	EAGAIN,
+#endif /* EAGAIN */
+#ifdef ECONNABORTED
+	ECONNABORTED,
+#endif /* ECONNABORTED */
+#ifdef EMFILE
+	EMFILE,
+#endif /* EMFILE */
+#ifdef ENFILE
+	ENFILE,
+#endif /* ENFILE */
+#ifdef ENOBUFS
+	ENOBUFS,
+#endif /* ENOBUFS */
+#ifdef ENOMEM
+	ENOMEM,
+#endif /* ENOMEM */
+#ifdef ENOSR
+	ENOSR,
+#endif /* ENOSR */
+#ifdef EWOULDBLOCK
+	EWOULDBLOCK,
+#endif /* EWOULDBLOCK */
+	0,
+};
+
 static pthread_mutex_t sync_master_lock = PTHREAD_MUTEX_INITIALIZER;
 struct sync_master_sock sync_master4 = { 0, -1 };
 struct sync_master_sock sync_master6 = { 0, -1 };
@@ -87,6 +116,7 @@ static int sync_queue_poke(struct peer *, struct sync *);
 static struct sync * sync_queue_peek(struct peer *);
 static int select_protocol(struct peer *, int, FILE *);
 static void sync_vers(FILE *, int);
+static int is_fatal(int);
 
 void
 peer_init(void) {
@@ -711,33 +741,9 @@ sync_master(arg)
 			mg_log(LOG_ERR, "incoming connexion "
 			    "failed: %s", strerror(errno));
 
-                        if ( 0
-#ifdef EAGAIN
-                            || errno == EAGAIN
-#endif /* EAGAIN */
-#ifdef ECONNABORTED
-                            || errno == ECONNABORTED
-#endif /* ECONNABORTED */
-#ifdef EMFILE
-                            || errno == EMFILE
-#endif /* EMFILE */
-#ifdef ENFILE
-                            || errno == ENFILE
-#endif /* ENFILE */
-#ifdef ENOBUFS
-                            || errno == ENOBUFS
-#endif /* ENOBUFS */
-#ifdef ENOMEM
-                            || errno == ENOMEM
-#endif /* ENOMEM */
-#ifdef ENOSR
-                            || errno == ENOSR
-#endif /* ENOSR */
-#ifdef EWOULDBLOCK
-                            || errno == EWOULDBLOCK
-#endif /* EWOULDBLOCK */
-                        ) continue;
-                        exit(EX_OSERR);
+			if (is_fatal(errno))
+                        	exit(EX_OSERR);
+
 
 		}
 		unmappedaddr(SA(&raddr), &raddrlen);
@@ -1555,4 +1561,16 @@ out:
 	PEER_UNLOCK;
 	
 	return;
+}
+
+static int 
+is_fatal(err)
+	int err;
+{
+	int *i;
+
+	for (i = sync_ignored_errno; *i; i++)
+		if (errno == *i)
+			return 0;
+	return 1;
 }
