@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.26 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.27 2007/09/27 03:40:25 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,13 +36,16 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.26 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.27 2007/09/27 03:40:25 manu Exp $");
 #endif
 #endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_STRINGS_H
+#include <strings.h>            /* bzero, ... */
+#endif
 #include <syslog.h>
 #include <errno.h>
 #include <sysexits.h>
@@ -62,7 +65,7 @@ __RCSID("$Id: dnsrbl.c,v 1.26 2007/07/08 21:02:28 manu Exp $");
 #define NS_MAXMSG	65535
 #endif
 
-#ifdef res_ninit
+#if (defined(res_ninit) || (__RES >= 19991006) )
 #define HAVE_RESN	1
 #ifndef res_ndestroy
 #define res_ndestroy(res)	res_nclose(res)
