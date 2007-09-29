@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.218 2007/09/19 03:01:07 manu Exp $
+# $Id: configure.ac,v 1.219 2007/09/29 14:18:59 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -31,12 +31,24 @@ CFLAGS=$SAVEDCFLAGS
 
 NORPSAVEDLDFLAGS=$LDFLAGS
 
-# Check if the linker accepts --rpath (for Darwin)
+# Any linker will probably accept -L
+rpath="-L"
+
+# Check if the linker accepts -R
+AC_MSG_CHECKING([if ld accepts -Rh])
+SAVEDLDFLAGS=$LDFLAGS
+LDFLAGS=$LDFLAGS" -Wl,-R=/"
+AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], 
+    [rpath="-R"; ldrpath=yes], [ldrpath=no])
+LDFLAGS=$SAVEDLDFLAGS
+AC_MSG_RESULT([$ldrpath])
+
+# Check if the linker accepts --rpath 
 AC_MSG_CHECKING([if ld accepts --rpath])
 SAVEDLDFLAGS=$LDFLAGS
 LDFLAGS=$LDFLAGS" -Wl,--rpath=/"
 AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], 
-    [rpath="--rpath="; ldrpath=yes], [rpath="-R"; ldrpath=no])
+    [rpath="--rpath="; ldrpath=yes], [ldrpath=no])
 LDFLAGS=$SAVEDLDFLAGS
 AC_MSG_RESULT([$ldrpath])
 
