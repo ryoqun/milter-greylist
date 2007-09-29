@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.219 2007/09/29 14:18:59 manu Exp $
+# $Id: configure.ac,v 1.220 2007/09/29 14:20:39 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -35,7 +35,7 @@ NORPSAVEDLDFLAGS=$LDFLAGS
 rpath="-L"
 
 # Check if the linker accepts -R
-AC_MSG_CHECKING([if ld accepts -Rh])
+AC_MSG_CHECKING([if ld accepts -R])
 SAVEDLDFLAGS=$LDFLAGS
 LDFLAGS=$LDFLAGS" -Wl,-R=/"
 AC_LINK_IFELSE([AC_LANG_PROGRAM([],[])], 

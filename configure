@@ -2987,8 +2987,8 @@ NORPSAVEDLDFLAGS=$LDFLAGS
 rpath="-L"
 
 # Check if the linker accepts -R
-echo "$as_me:$LINENO: checking if ld accepts -Rh" >&5
-echo $ECHO_N "checking if ld accepts -Rh... $ECHO_C" >&6
+echo "$as_me:$LINENO: checking if ld accepts -R" >&5
+echo $ECHO_N "checking if ld accepts -R... $ECHO_C" >&6
 SAVEDLDFLAGS=$LDFLAGS
 LDFLAGS=$LDFLAGS" -Wl,-R=/"
 cat >conftest.$ac_ext <<_ACEOF
