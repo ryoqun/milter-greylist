@@ -1,4 +1,5 @@
 4.0b3	
+	Warn in README that bison may be required for buidling
 	Fix configure error on Solaris (Tim Mooney)
 	Workaround for Solaris 256 stream limitation (Johann E. Klasek)
 	Fix spelling errors (Nerijus Baliunas)
