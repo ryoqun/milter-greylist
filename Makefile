@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.104 2007/09/19 03:01:07 manu Exp $
+# $Id: Makefile,v 1.105 2007/10/03 10:52:23 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -30,7 +30,7 @@
 #
 
 CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE -I${SRCDIR} -I.
-LDFLAGS=	
+LDFLAGS=	 
 LIBS= 		 -lpthread -lresolv -lmilter
 prefix=		/usr/local
 exec_prefix=	${prefix}
@@ -55,7 +55,7 @@ TRUE=		true
 
 OBJ= 		milter-greylist.o pending.o sync.o dnsrbl.o list.o macro.o \
 		conf_yacc.o dump_yacc.o conf.o autowhite.o dump.o spf.o \
-		acl.o urlcheck.o stat.o clock.o geoip.o
+		acl.o urlcheck.o stat.o clock.o geoip.o fd_pool.o
 SRC= 		milter-greylist.c pending.c sync.c conf.c macro.c stat.c \
 		clock.c autowhite.c dump.c spf.c acl.c dnsrbl.c list.c \
 		urlcheck.c geoip.c

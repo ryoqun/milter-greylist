@@ -1,9 +1,9 @@
-# $Id: README,v 1.55 2007/10/03 10:27:43 manu Exp $
+# $Id: README,v 1.56 2007/10/03 10:52:23 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/10/03 10:27:43 $
+		       $Date: 2007/10/03 10:52:23 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -617,6 +617,7 @@ when handling a large number of connections. If you are not sure whether
 your system is affected or not, check your system headers for the FILE 
 definition. On Solaris, the problem only exists with the 32 bit ABI, 
 so rebuilding milter-greylist with a 64 bit compiler will fix the problem.
+An alternative is to use the --enable-stdio-hack option to configure
 
 On IRIX, milter-greylist has to be compiled with the same ABI as
 libmilter. If libmilter was built with the MIPSpro compiler,
@@ -630,8 +631,7 @@ incompatibility may be fixed in gcc 3.4.
  ==========
 
 This software is available under a 3 clauses BSD license:
-
-  Copyright (c) 2004 Emmanuel Dreyfus
+  Copyright (c) 2004-2007 Emmanuel Dreyfus
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -658,9 +658,9 @@ This software is available under a 3 clauses BSD license:
   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
   OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
 If you run on a non-BSD system, two files with different licenses might
-be required for building or installing. The configure script has a
-different license as well.
+be required for building or installing.
 
 install-sh has a MIT BSD-like license:
   Copyright 1991 by the Massachusetts Institute of Technology
@@ -715,3 +715,35 @@ The configure script has the following license:
   This configure script is free software; the Free Software Foundation
   gives unlimited permission to copy, distribute and modify it.
 
+
+If you use the 32 bit ABI on Solaris and have a large traffic, you will 
+need the a workaround for stdio unability to use streams with associated
+file dexriptor above 255. The files implementing the workaround are
+fd_pool.c and fd_pool.h, and they have a 3 clause BDE license:
+  Copyright (c) 2007 Johann Klasek
+  All rights reserved.
+ 
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions
+  are met:
+  1. Redistributions of source code must retain the above copyright
+     notice, this list of conditions and the following disclaimer.
+  2. Redistributions in binary form must reproduce the above copyright
+     notice, this list of conditions and the following disclaimer in the
+     documentation and/or other materials provided with the distribution.
+  3. All advertising materials mentioning features or use of this software
+     must display the following acknowledgement:
+         This product includes software developed by Johann Klasek
+ 
+  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED
+  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+  STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
+  OF THE POSSIBILITY OF SUCH DAMAGE.
+ /

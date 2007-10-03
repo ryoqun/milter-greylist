@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.68 2007/05/02 03:36:50 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.69 2007/10/03 10:52:23 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -40,6 +40,9 @@
 #include <libmilter/mfapi.h>
 #include "config.h"
 #include "dump.h"
+
+/* environment of Solaris workaround for stdio descriptor limitation */
+#include "fd_pool.h"
 
 #define NUMLEN 20
 #define QSTRLEN 1024

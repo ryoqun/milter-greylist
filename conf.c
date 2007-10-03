@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.48 2007/09/27 03:45:03 manu Exp $ */
+/* $Id: conf.c,v 1.49 2007/10/03 10:52:23 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.48 2007/09/27 03:45:03 manu Exp $");
+__RCSID("$Id: conf.c,v 1.49 2007/10/03 10:52:23 manu Exp $");
 #endif
 #endif
 
@@ -196,7 +196,7 @@ conf_load_internal(timestamp)
 
 		TSS_SET(conf_key, threadconf);
 
-		fclose(stream);
+		Fclose(stream);
 
 		if (!conf_cold || newconf->c_debug) {
 			(void)gettimeofday(&tv2, NULL);

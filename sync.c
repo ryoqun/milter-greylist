@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.75 2007/09/27 10:43:49 manu Exp $ */
+/* $Id: sync.c,v 1.76 2007/10/03 10:52:23 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.75 2007/09/27 10:43:49 manu Exp $");
+__RCSID("$Id: sync.c,v 1.76 2007/10/03 10:52:23 manu Exp $");
 #endif
 #endif
 
@@ -146,7 +146,7 @@ peer_clear(void) {
 			sync_free(sync);
 			
 		if (peer->p_stream != NULL)
-			fclose(peer->p_stream);
+			Fclose(peer->p_stream);
 
 		LIST_REMOVE(peer, p_list);
 		pthread_mutex_destroy(&peer->p_mtx);
@@ -309,7 +309,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 		mg_log(LOG_ERR, "closing connexion with peer %s: "
 		    "send buffer would overflow (%d entries queued)", 
 		    peer->p_name, peer->p_qlen);
-		fclose(peer->p_stream);
+		Fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return -1;
 	}
@@ -321,7 +321,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 		    "complete line \"%s\" - bytes written: %i", 
 		    peer->p_name, strerror(errno), peer->p_qlen, 
 		    line, bw);
-		fclose(peer->p_stream);
+		Fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return -1;
 	}
@@ -339,7 +339,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 				mg_log(LOG_ERR, "lost connexion with peer %s: "
 		  		  "%s (%d entries queued)", 
 				    peer->p_name, strerror(errno), peer->p_qlen);
-				fclose(peer->p_stream);
+				Fclose(peer->p_stream);
 				peer->p_stream = NULL;
 				return -1;
 			}
@@ -348,7 +348,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 		mg_log(LOG_ERR, "lost connexion with peer %s: "
 		    "%s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);
-		fclose(peer->p_stream);
+		Fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return -1;
 	}
@@ -364,7 +364,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 		mg_log(LOG_ERR, "Unexpected reply \"%s\" from %s, "
 		    "closing connexion (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
-		fclose(peer->p_stream);
+		Fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return -1;
 	}
@@ -374,7 +374,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 		mg_log(LOG_ERR, "Unexpected reply \"%s\" from %s, "
 		    "closing connexion (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
-		fclose(peer->p_stream);
+		Fclose(peer->p_stream);
 		peer->p_stream = NULL;
 		return -1;
 	}
@@ -578,6 +578,10 @@ peer_connect(peer)	/* peer list is read-locked */
 		return -1;
 	}
 
+#ifdef USE_FD_POOL
+	s = fileno(stream);     /* the socket descriptor could have been replaced by Fdopen() ! */
+#endif
+
 	if (setvbuf(stream, NULL, _IOLBF, 0) != 0)
 		mg_log(LOG_ERR, "cannot set line buffering with peer %s: %s", 
 		    peer->p_name, strerror(errno));
@@ -623,7 +627,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	return 0;
 
 bad:
-	fclose(stream);
+	Fclose(stream);
 	peer->p_stream = NULL;
 
 	return -1;
@@ -776,7 +780,7 @@ sync_master(arg)
 			fprintf(stream, "105 No more peers, shutting down!\n");
 
 			PEER_UNLOCK;
-			fclose(stream);
+			Fclose(stream);
 			pthread_mutex_lock(&sync_master_lock);
 			close(sms->sock);
 			sms->sock = -1;
@@ -834,7 +838,7 @@ sync_master(arg)
 			    peerstr);
 			fprintf(stream, 
 			    "106 You have no permission to talk, go away!\n");
-			fclose(stream);
+			Fclose(stream);
 			continue;
 		}
 
@@ -843,7 +847,7 @@ sync_master(arg)
 			mg_log(LOG_ERR, "incoming connexion from %s failed, "
 			    "pthread_create failed: %s", 
 			    peerstr, strerror(error));
-			fclose(stream);
+			Fclose(stream);
 			continue;
 		}
 		if ((error = pthread_detach(tid)) != 0) {
@@ -1208,7 +1212,7 @@ eol:
 	}
 
 	fprintf(stream, "202 Good bye\n");
-	fclose(stream);
+	Fclose(stream);
 
 	conf_release();
 

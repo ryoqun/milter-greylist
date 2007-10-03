@@ -845,6 +845,7 @@ Optional Features:
   --disable-FEATURE       do not include FEATURE (same as --enable-FEATURE=no)
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --disable-rpath	do not hardcode runtime library paths
+  --enable-stdio-hack   Use workaround for Solaris stdio limitation
   --enable-drac	Enable DRAC support
   --enable-dnsrbl	Enable DNSRBL support
   --enable-postfix	Enable Postfix support
@@ -7897,6 +7898,13 @@ rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
 echo "$as_me:$LINENO: result: $dextensions" >&5
 echo "${ECHO_T}$dextensions" >&6
 CFLAGS=$SAVEDCFLAGS
+
+# Solaris 256 streams limitation worakround
+# Check whether --enable-stdio-hack or --disable-stdio-hack was given.
+if test "${enable_stdio_hack+set}" = set; then
+  enableval="$enable_stdio_hack"
+  CFLAGS=$CFLAGS" -DUSE_FD_POOL"
+fi;
 
 # Check for DRAC
 # Check whether --enable-drac or --disable-drac was given.

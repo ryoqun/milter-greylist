@@ -1,4 +1,5 @@
 4.0b3	
+	Workaround for Solaris 256 stream limitation (Johann E. Klasek)
 	Fix spelling errors (Nerijus Baliunas)
 	Restore build for systems like Tru64 where ld does not acccept -R
 	Cleanup temporary file after DB dump failure (Johann E. Klasek)

@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.220 2007/09/29 14:20:39 manu Exp $
+# $Id: configure.ac,v 1.221 2007/10/03 10:52:23 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -397,6 +397,11 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	])
 AC_MSG_RESULT([$dextensions])
 CFLAGS=$SAVEDCFLAGS
+
+# Solaris 256 streams limitation worakround
+AC_ARG_ENABLE(stdio-hack,
+        [  --enable-stdio-hack   Use workaround for Solaris stdio limitation],
+        [CFLAGS=$CFLAGS" -DUSE_FD_POOL"])
 
 # Check for DRAC
 AC_ARG_ENABLE(drac,
