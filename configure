@@ -8453,7 +8453,7 @@ if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   ac_status=$?
   echo "$as_me:$LINENO: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
-  pthreadfl=yes; SAVEDCLFAGS=$CFLAGS
+  pthreadfl=yes; SAVEDCFLAGS=$CFLAGS
 else
   echo "$as_me: failed program was:" >&5
 sed 's/^/| /' conftest.$ac_ext >&5
@@ -8464,7 +8464,7 @@ rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
 
 fi
 rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
-CLFAGS=$SAVEDCFLAGS
+CFLAGS=$SAVEDCFLAGS
 echo "$as_me:$LINENO: result: $pthreadfl" >&5
 echo "${ECHO_T}$pthreadfl" >&6
 

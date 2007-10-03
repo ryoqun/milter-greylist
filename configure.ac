@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.221 2007/10/03 10:52:23 manu Exp $
+# $Id: configure.ac,v 1.222 2007/10/03 10:57:00 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -481,9 +481,9 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],[])],
 	[pthreadfl=no], 
 	[CFLAGS=$CFLAGS" -pthread -D_XOPEN_SOURCE=500";
 	 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],[])],
-		[pthreadfl=yes; SAVEDCLFAGS=$CFLAGS], [pthreadfl=no])
+		[pthreadfl=yes; SAVEDCFLAGS=$CFLAGS], [pthreadfl=no])
 	])
-CLFAGS=$SAVEDCFLAGS
+CFLAGS=$SAVEDCFLAGS
 AC_MSG_RESULT([$pthreadfl])
 
 # Linux requires -D_XOPEN_SOURCE=500 to build with libpthread and -Wall
