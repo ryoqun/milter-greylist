@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.76 2007/10/03 10:52:23 manu Exp $ */
+/* $Id: sync.c,v 1.77 2007/10/03 16:28:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.76 2007/10/03 10:52:23 manu Exp $");
+__RCSID("$Id: sync.c,v 1.77 2007/10/03 16:28:50 manu Exp $");
 #endif
 #endif
 
@@ -1478,7 +1478,7 @@ local_addr(sa, salen)
 		    errno != EINVAL &&
 #endif
 #ifdef __sun__
-		    errno != 0
+		    errno != 0 &&
 #endif
 		    1) {
 			mg_log(LOG_ERR, "local_addr: bind failed: %s",

@@ -1,3 +1,5 @@
+4.0b4
+	Fix build problem on Solaris
 4.0b3	
 	Warn in README that bison may be required for buidling
 	Fix configure error on Solaris (Tim Mooney)
