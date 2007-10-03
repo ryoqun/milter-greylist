@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.193 2007/09/18 20:43:16 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.194 2007/10/03 10:27:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.193 2007/09/18 20:43:16 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.194 2007/10/03 10:27:43 manu Exp $");
 #endif
 #endif
 
@@ -562,7 +562,7 @@ real_envrcpt(ctx, envrcpt)
 	reset_acl_values(priv);
 	priv->priv_cur_rcpt = rcpt;
 	if (acl_filter(AS_RCPT, ctx, priv) != 0) {
-		mg_log(LOG_ERR, "ACL evaluation failire");
+		mg_log(LOG_ERR, "ACL evaluation failure");
 		return SMFIS_TEMPFAIL;
 	}
 	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST) {
