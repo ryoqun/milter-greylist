@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.74 2007/08/23 10:54:13 manu Exp $
+.\" $Id: greylist.conf.5,v 1.75 2007/10/04 10:54:44 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -521,7 +521,7 @@ reverse DNS:
   sm_macro "maybe_forged" "{client_resolve}" "FORGED"
 
   racl greylist sm_macro "maybe_forged" delay 1h
-  racl greylist default 15m
+  racl greylist default delay 15m
 .PP
 A regular expression can be used as the macro value. 
 It must be surrounded with slashes and not by quotes.
