@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.77 2007/10/03 16:28:50 manu Exp $ */
+/* $Id: sync.c,v 1.78 2007/10/04 16:27:52 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.77 2007/10/03 16:28:50 manu Exp $");
+__RCSID("$Id: sync.c,v 1.78 2007/10/04 16:27:52 manu Exp $");
 #endif
 #endif
 
@@ -1477,7 +1477,7 @@ local_addr(sa, salen)
 #ifdef __FreeBSD__
 		    errno != EINVAL &&
 #endif
-#ifdef __sun__
+#ifdef __sun
 		    errno != 0 &&
 #endif
 		    1) {
