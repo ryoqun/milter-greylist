@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.33 2007/10/03 10:52:23 manu Exp $ */
+/* $Id: dump.c,v 1.34 2007/10/05 10:35:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.33 2007/10/03 10:52:23 manu Exp $");
+__RCSID("$Id: dump.c,v 1.34 2007/10/05 10:35:00 manu Exp $");
 #endif
 #endif
 
@@ -252,7 +252,7 @@ dump_perform(final)
 	}
 
 	errno = 0;
-	if ((dump = fdopen(dumpfd, "w")) == NULL) {
+	if ((dump = Fdopen(dumpfd, "w")) == NULL) {
 		mg_log(LOG_ERR, "cannot write dumpfile \"%s\": %s", 
 		    newdumpfile, 
 		    (errno == 0) ? "out of stdio streams" : strerror(errno));
@@ -306,7 +306,7 @@ dump_reload(void) {
 	/* 
 	 * Re-import a saved greylist
 	 */
-	if ((dump = fopen(conf.c_dumpfile, "r")) == NULL) {
+	if ((dump = Fopen(conf.c_dumpfile, "r")) == NULL) {
 		mg_log(LOG_ERR, "cannot read dumpfile \"%s\"", conf.c_dumpfile);
 		mg_log(LOG_ERR, "starting with an empty greylist");
 	} else {
@@ -319,7 +319,7 @@ dump_reload(void) {
 
 		AUTOWHITE_UNLOCK;
 		PENDING_UNLOCK;
-		fclose(dump);
+		Fclose(dump);
 
 		/* 
 		 * dump_dirty has been bumped on each pending_get call,

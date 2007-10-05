@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.195 2007/10/03 10:52:23 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.196 2007/10/05 10:35:00 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.195 2007/10/03 10:52:23 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.196 2007/10/05 10:35:00 manu Exp $");
 #endif
 #endif
 
@@ -1677,14 +1677,14 @@ writepid(pidfile)
 {
 	FILE *stream;
 
-	if ((stream = fopen(pidfile, "w")) == NULL) {
+	if ((stream = Fopen(pidfile, "w")) == NULL) {
 		mg_log(LOG_ERR, "Cannot open pidfile \"%s\" for writing: %s", 
 		    pidfile, strerror(errno));
 		return;
 	}
 
 	fprintf(stream, "%ld\n", (long)getpid());
-	fclose(stream);
+	Fclose(stream);
 
 	return;
 }

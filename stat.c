@@ -1,4 +1,4 @@
-/* $Id: stat.c,v 1.3 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: stat.c,v 1.4 2007/10/05 10:35:00 manu Exp $ */
 
 /*
  * Copyright (c) 2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: stat.c,v 1.3 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: stat.c,v 1.4 2007/10/05 10:35:00 manu Exp $");
 #endif
 #endif
 
@@ -98,10 +98,14 @@ mg_stat_def(output, fstring)
 	switch (output[0]) {
 	case '>':	/* file */
 		if (output[1] == '>')
-			outfp = fopen(output + 2, "a");
+			outfp = Fopen(output + 2, "a");
 		else
-			outfp = fopen(output + 1, "w");
+			outfp = Fopen(output + 1, "w");
+#ifdef USE_FD_POOL
+		outfp_close = fclose_ext;
+#else
 		outfp_close = fclose;
+#endif
 		break;
 	case '|':	/* pipe */
 		outfp = popen(output + 1, "w");
