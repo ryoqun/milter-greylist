@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.28 2007/09/18 20:43:16 manu Exp $ */
+/* $Id: acl.h,v 1.29 2007/10/05 10:08:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -151,7 +151,6 @@ struct acl_param {
 #define A_FREE_REPORT		0x10
 
 struct all_list_entry;
-enum list_type;
 
 typedef union acl_data {
 	struct acl_netblock_data netblock;

@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.105 2007/10/03 10:52:23 manu Exp $
+# $Id: Makefile,v 1.106 2007/10/05 10:08:08 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,8 +29,8 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE -I${SRCDIR} -I.
-LDFLAGS=	 
+CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE -I${SRCDIR} -I. -I/usr/pkg/include
+LDFLAGS=	-L/usr/pkg/lib -lmilter -lpthread 
 LIBS= 		 -lpthread -lresolv -lmilter
 prefix=		/usr/local
 exec_prefix=	${prefix}
