@@ -1,4 +1,4 @@
-/* $Id: stat.c,v 1.4 2007/10/05 10:35:00 manu Exp $ */
+/* $Id: stat.c,v 1.5 2007/10/05 23:12:47 manu Exp $ */
 
 /*
  * Copyright (c) 2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: stat.c,v 1.4 2007/10/05 10:35:00 manu Exp $");
+__RCSID("$Id: stat.c,v 1.5 2007/10/05 23:12:47 manu Exp $");
 #endif
 #endif
 
@@ -97,6 +97,7 @@ mg_stat_def(output, fstring)
 
 	switch (output[0]) {
 	case '>':	/* file */
+		errno = 0;
 		if (output[1] == '>')
 			outfp = Fopen(output + 2, "a");
 		else
@@ -120,7 +121,8 @@ mg_stat_def(output, fstring)
 
 	if (outfp == NULL) {
 		mg_log(LOG_WARNING, "cannot open \"%s\" at line %d: %s",
-		    output, conf_line -1, strerror(errno));
+		    output, conf_line -1, 
+		    (errno == 0) ? "out of stdio streams" : strerror(errno));
 		return;
 	}
 

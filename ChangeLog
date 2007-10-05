@@ -1,4 +1,5 @@
 4.0b4
+	Add missing bits for Solaris 256 stream limitation workaround
 	Fix build problem on Solaris
 	Documentation fix (Tim Mooney)
 4.0b3	

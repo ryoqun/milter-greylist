@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.79 2007/10/05 10:35:00 manu Exp $ */
+/* $Id: sync.c,v 1.80 2007/10/05 23:12:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.79 2007/10/05 10:35:00 manu Exp $");
+__RCSID("$Id: sync.c,v 1.80 2007/10/05 23:12:47 manu Exp $");
 #endif
 #endif
 
@@ -759,10 +759,13 @@ sync_master(arg)
 		mg_log(LOG_INFO, "Incoming MX sync connexion from %s", 
 		    peerstr);
 
+		errno = 0;
 		if ((stream = Fdopen(fd, "w+")) == NULL) {
 			mg_log(LOG_ERR, 
 			    "incoming connexion from %s failed, "
-			    "fdopen fail: %s", peerstr, strerror(errno));
+			    "fdopen fail: %s", peerstr, 
+		    	    (errno == 0) ? "out of stdio streams"
+					 : strerror(errno));
 			close(fd);
 			exit(EX_OSERR);
 		}
