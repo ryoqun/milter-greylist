@@ -1,9 +1,9 @@
-# $Id: README,v 1.57 2007/10/03 11:03:12 manu Exp $
+# $Id: README,v 1.58 2007/10/05 10:29:29 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/10/03 11:03:12 $
+		       $Date: 2007/10/05 10:29:29 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -719,7 +719,7 @@ The configure script has the following license:
 If you use the 32 bit ABI on Solaris and have a large traffic, you will 
 need the a workaround for stdio unability to use streams with associated
 file dexriptor above 255. The files implementing the workaround are
-fd_pool.c and fd_pool.h, and they have a 3 clause BDE license:
+fd_pool.c and fd_pool.h, and they have a 3 clause BSD license:
   Copyright (c) 2007 Johann Klasek
   All rights reserved.
  
