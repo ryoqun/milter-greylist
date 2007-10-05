@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.107 2007/10/05 10:09:00 manu Exp $
+# $Id: Makefile,v 1.108 2007/10/05 23:20:19 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -30,7 +30,7 @@
 #
 
 CFLAGS= 	-g -O2 -Wall -D_BSD_SOURCE -I${SRCDIR} -I.
-LDFLAGS=	 
+LDFLAGS=	
 LIBS= 		 -lpthread -lresolv -lmilter
 prefix=		/usr/local
 exec_prefix=	${prefix}
