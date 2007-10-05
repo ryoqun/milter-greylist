@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.71 2007/09/20 11:07:23 manu Exp $ */
+/* $Id: acl.c,v 1.72 2007/10/05 10:47:48 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.71 2007/09/20 11:07:23 manu Exp $");
+__RCSID("$Id: acl.c,v 1.72 2007/10/05 10:47:48 manu Exp $");
 #endif
 #endif
 
@@ -2107,7 +2107,7 @@ acl_dump (void) {	/* acllist must be write locked */
 	 * Enable it if you need it, but you may be better changing the path
 	 */
 #if 0
-	debug = fopen("/tmp/access-list.debug", "w");
+	debug = Fopen("/tmp/access-list.debug", "w");
 #endif
 	ACL_RDLOCK;
 	mg_log(LOG_INFO, "Access list dump:");
@@ -2121,7 +2121,7 @@ acl_dump (void) {	/* acllist must be write locked */
 	}
 	ACL_UNLOCK;
 	if (debug != NULL)
-		fclose(debug);
+		Fclose(debug);
 }
 
 void 
