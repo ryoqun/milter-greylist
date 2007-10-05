@@ -7676,11 +7676,11 @@ rm -f conftest.err conftest.$ac_objext conftest.$ac_ext
 echo "$as_me:$LINENO: result: $timeradd" >&5
 echo "${ECHO_T}$timeradd" >&6
 
-# Check if -D_REENTRANT is needed for localtime_r, gmtime_r
+# Check if -D_REENTRANT is needed for localtime_r, gmtime_r, strtok_r
 SAVEDCFLAGS=$CFLAGS
 CFLAGS=$CFLAGS$efl
-echo "$as_me:$LINENO: checking if -D_REENTRANT is needed to use localtime_r" >&5
-echo $ECHO_N "checking if -D_REENTRANT is needed to use localtime_r... $ECHO_C" >&6
+echo "$as_me:$LINENO: checking if -D_REENTRANT is needed to use localtime_r and strtok_r" >&5
+echo $ECHO_N "checking if -D_REENTRANT is needed to use localtime_r and strtok_r... $ECHO_C" >&6
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
@@ -7689,6 +7689,7 @@ cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
                #include <time.h>
+               #include <stdio.h>
 
 int
 main ()
@@ -7696,6 +7697,7 @@ main ()
 
 
                (void)localtime_r(NULL, NULL);
+	       (void)strtok_r(NULL, NULL, NULL);
 
   ;
   return 0;
@@ -7736,13 +7738,14 @@ cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
 
                                #define _REENTRANT
-                               #include <time.h>
+                               #include <stdio.h>
 
 int
 main ()
 {
 
                                 (void)localtime_r(NULL, NULL);
+	       			(void)strtok_r(NULL, NULL, NULL);
 
   ;
   return 0;

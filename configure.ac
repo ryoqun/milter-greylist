@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.223 2007/10/03 11:10:35 manu Exp $
+# $Id: configure.ac,v 1.224 2007/10/05 10:18:19 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -351,21 +351,24 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 	    [], [<time.h> defines timeradd]) timeradd=no])
 AC_MSG_RESULT([$timeradd])
 
-# Check if -D_REENTRANT is needed for localtime_r, gmtime_r
+# Check if -D_REENTRANT is needed for localtime_r, gmtime_r, strtok_r
 SAVEDCFLAGS=$CFLAGS
 CFLAGS=$CFLAGS$efl
-AC_MSG_CHECKING([if -D_REENTRANT is needed to use localtime_r])
+AC_MSG_CHECKING([if -D_REENTRANT is needed to use localtime_r and strtok_r])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
                #include <time.h>
+               #include <stdio.h>
        ],[[
 
                (void)localtime_r(NULL, NULL);
+	       (void)strtok_r(NULL, NULL, NULL);
        ]])], [dreentrant=no],
                [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
                                #define _REENTRANT
-                               #include <time.h>
+                               #include <stdio.h>
                        ],[[
                                 (void)localtime_r(NULL, NULL);
+	       			(void)strtok_r(NULL, NULL, NULL);
                        ]])],
                        [SAVEDCFLAGS=$SAVEDCFLAGS" -D_REENTRANT";
                         dreentrant=yes], [dreentrant=no])
