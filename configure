@@ -9170,7 +9170,7 @@ fi;
 # Check whether --enable-dnsrbl or --disable-dnsrbl was given.
 if test "${enable_dnsrbl+set}" = set; then
   enableval="$enable_dnsrbl"
-  if test x$enableval = xyes; then
+  if test x$rdns = xyes; then
 		SAVEDCFLAGS=$CFLAGS" -DUSE_DNSRBL"
 		# For Debian
 		CFLAGS=
