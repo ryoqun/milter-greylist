@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.197 2007/10/05 23:12:47 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.198 2007/10/11 11:24:14 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.197 2007/10/05 23:12:47 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.198 2007/10/11 11:24:14 manu Exp $");
 #endif
 #endif
 
@@ -384,6 +384,7 @@ real_envfrom(ctx, envfrom)
 	}
 	if (priv->priv_buf)
 		free(priv->priv_buf);
+	priv->priv_msgcount = 0;
 
 	/* 
 	 * Now let's handle this new message...

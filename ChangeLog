@@ -1,5 +1,6 @@
 4.0b5
 	Accept --disable-dnsrbl without a bug
+	Fix message size when multiple messages are sent in one session
 4.0b4
 	Add missing bits for Solaris 256 stream limitation workaround
 	Fix build problem on Solaris
