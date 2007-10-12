@@ -1,6 +1,7 @@
 4.0b5
 	Accept --disable-dnsrbl without a bug
 	Fix message size when multiple messages are sent in one session
+	Do not build fd_pool.c if it is not used
 4.0b4
 	Add missing bits for Solaris 256 stream limitation workaround
 	Fix build problem on Solaris

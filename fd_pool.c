@@ -74,6 +74,7 @@
  *	http://www.research.att.com/~gsf/download/ref/sfio/sfio.html
  */
 
+#ifdef USE_FD_POOL
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -100,40 +101,8 @@ static char fd_pool[256];
 /* the current count of free low descriptors */
 static int fd_pool_free=0;
 
-#ifdef USE_FD_POOL
-
 /* take logging function from milter-greylist */
 #include "milter-greylist.h"
-
-#define fe_log mg_log
-
-#else
-
-/* ... otherwise define our own ... */
-
-/* log to syslog if set */
-static int fe_log_syslog=0;
-
-static
-/* VARARGS */
-void
-fe_log(int level, char *fmt, ...) {
-        va_list ap;
-
-        va_start(ap, fmt);
-
-        if (! fe_log_syslog) {
-                vfprintf(stderr, fmt, ap);
-                fprintf(stderr, "\n");
-        }
-        else
-                vsyslog(level, fmt, ap);
-
-        va_end(ap);
-        return;
-}
-
-#endif
 
 /* public file which is used to aquire new open descriptors ... */
 #define FNAME "/dev/null"
@@ -149,7 +118,7 @@ int fd_new_desc() {
 	int descriptor;
 
         if ((descriptor = open(FNAME, O_RDWR)) < 0) {
-                fe_log(LOG_ERR, "fd_pool: can't create dummy file descriptor file %s: %s", FNAME,
+                mg_log(LOG_ERR, "fd_pool: can't create dummy file descriptor file %s: %s", FNAME,
                         strerror(errno));
                 return -1;
         }
@@ -167,7 +136,7 @@ int fd_new_low_desc() {
 	int descriptor;
 
         if ((descriptor = fd_new_desc()) >= 256 || descriptor < 0) {
-                fe_log(LOG_ERR, "fd_pool: %s", (descriptor < 0 ? "can't allocate a new descriptor" : "can't allocate small dummy file descriptor (<256) - out of luck!") );
+                mg_log(LOG_ERR, "fd_pool: %s", (descriptor < 0 ? "can't allocate a new descriptor" : "can't allocate small dummy file descriptor (<256) - out of luck!") );
                 exit(EX_OSERR);	/* fatal situation - must exit */
         }
 	return descriptor;
@@ -221,7 +190,7 @@ int fclose_ext(FILE *stream) {
 		if (fd_pool[new_descriptor] == 0) {
 			fd_pool[new_descriptor] = 1;
 			fd_pool_free++;
-        		fe_log(LOG_INFO, "fclose_ext: adding new descriptor %d into low fd pool", 
+        		mg_log(LOG_INFO, "fclose_ext: adding new descriptor %d into low fd pool", 
 				new_descriptor);
 		}
 		
@@ -242,7 +211,7 @@ int fclose_ext(FILE *stream) {
 		descriptor = fd_new_desc(); /* try to allocate again, after the fclose(), maybe */
 						/* we can reclaim the closed descriptor ... */
 		if ( descriptor < 0 ) {
-        		fe_log(LOG_ERR, "fclose_ext: fd_new_desc failed: low descriptor %d lost! (%s)",
+        		mg_log(LOG_ERR, "fclose_ext: fd_new_desc failed: low descriptor %d lost! (%s)",
 			old_descriptor, strerror(errno));
 		}
 	}
@@ -254,7 +223,7 @@ int fclose_ext(FILE *stream) {
 					  /* available descriptor will be aquired - bit of racy ... */
 					  /* maybe some other systemcall of another thread is faster */
 		if ( descriptor < 0 ) {
-        		fe_log(LOG_ERR, "fclose_ext: dup failed: low descriptor %d lost! (%s)",
+        		mg_log(LOG_ERR, "fclose_ext: dup failed: low descriptor %d lost! (%s)",
 			old_descriptor, strerror(errno));
 		}
 		close(new_descriptor);
@@ -262,7 +231,7 @@ int fclose_ext(FILE *stream) {
 	/* but if we are in luck, we got some other low descriptor, not necessarily the one from the */
 	/* closed stream */
 	if ( descriptor >= 256 ) {
-        	fe_log(LOG_ERR, "fclose_ext: low descriptor %d lost!", old_descriptor);
+        	mg_log(LOG_ERR, "fclose_ext: low descriptor %d lost!", old_descriptor);
 		close(descriptor);
 	}
 	else if ( descriptor < 0 ) {
@@ -276,7 +245,7 @@ int fclose_ext(FILE *stream) {
 	    else {
 		fd_pool[descriptor] = 1;
 		fd_pool_free++;
-        	fe_log(LOG_INFO, "fclose_ext: taking descriptor %d back into low fd pool", descriptor);
+        	mg_log(LOG_INFO, "fclose_ext: taking descriptor %d back into low fd pool", descriptor);
 	    }
 
 	}
@@ -310,7 +279,7 @@ int get_pool_desc(int desc) {
 			fd = dup2(desc, i); close(desc);
 			fd_pool[i] = 0;
 			fd_pool_free--;
-        		fe_log(LOG_INFO, "fdopen_ext: get_pool_desc: descriptor %d reused as %d", desc, i);
+        		mg_log(LOG_INFO, "fdopen_ext: get_pool_desc: descriptor %d reused as %d", desc, i);
 			break;
 		}
 	}
@@ -335,7 +304,7 @@ FILE *fdopen_ext(int fd, char *mode) {
 	  /* if we got a non low descriptor, try to map it into to low descriptor pool */
 	  descriptor = get_pool_desc(fd);
 	  if (descriptor < 0) {
-        		fe_log(LOG_ERR, "fdopen_ext: no free low file descriptor");
+        		mg_log(LOG_ERR, "fdopen_ext: no free low file descriptor");
 			return fdopen(fd, mode);
 	  }
 	  return fdopen(descriptor, mode);
@@ -377,13 +346,13 @@ FILE *fopen_ext(char *path, char *mode) {
 		}
 		else {
 			/* descriptor missed, some other has taken it, but fopen() successful! */
-			fe_log(LOG_INFO, "fopen_ext: descriptor %d lost!", descriptor);
+			mg_log(LOG_INFO, "fopen_ext: descriptor %d lost!", descriptor);
 			errno = err;
 			return stream;
 		}
 	}
 	else {
-		fe_log(LOG_ERR, "fopen_ext: failed and descriptor %d lost!", descriptor);
+		mg_log(LOG_ERR, "fopen_ext: failed and descriptor %d lost!", descriptor);
 		errno = err;
 		return stream;
 	}
@@ -391,3 +360,4 @@ FILE *fopen_ext(char *path, char *mode) {
 	/* not very safe and can be raced out by other threads which may took the descriptor */
 	/* earlier ... :( */
 }
+#endif /* USE_FD_POOL */

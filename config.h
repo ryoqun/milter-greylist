@@ -2,7 +2,7 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
-#define BUILD_ENV "manu@melancolie:/home/manu/milter-greylist-current Fri Oct  5 17:38:15 CEST 2007"
+#define BUILD_ENV "manu@adipocyte:/home/manu/milter-greylist-current Tue Oct  9 14:59:42 UTC 2007"
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define HAVE_ARPA_INET_H 1
