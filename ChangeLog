@@ -1,4 +1,4 @@
-4.0b5
+4.0rc1
 	Accept --disable-dnsrbl without a bug
 	Fix message size when multiple messages are sent in one session
 	Do not build fd_pool.c if it is not used
