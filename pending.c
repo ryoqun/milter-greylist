@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.84 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: pending.c,v 1.85 2007/10/18 15:07:47 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.84 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: pending.c,v 1.85 2007/10/18 15:07:47 manu Exp $");
 #endif
 #endif
 
@@ -285,8 +285,8 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	struct pending *next;
 	struct timeval tv;
 	time_t now;
-	time_t rest = -1;
-	time_t accepted = -1;
+	time_t rest;
+	time_t accepted;
 	int dirty = 0;
 	struct pending_bucket *b;
 	ipaddr *mask = NULL;
@@ -349,8 +349,9 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	 * It was not found. Create it and propagagte it to peers.
 	 * Error handling is useless here, we will tempfail anyway
 	 */
-	date = now + delay;
-	pending = pending_get(sa, salen, from, rcpt, date);
+	accepted = now + delay;
+	rest = 0;
+	pending = pending_get(sa, salen, from, rcpt, accepted);
 	if (pending) {
 		++dirty;
 		peer_create(pending);
@@ -361,7 +362,7 @@ out:
 	PENDING_UNLOCK;
 
 	if (remaining != NULL)
-		*remaining = rest; 
+		*remaining = rest;
 
 	if (elapsed != NULL)
 		*elapsed = now - (accepted - delay);

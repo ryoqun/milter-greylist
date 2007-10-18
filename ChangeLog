@@ -1,3 +1,5 @@
+4.0rc2
+	Fix %E and %R format substitution that sometime returned bogus results
 4.0rc1
 	Accept --disable-dnsrbl without a bug
 	Fix message size when multiple messages are sent in one session
