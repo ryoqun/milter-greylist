@@ -2,6 +2,7 @@
 	Fix %E and %R format substitution that sometime returned bogus results
 	Report time taken by DNSRBL and urlcheck lookups (Benoit Branciard)
 	Document milter timeouts, RPM generation
+	Add 4.0 features examples to default greylist.conf
 4.0rc1
 	Accept --disable-dnsrbl without a bug
 	Fix message size when multiple messages are sent in one session
