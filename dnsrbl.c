@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.c,v 1.27 2007/09/27 03:40:25 manu Exp $ */
+/* $Id: dnsrbl.c,v 1.28 2007/10/23 10:57:53 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: dnsrbl.c,v 1.27 2007/09/27 03:40:25 manu Exp $");
+__RCSID("$Id: dnsrbl.c,v 1.28 2007/10/23 10:57:53 manu Exp $");
 #endif
 #endif
 
@@ -128,6 +128,7 @@ dnsrbl_check_source(ad, stage, ap, priv)
 	char *addr;
 	uint32_t *saddr;
 	size_t len;
+	struct timeval tv1, tv2, tv3;
 
 	sa = SA(&priv->priv_addr);
 	salen = priv->priv_addrlen;
@@ -186,7 +187,19 @@ dnsrbl_check_source(ad, stage, ap, priv)
 		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
 		goto end;
 	}
+
+        if (conf.c_debug)
+                gettimeofday(&tv1, NULL);
+
 	anslen = res_nquery(&res, req, C_IN, qtype, ans, NS_MAXMSG + 1);
+
+        if (conf.c_debug) {
+                gettimeofday(&tv2, NULL);
+                timersub(&tv2, &tv1, &tv3);
+                mg_log(LOG_DEBUG, "DNSRBL lookup %s performed in %ld.%06lds",
+                    req, tv3.tv_sec, tv3.tv_usec);
+        }
+
 	if (anslen == -1)
 		goto end;
 

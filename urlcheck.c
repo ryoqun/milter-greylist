@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.28 2007/09/18 20:43:16 manu Exp $ */
+/* $Id: urlcheck.c,v 1.29 2007/10/23 10:57:53 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.28 2007/09/18 20:43:16 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.29 2007/10/23 10:57:53 manu Exp $");
 #endif
 #endif
 
@@ -604,13 +604,16 @@ urlcheck_validate(ad, stage, ap, priv)
 	int retval = 0;
 	struct urlcheck_data ud;
 	struct urlcheck_cnx *cnx;
+	struct timeval tv1, tv2, tv3;
 
 	rcpt = priv->priv_cur_rcpt;
 	ue = ad->urlcheck;
 	url = fstring_expand(priv, rcpt, ue->u_url);
 
-	if (conf.c_debug)
+	if (conf.c_debug) {
 		mg_log(LOG_DEBUG, "checking \"%s\"\n", url);
+		gettimeofday(&tv1, NULL);
+	}
 
 	cnx = get_cnx(ue);
 
@@ -645,6 +648,14 @@ out:
 
 	if (ud.ud_error != 0)
 		retval = ud.ud_error;
+
+        if (conf.c_debug) {
+                gettimeofday(&tv2, NULL);
+                timersub(&tv2, &tv1, &tv3);
+                mg_log(LOG_DEBUG, "urlcheck lookup performed in %ld.%06lds",
+                    tv3.tv_sec, tv3.tv_usec);
+        }
+
 	return retval;
 }
 
