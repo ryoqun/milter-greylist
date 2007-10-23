@@ -1,9 +1,9 @@
-# $Id: README,v 1.58 2007/10/05 10:29:29 manu Exp $
+# $Id: README,v 1.59 2007/10/23 11:06:03 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/10/05 10:29:29 $
+		       $Date: 2007/10/23 11:06:03 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -36,6 +36,9 @@ Run this command to regenerate a table of contents:
 
  1 Building and installing milter-greylist 
  =========================================
+
+This section deals with installing milter-greylist from sources. If you
+want to generate a RPM, see section 16 of this document.
 
 First, download the sources. You can get a tarball from
 http://ftp.espci.fr/pub/milter-greylist
@@ -79,7 +82,10 @@ need manual tweaks.
 
 On the make install step, the Makefile will install a default config
 file in /etc/mail/greylist.conf, except if there is already such
-a file. In that case the original file is preserved.
+a file. In that case the original file is preserved. Great care is taken
+to maintain milter-greylist backward compatibility, so no config file 
+change should be nescessary when upgrading: Just replacing the 
+milter-greylist binary and restarting the milter should be enough.
 
 Some startup scripts are available: rc-redhat.sh, rc-debian, rc-gentoo.sh,
 rc-suse.sh for Linux, rc-bsd.sh for NetBSD and FreeBSD, and rc-solaris.sh
@@ -96,6 +102,14 @@ O InputMailFilters=greylist
 Xgreylist, S=local:/var/milter-greylist/milter-greylist.sock 
 O Milter.macros.connect=j,{if_addr}
 O Milter.macros.envfrom=i
+
+If you use SPF, DNSRBL or urlchecks, then milter-greylist can 
+spend a lot of time waiting for DNS lookups to complete. This
+may lead to sendmail reporting timeout errors. If you see such
+messages, consider setting a timeout larger than the default (see 
+Sendmail's milter documentation for more details on timeout settings):
+
+Xgreylist, S=local:/var/milter-greylist/milter-greylist.sock, T=R:1m
 
 Note that InputMailFilters and Milter.macros.* options are shared 
 with other milters, and the other milters you have set up may 
