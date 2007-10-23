@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.75 2007/10/04 10:54:44 manu Exp $
+.\" $Id: greylist.conf.5,v 1.76 2007/10/23 11:38:51 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -49,7 +49,7 @@ is to setup
 .B milter-greylist(8)
 whitelist. It also offers a handy blacklist feature. 
 Access-lists (ACL) are used to do that. ACL enable the administrator 
-to specify complex conditions on sender IP, sender DNS address, 
+to specify complex conditions on sender IP, sender DNS address,
 sender e-mail address, and recipient e-mail address. If support for
 DNSRBL was built-in, it is even possible to use DNSRBL in ACL.
 .PP
@@ -71,7 +71,7 @@ keyword, and by any set of the following clauses:
 .I auth\fR,
 .I tls\fR,
 .I spf\fR
-(if build with SPF support), 
+(if build with SPF support),
 .I geoip\fR
 (if build with GeoIP support),
 .I urlcheck\fR
@@ -156,7 +156,7 @@ statement can be used to specify the location of GeoIP database.
 .TP
 .I auth
 This is used to select a user that succeeded SMTP AUTH. In order to select
-any user that succeeds SMTP AUTH, you can use a regular expression matching, 
+any user that succeeds SMTP AUTH, you can use a regular expression matching,
 like below;
 .IP
   racl whitelist auth /.*/
@@ -202,7 +202,7 @@ Here is an example:
 .PP
   racl greylist rcpt /.*@example\\.net/
 .PP
-When regular expressions are not used, 
+When regular expressions are not used,
 .I from\fR,
 and
 .I rcpt
@@ -263,7 +263,7 @@ The
 .I msg
 strings accepts format string substitution as documented in the 
 .B FORMAT STRINGS 
-section. For instance, 
+section. For instance,
 .I %A
 gets substituted by the ACL line number.
 .IP
@@ -321,7 +321,7 @@ racl whitelist default
 ACL using the
 .I racl
 keyword are evaluated at the RCPT stage of the SMTP transaction. It is 
-also possible to have ACL evaluated at the DATA stage of the SMTP transaction, 
+also possible to have ACL evaluated at the DATA stage of the SMTP transaction,
 using the 
 .I dacl 
 keyword. DATA-stage ACL cannot use the
@@ -444,7 +444,7 @@ option.
 .PP
 If the
 .I dumpfreq
-value is too small, it will kill performance. If it is too high, 
+value is too small, it will kill performance. If it is too high,
 you will loose a bigger part of the database on a crash. 
 .PP
 Set 
@@ -452,7 +452,7 @@ Set
 to 0 to get a dump on each change (kills performance),
 Set it to -1 to never dump to a file (unsafe as you lose the whole 
 greylist on each crash), or give a time value for the delay between dumps.
-The time is given in seconds, except if a unit is given: m for minutes, 
+The time is given in seconds, except if a unit is given: m for minutes,
 h for hours, and d for days.
 .PP
 You may further improve the performance of the dump operation at the expense
@@ -464,7 +464,7 @@ option in the configuration file. This is specifficaly recommended if
 your dumpfile grows to 100's of megabytes - it can reduce the time
 needed for the dump operation by the order of magnitude!
 .SH REPORTING
-By default, 
+By default,
 .B milter-greylist(8)
 will add a 
 .I X-Greylist
@@ -573,7 +573,7 @@ The trailing 5 at the end of the
 .I urlcheck
 definition is the maximum number of simultaneous connexions we want to 
 launch on this URL. For each message, the URL will be querried, with  % format 
-tags being subtituted. For instance, 
+tags being subtituted. For instance,
 .I %r
 is substituted by the recipient. See the 
 .B FORMAT STRINGS
@@ -779,7 +779,7 @@ This sets the auto-whitelisting duration, equivalent to the
 .B -a
 command-line option. As for the 
 .I greylist
-keyword, 
+keyword,
 units can be
 supplied. Here is an example for a 3 day long auto-whitelisting:
 .IP
@@ -806,7 +806,7 @@ Example:
 .I subnetmatch
 This is equivalent to the 
 .B -L 
-command line option. It takes a slash followed by a CIDR mask as argument, 
+command line option. It takes a slash followed by a CIDR mask as argument,
 and it commands the subnet matching feature. Example, for a class C wide
 matching:
 .IP
@@ -1032,40 +1032,56 @@ Emmanuel Dreyfus <manu@netbsd.org>
 .B milter-greylist
 received many contributions from (in alphabetical order):
 Aida Shinra,
-Gary Aitken,
-Joel Bertrand,
-Moritz Both,
-Attila Bruncsak,
-Pavel Cahyna,
-Remy Card,
-Alexandre Cherif,
-Eugene Crosser,
-Elrond,
-Cyril Guibourg,
-Klas Heggemann,
-Matthieu Herrb,
-Dan Hollis,
-Per Holm,
-Romain Kang,
-Guido Kerkewitz,
-Matt Kettler,
-Petr Kristof,
-Stephane Lentz,
 Alexander Lobodzinski,
-Ivan F. Martinez,
-Martin Paul,
-Christian Pelissier,
-Fredrik Pettai,
+Alexandre Cherif,
 Alexey Popov,
-Jeff Rife,
-Matthias Scheler,
-Jobst Schmalenbach,
-Thomas Scheunemann,
-Wolfgang Solfrank,
+Andrew McGill,
+Attila Bruncsak,
+Benoit Branciard,
+Bernhard Schneider,
+Christian Pelissier,
+Cyril Guibourg,
+Dan Hollis,
+Elrond,
+Eugene Crosser,
 Fabien Tassin,
+Fredrik Pettai,
+Gary Aitken,
+Georg Horn,
+Gert Doering,
+Guido Kerkewitz,
 Hajimu Umemoto,
-Lev Walkin, and
-Ranko Zivojnovic
+Hideki ONO,
+Ivan F. Martinez,
+Jacques Beigbeder,
+Jeff Rife,
+Jobst Schmalenbach,
+Joel Bertrand,
+Johann E. Klasek,
+John Thiltges,
+Klas Heggemann,
+Lev Walkin,
+Martin Paul,
+Matt Kettler,
+Matthias Scheler,
+Matthieu Herrb,
+Michael Fromme,
+Moritz Both,
+Nerijus Baliunas,
+Pavel Cahyna,
+Per Holm,
+Petr Kristof,
+Ralf S. Engelschall,
+Ranko Zivojnovic,
+Remy Card,
+Rogier Maas,
+Romain Kang,
+Rudy Eschauzier,
+Stephane Lentz,
+Thomas Scheunemann,
+Tim Mooney,
+Wolfgang Solfrank, and
+Yaroslav Boychuk.
 .PP    
 Thanks to
 Helmut Messerer 
@@ -1074,7 +1090,7 @@ Thomas Pfau
 for their feedback on the first releases of this software.
 .SH SEE ALSO
 milter-greylist(8),
-sendmail(8), 
+sendmail(8),
 syslogd(8).
 .TP
 Evan Harris's paper:
