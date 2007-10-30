@@ -1,4 +1,4 @@
-4.0rc3
+4.0
 	More 4.0 features examples to default greylist.conf
 4.0rc2
 	Fix %E and %R format substitution that sometime returned bogus results
