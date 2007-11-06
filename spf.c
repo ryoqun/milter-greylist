@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.26 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: spf.c,v 1.27 2007/11/06 11:39:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,11 +34,13 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.26 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: spf.c,v 1.27 2007/11/06 11:39:33 manu Exp $");
 #endif
 #endif
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <sysexits.h>
 #include <errno.h>
 #include <string.h>
 #include <strings.h>
@@ -50,8 +52,20 @@ __RCSID("$Id: spf.c,v 1.26 2007/07/08 21:02:28 manu Exp $");
 
 #include "conf.h"
 #include "spf.h"
-
 #include "acl.h"
+#include "milter-greylist.h"
+
+#ifdef USE_DMALLOC
+#include <dmalloc.h> 
+#endif
+
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
+     defined(HAVE_SPF2_10) || defined(HAVE_SPF2))
+static int spf_check_internal(acl_data_t *, acl_stage_t, 
+			      struct acl_param *, struct mlfi_priv *);
+static int spf_check_self(acl_data_t *, acl_stage_t, 
+			  struct acl_param *, struct mlfi_priv *);
+#endif
 
 #ifdef HAVE_SPF
 #include <spf.h>
@@ -60,13 +74,9 @@ __RCSID("$Id: spf.c,v 1.26 2007/07/08 21:02:28 manu Exp $");
 #define SPF_FALSE 0
 #endif
 
-#ifdef USE_DMALLOC
-#include <dmalloc.h> 
-#endif
 
-
-int
-spf_check(ad, as, ap, priv)
+static int
+spf_check_internal(ad, as, ap, priv)
 	acl_data_t *ad;
 	acl_stage_t as;
 	struct acl_param *ap;
@@ -139,8 +149,8 @@ out1:
 #endif
 
 #if defined(HAVE_SPF_ALT) || defined(HAVE_SPF2_10)
-int
-spf_check(ad, as, ap, priv)
+static int
+spf_check_internal(ad, as, ap, priv)
 	acl_data_t *ad;
 	acl_stage_t as;
 	struct acl_param *ap;
@@ -242,8 +252,8 @@ out1:
 #ifdef HAVE_SPF2
 #include <spf2/spf.h>
 
-int
-spf_check(ad, as, ap, priv)
+static int
+spf_check_internal(ad, as, ap, priv)
 	acl_data_t *ad;
 	acl_stage_t as;
 	struct acl_param *ap;
@@ -342,4 +352,150 @@ out1:
 	return result;
 }
 
+
 #endif /* HAVE_SPF2 */
+
+
+
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
+     defined(HAVE_SPF2_10) || defined(HAVE_SPF2))
+char *
+acl_print_spf(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	char *tmpstr;
+	switch (*(enum spf_status *)ad) {
+	case MGSPF_PASS:
+		tmpstr = "pass";
+		break;
+	case MGSPF_FAIL:
+		tmpstr = "fail";
+		break;
+	case MGSPF_SOFTFAIL:
+		tmpstr = "softfail";
+		break;
+	case MGSPF_NEUTRAL:
+		tmpstr = "neutral";
+		break;
+	case MGSPF_UNKNOWN:
+		tmpstr = "unknown";
+		break;
+	case MGSPF_ERROR:
+		tmpstr = "error";
+		break;
+	case MGSPF_NONE:
+		tmpstr = "none";
+		break;
+	case MGSPF_SELF:
+		tmpstr = "self";
+		break;
+	default:
+		mg_log(LOG_ERR, "Internal error: unexpected spf_status");
+		exit(EX_SOFTWARE);
+		break;
+	}
+	snprintf(buf, len, "%s", tmpstr);
+	return buf;
+}
+
+void
+acl_add_spf(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+#ifdef USE_POSTFIX
+	mg_log(LOG_ERR, "spf self clause is broken on Postfix");
+	exit(EX_DATAERR);
+#endif
+	ad->spf_status = *(enum spf_status *)data;
+	return;
+}
+
+int
+spf_check(ad, as, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t as;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	switch (*(enum spf_status *)ad) {
+	case MGSPF_PASS:
+	case MGSPF_FAIL:
+	case MGSPF_SOFTFAIL:
+	case MGSPF_NEUTRAL:
+	case MGSPF_UNKNOWN:
+	case MGSPF_ERROR:
+	case MGSPF_NONE:
+		return spf_check_internal(ad, as, ap, priv);
+		break;
+	case MGSPF_SELF:
+		return spf_check_self(ad, as, ap, priv);		
+		break;
+	default:
+		break;
+	}
+
+	mg_log(LOG_ERR, "Internal error: unexpected spf_status");
+	exit(EX_SOFTWARE);
+
+	return 0;
+}
+
+/* 
+ * Check if the SPF record is wide open: the simpliest
+ * way of doing it is to check whether our own IP 
+ * validates the record.
+ * That is a problem for Postfix installations, as the
+ * local IP is not available. For now this clause is 
+ * not available on Postfix.
+ */
+static int
+spf_check_self(ad, as, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t as;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	int retval = 0;
+#ifndef USE_POSTFIX
+	sockaddr_t saved_addr;
+	acl_data_t tmp_ad;
+	char *ip;
+	int error;
+
+	memcpy(&saved_addr, &priv->priv_addr, sizeof(saved_addr));
+
+	ip = local_ipstr(priv);
+	if (strchr(ip, ':') != NULL) {
+#ifdef AF_INET6
+		error = inet_pton(AF_INET6, ip, SADDR6(SA(&priv->priv_addr)));
+		if (error != 0) {
+			mg_log(LOG_ERR, "Invalid IPv6 local address");
+			exit(EX_SOFTWARE);
+		}
+#else /* AF_INET6 */
+		mg_log(LOG_ERR, 
+		    "IPv6 support not compiled but local IP is IPv6");
+		exit(EX_SOFTWARE);
+#endif /* AF_INET6 */
+	} else {
+		error = inet_pton(AF_INET, ip, SADDR4(SA(&priv->priv_addr)));
+		if (error != 0) {
+			mg_log(LOG_ERR, "Invalid IPv4 local address");
+			exit(EX_SOFTWARE);
+		}
+	}
+
+	memcpy(&tmp_ad, ad, sizeof(tmp_ad));
+	tmp_ad.spf_status = MGSPF_PASS;
+
+	retval = spf_check_internal(&tmp_ad, as, ap, priv);
+
+	memcpy(&priv->priv_addr, &saved_addr, sizeof(saved_addr));
+#endif /* !USE_POSTFIX */
+	return retval;
+}
+
+#endif

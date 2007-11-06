@@ -30,6 +30,13 @@ noaccessdb	[Nn][Oo][Aa][Cc][Cc][Ee][Ss][Ss][Dd][Bb]
 extendedregex	[Ee][Xx][Tt][Ee][Nn][Dd][Ee][Dd][Rr][Ee][Gg][Ee][Xx]
 nospf		[Nn][Oo][Ss][Pp][Ff]
 spf		[Ss][Pp][Ff]
+pass		[Pp][Aa][Ss][Ss]
+fail		[Ff][Aa][Ii][Ll]
+softfail	[Ss][Oo][Ff][Tt][Ff][Aa][Ii][Ll]
+neutral		[Nn][Ee][Uu][Tt][Rr][Aa][Ll]
+unknown		[Uu][Nn][Kk][Nn][Oo][Ww][Nn]
+error		[Ee][Rr][Rr][Oo][Rr]
+self		[Ss][Ee][Ll][Ff]
 delayedreject	[Dd][Ee][Ll][Aa][Yy][Ee][Dd][Rr][Ee][Jj][Ee][Cc][Tt]
 testmode	[Tt][Ee][Ss][Tt][Mm][Oo][Dd][Ee]
 greylist	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt]:?		
@@ -107,6 +114,7 @@ neg		"!"
 prop		"$"[-_A-Za-z0-9]+
 
 %s S_REGEX 
+%s S_SPF
 %x S_CLOCKSPEC1 S_CLOCKSPEC2
 
 
@@ -117,7 +125,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.75 2007/07/08 21:02:28 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.76 2007/11/06 11:39:33 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -171,7 +179,15 @@ prop		"$"[-_A-Za-z0-9]+
 {extendedregex}	{ return EXTENDEDREGEX; }
 {delayedreject}	{ return DELAYEDREJECT; }
 {nospf}		{ return NOSPF; }
-{spf}		{ return SPF; }
+{spf}		{ BEGIN(S_SPF); return SPF; }
+{pass}		{ yylval.spf_status = MGSPF_PASS; return SPF_STATUS; }
+{fail}		{ yylval.spf_status = MGSPF_FAIL; return SPF_STATUS; }
+{softfail}	{ yylval.spf_status = MGSPF_SOFTFAIL; return SPF_STATUS; }
+{neutral}	{ yylval.spf_status = MGSPF_NEUTRAL; return SPF_STATUS; }
+{unknown}	{ yylval.spf_status = MGSPF_UNKNOWN; return SPF_STATUS; }
+{error}		{ yylval.spf_status = MGSPF_ERROR; return SPF_STATUS; }
+{self}		{ yylval.spf_status = MGSPF_SELF; return SPF_STATUS; }
+<S_SPF>{none}	{ yylval.spf_status = MGSPF_NONE; return SPF_STATUS; }
 {quiet}		{ return QUIET; }
 {testmode}	{ return TESTMODE; }
 {verbose}	{ return VERBOSE; }
@@ -203,8 +219,8 @@ prop		"$"[-_A-Za-z0-9]+
 {user}		{ return USER; }
 {nodetach}	{ return NODETACH; }
 {report}	{ return REPORT; }
+<INITIAL>{none}	{ return NONE; }
 {stat}		{ return STAT; }
-{none}		{ return NONE; }
 {delays}	{ return DELAYS; }
 {nodelays}	{ return NODELAYS; }
 {gldelay}	{ return GLXDELAY; }

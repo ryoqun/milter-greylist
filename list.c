@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.15 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: list.c,v 1.16 2007/11/06 11:39:33 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.15 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: list.c,v 1.16 2007/11/06 11:39:33 manu Exp $");
 #endif
 #endif
 
@@ -57,6 +57,7 @@ __RCSID("$Id: list.c,v 1.15 2007/07/08 21:02:28 manu Exp $");
 
 #include "milter-greylist.h"
 #include "conf.h"
+#include "spf.h"
 #include "acl.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"

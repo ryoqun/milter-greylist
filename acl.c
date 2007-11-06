@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.72 2007/10/05 10:47:48 manu Exp $ */
+/* $Id: acl.c,v 1.73 2007/11/06 11:39:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.72 2007/10/05 10:47:48 manu Exp $");
+__RCSID("$Id: acl.c,v 1.73 2007/11/06 11:39:33 manu Exp $");
 #endif
 #endif
 
@@ -60,6 +60,7 @@ __RCSID("$Id: acl.c,v 1.72 2007/10/05 10:47:48 manu Exp $");
 #include <arpa/inet.h>
 #include <regex.h>
 
+#include "spf.h"
 #include "acl.h"
 #include "conf.h"
 #include "sync.h"
@@ -288,9 +289,9 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  NULL, acl_list_filter },
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
      defined(HAVE_SPF2_10) || defined(HAVE_SPF2)) 
-	{ AC_SPF, UNIQUE, AS_ANY, "spf",
-	  AT_NONE, AC_NONE, AC_SPF,  EXF_SPF,
-	  acl_print_null, NULL,
+	{ AC_SPF, MULTIPLE_OK, AS_ANY, "spf",
+	  AT_SPF, AC_NONE, AC_SPF,  EXF_SPF,
+	  acl_print_spf, acl_add_spf,
 	  NULL, spf_check },
 #endif
 	{ AC_MSGSIZE, MULTIPLE_OK, AS_DATA, "msgsize", 

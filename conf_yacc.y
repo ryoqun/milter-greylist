@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR HELO FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL GLHEADER BODY MAXPEEK STAT POSTMSG FORK GETPROP CLEAR PROP AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME GEOIPDB GEOIP 
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR HELO FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL GLHEADER BODY MAXPEEK STAT POSTMSG FORK GETPROP CLEAR PROP AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME GEOIPDB GEOIP PASS FAIL SOFTFAIL NEUTRAL UNKNWON ERROR SELF SPF_STATUS
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.82 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.83 2007/11/06 11:39:33 manu Exp $");
 #endif
 #endif
 
@@ -18,6 +18,7 @@ __RCSID("$Id: conf_yacc.y,v 1.82 2007/07/08 21:02:28 manu Exp $");
 #include <dmalloc.h> 
 #endif
 #include "conf.h"
+#include "spf.h"
 #include "acl.h"
 #include "sync.h"
 #include "list.h"
@@ -33,6 +34,7 @@ __RCSID("$Id: conf_yacc.y,v 1.82 2007/07/08 21:02:28 manu Exp $");
 #endif
 #include "stat.h"
 #include "clock.h"
+#include "spf.h"
 #include "milter-greylist.h"
 
 #define LEN4 sizeof(struct sockaddr_in)
@@ -61,6 +63,7 @@ void conf_error(char *);
 	char regex[REGEXLEN + 1];
 	enum operator op; 
 	char prop[QSTRLEN + 1];
+	enum spf_status spf_status;
 	}
 %type <ipaddr> IPADDR;
 %type <ip6addr> IP6ADDR;
@@ -73,6 +76,7 @@ void conf_error(char *);
 %type <regex> REGEX;
 %type <op> OP;
 %type <prop> PROP;
+%type <spf_status> SPF_STATUS;
 
 %%
 lines	:	lines netblock '\n' 
@@ -582,6 +586,7 @@ acl_clause:	helo_clause
 	|	tls_clause
 	|	tlsregex_clause
 	|	spf_clause
+	|	spf_compat_clause
 	|	msgsize_clause
 	|	rcptcount_clause
 	|	no_clause
@@ -759,10 +764,25 @@ tlsregex_clause:	TLS REGEX {
 			}
 	;
 
-spf_clause:		SPF {
+spf_clause:		SPF SPF_STATUS {
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
      defined(HAVE_SPF2_10) || defined(HAVE_SPF2))
-				acl_add_clause(AC_SPF, NULL); 
+				acl_add_clause(AC_SPF, &$2); 
+				conf.c_nospf = 1;
+#else
+				mg_log(LOG_INFO, 
+				    "SPF support not compiled in line %d", 
+				    conf_line);
+#endif
+			}
+	;
+
+spf_compat_clause:	 SPF {
+#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
+     defined(HAVE_SPF2_10) || defined(HAVE_SPF2))
+				enum spf_status status = MGSPF_PASS;
+
+				acl_add_clause(AC_SPF, &status); 
 				conf.c_nospf = 1;
 #else
 				mg_log(LOG_INFO, 

@@ -1,4 +1,4 @@
-/* $Id: autowhite.c,v 1.55 2007/07/08 21:02:28 manu Exp $ */
+/* $Id: autowhite.c,v 1.56 2007/11/06 11:39:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -32,7 +32,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: autowhite.c,v 1.55 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: autowhite.c,v 1.56 2007/11/06 11:39:33 manu Exp $");
 #endif
 #endif
 
@@ -62,6 +62,7 @@ __RCSID("$Id: autowhite.c,v 1.55 2007/07/08 21:02:28 manu Exp $");
 #include "pending.h"
 #include "dump.h"
 #include "autowhite.h"
+#include "spf.h"
 #include "acl.h"
 #include "sync.h"
 

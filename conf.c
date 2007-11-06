@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.50 2007/10/05 10:35:00 manu Exp $ */
+/* $Id: conf.c,v 1.51 2007/11/06 11:39:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.50 2007/10/05 10:35:00 manu Exp $");
+__RCSID("$Id: conf.c,v 1.51 2007/11/06 11:39:33 manu Exp $");
 #endif
 #endif
 
@@ -61,6 +61,7 @@ __RCSID("$Id: conf.c,v 1.50 2007/10/05 10:35:00 manu Exp $");
 #include <time.h>
 #include <sys/time.h>
 
+#include "spf.h"
 #include "acl.h"
 #ifdef USE_DNSRBL
 #include "dnsrbl.h"

@@ -1,4 +1,4 @@
-/* $Id: spf.h,v 1.13 2007/03/22 23:11:35 manu Exp $ */
+/* $Id: spf.h,v 1.14 2007/11/06 11:39:33 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -39,16 +39,28 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
 
+enum spf_status { 
+	MGSPF_PASS, 
+	MGSPF_FAIL, 
+	MGSPF_SOFTFAIL, 
+	MGSPF_NEUTRAL, 
+	MGSPF_UNKNOWN,
+	MGSPF_ERROR, 
+	MGSPF_NONE, 
+	MGSPF_SELF,
+};
+
 #include "acl.h"
 
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
      defined(HAVE_SPF2_10) || defined(HAVE_SPF2))
+char *acl_print_spf(acl_data_t *, char *, size_t);
+void acl_add_spf(acl_data_t *, void *);
 int spf_check(acl_data_t *, acl_stage_t,
-		  struct acl_param *, struct mlfi_priv *);
+	      struct acl_param *, struct mlfi_priv *);
 #define SPF_CHECK(priv) spf_check(NULL, AS_RCPT, NULL, (priv))
 #else
 #define SPF_CHECK(priv) 0
-
 #endif
 
 
