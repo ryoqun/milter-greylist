@@ -125,7 +125,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.76 2007/11/06 11:39:33 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.77 2007/11/07 04:05:14 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -180,14 +180,22 @@ prop		"$"[-_A-Za-z0-9]+
 {delayedreject}	{ return DELAYEDREJECT; }
 {nospf}		{ return NOSPF; }
 {spf}		{ BEGIN(S_SPF); return SPF; }
-{pass}		{ yylval.spf_status = MGSPF_PASS; return SPF_STATUS; }
-{fail}		{ yylval.spf_status = MGSPF_FAIL; return SPF_STATUS; }
-{softfail}	{ yylval.spf_status = MGSPF_SOFTFAIL; return SPF_STATUS; }
-{neutral}	{ yylval.spf_status = MGSPF_NEUTRAL; return SPF_STATUS; }
-{unknown}	{ yylval.spf_status = MGSPF_UNKNOWN; return SPF_STATUS; }
-{error}		{ yylval.spf_status = MGSPF_ERROR; return SPF_STATUS; }
-{self}		{ yylval.spf_status = MGSPF_SELF; return SPF_STATUS; }
-<S_SPF>{none}	{ yylval.spf_status = MGSPF_NONE; return SPF_STATUS; }
+{pass}		{ BEGIN(0); 
+		  yylval.spf_status = MGSPF_PASS; return SPF_STATUS; }
+{fail}		{ BEGIN(0); 
+		  yylval.spf_status = MGSPF_FAIL; return SPF_STATUS; }
+{softfail}	{ BEGIN(0); 
+		  yylval.spf_status = MGSPF_SOFTFAIL; return SPF_STATUS; }
+{neutral}	{ BEGIN(0); 
+		  yylval.spf_status = MGSPF_NEUTRAL; return SPF_STATUS; }
+{unknown}	{ BEGIN(0); 
+		  yylval.spf_status = MGSPF_UNKNOWN; return SPF_STATUS; }
+{error}		{ BEGIN(0); 
+		  yylval.spf_status = MGSPF_ERROR; return SPF_STATUS; }
+{self}		{ BEGIN(0); 
+		  yylval.spf_status = MGSPF_SELF; return SPF_STATUS; }
+<S_SPF>{none}	{ BEGIN(0); 
+		  yylval.spf_status = MGSPF_NONE; return SPF_STATUS; }
 {quiet}		{ return QUIET; }
 {testmode}	{ return TESTMODE; }
 {verbose}	{ return VERBOSE; }
