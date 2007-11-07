@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.27 2007/11/06 11:39:33 manu Exp $ */
+/* $Id: spf.c,v 1.28 2007/11/07 00:02:27 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.27 2007/11/06 11:39:33 manu Exp $");
+__RCSID("$Id: spf.c,v 1.28 2007/11/07 00:02:27 manu Exp $");
 #endif
 #endif
 
@@ -468,11 +468,13 @@ spf_check_self(ad, as, ap, priv)
 	memcpy(&saved_addr, &priv->priv_addr, sizeof(saved_addr));
 
 	ip = local_ipstr(priv);
-	if (strchr(ip, ':') != NULL) {
+	if (strcmp(ip, "IPv6:") == 0) {
 #ifdef AF_INET6
-		error = inet_pton(AF_INET6, ip, SADDR6(SA(&priv->priv_addr)));
-		if (error != 0) {
-			mg_log(LOG_ERR, "Invalid IPv6 local address");
+		if ((error = inet_pton(AF_INET6, ip + strlen("IPv6:",
+				       SADDR6(SA(&priv->priv_addr)))) != 0)
+			mg_log(LOG_ERR, 
+			       "Invalid IPv6 local address (%d)",
+			       error);
 			exit(EX_SOFTWARE);
 		}
 #else /* AF_INET6 */
@@ -483,7 +485,9 @@ spf_check_self(ad, as, ap, priv)
 	} else {
 		error = inet_pton(AF_INET, ip, SADDR4(SA(&priv->priv_addr)));
 		if (error != 0) {
-			mg_log(LOG_ERR, "Invalid IPv4 local address");
+			mg_log(LOG_ERR, 
+			       "Invalid IPv4 local address (%d)",
+			       error);
 			exit(EX_SOFTWARE);
 		}
 	}

@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.29 2007/10/23 10:57:53 manu Exp $ */
+/* $Id: urlcheck.c,v 1.30 2007/11/07 00:02:27 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.29 2007/10/23 10:57:53 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.30 2007/11/07 00:02:27 manu Exp $");
 #endif
 #endif
 
@@ -59,6 +59,7 @@ __RCSID("$Id: urlcheck.c,v 1.29 2007/10/23 10:57:53 manu Exp $");
 
 #include "milter-greylist.h"
 #include "pending.h"
+#include "spf.h"
 #include "acl.h"
 #include "conf.h"
 #include "urlcheck.h"

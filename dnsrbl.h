@@ -1,4 +1,4 @@
-/* $Id: dnsrbl.h,v 1.9 2007/02/26 04:27:50 manu Exp $ */
+/* $Id: dnsrbl.h,v 1.10 2007/11/07 00:02:27 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -29,6 +29,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "spf.h"
 #include "acl.h"
 
 #ifndef NS_MAXDNAME
