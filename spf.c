@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.28 2007/11/07 00:02:27 manu Exp $ */
+/* $Id: spf.c,v 1.29 2007/11/08 04:32:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.28 2007/11/07 00:02:27 manu Exp $");
+__RCSID("$Id: spf.c,v 1.29 2007/11/08 04:32:06 manu Exp $");
 #endif
 #endif
 
@@ -111,8 +111,33 @@ spf_check_internal(ad, as, ap, priv)
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "SPF return code %d", p->RES);
 
-	if (p->RES == SPF_PASS)
-		result = 1;
+	switch (*(enum spf_status *)ad) {
+	case MGSPF_PASS:
+		result = (p->RES == SPF_PASS);
+		break;
+	case MGSPF_FAIL:
+		result = (p->RES == SPF_H_FAIL);
+		break;
+	case MGSPF_SOFTFAIL:
+		result = (p->RES == SPF_S_FAIL);
+		break;
+	case MGSPF_NEUTRAL:
+		result = (p->RES == SPF_NEUTRAL);
+		break;
+	case MGSPF_UNKNOWN:
+		result = (p->RES == SPF_UNKNOWN || p->RES == SPF_UNMECH);
+		break;
+	case MGSPF_ERROR:
+		result = (p->RES == SPF_ERROR);
+		break;
+	case MGSPF_NONE:
+		result = (p->RES == SPF_NONE);
+		break;
+	default:
+		mg_log(LOG_ERR, "Internal error: unexpected spf_status");
+		exit(EX_SOFTWARE);
+		break;
+	}
 
 	SPF_close(p);
 
@@ -225,8 +250,34 @@ spf_check_internal(ad, as, ap, priv)
 #else
 	out = SPF_result(spfconf, dnsconf);
 #endif
-	if (out.result == SPF_RESULT_PASS) 
-		result = 1;
+
+	switch (*(enum spf_status *)ad) {
+	case MGSPF_PASS:
+		result = (out.result == SPF_RESULT_PASS);
+		break;
+	case MGSPF_FAIL:
+		result = (out.result == SPF_RESULT_FAIL);
+		break;
+	case MGSPF_SOFTFAIL:
+		result = (out.result == SPF_RESULT_SOFTFAIL);
+		break;
+	case MGSPF_NEUTRAL:
+		result = (out.result == SPF_RESULT_NEUTRAL);
+		break;
+	case MGSPF_UNKNOWN:
+		result = (out.result == SPF_RESULT_UNKNOWN);
+		break;
+	case MGSPF_ERROR:
+		result = (out.result == SPF_RESULT_ERROR);
+		break;
+	case MGSPF_NONE:
+		result = (out.result == SPF_RESULT_NONE);
+		break;
+	default:
+		mg_log(LOG_ERR, "Internal error: unexpected spf_status");
+		exit(EX_SOFTWARE);
+		break;
+	}
 
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "SPF return code %d", out.result);
@@ -330,8 +381,36 @@ spf_check_internal(ad, as, ap, priv)
 	 * Get the SPF result
 	 */
 	SPF_request_query_mailfrom(spf_request, &spf_response);
-	if ((res = SPF_response_result(spf_response)) == SPF_RESULT_PASS)
-		result = 1;
+	res = SPF_response_result(spf_response);
+
+	switch (*(enum spf_status *)ad) {
+	case MGSPF_PASS:
+		result = (res == SPF_RESULT_PASS);
+		break;
+	case MGSPF_FAIL:
+		result = (res == SPF_RESULT_FAIL);
+		break;
+	case MGSPF_SOFTFAIL:
+		result = (res == SPF_RESULT_SOFTFAIL);
+		break;
+	case MGSPF_NEUTRAL:
+		result = (res == SPF_RESULT_NEUTRAL);
+		break;
+	case MGSPF_UNKNOWN:
+		result = 
+		    (res == SPF_RESULT_PERMERROR || res == SPF_RESULT_INVALID);
+		break;
+	case MGSPF_ERROR:
+		result = (res == SPF_RESULT_TEMPERROR);
+		break;
+	case MGSPF_NONE:
+		result = (res == SPF_RESULT_NONE);
+		break;
+	default:
+		mg_log(LOG_ERR, "Internal error: unexpected spf_status");
+		exit(EX_SOFTWARE);
+		break;
+	}
 
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "SPF return code %d", res);
@@ -463,18 +542,16 @@ spf_check_self(ad, as, ap, priv)
 	sockaddr_t saved_addr;
 	acl_data_t tmp_ad;
 	char *ip;
-	int error;
 
 	memcpy(&saved_addr, &priv->priv_addr, sizeof(saved_addr));
 
 	ip = local_ipstr(priv);
-	if (strcmp(ip, "IPv6:") == 0) {
+	if (strncmp(ip, "IPv6:", strlen("IPv6:")) == 0) {
 #ifdef AF_INET6
-		if ((error = inet_pton(AF_INET6, ip + strlen("IPv6:",
-				       SADDR6(SA(&priv->priv_addr)))) != 0)
+		if (inet_pton(AF_INET6, ip + strlen("IPv6:"), 
+			    SADDR6(SA(&priv->priv_addr))) <= 0) {
 			mg_log(LOG_ERR, 
-			       "Invalid IPv6 local address (%d)",
-			       error);
+			       "Invalid IPv6 local address %s", ip);
 			exit(EX_SOFTWARE);
 		}
 #else /* AF_INET6 */
@@ -483,11 +560,10 @@ spf_check_self(ad, as, ap, priv)
 		exit(EX_SOFTWARE);
 #endif /* AF_INET6 */
 	} else {
-		error = inet_pton(AF_INET, ip, SADDR4(SA(&priv->priv_addr)));
-		if (error != 0) {
+		if (inet_pton(AF_INET, ip, 
+			    SADDR4(SA(&priv->priv_addr))) <= 0) {
 			mg_log(LOG_ERR, 
-			       "Invalid IPv4 local address (%d)",
-			       error);
+			       "Invalid IPv4 local address %s", ip);
 			exit(EX_SOFTWARE);
 		}
 	}
