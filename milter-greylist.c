@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.199 2007/11/06 11:39:33 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.200 2007/11/08 11:35:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.199 2007/11/06 11:39:33 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.200 2007/11/08 11:35:51 manu Exp $");
 #endif
 #endif
 
@@ -921,7 +921,7 @@ real_eom(ctx)
 				priv->priv_last_whitelist &= ~EXF_DRAC;
 			}
 			if (priv->priv_last_whitelist & EXF_SPF) {
-				ADD_REASON(whystr, "Sender is SPF-compliant");
+				ADD_REASON(whystr, "Sender passed SPF test");
 				priv->priv_last_whitelist &= ~EXF_SPF;
 			}
 			if (priv->priv_last_whitelist & EXF_NONIP) {
