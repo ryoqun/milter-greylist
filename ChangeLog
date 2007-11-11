@@ -1,6 +1,7 @@
 4.1.1
 	Documentation fixes
 	Add SPF status selection to ACL
+	Add id string to ACL
 4.0
 	More 4.0 features examples to default greylist.conf
 4.0rc2

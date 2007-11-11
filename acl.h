@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.30 2007/11/06 11:39:33 manu Exp $ */
+/* $Id: acl.h,v 1.31 2007/11/11 11:57:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -135,6 +135,7 @@ struct acl_param {
 	time_t ap_delay;
 	time_t ap_autowhite;
 	int ap_flags;
+	char *ap_id;
 	char *ap_code;
 	char *ap_ecode;
 	char *ap_msg;
@@ -149,6 +150,7 @@ struct acl_param {
 #define A_FREE_ECODE		0x04
 #define A_FREE_MSG		0x08
 #define A_FREE_REPORT		0x10
+#define A_FREE_ID		0x20
 
 struct all_list_entry;
 
@@ -207,6 +209,7 @@ struct acl_clause {
 
 struct acl_entry {
 	int a_line;
+	char *a_id;
 	acl_type_t a_type;
 	acl_stage_t a_stage;
 	TAILQ_HEAD(,acl_clause) a_clause;
@@ -233,6 +236,7 @@ void acl_negate_clause(void);
 void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
 void acl_add_flushaddr(void);
+void acl_add_id(char *);
 void acl_add_code(char *);
 void acl_add_ecode(char *);
 void acl_add_msg(char *);

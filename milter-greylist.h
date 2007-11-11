@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.70 2007/11/06 11:39:33 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.71 2007/11/11 11:57:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -144,6 +144,7 @@ struct smtp_reply {
 	time_t sr_elapsed;
 	time_t sr_remaining;
 	int sr_acl_line;
+	char *sr_acl_id;
 	time_t sr_delay;
 	time_t sr_autowhite;
 	char *sr_code;

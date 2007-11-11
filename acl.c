@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.73 2007/11/06 11:39:33 manu Exp $ */
+/* $Id: acl.c,v 1.74 2007/11/11 11:57:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.73 2007/11/06 11:39:33 manu Exp $");
+__RCSID("$Id: acl.c,v 1.74 2007/11/11 11:57:19 manu Exp $");
 #endif
 #endif
 
@@ -1689,6 +1689,7 @@ acl_filter(stage, ctx, priv)
 		ap.ap_delay = acl->a_delay;
 		ap.ap_autowhite = acl->a_autowhite;
 		ap.ap_flags = acl->a_flags;
+		ap.ap_id = acl->a_id;
 		ap.ap_code = acl->a_code;
 		ap.ap_ecode = acl->a_ecode;
 		ap.ap_msg = acl->a_msg;
@@ -1749,6 +1750,14 @@ acl_filter(stage, ctx, priv)
 		    (ap.ap_autowhite != -1) ? 
 		    ap.ap_autowhite : conf.c_autowhite_validity;
 
+		if (ap.ap_id) {
+			priv->priv_sr.sr_acl_id = strdup(ap.ap_id);
+			if (priv->priv_sr.sr_acl_id == NULL) { 
+				mg_log(LOG_ERR, "strdup failed: %s", 
+				    strerror(errno));
+				exit(EX_OSERR);
+			}
+		}
 		if (ap.ap_code) {
 			priv->priv_sr.sr_code = strdup(ap.ap_code);
 			if (priv->priv_sr.sr_code == NULL) { 
@@ -1784,6 +1793,8 @@ acl_filter(stage, ctx, priv)
 		priv->priv_sr.sr_pmatch = ap.ap_pmatch;
 			
 		/* Free temporary memory if nescessary */
+		if (ap.ap_flags & A_FREE_ID)
+			free(ap.ap_id);
 		if (ap.ap_flags & A_FREE_CODE)
 			free(ap.ap_code);
 		if (ap.ap_flags & A_FREE_ECODE)
@@ -2031,6 +2042,12 @@ acl_entry(entrystr, len, acl)
 		break;
 	}
 
+	if (acl->a_id) {
+		snprintf(tempstr, sizeof(tempstr), 
+		    "\"%s\" ", acl->a_id);
+		mystrlcat(entrystr, tempstr, len);
+	}
+
 	TAILQ_FOREACH(ac, &acl->a_clause, ac_list) {
 		char tempstr2[HDRLEN];
 		acl_data_t *ad;
@@ -2235,6 +2252,28 @@ acl_add_code(code)
 		
 	if (conf.c_debug || conf.c_acldebug)
 		mg_log(LOG_DEBUG, "load acl code \"%s\"", code);
+
+	return;
+}
+
+void 
+acl_add_id(id)
+	char *id;
+{
+	if (gacl->a_id) {
+		mg_log(LOG_ERR,
+		    "id specified twice in ACL line %d", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	if ((gacl->a_id = strdup(id)) == NULL) {
+		mg_log(LOG_ERR,
+		    "malloc failed in ACL line %d", conf_line);
+		exit(EX_OSERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl id \"%s\"", id);
 
 	return;
 }

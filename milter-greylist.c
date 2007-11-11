@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.200 2007/11/08 11:35:51 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.201 2007/11/11 11:57:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.200 2007/11/08 11:35:51 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.201 2007/11/11 11:57:19 manu Exp $");
 #endif
 #endif
 
@@ -1874,6 +1874,8 @@ static void
 smtp_reply_free(sr)
 	struct smtp_reply *sr;
 {
+	if (sr->sr_acl_id)
+		free(sr->sr_acl_id);
 	free(sr->sr_code);
 	free(sr->sr_ecode);
 	free(sr->sr_msg);
@@ -2703,6 +2705,21 @@ fstring_expand(priv, rcpt, fstring)
 				   priv->priv_sr.sr_acl_line); 
 				mystrncat(&outstr, buf, &outmaxlen);
 			} else {
+				mystrncat(&outstr, "(none)", &outmaxlen);
+			}
+			break;
+		}	
+		case 'a': {	/* id string for matching ACL */
+			char buf[QSTRLEN + 1];
+
+			if (priv->priv_sr.sr_acl_id) {
+				snprintf(buf, sizeof(buf), "%s", 
+				   priv->priv_sr.sr_acl_id); 
+				mystrncat(&outstr, buf, &outmaxlen);
+			} else if (priv->priv_sr.sr_acl_line) {
+				snprintf(buf, sizeof(buf), "%d", 
+				   priv->priv_sr.sr_acl_line); 
+				mystrncat(&outstr, buf, &outmaxlen);
 				mystrncat(&outstr, "(none)", &outmaxlen);
 			}
 			break;

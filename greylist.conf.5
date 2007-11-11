@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.79 2007/11/07 11:55:49 manu Exp $
+.\" $Id: greylist.conf.5,v 1.80 2007/11/11 11:57:19 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -55,7 +55,7 @@ DNSRBL was built-in, it is even possible to use DNSRBL in ACL.
 .PP
 An access-list entry starts with the
 .I racl
-keyword followed by the
+keyword followed by an optional id quoted string, then the
 .I greylist\fR,
 .I whitelist\fR,
 or
@@ -1016,6 +1016,10 @@ or
 .TP
 .I %A
 the line number of the ACL that caused the action.
+.TP
+.I %a
+the id string of the ACL that caused the action. If no id was given, the line
+number is used instead.
 .TP
 .I %Et
 total elapsed time in seconds before a greylisted message has been accepted
