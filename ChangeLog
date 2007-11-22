@@ -1,4 +1,5 @@
 4.0.1
+	Avoid C99 specific syntax (Greg Troxel)
 	Documentation fixes
 4.0
 	More 4.0 features examples to default greylist.conf
