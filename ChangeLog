@@ -3,6 +3,7 @@
 	Documentation fixes
 	Add SPF status selection to ACL
 	Add id string to ACL
+	Fix typos in documentation (Constantine A. Murenin)
 4.0
 	More 4.0 features examples to default greylist.conf
 4.0rc2
