@@ -1,9 +1,9 @@
-# $Id: README,v 1.59 2007/10/23 11:06:03 manu Exp $
+# $Id: README,v 1.59.2.1 2007/12/17 12:03:02 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/10/23 11:06:03 $
+		       $Date: 2007/12/17 12:03:02 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -89,7 +89,7 @@ milter-greylist binary and restarting the milter should be enough.
 
 Some startup scripts are available: rc-redhat.sh, rc-debian, rc-gentoo.sh,
 rc-suse.sh for Linux, rc-bsd.sh for NetBSD and FreeBSD, and rc-solaris.sh
-for Solaris. They are not installed by default; you have install the 
+for Solaris. They are not installed by default; you have to install the 
 startup script manually if you want to use one.
 
 
@@ -206,7 +206,7 @@ acl whitelist addr 10.0.0.0/8
 Then consider adding addresses of all the friendly networks you get
 mail from. By friendly networks, we mean networks with no spammers:
 Universities are usually friendly, some companies are friendly,
-some other are not, and dial-up and ADSL ISPs are definitively not
+some others are not, and dial-up and ADSL ISPs are definitively not
 friendly at all.
 
 
@@ -579,7 +579,7 @@ previously resent and accepted message:
 where M.m is the major and minor version number of milter-greylist.
 
 The file /var/milter-greylist/greylist.db is a dump of the greylist.
-It is done on each change and is used to restore state after
+It is done periodically and is used to restore state after
 milter-greylist has been restarted. The file contains an entry per
 line, with four columns:  IP address, sender e-mail address,
 recipient e-mail address, and time when the message will be accepted

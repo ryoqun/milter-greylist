@@ -1,6 +1,7 @@
 4.0.1
 	Avoid C99 specific syntax (Greg Troxel)
 	Documentation fixes
+	Fix typos in documentation (Constantine A. Murenin)
 4.0
 	More 4.0 features examples to default greylist.conf
 4.0rc2
