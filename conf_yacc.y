@@ -6,11 +6,12 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.84 2007/12/29 16:27:15 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.85 2007/12/29 19:06:49 manu Exp $");
 #endif
 #endif
 
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
 #include <syslog.h>
 #include <sysexits.h>
@@ -299,13 +300,23 @@ lazyaw:		LAZYAW	{ if (C_NOTFORCED(C_LAZYAW)) conf.c_lazyaw = 1; }
 	;
 pidfile:	PIDFILE QSTRING	{ if (C_NOTFORCED(C_PIDFILE)) 
 					conf.c_pidfile = 
-					    quotepath(conf.c_pidfile_storage, $2, QSTRLEN);
+					    quotepath(conf.c_pidfile_storage, 
+						$2, QSTRLEN);
 				}
 	;
 dumpfile:	GLDUMPFILE QSTRING{ if (C_NOTFORCED(C_DUMPFILE)) 
 					conf.c_dumpfile = 
-					    quotepath(conf.c_dumpfile_storage, $2, QSTRLEN);
+					    quotepath(conf.c_dumpfile_storage, 
+					    $2, QSTRLEN);
 				}
+	|	GLDUMPFILE QSTRING TNUMBER 	{
+				if (C_NOTFORCED(C_SOCKET))
+					conf.c_dumpfile = 
+					    quotepath(conf.c_dumpfile_storage, 
+					    $2, QSTRLEN);
+
+				conf.c_dumpfile_mode = (int)strtol($3, NULL, 8);
+			}
 	;
 subnetmatch:	SUBNETMATCH CIDR{ if (C_NOTFORCED(C_MATCHMASK))
 					prefix2mask4($2, &conf.c_match_mask);

@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.34 2007/10/05 10:35:00 manu Exp $ */
+/* $Id: dump.c,v 1.35 2007/12/29 19:06:49 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.34 2007/10/05 10:35:00 manu Exp $");
+__RCSID("$Id: dump.c,v 1.35 2007/12/29 19:06:49 manu Exp $");
 #endif
 #endif
 
@@ -56,6 +56,7 @@ __RCSID("$Id: dump.c,v 1.34 2007/10/05 10:35:00 manu Exp $");
 #include <time.h>
 
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/param.h>
 #include <sys/time.h>
 #include <sys/socket.h>
@@ -249,6 +250,15 @@ dump_perform(final)
 		close(dumpfd);
 		unlink(newdumpfile);		/* clean up ... */
 		exit(EX_OSERR);
+	}
+
+	if ((conf.c_dumpfile_mode != -1) &&
+	    (fchmod(dumpfd, conf.c_dumpfile_mode) == -1)) {
+			mg_log(LOG_ERR, "chmod(\"%s\", 0%o) failed: %s", 
+			    newdumpfile, conf.c_dumpfile_mode, strerror(errno));
+			close(dumpfd);
+			unlink(newdumpfile);		/* clean up ... */
+			exit(EX_OSERR);
 	}
 
 	errno = 0;

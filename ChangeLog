@@ -1,4 +1,5 @@
 4.1.1
+	Add configurable dumpfile permissions
 	Avoid C99 specific syntax (Greg Troxel)
 	Documentation fixes
 	Add SPF status selection to ACL
