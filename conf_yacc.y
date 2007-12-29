@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.83 2007/11/06 11:39:33 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.84 2007/12/29 16:27:15 manu Exp $");
 #endif
 #endif
 
@@ -530,27 +530,35 @@ access_list:	ACL GREYLIST  acl_entry {
 	;
 
 rcpt_access_list:
-		RACL GREYLIST  acl_entry { 
+		RACL id GREYLIST  acl_entry { 
 			acl_register_entry_last(AS_RCPT, A_GREYLIST);
 		}
-	|	RACL WHITELIST acl_entry { 
+	|	RACL id WHITELIST acl_entry { 
 			acl_register_entry_last(AS_RCPT, A_WHITELIST);
 		}
-	|	RACL BLACKLIST acl_entry { 
+	|	RACL id BLACKLIST acl_entry { 
 			acl_register_entry_last(AS_RCPT, A_BLACKLIST);
 		}
 	;
 
 data_access_list:
-		DACL GREYLIST  acl_entry { 
+		DACL id GREYLIST  acl_entry { 
 			acl_register_entry_last(AS_DATA, A_GREYLIST);
 		}
-	|	DACL WHITELIST acl_entry { 
+	|	DACL id WHITELIST acl_entry { 
 			acl_register_entry_last(AS_DATA, A_WHITELIST);
 		}
-	|	DACL BLACKLIST acl_entry { 
+	|	DACL id BLACKLIST acl_entry { 
 			acl_register_entry_last(AS_DATA, A_BLACKLIST);
 		}
+	;
+
+id:		QSTRING { 
+			char id[QSTRLEN + 1];
+
+			acl_add_id(quotepath(id, $1, QSTRLEN)); 
+		}
+	|
 	;
 
 acl_entry:	acl_default_entry 	{ conf_acl_end = 1; }
