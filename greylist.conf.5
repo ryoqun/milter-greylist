@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.77.2.2 2007/12/17 14:27:13 manu Exp $
+.\" $Id: greylist.conf.5,v 1.77.2.3 2008/02/06 04:12:17 manu Exp $
 .\"
 .\" Copyright (c) 2004-2007 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -66,6 +66,7 @@ keyword, and by any set of the following clauses:
 .I from\fR,
 .I rcpt\fR,
 .I rcptcount\fR,
+.I helo\fR,
 .I sm_macro\fR,
 .I time\fR,
 .I auth\fR,
@@ -132,6 +133,10 @@ Followed by an operator and a recipient count, this is used to select the
 amount of recipients. Example:
 .IP
   racl blacklist rcptcount >= 25 msg "No more than 25 recipients, please"
+.TP
+.I helo
+Followed by a quoted string or a regular expression, this can be used to
+filter on the HELO string.
 .TP
 .I sm_macro 
 This is used to select a Sendmail macro value. See the section on that
