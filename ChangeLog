@@ -1,4 +1,5 @@
 4.0.1
+	Fix error about stat in greylist.conf (Bob Smith)
 	Avoid C99 specific syntax (Greg Troxel)
 	Documentation fixes
 	Fix typos in documentation (Constantine A. Murenin)
