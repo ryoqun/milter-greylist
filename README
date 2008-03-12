@@ -1,9 +1,9 @@
-# $Id: README,v 1.60 2007/12/17 12:02:04 manu Exp $
+# $Id: README,v 1.61 2008/03/12 04:36:56 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2007/12/17 12:02:04 $
+		       $Date: 2008/03/12 04:36:56 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -50,7 +50,9 @@ Don't forget to set CVS_RSH=ssh if this is not your system default.
 Build dependencies: 
 - flex (AT&T lex cannot build milter-greylist sources)
 - yacc or bison (some older yacc will fail, use bison instead)
-- libmilter (comes with Sendmail)
+- libmilter (comes with Sendmail, or with the sendmail-devel
+  package on RedHat, Fedora and SuSE. Debian and Ubuntu have it
+  in libmilter-dev)
 - Any POSIX threads library (Provided by libc on some systems)
 
 Optional dependencies: 

@@ -1,4 +1,5 @@
 4.1.1
+	Document what package contains libmilter
 	Fix error about stat in greylist.conf (Bob Smith)
 	Add configurable dumpfile permissions
 	Avoid C99 specific syntax (Greg Troxel)
