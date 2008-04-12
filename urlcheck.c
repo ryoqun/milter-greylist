@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.30 2007/11/07 00:02:27 manu Exp $ */
+/* $Id: urlcheck.c,v 1.31 2008/04/12 19:55:51 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.30 2007/11/07 00:02:27 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.31 2008/04/12 19:55:51 manu Exp $");
 #endif
 #endif
 
@@ -506,7 +506,7 @@ curl_outlet(buffer, size, nmemb, userp)
 	 * a trailing \n\0 at the end of the buffer. 
 	 */
 	if (newlen == 0)
-		newlen += 2;
+		newlen = ud->ud_iov.iov_len = 2;
 
 	newlen += (size * nmemb);
 
@@ -525,7 +525,8 @@ curl_outlet(buffer, size, nmemb, userp)
 	}
 	ud->ud_iov.iov_base = newbuf;
 	
-	memcpy(ud->ud_iov.iov_base + ud->ud_iov.iov_len, buffer, size * nmemb);
+	memcpy(ud->ud_iov.iov_base + ud->ud_iov.iov_len - 2, 
+	       buffer, size * nmemb);
 	ud->ud_iov.iov_len = newlen;
 
 	return (size * nmemb);
@@ -1078,6 +1079,8 @@ answer_parse(data, ap, flags, priv)
 
 		if (buf[idx] == '\n') {
 			buf[idx] = '\0';
+			if (idx > 0 && buf[idx - 1] == '\r')
+			    buf[idx - 1] = '\0';
 			mg_log(LOG_DEBUG, 
 			    "ignoring unexpected line with no value \"%s\"", 
 			    linep);
@@ -1099,6 +1102,8 @@ answer_parse(data, ap, flags, priv)
 
 		if (buf[idx] == '\n') {
 			buf[idx] = '\0';
+			if (idx > 0 && buf[idx - 1] == '\r')
+			    buf[idx - 1] = '\0';
 			mg_log(LOG_DEBUG, "ignoring line \"%s: %s\"", 
 			    linep, valp);
 			idx++;
@@ -1112,6 +1117,8 @@ answer_parse(data, ap, flags, priv)
 
 		if (idx == len) {
 			buf[idx] = '\0';
+			if (idx > 0 && buf[idx - 1] == '\r')
+			    buf[idx - 1] = '\0';
 			mg_log(LOG_DEBUG, 
 			    "ignoring unexpected line \"%s: %s\"", 
 			    linep, valp);
@@ -1120,12 +1127,14 @@ answer_parse(data, ap, flags, priv)
 
 		/* cut valp */
 		buf[idx] = '\0';
+		if (idx > 0 && buf[idx - 1] == '\r')
+		    buf[idx - 1] = '\0';
 		idx++;
 
 		if (answer_getline(linep, valp, ap) == -1) {
 			if (!(flags & U_GETPROP))
 				mg_log(LOG_DEBUG, 
-				    "ignoring unepxected \"%s\" => \"%s\"",
+				    "ignoring unexpected \"%s\" => \"%s\"",
 				    linep, valp);
 		} else {
 			/* We have a match! */

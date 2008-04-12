@@ -1,4 +1,5 @@
 4.1.1
+	Fix corruption in urlcheck parsing (Benoit Branciard)
 	Document what package contains libmilter
 	Fix error about stat in greylist.conf (Bob Smith)
 	Add configurable dumpfile permissions
