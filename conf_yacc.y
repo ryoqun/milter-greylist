@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.85 2007/12/29 19:06:49 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.86 2008/04/24 11:05:50 manu Exp $");
 #endif
 #endif
 
@@ -159,6 +159,7 @@ netblock:	ADDR IPADDR CIDR{
 			acl_add_clause(AC_NETBLOCK, &and);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 #else
+			acl_drop();
 			mg_log(LOG_INFO,
 			    "IPv6 is not supported, ignore line %d",
 			    conf_line);
@@ -175,6 +176,7 @@ netblock:	ADDR IPADDR CIDR{
 			acl_add_clause(AC_NETBLOCK, &and);
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 #else
+			acl_drop();
 			mg_log(LOG_INFO,
 			    "IPv6 is not supported, ignore line %d",
 			    conf_line);
@@ -371,7 +373,8 @@ geoipdb:	GEOIPDB QSTRING	{
 				geoip_set_db(quotepath(path, $2, QSTRLEN));
 #else
 				mg_log(LOG_INFO, 
-				    "GeoIP support not compiled in line %d", 
+				    "GeoIP support not compiled in, "
+				    "ignore line %d", 
 				    conf_line);
 #endif
 				}
@@ -674,8 +677,10 @@ geoip_clause:		GEOIP QSTRING {
 				acl_add_clause(AC_GEOIP, 
 				    quotepath(ccode, $2, IPADDRSTRLEN));
 #else
+				acl_drop();
 				mg_log(LOG_INFO, 
-				    "GeoIP support not compiled in line %d", 
+				    "GeoIP support not compiled in, "
+				    "ignoting line %d", 
 				    conf_line);
 #endif
 			}
@@ -716,8 +721,9 @@ dnsrbl_clause:		DNSRBL QSTRING {
 
 			acl_add_clause(AC_DNSRBL, quotepath(path, $2, QSTRLEN));
 #else
+			acl_drop();
 			mg_log(LOG_INFO, 
-			    "DNSRBL support not compiled in line %d", 
+			    "DNSRBL support not compiled in, ignore line %d", 
 			    conf_line);
 #endif
 			}
@@ -789,8 +795,10 @@ spf_clause:		SPF SPF_STATUS {
 				acl_add_clause(AC_SPF, &$2); 
 				conf.c_nospf = 1;
 #else
+				acl_drop();
 				mg_log(LOG_INFO, 
-				    "SPF support not compiled in line %d", 
+				    "SPF support not compiled in,  "
+				    "ignore line %d", 
 				    conf_line);
 #endif
 			}
@@ -804,8 +812,10 @@ spf_compat_clause:	 SPF {
 				acl_add_clause(AC_SPF, &status); 
 				conf.c_nospf = 1;
 #else
+				acl_drop();
 				mg_log(LOG_INFO, 
-				    "SPF support not compiled in line %d", 
+				    "SPF support not compiled in, "
+				    "ignore line %d", 
 				    conf_line);
 #endif
 			}
@@ -818,8 +828,9 @@ urlcheck_clause:	URLCHECK QSTRING {
 			acl_add_clause(AC_URLCHECK, 
 				       quotepath(path, $2, QSTRLEN));
 #else
+			acl_drop();
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in line %d", 
+			    "CURL support not compiled in, ignore line %d", 
 			    conf_line);
 #endif
 			}
@@ -835,8 +846,9 @@ prop_clause:		PROP QSTRING {
 
 			acl_add_clause(AC_PROP, &upd);
 #else
+			acl_drop();
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in line %d", 
+			    "CURL support not compiled in, ignore line %d", 
 			    conf_line);
 #endif
 		}
@@ -850,8 +862,9 @@ propregex_clause:	PROP REGEX {
 			upd.upd_data = $2;
 			acl_add_clause(AC_PROPRE, &upd);
 #else
+			acl_drop();
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in line %d", 
+			    "CURL support not compiled in, ignore line %d", 
 			    conf_line);
 #endif
 		}
@@ -892,6 +905,7 @@ netblock_clause:	ADDR IPADDR CIDR {
 
 				acl_add_clause(AC_NETBLOCK, &and);
 #else
+				acl_drop();
 				mg_log(LOG_INFO, 
 				    "IPv6 is not supported, ignore line %d",
 				    conf_line);
@@ -907,6 +921,7 @@ netblock_clause:	ADDR IPADDR CIDR {
 
 				acl_add_clause(AC_NETBLOCK, &and);
 #else
+				acl_drop();
 				mg_log(LOG_INFO, "IPv6 is not supported, "
 				     "ignore line %d", conf_line);
 #endif
@@ -919,7 +934,7 @@ dracdb:			DRAC DB QSTRING	{
 					    quotepath(conf.c_dracdb_storage, $3, QSTRLEN);
 #else
 				mg_log(LOG_INFO, "DRAC support not compiled "
-				    "in line %d", conf_line);
+				    "in, ignore line %d", conf_line);
 #endif
 		}
 	;
@@ -962,7 +977,7 @@ dnsrbldefip:	DNSRBL QSTRING DOMAINNAME IPADDR {
 			    $3, SA(&$4), 32);
 #else
 			mg_log(LOG_INFO, 
-			    "DNSRBL support not compiled in line %d", 
+			    "DNSRBL support not compiled in, ignore  line %d", 
 			    conf_line);
 #endif
 		}
@@ -976,7 +991,7 @@ dnsrbldefnetblock:	DNSRBL QSTRING DOMAINNAME IPADDR CIDR {
 			    $3, SA(&$4), $5);
 #else
 			mg_log(LOG_INFO, 
-			    "DNSRBL support not compiled in line %d", 
+			    "DNSRBL support not compiled in, ignore line %d", 
 			    conf_line);
 #endif
 		}
@@ -1005,7 +1020,7 @@ urlcheckdef:	URLCHECK QSTRING QSTRING TNUMBER urlcheckdef_flags {
 			    urlcheck_gflags);
 #else
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in line %d", 
+			    "CURL support not compiled in, ignore  line %d", 
 			    conf_line);
 #endif
 		}
@@ -1023,7 +1038,7 @@ urlcheckdef_postmsg:	POSTMSG	{
 				urlcheck_gflags |= U_POSTMSG; 
 #else
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in line %d", 
+			    "CURL support not compiled in, ignore line %d", 
 			    conf_line);
 #endif
 			}
@@ -1033,7 +1048,7 @@ urlcheckdef_getprop:	GETPROP	{
 				urlcheck_gflags |= U_GETPROP; 
 #else
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in line %d", 
+			    "CURL support not compiled in, ignore line %d", 
 			    conf_line);
 #endif
 			}
@@ -1043,7 +1058,7 @@ urlcheckdef_clear:	 CLEAR {
 				urlcheck_gflags |= U_CLEARPROP; 
 #else
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in line %d", 
+			    "CURL support not compiled in, ignore line %d", 
 			    conf_line);
 #endif
 			}
@@ -1053,7 +1068,7 @@ urlcheckdef_fork:	 FORK {
 				urlcheck_gflags |= U_FORK;
 #else
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in line %d", 
+			    "CURL support not compiled in, ignore line %d", 
 			    conf_line);
 #endif
 			}

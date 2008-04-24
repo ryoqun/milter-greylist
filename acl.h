@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.31 2007/11/11 11:57:19 manu Exp $ */
+/* $Id: acl.h,v 1.32 2008/04/24 11:05:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -151,6 +151,7 @@ struct acl_param {
 #define A_FREE_MSG		0x08
 #define A_FREE_REPORT		0x10
 #define A_FREE_ID		0x20
+#define A_DROP_ACL		0x40
 
 struct all_list_entry;
 
@@ -230,6 +231,7 @@ char *stage_string(acl_stage_t);
 struct acl_clause_rec *get_acl_clause_rec(acl_clause_t);
 struct acl_clause_rec *acl_list_item_fixup(acl_clause_t, acl_clause_t);
 void acl_init(void);
+void acl_drop(void);
 void acl_clear(void);
 void acl_add_clause(acl_clause_t, void *);
 void acl_negate_clause(void);

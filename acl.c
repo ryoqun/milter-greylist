@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.74 2007/11/11 11:57:19 manu Exp $ */
+/* $Id: acl.c,v 1.75 2008/04/24 11:05:50 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.74 2007/11/11 11:57:19 manu Exp $");
+__RCSID("$Id: acl.c,v 1.75 2008/04/24 11:05:50 manu Exp $");
 #endif
 #endif
 
@@ -99,6 +99,7 @@ char *acl_print_list(acl_data_t *, char *, size_t);
 char *acl_print_null(acl_data_t *, char *, size_t);
 char *acl_print_opnum(acl_data_t *, char *, size_t);
 int acl_opnum_cmp(int, enum operator, int);
+void acl_free_entry(struct acl_entry *);
 void acl_free_netblock(acl_data_t *);
 void acl_free_string(acl_data_t *);
 void acl_free_regex(acl_data_t *);
@@ -1093,6 +1094,39 @@ acl_init(void) {
 }
 
 void
+acl_free_entry(acl)
+	struct acl_entry *acl;
+{
+	struct acl_clause *ac;
+
+	while (!TAILQ_EMPTY(&acl->a_clause)) {
+		ac = TAILQ_FIRST(&acl->a_clause);
+		TAILQ_REMOVE(&acl->a_clause, ac, ac_list);
+		if (ac->ac_acr->acr_free)
+			(*ac->ac_acr->acr_free)(&ac->ac_data);
+		free(ac);
+	}
+
+	if (acl->a_code != NULL)
+		free(acl->a_code);
+	if (acl->a_ecode != NULL)
+		free(acl->a_ecode);
+	if (acl->a_msg != NULL)
+		free(acl->a_msg);
+	if (acl->a_report != NULL)
+		free(acl->a_report);
+	free(acl);
+
+	return;
+}
+
+void
+acl_drop(void) {
+	gacl->a_flags |= A_DROP_ACL;
+	return;
+}
+
+void
 acl_add_flushaddr(void) {
 	gacl->a_flags |= A_FLUSHADDR;
 	return;	
@@ -1524,6 +1558,14 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 		}
 	}
 
+	if (gacl->a_flags & A_DROP_ACL) {
+		acl_free_entry(gacl);
+		gacl =  acl_init_entry(); 
+		if (conf.c_debug || conf.c_acldebug)
+			mg_log(LOG_DEBUG, "Drop ACL %d", conf_line - 1);
+		return NULL;
+	}
+
 	if ((acl = malloc(sizeof(*acl))) == NULL) {
 		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
 		exit(EX_OSERR);
@@ -1604,6 +1646,14 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 			conf_racl_end = 1;
 			conf_acl_end = 0;
 		}
+	}
+
+	if (gacl->a_flags & A_DROP_ACL) {
+		acl_free_entry(gacl);
+		gacl =  acl_init_entry(); 
+		if (conf.c_debug || conf.c_acldebug)
+			mg_log(LOG_DEBUG, "Drop ACL %d", conf_line - 1);
+		return NULL;
 	}
 
 	acl = gacl;
@@ -1975,29 +2025,11 @@ emailcmp(big, little)
 void
 acl_clear(void) {	/* acllist must be write locked */
 	struct acl_entry *acl;
-	struct acl_clause *ac;
 
 	while (!TAILQ_EMPTY(&acl_head)) {
 		acl = TAILQ_FIRST(&acl_head);
 		TAILQ_REMOVE(&acl_head, acl, a_list);
-
-		while (!TAILQ_EMPTY(&acl->a_clause)) {
-			ac = TAILQ_FIRST(&acl->a_clause);
-			TAILQ_REMOVE(&acl->a_clause, ac, ac_list);
-			if (ac->ac_acr->acr_free)
-				(*ac->ac_acr->acr_free)(&ac->ac_data);
-			free(ac);
-		}
-
-		if (acl->a_code != NULL)
-			free(acl->a_code);
-		if (acl->a_ecode != NULL)
-			free(acl->a_ecode);
-		if (acl->a_msg != NULL)
-			free(acl->a_msg);
-		if (acl->a_report != NULL)
-			free(acl->a_report);
-		free(acl);
+		acl_free_entry(acl);
 	}
 
 	return;
