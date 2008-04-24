@@ -3,6 +3,20 @@
 # Greylist init script
 # July 2004
 # BERTRAND Joël
+#
+### BEGIN INIT INFO
+# Provides:                 milter-greylist
+# Required-Start:    $local_fs $named $remote_fs $syslog
+# Required-Stop:     mountall
+# Should-Start:             sendmail
+# Should-Stop:
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Script to start/stop the greylist-milter
+# Description: another spam-defense service
+### END INIT INFO
+
+
 
 # Based on skeleton by Miquel van Smoorenburg and Ian Murdock
 
@@ -14,8 +28,7 @@ DESC="Greylist Mail Filter Daemon"
 PIDFILE="/var/run/$NAME.pid"
 PNAME="milter-greylist"
 USER="@USER@"
-SOCKET=/var/run/milter-greylist/greylist.sock
-DOPTIONS="-P $PIDFILE -u $USER -p $SOCKET"
+SOCKET=/var/run/milter-greylist/milter-greylist.sock
 
 
 [ -x $DAEMON ] || DAEMON=@BINDIR@/milter-greylist
@@ -25,11 +38,27 @@ DOPTIONS="-P $PIDFILE -u $USER -p $SOCKET"
 export TMPDIR=/tmp
 # Apparently people have trouble if this isn't explicitly set...
 
-ENABLED=1
+ENABLED=0
 OPTIONS=""
 NICE=
 
-test "$ENABLED" != "0" || exit 0
+test -f /etc/default/milter-greylist && . /etc/default/milter-greylist
+
+DOPTIONS="-P $PIDFILE -u $USER -p $SOCKET"
+
+if [ "$ENABLED" = "0" ]; then
+    echo "$DESC: disabled, see /etc/default/milter-greylist"
+    exit 0
+fi
+
+if ! getent passwd | grep -q "^greylist:"; then
+  echo "$0: greylist user does not exist. Aborting" >&2
+  exit 1
+fi
+if ! getent group | grep -q "^greylist:" ; then
+  echo "$0: greylist group does not exist. Aborting" >&2
+  exit 1
+fi
 
 set -e
 
@@ -47,7 +76,7 @@ case "$1" in
 	echo "$NAME."
 	;;
 
-  restart|force-reload)
+  restart|force-reload|reload)
 	echo -n "Restarting $DESC: "
 	start-stop-daemon --stop --pidfile $PIDFILE --name $PNAME \
 	    --retry 5 --oknodo
