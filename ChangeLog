@@ -1,6 +1,7 @@
 4.1.2
 	Update Debian startup script (Adam Katz)
 	Fix bogus ACL when using features not compiled in
+	Fix a crash when using SPF (Johann Klasek)
 4.1.1
 	Fix corruption in urlcheck parsing (Benoit Branciard)
 	Document what package contains libmilter

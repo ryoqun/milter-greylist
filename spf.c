@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.29 2007/11/08 04:32:06 manu Exp $ */
+/* $Id: spf.c,v 1.30 2008/05/27 04:49:59 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.29 2007/11/08 04:32:06 manu Exp $");
+__RCSID("$Id: spf.c,v 1.30 2008/05/27 04:49:59 manu Exp $");
 #endif
 #endif
 
@@ -90,6 +90,7 @@ spf_check_internal(ad, as, ap, priv)
 	char addr[IPADDRSTRLEN];
 	int result = 0;
 	struct timeval tv1, tv2, tv3;
+	enum spf_status status;
 
 	if (conf.c_debug)
 		gettimeofday(&tv1, NULL);
@@ -111,7 +112,8 @@ spf_check_internal(ad, as, ap, priv)
 	if (conf.c_debug)
 		mg_log(LOG_DEBUG, "SPF return code %d", p->RES);
 
-	switch (*(enum spf_status *)ad) {
+	status = ad ? *(enum spf_status *)ad : MGSPF_PASS;
+	switch (status) {
 	case MGSPF_PASS:
 		result = (p->RES == SPF_PASS);
 		break;
@@ -193,6 +195,7 @@ spf_check_internal(ad, as, ap, priv)
 	int result = 0;
 	struct timeval tv1, tv2, tv3;
 	size_t len;
+	enum spf_status status;
 
 	if (conf.c_debug)
 		gettimeofday(&tv1, NULL);
@@ -251,7 +254,8 @@ spf_check_internal(ad, as, ap, priv)
 	out = SPF_result(spfconf, dnsconf);
 #endif
 
-	switch (*(enum spf_status *)ad) {
+	status = ad ? *(enum spf_status *)ad : MGSPF_PASS;
+	switch (status) {
 	case MGSPF_PASS:
 		result = (out.result == SPF_RESULT_PASS);
 		break;
@@ -320,6 +324,7 @@ spf_check_internal(ad, as, ap, priv)
 	int res, result = 0;
 	struct timeval tv1, tv2, tv3;
 	size_t len;
+	enum spf_status status;
 
 	if (conf.c_debug)
 		gettimeofday(&tv1, NULL);
@@ -383,7 +388,8 @@ spf_check_internal(ad, as, ap, priv)
 	SPF_request_query_mailfrom(spf_request, &spf_response);
 	res = SPF_response_result(spf_response);
 
-	switch (*(enum spf_status *)ad) {
+	status = ad ? *(enum spf_status *)ad : MGSPF_PASS;
+	switch (status) {
 	case MGSPF_PASS:
 		result = (res == SPF_RESULT_PASS);
 		break;
@@ -445,7 +451,10 @@ acl_print_spf(ad, buf, len)
 	size_t len;
 {
 	char *tmpstr;
-	switch (*(enum spf_status *)ad) {
+	enum spf_status status;
+
+	status = ad ? *(enum spf_status *)ad : MGSPF_PASS;
+	switch (status) {
 	case MGSPF_PASS:
 		tmpstr = "pass";
 		break;
@@ -499,7 +508,10 @@ spf_check(ad, as, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
-	switch (*(enum spf_status *)ad) {
+	enum spf_status status;
+
+	status = ad ? *(enum spf_status *)ad : MGSPF_PASS;
+	switch (status) {
 	case MGSPF_PASS:
 	case MGSPF_FAIL:
 	case MGSPF_SOFTFAIL:
@@ -568,7 +580,11 @@ spf_check_self(ad, as, ap, priv)
 		}
 	}
 
-	memcpy(&tmp_ad, ad, sizeof(tmp_ad));
+	if (ad == NULL)
+		memsey(&tmp_ad, 0, sizeof(tmp_ad));
+	else
+		memcpy(&tmp_ad, ad, sizeof(tmp_ad));
+
 	tmp_ad.spf_status = MGSPF_PASS;
 
 	retval = spf_check_internal(&tmp_ad, as, ap, priv);
