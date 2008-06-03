@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.80 2007/10/05 23:12:47 manu Exp $ */
+/* $Id: sync.c,v 1.81 2008/06/03 10:26:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.80 2007/10/05 23:12:47 manu Exp $");
+__RCSID("$Id: sync.c,v 1.81 2008/06/03 10:26:19 manu Exp $");
 #endif
 #endif
 
@@ -306,7 +306,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	}
 
 	if (bw > LINELEN) {
-		mg_log(LOG_ERR, "closing connexion with peer %s: "
+		mg_log(LOG_ERR, "closing connection with peer %s: "
 		    "send buffer would overflow (%d entries queued)", 
 		    peer->p_name, peer->p_qlen);
 		Fclose(peer->p_stream);
@@ -316,7 +316,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 
 	bw = fprintf(peer->p_stream, "%s", line);
 	if (bw != strlen(line)) {
-		mg_log(LOG_ERR, "closing connexion with peer %s: "
+		mg_log(LOG_ERR, "closing connection with peer %s: "
 		    "%s (%d entries queued) - I was unable to send "
 		    "complete line \"%s\" - bytes written: %i", 
 		    peer->p_name, strerror(errno), peer->p_qlen, 
@@ -336,7 +336,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	if (fgets(line, LINELEN, peer->p_stream) == NULL) {
 		if (errno == EAGAIN) {
 			if ( feof(peer->p_stream) ) {
-				mg_log(LOG_ERR, "lost connexion with peer %s: "
+				mg_log(LOG_ERR, "lost connection with peer %s: "
 		  		  "%s (%d entries queued)", 
 				    peer->p_name, strerror(errno), peer->p_qlen);
 				Fclose(peer->p_stream);
@@ -345,7 +345,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 			}
 			goto get_more;
 		}
-		mg_log(LOG_ERR, "lost connexion with peer %s: "
+		mg_log(LOG_ERR, "lost connection with peer %s: "
 		    "%s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);
 		Fclose(peer->p_stream);
@@ -362,7 +362,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 
 	if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
 		mg_log(LOG_ERR, "Unexpected reply \"%s\" from %s, "
-		    "closing connexion (%d entries queued)", 
+		    "closing connection (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
 		Fclose(peer->p_stream);
 		peer->p_stream = NULL;
@@ -372,7 +372,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	replycode = atoi(replystr);
 	if (replycode != 201) {
 		mg_log(LOG_ERR, "Unexpected reply \"%s\" from %s, "
-		    "closing connexion (%d entries queued)", 
+		    "closing connection (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
 		Fclose(peer->p_stream);
 		peer->p_stream = NULL;
@@ -588,7 +588,7 @@ peer_connect(peer)	/* peer list is read-locked */
 
 	sync_waitdata(s);	
 	if (fgets(line, LINELEN, stream) == NULL) {
-		mg_log(LOG_ERR, "Lost connexion with peer %s: "
+		mg_log(LOG_ERR, "Lost connection with peer %s: "
 		    "%s (%d entries queued)", 
 		    peer->p_name, strerror(errno), peer->p_qlen);
 		goto bad;
@@ -603,7 +603,7 @@ peer_connect(peer)	/* peer list is read-locked */
 
 	if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
 		mg_log(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
-		    "closing connexion (%d entries queued)", 
+		    "closing connection (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
 		goto bad;
 	}
@@ -611,7 +611,7 @@ peer_connect(peer)	/* peer list is read-locked */
 	replycode = atoi(replystr);
 	if (replycode != 200) {
 		mg_log(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
-		    "closing connexion (%d entries queued)", 
+		    "closing connection (%d entries queued)", 
 		    line, peer->p_name, peer->p_qlen);
 		goto bad;
 	}
@@ -742,7 +742,7 @@ sync_master(arg)
 		bzero((void *)&raddr, sizeof(raddr));
 		raddrlen = sizeof(raddr);
 		if ((fd = accept(sock, SA(&raddr), &raddrlen)) == -1) {
-			mg_log(LOG_ERR, "incoming connexion "
+			mg_log(LOG_ERR, "incoming connection "
 			    "failed: %s", strerror(errno));
 
 			if (is_fatal(errno))
@@ -756,13 +756,13 @@ sync_master(arg)
 		conf_retain();
 
 		iptostring(SA(&raddr), raddrlen, peerstr, sizeof(peerstr));
-		mg_log(LOG_INFO, "Incoming MX sync connexion from %s", 
+		mg_log(LOG_INFO, "Incoming MX sync connection from %s", 
 		    peerstr);
 
 		errno = 0;
 		if ((stream = Fdopen(fd, "w+")) == NULL) {
 			mg_log(LOG_ERR, 
-			    "incoming connexion from %s failed, "
+			    "incoming connection from %s failed, "
 			    "fdopen fail: %s", peerstr, 
 		    	    (errno == 0) ? "out of stdio streams"
 					 : strerror(errno));
@@ -847,14 +847,14 @@ sync_master(arg)
 
 		if ((error = pthread_create(&tid, NULL, 
 		    (void *(*)(void *))sync_server, (void *)stream)) != 0) {
-			mg_log(LOG_ERR, "incoming connexion from %s failed, "
+			mg_log(LOG_ERR, "incoming connection from %s failed, "
 			    "pthread_create failed: %s", 
 			    peerstr, strerror(error));
 			Fclose(stream);
 			continue;
 		}
 		if ((error = pthread_detach(tid)) != 0) {
-			mg_log(LOG_ERR, "incoming connexion from %s failed, "
+			mg_log(LOG_ERR, "incoming connection from %s failed, "
 			    "pthread_detach failed: %s",
 			    peerstr, strerror(error));
 			exit(EX_OSERR);
@@ -1247,7 +1247,7 @@ sync_help(stream)
 	fprintf(stream, "203 \n");
 	fprintf(stream, "203 Available commands are:\n");
 	fprintf(stream, "203 help  -- displays this message\n");
-	fprintf(stream, "203 quit  -- terminate connexion\n");
+	fprintf(stream, "203 quit  -- terminate connection\n");
 	fprintf(stream, "203 vers2 -- speak version 2 protocol\n");
 	fprintf(stream, "203 vers3 -- speak version 3 protocol\n");
 	fprintf(stream, 
@@ -1519,7 +1519,7 @@ select_protocol(peer, s, stream)
 
 		sync_waitdata(s);	
 		if (fgets(line, LINELEN, stream) == NULL) {
-			mg_log(LOG_ERR, "Lost connexion with peer %s: "
+			mg_log(LOG_ERR, "Lost connection with peer %s: "
 			    "%s (%d entries queued)", 
 			    peer->p_name, strerror(errno), peer->p_qlen);
 			return 0;
@@ -1527,7 +1527,7 @@ select_protocol(peer, s, stream)
 
 		if ((replystr = strtok_r(line, sep, &cookie)) == NULL) {
 			mg_log(LOG_ERR, "Unexpected reply \"%s\" from peer %s "
-			    "closing connexion (%d entries queued)", 
+			    "closing connection (%d entries queued)", 
 			    line, peer->p_name, peer->p_qlen);
 			return 0;
 		}

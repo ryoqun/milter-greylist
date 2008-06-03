@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.31 2008/04/12 19:55:51 manu Exp $ */
+/* $Id: urlcheck.c,v 1.32 2008/06/03 10:26:19 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.31 2008/04/12 19:55:51 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.32 2008/06/03 10:26:19 manu Exp $");
 #endif
 #endif
 
@@ -532,7 +532,7 @@ curl_outlet(buffer, size, nmemb, userp)
 	return (size * nmemb);
 }
 
-/* Return a locked connexion */
+/* Return a locked connection */
 static struct urlcheck_cnx *
 get_cnx(ue) 
 	struct urlcheck_entry *ue;
@@ -569,7 +569,7 @@ get_cnx(ue)
 	}
 
 	/* 
-	 * Nothing was free, we have to wait for a connexion.  
+	 * Nothing was free, we have to wait for a connection.  
 	 * Use the one that was locked for the longest time
 	 */
 	if (cnx == NULL) {
@@ -584,7 +584,7 @@ get_cnx(ue)
 	}
 
 	/* 
-	 * We now have a lock on a connexion 
+	 * We now have a lock on a connection 
 	 * Record the time 
 	 */
 	cnx->uc_old = time(NULL);

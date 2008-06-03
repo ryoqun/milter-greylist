@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.20 2007/03/16 03:58:04 manu Exp $ */
+/* $Id: sync.h,v 1.21 2008/06/03 10:26:19 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
@@ -46,7 +46,7 @@
 #define MXGLSYNC_NAME "mxglsync"
 #define MXGLSYNC_PORT "5252"
 
-#define MXGLSYNC_BACKLOG 5 /* Maximum connexions */
+#define MXGLSYNC_BACKLOG 5 /* Maximum connections */
 
 #ifdef HAVE_MISSING_SOCKLEN_T
 typedef unsigned int socklen_t;

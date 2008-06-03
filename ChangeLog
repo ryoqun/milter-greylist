@@ -2,6 +2,7 @@
 	Update Debian startup script (Adam Katz)
 	Fix bogus ACL when using features not compiled in
 	Fix a crash when using SPF (Johann Klasek)
+	Fix Typos
 4.1.1
 	Fix corruption in urlcheck parsing (Benoit Branciard)
 	Document what package contains libmilter
@@ -144,7 +145,7 @@
 3.1.2
 	Fix timespamp on sparc64 (Gert Doering)
 	Add the ability to query extrnal sources in ACL using URL 
-	Add connexion pools for URL queries to enable persistent connexions
+	Add connection pools for URL queries to enable persistent connections
 	Fix dependency in rc-bsd.sh: it's mail, not sendmail
 	Add DATA-stage ACL
 	Update to .spec file (Rudy Eschauzier)
@@ -221,7 +222,7 @@
 	Build fix (Attila Bruncsak)
 2.1.4
 	Fixes to bucketed databases when using lazyaw (Ranko Zivojnovic)
-	Tell local connexions are non IP instead of non IPv4 (Attila Bruncsak)
+	Tell local connections are non IP instead of non IPv4 (Attila Bruncsak)
 	Faster ACL code (Attila Bruncsak)
 	Option to log expired entries (Jeff Rife)
 	Cosmetic changes in debug logs (Fredrik Pettai)
