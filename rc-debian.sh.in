@@ -28,7 +28,7 @@ DESC="Greylist Mail Filter Daemon"
 PIDFILE="/var/run/$NAME.pid"
 PNAME="milter-greylist"
 USER="@USER@"
-SOCKET=/var/run/milter-greylist/milter-greylist.sock
+SOCKET=/var/milter-greylist/milter-greylist.sock
 
 
 [ -x $DAEMON ] || DAEMON=@BINDIR@/milter-greylist
