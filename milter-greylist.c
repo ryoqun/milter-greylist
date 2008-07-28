@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.202 2007/12/29 19:06:49 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.203 2008/07/28 10:21:07 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.202 2007/12/29 19:06:49 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.203 2008/07/28 10:21:07 manu Exp $");
 #endif
 #endif
 
@@ -497,6 +497,7 @@ real_envrcpt(ctx, envrcpt)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+	priv->priv_rcptcount++;
 
 	if (!iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
 	    sizeof(addrstr)))
@@ -1990,7 +1991,6 @@ add_recipient(priv, rcpt)
 	nr->r_addr[ADDRLEN] = '\0';
 
 	LIST_INSERT_HEAD(&priv->priv_rcpt, nr, r_list);
-	priv->priv_rcptcount++;
 	return;
 }
 

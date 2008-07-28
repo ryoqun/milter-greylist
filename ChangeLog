@@ -1,4 +1,5 @@
 4.1.2
+	Fix recipient count bug (Constantine A. Murenin)
 	Update Debian startup script (Adam Katz)
 	Fix bogus ACL when using features not compiled in
 	Fix a crash when using SPF (Johann Klasek)
