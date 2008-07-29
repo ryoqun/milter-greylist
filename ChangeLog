@@ -1,6 +1,5 @@
 4.1.2
-	Fix recipient count bug (Constantine A. Murenin)
-	Fix recipient count bug (Constantine A. Murenin)
+	Fix auth and tls clauses in ACL so that they accept regex
 	Update Debian startup script (Adam Katz)
 	Fix bogus ACL when using features not compiled in
 	Fix a crash when using SPF (Johann Klasek)

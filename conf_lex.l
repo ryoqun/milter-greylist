@@ -125,7 +125,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.77 2007/11/07 04:05:14 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.78 2008/07/29 16:22:10 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -171,8 +171,8 @@ prop		"$"[-_A-Za-z0-9]+
 {lazyaw}	{ return LAZYAW; }
 {greylist}	{ return GREYLIST; }
 {noauth}	{ return NOAUTH; }
-{auth}		{ return AUTH; }
-{tls}		{ return TLS; }
+{auth}		{ BEGIN(S_REGEX); return AUTH; }
+{tls}		{ BEGIN(S_REGEX); return TLS; }
 {msgsize}	{ return MSGSIZE; }
 {rcptcount}	{ return RCPTCOUNT; }
 {noaccessdb}	{ return NOACCESSDB; }
