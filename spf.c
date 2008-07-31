@@ -1,4 +1,4 @@
-/* $Id: spf.c,v 1.30 2008/05/27 04:49:59 manu Exp $ */
+/* $Id: spf.c,v 1.31 2008/07/31 10:56:40 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spf.c,v 1.30 2008/05/27 04:49:59 manu Exp $");
+__RCSID("$Id: spf.c,v 1.31 2008/07/31 10:56:40 manu Exp $");
 #endif
 #endif
 
@@ -581,7 +581,7 @@ spf_check_self(ad, as, ap, priv)
 	}
 
 	if (ad == NULL)
-		memsey(&tmp_ad, 0, sizeof(tmp_ad));
+		memset(&tmp_ad, 0, sizeof(tmp_ad));
 	else
 		memcpy(&tmp_ad, ad, sizeof(tmp_ad));
 
