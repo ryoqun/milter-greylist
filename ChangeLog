@@ -1,5 +1,6 @@
 4.1.3
 	Fix build of SPF code
+	Fix build of GeoIP code
 4.1.2
 	Fix auth and tls clauses in ACL so that they accept regex
 	Update Debian startup script (Adam Katz)
