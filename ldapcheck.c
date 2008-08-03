@@ -1,4 +1,4 @@
-/* $Id: ldapcheck.c,v 1.1 2008/08/03 09:48:44 manu Exp $ */
+/* $Id: ldapcheck.c,v 1.2 2008/08/03 10:14:28 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: ldapcheck.c,v 1.1 2008/08/03 09:48:44 manu Exp $");
+__RCSID("$Id: ldapcheck.c,v 1.2 2008/08/03 10:14:28 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
@@ -60,6 +60,7 @@ __RCSID("$Id: ldapcheck.c,v 1.1 2008/08/03 09:48:44 manu Exp $");
 
 struct ldapconf {
 	char lc_urls[QSTRLEN + 1];
+	int lc_urlcount;
 	char *lc_dn;
 	char *lc_pwd;
 	LDAP *lc_ld;
@@ -83,6 +84,7 @@ ldapcheck_init(void) {
 	LIST_INIT(&ldapcheck_list);
 
 	ldapconf.lc_urls[0] = '\0';
+	ldapconf.lc_urlcount = 0;
 	ldapconf.lc_ld = NULL;
 	ldapconf.lc_dn = "";
 	ldapconf.lc_pwd = "";
@@ -94,9 +96,24 @@ void
 ldapcheck_conf_add(urls)
 	char *urls;
 {
+	char *lasts = NULL;
+	char *p;
+	char *sep = "\t ";
+
 	strncpy(ldapconf.lc_urls, urls, sizeof(ldapconf.lc_urls));
 	ldapconf.lc_urls[sizeof(ldapconf.lc_urls) - 1 ] = '\0';
 
+	p = strtok_r(urls, sep, &lasts); 
+	while (p) {
+		ldapconf.lc_urlcount++;
+		p = strtok_r(NULL, sep, &lasts);
+	}
+	if (conf.c_debug)
+		mg_log(LOG_DEBUG, 
+		      "loaded %d LDAP URL: \"%s\"", 
+		      ldapconf.lc_urlcount,
+		      ldapconf.lc_urls);
+	
 	return;
 }
 
