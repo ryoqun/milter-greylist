@@ -1,7 +1,7 @@
-# $Id: milter-greylist.spec,v 1.91 2008/04/24 11:12:26 manu Exp $
+# $Id: milter-greylist.spec,v 1.92 2008/08/03 04:31:42 manu Exp $
 # Contributed by Ivan F. Martinez
 
-%define ver 4.1.2
+%define ver 4.1.3
 %define rel 1
 
 %define user root
