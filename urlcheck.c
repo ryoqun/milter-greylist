@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.32 2008/06/03 10:26:19 manu Exp $ */
+/* $Id: urlcheck.c,v 1.33 2008/08/03 05:00:06 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.32 2008/06/03 10:26:19 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.33 2008/08/03 05:00:06 manu Exp $");
 #endif
 #endif
 
@@ -113,10 +113,6 @@ static int answer_parse(struct iovec *, struct acl_param *, int,
 			struct mlfi_priv *);
 static int answer_getline(char *, char *, struct acl_param *);
 static struct urlcheck_cnx *get_cnx(struct urlcheck_entry *);
-static void urlcheck_prop_push(char *, char *, int, struct mlfi_priv *);
-static void urlcheck_prop_clear_tmp(struct mlfi_priv *);
-static void urlcheck_prop_untmp(struct mlfi_priv *);
-
 static void urlcheck_validate_pipe(struct urlcheck_data *, 
 				   struct urlcheck_entry *, 
 				   struct urlcheck_cnx *, char *);
@@ -285,58 +281,6 @@ urlcheck_clear(void)	/* acllist must be write locked */
 }
 
 
-#if 0
-static char *
-url_encode(url)
-	char *url;
-{
-	char *cp;
-	size_t len;
-	char *out;
-	char *op;
-
-	len = 0;
-	for (cp = url; *cp; cp++) {
-		if (isalnum((int)*cp) || 
-		    (*cp == '.') || 
-		    (*cp == '-') || 
-		    (*cp == '_')) {
-			len++;
-		} else {
-			len += 3;
-		}
-	}
-	len++;
-
-	if ((out = malloc(len + 1)) == NULL) {
-		mg_log(LOG_ERR, "malloc(%d) failed", 
-		    len + 1, strerror(errno));
-		exit(EX_OSERR);
-	}
-	out[0] = '\0';
-	op = out;
-
-	for (cp = url; *cp; cp++) {
-		if (isalnum((int)*cp) || 
-		    (*cp == '.') || 
-		    (*cp == '-') || 
-		    (*cp == ':') || 
-		    (*cp == '_')) {
-			*op++ = *cp;
-		} else {
-			int i;
-
-			*op = '\0';
-			(void)snprintf(op, 4, "%%%x", *cp);
-			for (i = 0; i < 4; i++)
-				op[i] = (char)toupper((int)op[i]);
-			op += 3;
-		}
-	}
-
-	return out;
-}
-#endif
 
 static int
 find_boundary(priv, boundary)
@@ -807,7 +751,8 @@ urlcheck_validate_helper(ue, cnx)
 	(void)alarm(URLCHECK_HELPER_TIMEOUT);
 
 	if (read(cnx->uc_pipe_req[0], &size, sizeof(size)) != sizeof(size)) {
-		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		mg_log(LOG_ERR, "urlcheck helper I/O error (%d) "
+				"size = %ld", __LINE__, size);
 		exit(EX_OSERR);
 	}
 
@@ -820,7 +765,7 @@ urlcheck_validate_helper(ue, cnx)
 	}
 
 	if (read(cnx->uc_pipe_req[0], url, size) != size) {
-		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		mg_log(LOG_ERR, "urlcheck helper I/O error (%d)", __LINE__);
 		exit(EX_OSERR);
 	}
 
@@ -841,17 +786,17 @@ urlcheck_validate_helper(ue, cnx)
 	size = ud.ud_iov.iov_len;
 	if (write(cnx->uc_pipe_rep[1], 
 	    &ud.ud_error, sizeof(ud.ud_error)) != sizeof(size)) {
-		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		mg_log(LOG_ERR, "urlcheck helper I/O error (%d)", __LINE__);
 		exit(EX_OSERR);
 	}
 
 	if (write(cnx->uc_pipe_rep[1], &size, sizeof(size)) != sizeof(size)) {
-		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		mg_log(LOG_ERR, "urlcheck helper I/O error (%d)", __LINE__);
 		exit(EX_OSERR);
 	}
 
 	if (write(cnx->uc_pipe_rep[1], ud.ud_iov.iov_base, size) != size) {
-		mg_log(LOG_ERR, "urlcheck helper I/O error");
+		mg_log(LOG_ERR, "urlcheck helper I/O error (%d)", __LINE__);
 		exit(EX_OSERR);
 	}
 
@@ -1142,7 +1087,7 @@ answer_parse(data, ap, flags, priv)
 		}
 
 		if (flags & U_GETPROP)
-			urlcheck_prop_push(linep, valp, flags, priv);
+			prop_push(linep, valp, flags & U_CLEARPROP, priv);
 	}
 
 	/* 
@@ -1151,9 +1096,9 @@ answer_parse(data, ap, flags, priv)
 	 */
 	if (flags & U_GETPROP) {
 		if (retval == 0)
-			urlcheck_prop_clear_tmp(priv);
+			prop_clear_tmp(priv);
 		else
-			urlcheck_prop_untmp(priv);
+			prop_untmp(priv);
 	}
 
 	return retval;
@@ -1252,183 +1197,4 @@ out:
 	return 0;
 }
 
-static void
-urlcheck_prop_push(linep, valp, flags, priv)
-	char *linep;
-	char *valp;
-	int flags;
-	struct mlfi_priv *priv;
-{
-	char *cp;
-	struct urlcheck_prop *up;
-
-	if ((up = malloc(sizeof(*up))) == NULL) {
-		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	if ((up->up_name = strdup(linep)) == NULL) {
-		mg_log(LOG_ERR, "strup failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	if ((up->up_value = strdup(valp)) == NULL) {
-		mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
-
-	/*
-	 * Convert everything to lower-case
-	 */
-	for (cp = up->up_name; *cp; cp++)
-		*cp = (char)tolower((int)*cp);
-
-	for (cp = up->up_value; *cp; cp++)
-		*cp = (char)tolower((int)*cp);
-
-	up->up_flags = UP_TMPPROP;
-	if (flags & U_CLEARPROP);
-		up->up_flags |= UP_CLEARPROP;
-
-	LIST_INSERT_HEAD(&priv->priv_prop, up, up_list);
-
-	if (conf.c_debug)
-		mg_log(LOG_DEBUG, "got prop $%s = \"%s\"", linep, valp);
-
-	return;
-}
-
-void
-urlcheck_prop_clear_all(priv)
-	struct mlfi_priv *priv;
-{
-	struct urlcheck_prop *up;
-
-	while ((up = LIST_FIRST(&priv->priv_prop)) != NULL) {
-		free(up->up_name);
-		free(up->up_value);
-		LIST_REMOVE(up, up_list);
-		free(up);
-	}
-
-	return;
-}
-
-int 
-urlcheck_prop_string_validate(ad, stage, ap, priv)
-	acl_data_t *ad;
-	acl_stage_t stage;
-	struct acl_param *ap;
-	struct mlfi_priv *priv; 
-{
-	struct urlcheck_prop *up;
-	acl_data_t *upd;
-	char *string;
-	int retval = 0;
-
-	upd = (acl_data_t *)&ad->prop->upd_data;
-	string = fstring_expand(priv, NULL, upd->string);
-
-	LIST_FOREACH(up, &priv->priv_prop, up_list) {
-		if (strcasecmp(ad->prop->upd_name, up->up_name) != 0)
-			continue;
-
-		if (conf.c_debug)
-			mg_log(LOG_DEBUG, "test $%s = \"%s\" vs \"%s\"",
-			    up->up_name, up->up_value, string);
-
-		if (strcasecmp(up->up_value, string) == 0) {
-			retval = 1;
-			break;
-		}
-	}
-
-	free(string);	
-	return retval;
-}
-
-void
-urlcheck_prop_clear(priv)
-	struct mlfi_priv *priv; 
-{
-	struct urlcheck_prop *up;
-	struct urlcheck_prop *nup;
-
-	up = LIST_FIRST(&priv->priv_prop); 
-
-	while (up != NULL) {
-		nup = LIST_NEXT(up, up_list);
-		if (up->up_flags & UP_CLEARPROP) {
-			free(up->up_name);
-			free(up->up_value);
-			LIST_REMOVE(up, up_list);
-			free(up);
-		}
-		up = nup;
-	}
-	return;
-}
-
-static void
-urlcheck_prop_clear_tmp(priv)
-	struct mlfi_priv *priv; 
-{
-	struct urlcheck_prop *up;
-	struct urlcheck_prop *nup;
-
-	up = LIST_FIRST(&priv->priv_prop); 
-
-	while (up != NULL) {
-		nup = LIST_NEXT(up, up_list);
-		if (up->up_flags & UP_TMPPROP) {
-			free(up->up_name);
-			free(up->up_value);
-			LIST_REMOVE(up, up_list);
-			free(up);
-		}
-		up = nup;
-	}
-	return;
-}
-
-static void
-urlcheck_prop_untmp(priv)
-	struct mlfi_priv *priv; 
-{
-	struct urlcheck_prop *up;
-
-	LIST_FOREACH(up, &priv->priv_prop, up_list)
-		up->up_flags &= ~UP_TMPPROP;
-	return;
-}
-
-int 
-urlcheck_prop_regex_validate(ad, stage, ap, priv)
-	acl_data_t *ad;
-	acl_stage_t stage;
-	struct acl_param *ap;
-	struct mlfi_priv *priv; 
-{
-	struct urlcheck_prop *up;
-	acl_data_t *upd;
-	int retval = 0;
-
-	upd = (acl_data_t *)&ad->prop->upd_data;
-
-	LIST_FOREACH(up, &priv->priv_prop, up_list) {
-		if (strcasecmp(ad->prop->upd_name, up->up_name) != 0)
-			continue;
-
-		if (conf.c_debug)
-			mg_log(LOG_DEBUG, "test $%s = \"%s\" vs %s",
-			    up->up_name, up->up_value, upd->regex.re_copy);
-
-		if (myregexec(priv, upd, ap, up->up_value) == 0) {
-			retval = 1;
-			break;
-		}
-	}
-
-	return retval;
-}
 #endif /* USE_CURL */

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.204 2008/07/28 10:51:42 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.205 2008/08/03 05:00:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.204 2008/07/28 10:51:42 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.205 2008/08/03 05:00:06 manu Exp $");
 #endif
 #endif
 
@@ -94,6 +94,12 @@ static int check_drac(char *dotted_ip);
 #endif
 #ifdef USE_CURL
 #include "urlcheck.h"
+#endif
+#ifdef USE_LDAP
+#include "ldapcheck.h"
+#endif
+#if defined(USE_CURL) || defined(USE_LDAP)
+#include "prop.h"
 #endif
 #ifdef USE_GEOIP
 #include "geoip.h"
@@ -507,12 +513,12 @@ real_envrcpt(ctx, envrcpt)
 		    priv->priv_queueid, priv->priv_hostname, 
 		    addrstr, priv->priv_from, *envrcpt);
 
-#ifdef USE_CURL
+#if defined(USE_CURL) || defined(USE_LDAP)
 	/*
 	 * Avoid properties gathered by urlcheck 
 	 * to mix for multiple recipients.
 	 */
-	urlcheck_prop_clear(priv);
+	prop_clear(priv);
 #endif
 
 	if ((priv->priv_sr.sr_whitelist & EXF_WHITELIST) &&
@@ -1031,8 +1037,8 @@ real_close(ctx)
 		}
 		if (priv->priv_buf)
 			free(priv->priv_buf);
-#ifdef USE_CURL
-		urlcheck_prop_clear_all(priv);
+#if defined(USE_CURL) || defined(USE_LDAP)
+		prop_clear_all(priv);
 #endif
 #ifdef USE_DNSRBL
 		dnsrbl_list_cleanup(priv);
@@ -1277,6 +1283,9 @@ main(argc, argv)
 #endif
 #ifdef USE_CURL
 	urlcheck_init();
+#endif
+#ifdef USE_LDAP
+	ldapcheck_init();
 #endif
 	macro_init();
 

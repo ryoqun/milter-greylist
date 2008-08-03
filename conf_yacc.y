@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR HELO FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL GLHEADER BODY MAXPEEK STAT POSTMSG FORK GETPROP CLEAR PROP AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME GEOIPDB GEOIP PASS FAIL SOFTFAIL NEUTRAL UNKNWON ERROR SELF SPF_STATUS
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR HELO FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL GLHEADER BODY MAXPEEK STAT POSTMSG FORK GETPROP CLEAR PROP AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME GEOIPDB GEOIP PASS FAIL SOFTFAIL NEUTRAL UNKNWON ERROR SELF SPF_STATUS LDAPCONF LDAPCHECK
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.86 2008/04/24 11:05:50 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.87 2008/08/03 05:00:06 manu Exp $");
 #endif
 #endif
 
@@ -29,6 +29,12 @@ __RCSID("$Id: conf_yacc.y,v 1.86 2008/04/24 11:05:50 manu Exp $");
 #endif
 #ifdef USE_CURL
 #include "urlcheck.h"
+#endif
+#ifdef USE_LDAP
+#include "ldapcheck.h"
+#endif
+#if defined(USE_CURL) || defined(USE_LDAP)
+#include "prop.h"
 #endif
 #ifdef USE_GEOIP
 #include "geoip.h"
@@ -124,6 +130,8 @@ lines	:	lines netblock '\n'
 	|	lines dnsrbldef '\n'
 	|	lines macrodef '\n'
 	|	lines urlcheckdef '\n'
+	|	lines ldapcheckdef '\n'
+	|	lines ldapconfdef '\n'
 	|	lines listdef '\n'
 	|	lines '\n'
 	|
@@ -598,6 +606,7 @@ acl_clause:	helo_clause
 	|	dnsrbl_clause
 	|	macro_clause
 	|	urlcheck_clause
+	|	ldapcheck_clause
 	|	list_clause
 	|	header_clause
 	|	headerregex_clause
@@ -835,10 +844,24 @@ urlcheck_clause:	URLCHECK QSTRING {
 #endif
 			}
 	;
+ldapcheck_clause:	LDAPCHECK QSTRING { 
+#ifdef USE_LDAP
+			char name[QSTRLEN + 1];
+
+			acl_add_clause(AC_LDAPCHECK, 
+				       quotepath(name, $2, QSTRLEN));
+#else
+			acl_drop();
+			mg_log(LOG_INFO, 
+			    "LDAP support not compiled in, ignore line %d", 
+			    conf_line);
+#endif
+			}
+	;
 
 prop_clause:		PROP QSTRING {
-#ifdef USE_CURL
-			struct urlcheck_prop_data upd;
+#if defined(USE_CURL) || defined(USE_LDAP)
+			struct prop_data upd;
 			char qstring[QSTRLEN + 1];
 
 			upd.upd_name = $1;
@@ -848,15 +871,15 @@ prop_clause:		PROP QSTRING {
 #else
 			acl_drop();
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in, ignore line %d", 
-			    conf_line);
+			    "no CURL or LDAP support not compiled in, "
+			    "ignore line %d", conf_line);
 #endif
 		}
 	;
 
 propregex_clause:	PROP REGEX {
-#ifdef USE_CURL
-			struct urlcheck_prop_data upd;
+#if defined(USE_CURL) || defined(USE_LDAP)
+			struct prop_data upd;
 
 			upd.upd_name = $1;
 			upd.upd_data = $2;
@@ -864,8 +887,8 @@ propregex_clause:	PROP REGEX {
 #else
 			acl_drop();
 			mg_log(LOG_INFO, 
-			    "CURL support not compiled in, ignore line %d", 
-			    conf_line);
+			    "no CURL or LDAP support not compiled in, "
+			    "ignore line %d", conf_line);
 #endif
 		}
 	;
@@ -1010,6 +1033,36 @@ macrodef_string:	SM_MACRO QSTRING QSTRING QSTRING {
 			}
 	;
 
+ldapcheckdef:	LDAPCHECK QSTRING QSTRING ldapcheckdef_flags {
+#ifdef USE_LDAP
+			char name[QSTRLEN + 1];
+			char url[QSTRLEN + 1];
+
+			ldapcheck_def_add(quotepath(name, $2, QSTRLEN), 
+			    quotepath(url, $3, QSTRLEN), ldapcheck_gflags);
+#else
+			mg_log(LOG_INFO, 
+			    "LDAP support not compiled in, ignore  line %d", 
+			    conf_line);
+#endif
+		}
+	;
+
+ldapcheckdef_flags:	ldapcheckdef_flags ldapcheckdef_clear
+		|	
+		;
+
+ldapcheckdef_clear:	 CLEAR { 
+#ifdef USE_LDAP
+				ldapcheck_gflags |= L_CLEARPROP; 
+#else
+			mg_log(LOG_INFO, 
+			    "LDAP support not compiled in, ignore line %d", 
+			    conf_line);
+#endif
+			}
+		;
+
 urlcheckdef:	URLCHECK QSTRING QSTRING TNUMBER urlcheckdef_flags {
 #ifdef USE_CURL
 			char path1[QSTRLEN + 1];
@@ -1074,7 +1127,18 @@ urlcheckdef_fork:	 FORK {
 			}
 		;
 
+ldapconfdef:	LDAPCONF QSTRING {
+#ifdef USE_LDAP
+			char uris[QSTRLEN + 1];
 
+			ldapcheck_conf_add(quotepath(uris, $2, QSTRLEN));
+#else
+			mg_log(LOG_INFO, 
+			    "LDAP support not compiled in, ignore  line %d", 
+			    conf_line);
+#endif
+		}
+	;
 macrodef_regex:		SM_MACRO QSTRING QSTRING REGEX {
 				char name[QSTRLEN + 1];
 				char macro[QSTRLEN + 1];

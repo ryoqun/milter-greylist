@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.32 2008/04/24 11:05:50 manu Exp $ */
+/* $Id: acl.h,v 1.33 2008/08/03 05:00:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -52,7 +52,7 @@ typedef enum { A_GREYLIST, A_WHITELIST, A_BLACKLIST, } acl_type_t;
 typedef enum { AS_NONE, AS_RCPT, AS_DATA, AS_ANY, } acl_stage_t;
 typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK, AT_OPNUM, 
 	       AT_CLOCKSPEC, AT_DNSRBL, AT_URLCHECK, AT_MACRO, 
-	       AT_LIST, AT_PROP, AT_SPF } acl_data_type_t;
+	       AT_LIST, AT_PROP, AT_SPF, AT_LDAPCHECK } acl_data_type_t;
 
 typedef enum {
 	AC_NONE,
@@ -87,6 +87,7 @@ typedef enum {
 	AC_MACRO_LIST,
 	AC_URLCHECK,
 	AC_URLCHECK_LIST,
+	AC_LDAPCHECK,
 	AC_PROP,
 	AC_PROPRE,
 	AC_AUTH,
@@ -170,7 +171,12 @@ typedef union acl_data {
 #endif
 #ifdef USE_CURL
 	struct urlcheck_entry *urlcheck;
-	struct urlcheck_prop_data *prop;
+#endif
+#ifdef USE_LDAP
+	struct ldapcheck_entry *ldapcheck;
+#endif
+#if defined(USE_CURL) || defined(USE_LDAP)
+	struct prop_data *prop;
 #endif
 	struct acl_opnum_data opnum;
 	struct clockspec *clockspec;
@@ -323,4 +329,5 @@ int myregexec(struct mlfi_priv *, acl_data_t *,
 #define EXF_GEOIP	(1 << 24)
 #define EXF_PROP	(1 << 25)
 #define EXF_HELO	(1 << 26)
+#define EXF_LDAPCHECK	(1 << 27)
 #endif /* _ACL_H_ */

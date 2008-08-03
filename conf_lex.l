@@ -95,6 +95,8 @@ body		[Bb][Oo][Dd][Yy]
 maxpeek		[Mm][Aa][Xx][Pp][Ee][Ee][Kk]
 geoipdb		[Gg][Ee][Oo][Ii][Pp][Dd][Bb]
 geoip		[Gg][Ee][Oo][Ii][Pp]
+ldapconf	[Ll][Dd][Aa][Pp][Cc][Oo][Nn][Ff]
+ldapcheck	[Ll][Dd][Aa][Pp][Cc][Hh][Ee][Cc][Kk]
 openlist	"{"
 closelist	"}"
 nextln		"\\".*"\n"
@@ -125,7 +127,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.78 2008/07/29 16:22:10 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.79 2008/08/03 05:00:06 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -219,6 +221,8 @@ prop		"$"[-_A-Za-z0-9]+
 {maxpeek}	{ return MAXPEEK; }
 {geoipdb}	{ return GEOIPDB; }
 {geoip}		{ return GEOIP; }
+{ldapconf}	{ return LDAPCONF; }
+{ldapcheck}	{ return LDAPCHECK; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }

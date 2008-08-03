@@ -1,4 +1,4 @@
-/* $Id: urlcheck.h,v 1.13 2007/03/16 03:58:04 manu Exp $ */
+/* $Id: urlcheck.h,v 1.14 2008/08/03 05:00:06 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -30,6 +30,7 @@
  */
 
 #include <curl/curl.h>
+#include "prop.h"
 
 struct urlcheck_cnx {
 	CURL *uc_hdl;
@@ -57,21 +58,6 @@ struct urlcheck_entry {
 
 #define URLCHECK_HELPER_TIMEOUT 60
 
-struct urlcheck_prop_data {
-	char *upd_name;
-	void *upd_data;
-};
-
-struct urlcheck_prop {
-	char *up_name;
-	char *up_value;
-	int up_flags;
-	LIST_ENTRY(urlcheck_prop) up_list;
-};
-
-#define UP_CLEARPROP	0x4
-#define UP_TMPPROP	0x8
-
 extern int urlcheck_gflags;
 
 struct urlcheck_entry *urlcheck_byname(char *);
@@ -80,10 +66,3 @@ void urlcheck_def_add(char *, char *, int, int);
 void urlcheck_clear(void);
 int urlcheck_validate(acl_data_t *, acl_stage_t,
 		      struct acl_param *, struct mlfi_priv *);
-char *urlcheck_prop_byname(struct mlfi_priv *, char *);
-void urlcheck_prop_clear_all(struct mlfi_priv *);
-void urlcheck_prop_clear(struct mlfi_priv *);
-int urlcheck_prop_string_validate(acl_data_t *, acl_stage_t,
-				  struct acl_param *, struct mlfi_priv *); 
-int urlcheck_prop_regex_validate(acl_data_t *, acl_stage_t,
-				 struct acl_param *, struct mlfi_priv *); 

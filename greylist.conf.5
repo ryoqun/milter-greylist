@@ -1,7 +1,7 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.86 2008/06/03 10:26:19 manu Exp $
+.\" $Id: greylist.conf.5,v 1.87 2008/08/03 05:00:06 manu Exp $
 .\"
-.\" Copyright (c) 2004-2007 Emmanuel Dreyfus
+.\" Copyright (c) 2004-2008 Emmanuel Dreyfus
 .\" All rights reserved.
 .\"
 .\" Redistribution and use in source and binary forms, with or without
@@ -75,6 +75,8 @@ keyword, and by any set of the following clauses:
 (if build with SPF support),
 .I geoip\fR
 (if build with GeoIP support),
+.I ldapcheck\fR
+(if build with --with-openldap),
 .I urlcheck\fR
 (if built with --with-libcurl), and 
 .I dnsrbl\fR
@@ -207,6 +209,10 @@ is only available if SPF support was compiled in. Using it will disable
 global SPF whitelisting, like if the
 .I nospf
 keyword would have been used.
+.TP
+.I ldapcheck
+This is used to query an LDAP directory.
+See the section on that topic for more information.
 .TP
 .I urlcheck
 This is used to query an external configuration source through an URL.
@@ -711,6 +717,34 @@ attribute of a LDAP directory.
 .PP
 Note that when matching gathered properties, format strings and regex can
 be used.
+.PP
+.SH LDAP CHECKS
+If milter-greylist was built with --with-openldap, then you can also use 
+.I ldapcheck
+for pulling information from an LDAP directory. This works exactly like
+.I urlcheck\fR,
+except that properties are always collected: the only available option is 
+.I clear\fR.
+.PP
+A list of LDAP URL to use can be specified with the
+.I ldapconf 
+keyword:
+.IP
+  ldapconf "ldap://localhost ldaps://ldap.example.net"
+.PP
+If one of the server goes down, milter-greylist will try the next one.
+When
+.I ldaps://
+is used, the system's 
+.I ldap.conf
+file is used to locate x509 certificates.
+.PP
+When defining LDAP queries with the
+.I ldapcheck
+statement, note that the scheme and host part of the URL are ignored.
+Servers listed in
+.I ldapconf
+are used instead.
 .PP
 .SH CUSTOM REPORTS
 The 

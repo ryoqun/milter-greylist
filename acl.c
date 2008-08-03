@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.75 2008/04/24 11:05:50 manu Exp $ */
+/* $Id: acl.c,v 1.76 2008/08/03 05:00:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.75 2008/04/24 11:05:50 manu Exp $");
+__RCSID("$Id: acl.c,v 1.76 2008/08/03 05:00:06 manu Exp $");
 #endif
 #endif
 
@@ -70,6 +70,12 @@ __RCSID("$Id: acl.c,v 1.75 2008/04/24 11:05:50 manu Exp $");
 #endif
 #ifdef USE_CURL
 #include "urlcheck.h"
+#endif
+#ifdef USE_LDAP
+#include "ldapcheck.h"
+#endif
+#if defined(USE_CURL) || defined(USE_LDAP)
+#include "prop.h"
 #endif
 #ifdef USE_GEOIP
 #include "geoip.h"
@@ -120,6 +126,12 @@ char *acl_print_dnsrbl(acl_data_t *, char *, size_t);
 #ifdef USE_CURL
 void acl_add_urlcheck(acl_data_t *, void *);
 char *acl_print_urlcheck(acl_data_t *, char *, size_t);
+#endif
+#ifdef USE_LDAP
+void acl_add_ldapcheck(acl_data_t *, void *);
+char *acl_print_ldapcheck(acl_data_t *, char *, size_t);
+#endif
+#if defined(USE_CURL) || defined(USE_LDAP)
 void acl_add_prop_string(acl_data_t *, void *);
 void acl_add_prop_regex(acl_data_t *, void *);
 char *acl_print_prop_string(acl_data_t *, char *, size_t);
@@ -255,14 +267,22 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  AT_LIST, AC_NONE, AC_NONE, EXF_URLCHECK,
 	  acl_print_list, acl_add_list, 
 	  NULL, acl_list_filter },
+#endif
+#ifdef USE_LDAP
+	{ AC_LDAPCHECK, MULTIPLE_OK, AS_ANY, "ldapcheck", 
+	  AT_LDAPCHECK, AC_NONE, AC_STRING, EXF_LDAPCHECK,
+	  acl_print_ldapcheck, acl_add_ldapcheck,
+	  NULL, ldapcheck_validate },
+#endif
+#if defined(USE_CURL) || defined(USE_LDAP)
 	{ AC_PROP, MULTIPLE_OK, AS_ANY, "prop", 
 	  AT_PROP, AC_NONE, AC_PROP, EXF_PROP,
 	  acl_print_prop_string, acl_add_prop_string,
-	  acl_free_prop_string, urlcheck_prop_string_validate },
+	  acl_free_prop_string, prop_string_validate },
 	{ AC_PROP, MULTIPLE_OK, AS_ANY, "propre", 
 	  AT_PROP, AC_NONE, AC_PROPRE, EXF_PROP,
 	  acl_print_prop_regex, acl_add_prop_regex,
-	  acl_free_prop_regex, urlcheck_prop_regex_validate },
+	  acl_free_prop_regex, prop_regex_validate },
 #endif
 	{ AC_AUTH, MULTIPLE_OK, AS_ANY, "auth", 
 	  AT_STRING, AC_AUTH_LIST, AC_STRING, EXF_AUTH,
@@ -1303,15 +1323,44 @@ acl_print_urlcheck(ad, buf, len)
 	snprintf(buf, len, "\"%s\"", ad->urlcheck->u_name);
 	return buf;
 }
+#endif
 
+#ifdef USE_LDAP
+void
+acl_add_ldapcheck(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	char *name = data;
+
+	if ((ad->ldapcheck = ldapcheck_byname(name)) == NULL) {
+		mg_log(LOG_ERR, "unknown LDAP check \"%s\"", name);
+		exit(EX_DATAERR);
+	}
+		
+	return;
+}
+
+char *
+acl_print_ldapcheck(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	snprintf(buf, len, "\"%s\"", ad->ldapcheck->lce_url);
+	return buf;
+}
+#endif
+
+#if defined(USE_CURL) || defined(USE_LDAP)
 void
 acl_add_prop_string(ad, data)
 	acl_data_t *ad;
 	void *data;
 {
-	struct urlcheck_prop_data *upd;
+	struct prop_data *upd;
 
-	upd = (struct urlcheck_prop_data *)data;
+	upd = (struct prop_data *)data;
 
 	if ((ad->prop = malloc(sizeof(*ad->prop))) == NULL) {
 		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
@@ -1323,7 +1372,7 @@ acl_add_prop_string(ad, data)
 		exit(EX_OSERR);
 	}
 
-	acl_add_string((acl_data_t *)&ad->prop->upd_data, upd->upd_data);
+	acl_add_string((void *)&ad->prop->upd_data, upd->upd_data);
 
 	return;
 }
@@ -1332,9 +1381,9 @@ acl_add_prop_regex(ad, data)
 	acl_data_t *ad;
 	void *data;
 {
-	struct urlcheck_prop_data *upd;
+	struct prop_data *upd;
 
-	upd = (struct urlcheck_prop_data *)data;
+	upd = (struct prop_data *)data;
 
 	if ((ad->prop = malloc(sizeof(*ad->prop))) == NULL) {
 		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
@@ -1346,7 +1395,7 @@ acl_add_prop_regex(ad, data)
 		exit(EX_OSERR);
 	}
 
-	acl_add_regex((acl_data_t *)&ad->prop->upd_data, upd->upd_data);
+	acl_add_regex((void *)&ad->prop->upd_data, upd->upd_data);
 
 	return;
 }
@@ -1360,7 +1409,7 @@ acl_print_prop_string(ad, buf, len)
 	size_t written;
 
 	written = snprintf(buf, len, "$%s ", ad->prop->upd_name);
-	acl_print_string((acl_data_t *)&ad->prop->upd_data, 
+	acl_print_string((void *)&ad->prop->upd_data, 
 	    buf + written, len - written);
 
 	return buf;
@@ -1375,7 +1424,7 @@ acl_print_prop_regex(ad, buf, len)
 	size_t written;
 
 	written = snprintf(buf, len, "$%s ", ad->prop->upd_name);
-	acl_print_regex((acl_data_t *)&ad->prop->upd_data, 
+	acl_print_regex((void *)&ad->prop->upd_data, 
 	    buf + written, len - written);
 
 	return buf;
@@ -1386,7 +1435,7 @@ acl_free_prop_string(ad)
 	acl_data_t *ad;
 {
 	free(ad->prop->upd_name);
-	acl_free_string((acl_data_t *)&ad->prop->upd_data);
+	acl_free_string((void *)&ad->prop->upd_data);
 	free(ad->prop);
 
 	return;
@@ -1396,7 +1445,7 @@ acl_free_prop_regex(ad)
 	acl_data_t *ad;
 {
 	free(ad->prop->upd_name);
-	acl_free_regex((acl_data_t *)&ad->prop->upd_data);
+	acl_free_regex((void *)&ad->prop->upd_data);
 	free(ad->prop);
 
 	return;

@@ -1,9 +1,9 @@
-# $Id: README,v 1.61 2008/03/12 04:36:56 manu Exp $
+# $Id: README,v 1.62 2008/08/03 05:00:06 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2008/03/12 04:36:56 $
+		       $Date: 2008/08/03 05:00:06 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -24,12 +24,13 @@ Table of contents:
  11 Building with SPF
  12 Using DRAC
  13 Using URL checks
- 14 Using TLS
- 15 Custom logs
- 16 Packaging
- 17 Things to look at if things get wrong
- 18 Known problems
- 19 License
+ 14 Using LDAP natively
+ 15 Using TLS
+ 16 Custom logs
+ 17 Packaging
+ 18 Things to look at if things get wrong
+ 19 Known problems
+ 20 License
 
 Run this command to regenerate a table of contents:
  sed '/^.====/{g;p;};h;d' README
@@ -482,7 +483,40 @@ the URL could be a ldap:// query, though this has not been experimented
 yet. 
 
 
- 14 Using TLS
+ 15 Using LDAP natively
+ ======================
+
+It is possible to use URL checks against an LDAP URL, but that method
+has some drawbacks:
+- This uses CURL, which must be built with LDAP support
+- There might be thread-safety problems. A workaround it to use the
+  fork option of urlcheck statement, so that milter-greylist forks 
+  a pool of instances to perform queries. This may not be very reliable
+  on some setups.
+- It is not possible to fallback to another server if the LDAP directory 
+  goes down.
+
+milter-greylist can also support LDAP natively, using OpenLDAP libraries,
+if configure --with-openldap is used. 
+
+Here is an example that pulls a per-user sender whitelist from the 
+directory:
+
+ldapconf "ldapi:// ldaps://ldap.example.net"
+ldapcheck "mytest" "ldap://ldap.example.net/o=example?whitelist?sub?mail=%r"
+acl whitelist ldapcheck "mytest" $whitelist "%f"
+acl greylist default
+
+The ldapconf statement is used to list LDAP servers. If one goes down, 
+another will be contacted. For ldaps:// URLs, certificate information
+is taken from system ldap.conf.
+
+ldapcheck definition works like urlcheck with the getprop option (see 
+the man page for details). Note that the scheme and host parts of the 
+URL are just ignored: information from ldapconf is used instead.
+
+
+ 15 Using TLS
  ==============
 
 Using the "tls" clause, an ACL could match any email that succeeded TLS
@@ -511,7 +545,7 @@ To find the DN of any certificate, you can use the openssl command:
 $ openssl x509 -noout -issuer < some.crt | cut -d' ' -f2- | sed -e 's/ /+20/g'
 
 
- 15 Custom logs
+ 16 Custom logs
  ==============
 
 It is possible to monitor milter-greylist activity with a custom log
@@ -537,7 +571,7 @@ or reject
 %A is substituted by the line number of the ACL that caused the decision
 
 
- 16 Packaging
+ 17 Packaging
  ============
 
 milter-greylist is available from NetBSD pkgsrc and FreeBSD ports.
@@ -550,7 +584,7 @@ milter-greylist, use
 rpmbuild --define "build_user smmsp" --define "build_dnsrbl 1" -tb milter-greylist-3.1.4.tgz
 
 
- 17 Things to look at if things get wrong
+ 18 Things to look at if things get wrong
  ========================================
 
 First, read the milter-greylist(8) and greylist.conf(5) man page! :-)
@@ -600,7 +634,7 @@ Examining the tail of this file may reveal problems with domains which
 use multiple MX servers or whose mail is actually served by another site.
 
 
- 18 Known problems
+ 19 Known problems
  =================
 
 If milter-greylist terminates during its operation, first check your
@@ -643,7 +677,7 @@ configure with the CC environment variable set to cc. This
 incompatibility may be fixed in gcc 3.4.
 
 
- 19 License
+ 20 License
  ==========
 
 This software is available under a 3 clauses BSD license:
