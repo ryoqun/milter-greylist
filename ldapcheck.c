@@ -1,4 +1,4 @@
-/* $Id: ldapcheck.c,v 1.2 2008/08/03 10:14:28 manu Exp $ */
+/* $Id: ldapcheck.c,v 1.3 2008/08/05 22:00:38 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: ldapcheck.c,v 1.2 2008/08/03 10:14:28 manu Exp $");
+__RCSID("$Id: ldapcheck.c,v 1.3 2008/08/05 22:00:38 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
@@ -58,38 +58,61 @@ __RCSID("$Id: ldapcheck.c,v 1.2 2008/08/03 10:14:28 manu Exp $");
 #include "prop.h"
 #include "ldapcheck.h"
 
-struct ldapconf {
-	char lc_urls[QSTRLEN + 1];
-	int lc_urlcount;
+struct ldapconf_entry {
+	char *lc_url;
 	char *lc_dn;
 	char *lc_pwd;
 	LDAP *lc_ld;
+	SIMPLEQ_ENTRY(ldapconf_entry) lc_list;
 };
 
-
+SIMPLEQ_HEAD(ldapconf_list, ldapconf_entry);
 LIST_HEAD(ldapcheck_list, ldapcheck_entry);
 
-static int ldapcheck_reconnect(struct ldapconf *);
-static int ldapcheck_connect(struct ldapconf *);
-static int ldapcheck_disconnect(struct ldapconf *);
+static void ldapcheck_conf_addone(char *);
+static int ldapcheck_connect(struct ldapconf_entry *);
+static int ldapcheck_disconnect(struct ldapconf_entry *);
 static char *url_encode_percent(char *);
 
 static struct ldapcheck_list ldapcheck_list;
-static struct ldapconf ldapconf;
+static struct ldapconf_list ldapconf_list;
 
 int ldapcheck_gflags = 0;
 
 void
 ldapcheck_init(void) {
 	LIST_INIT(&ldapcheck_list);
-
-	ldapconf.lc_urls[0] = '\0';
-	ldapconf.lc_urlcount = 0;
-	ldapconf.lc_ld = NULL;
-	ldapconf.lc_dn = "";
-	ldapconf.lc_pwd = "";
+	SIMPLEQ_INIT(&ldapconf_list);
 
 	ldapcheck_gflags = 0;
+
+	return;
+}
+
+static void
+ldapcheck_conf_addone(url)
+	char *url;
+{
+	struct ldapconf_entry *lc;
+
+	if ((lc = malloc(sizeof(*lc))) == NULL) {
+		mg_log(LOG_ERR, "malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if ((lc->lc_url = strdup(url)) == NULL) {
+		mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	lc->lc_dn = NULL;
+	lc->lc_pwd = NULL;
+	lc->lc_ld = NULL;
+	(void)ldapcheck_connect(lc);
+
+	SIMPLEQ_INSERT_TAIL(&ldapconf_list, lc, lc_list);
+
+	return; 
 }
 
 void
@@ -100,20 +123,14 @@ ldapcheck_conf_add(urls)
 	char *p;
 	char *sep = "\t ";
 
-	strncpy(ldapconf.lc_urls, urls, sizeof(ldapconf.lc_urls));
-	ldapconf.lc_urls[sizeof(ldapconf.lc_urls) - 1 ] = '\0';
+	if ((p = strtok_r(urls, sep, &lasts)) != NULL) {
+		ldapcheck_conf_addone(p);
 
-	p = strtok_r(urls, sep, &lasts); 
-	while (p) {
-		ldapconf.lc_urlcount++;
-		p = strtok_r(NULL, sep, &lasts);
+		while (p)
+			if ((p = strtok_r(NULL, sep, &lasts)) != NULL)
+				ldapcheck_conf_addone(p);
 	}
-	if (conf.c_debug)
-		mg_log(LOG_DEBUG, 
-		      "loaded %d LDAP URL: \"%s\"", 
-		      ldapconf.lc_urlcount,
-		      ldapconf.lc_urls);
-	
+
 	return;
 }
 
@@ -167,16 +184,8 @@ ldapcheck_def_add(name, url, flags)
 
 
 static int
-ldapcheck_reconnect(lc)
-	struct ldapconf *lc;
-{
-	(void)ldapcheck_disconnect(lc);
-	return ldapcheck_connect(lc);
-}
-
-static int
 ldapcheck_connect(lc)
-	struct ldapconf *lc;
+	struct ldapconf_entry *lc;
 {	
 	int error;
 	int option;
@@ -191,10 +200,10 @@ ldapcheck_connect(lc)
 	/*
 	 * Initialize connexion
 	 */
-	if ((error = ldap_initialize(&lc->lc_ld, lc->lc_urls)) != 0) {
+	if ((error = ldap_initialize(&lc->lc_ld, lc->lc_url)) != 0) {
 		mg_log(LOG_WARNING, 
 		       "ldap_initialize failed for LDAP URL \"%s\": %s", 
-		       lc->lc_urls, ldap_err2string(error));
+		       lc->lc_url, ldap_err2string(error));
 		return -1;
 	}
 
@@ -203,7 +212,7 @@ ldapcheck_connect(lc)
 	if ((error = ldap_set_option(lc->lc_ld, option, &optval)) != 0) {
 		mg_log(LOG_WARNING,
 		       "ldap_set_option failed for LDAP URL \"%s\": %s", 
-		       lc->lc_urls, ldap_err2string(error));
+		       lc->lc_url, ldap_err2string(error));
 		goto bad;
 	}
 
@@ -211,20 +220,24 @@ ldapcheck_connect(lc)
 	if (error != 0) {
 		mg_log(LOG_WARNING,
 		       "ldap_simple_bind_s failed for LDAP URL \"%s\": %s",
-		       lc->lc_urls, ldap_err2string(error));
+		       lc->lc_url, ldap_err2string(error));
 		goto bad;
 	}
+
+	if (conf.c_debug)
+		mg_log(LOG_INFO, "LDAP URL \"%s\" connected", lc->lc_url);
 
 	return 0;
 
 bad:
+	mg_log(LOG_WARNING, "LDAP URL \"%s\" unreachable", lc->lc_url);
 	(void)ldapcheck_disconnect(lc);
 	return -1;
 }
 
 static int
 ldapcheck_disconnect(lc)
-	struct ldapconf *lc;
+	struct ldapconf_entry *lc;
 {	
 	int error = 0;
 
@@ -237,6 +250,9 @@ ldapcheck_disconnect(lc)
 
 	lc->lc_ld = NULL;
 
+	if (conf.c_debug)
+		mg_log(LOG_INFO, "LDAP URL \"%s\" disconnected", lc->lc_url);
+
 	return error;
 }
 
@@ -248,7 +264,7 @@ ldapcheck_validate(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
-	struct ldapconf *lc;
+	struct ldapconf_entry *lc;
 	char *rcpt;
 	struct ldapcheck_entry *lce;
 	LDAPURLDesc *lud = NULL;
@@ -259,7 +275,6 @@ ldapcheck_validate(ad, stage, ap, priv)
 	int retval = -1;
 	int clearprop;
 
-	lc = &ldapconf;
 	rcpt = priv->priv_cur_rcpt;
 	lce = ad->ldapcheck;
 	url = fstring_expand(priv, rcpt, lce->lce_url);
@@ -270,40 +285,55 @@ ldapcheck_validate(ad, stage, ap, priv)
 		gettimeofday(&tv1, NULL);
 	}
 
-	if (lc->lc_ld == NULL)
-		if (ldapcheck_connect(lc) != 0)
-			goto bad;
-
 	if ((error = ldap_url_parse(url, &lud)) != 0) {
 		mg_log(LOG_ERR, "Bad expanded LDAP URL \"%s\"", url);
 		goto bad;
 	}
 
-	/*
-	 * Perform the search
-	 */
-retry:
-	error = ldap_search_ext_s(lc->lc_ld, 
-				  lud->lud_dn,
-				  lud->lud_scope,
-				  lud->lud_filter,
-				  lud->lud_attrs,
-				  0,		/* attrsonly */
-				  NULL, 	/* serverctrls */
-				  NULL, 	/* clientctrls */
-				  NULL,		/* timeout */
-				  0,		/* sizelimit */
-				  &res);
-	if (error != 0) {
-		if ((error == LDAP_SERVER_DOWN) &&
-		    (ldapcheck_reconnect(lc) != 0))
-			goto retry;
-			
-		mg_log(LOG_ERR, "ldap_search_ext_s(\"%s\") failed: %s", 
-		       url, ldap_err2string(error));
-		goto bad;
+	SIMPLEQ_FOREACH(lc, &ldapconf_list, lc_list) {
+		if (lc->lc_ld == NULL)
+			if (ldapcheck_connect(lc) != 0)
+				continue;
+
+		if (conf.c_debug)
+			mg_log(LOG_DEBUG, 
+			       "Querying \"%s\"", lc->lc_url);
+
+		/*
+		 * Perform the search
+		 */
+		error = ldap_search_ext_s(lc->lc_ld, 
+					  lud->lud_dn,
+					  lud->lud_scope,
+					  lud->lud_filter,
+					  lud->lud_attrs,
+					  0,		/* attrsonly */
+					  NULL, 	/* serverctrls */
+					  NULL, 	/* clientctrls */
+					  NULL,		/* timeout */
+					  0,		/* sizelimit */
+					  &res);
+
+		if (error == LDAP_SERVER_DOWN) {
+			(void)ldapcheck_disconnect(lc);
+			mg_log(LOG_ERR, 
+			       "LDAP URL \"%s\" unreachable", lc->lc_url);
+			continue;
+		}
+
+		if (error != 0) 
+			mg_log(LOG_ERR, 
+			       "ldap_search_ext_s(\"%s\") failed: %s", 
+			       url, ldap_err2string(error));
+
+		break;
 	}
-	
+
+	if ((lc == NULL) || (lc->lc_ld == NULL)) {
+		mg_log(LOG_ERR, "No LDAP URL can be reached");
+		goto bad;	
+	}
+
 	/* 
 	 * Extract results
 	 */
@@ -356,9 +386,7 @@ void
 ldapcheck_clear(void)	/* acllist must be write locked */
 {
 	struct ldapcheck_entry *lce;
-	struct ldapconf *lc;
-
-	lc = &ldapconf;
+	struct ldapconf_entry *lc;
 
 	while(!LIST_EMPTY(&ldapcheck_list)) {
 		lce = LIST_FIRST(&ldapcheck_list);
@@ -366,7 +394,23 @@ ldapcheck_clear(void)	/* acllist must be write locked */
 		free(lce);
 	}
 	
-	(void)ldapcheck_disconnect(lc);
+	while(!SIMPLEQ_EMPTY(&ldapconf_list)) {
+		lc = SIMPLEQ_FIRST(&ldapconf_list);
+		SIMPLEQ_REMOVE(&ldapconf_list, lc, ldapconf_entry, lc_list);
+
+		ldapcheck_disconnect(lc);
+
+		if (lc->lc_url)
+			free(lc->lc_url);
+
+		if (lc->lc_dn)
+			free(lc->lc_dn);
+
+		if (lc->lc_pwd)
+			free(lc->lc_pwd);
+
+		free(lc);
+	}
 
 	ldapcheck_init();
 
