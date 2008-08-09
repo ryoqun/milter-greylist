@@ -1,3 +1,5 @@
+4.1.5
+	Fix huge memory leaks in native LDAP support
 4.1.4
 	Native LDAP support through OpenLDAP
 4.1.3

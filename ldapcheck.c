@@ -1,4 +1,4 @@
-/* $Id: ldapcheck.c,v 1.3 2008/08/05 22:00:38 manu Exp $ */
+/* $Id: ldapcheck.c,v 1.4 2008/08/09 11:57:33 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: ldapcheck.c,v 1.3 2008/08/05 22:00:38 manu Exp $");
+__RCSID("$Id: ldapcheck.c,v 1.4 2008/08/09 11:57:33 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
@@ -270,7 +270,8 @@ ldapcheck_validate(ad, stage, ap, priv)
 	LDAPURLDesc *lud = NULL;
 	char *url = NULL;
 	struct timeval tv1, tv2, tv3;
-	LDAPMessage *res;
+	LDAPMessage *res0 = NULL;
+	LDAPMessage *res = NULL;
 	int error;
 	int retval = -1;
 	int clearprop;
@@ -312,7 +313,7 @@ ldapcheck_validate(ad, stage, ap, priv)
 					  NULL, 	/* clientctrls */
 					  NULL,		/* timeout */
 					  0,		/* sizelimit */
-					  &res);
+					  &res0);
 
 		if (error == LDAP_SERVER_DOWN) {
 			(void)ldapcheck_disconnect(lc);
@@ -337,15 +338,17 @@ ldapcheck_validate(ad, stage, ap, priv)
 	/* 
 	 * Extract results
 	 */
-	res = ldap_first_entry(lc->lc_ld, res);
-	while (res != NULL) {
-		BerElement *ber;
-		char *attr;
+	for (res = ldap_first_entry(lc->lc_ld, res0);
+	     res != NULL;
+	     res = ldap_next_entry(lc->lc_ld, res)) {
+		BerElement *ber = NULL;
+		char *attr = NULL;
 
-		attr = ldap_first_attribute(lc->lc_ld, res, &ber);
-		while (attr != NULL) {
-			char **vals;
-			char **val;
+		for (attr = ldap_first_attribute(lc->lc_ld, res, &ber);
+		     attr != NULL;
+		     attr = ldap_next_attribute(lc->lc_ld, res, ber)) {
+			char **vals = NULL;
+			char **val = NULL;
 			
 			vals = ldap_get_values(lc->lc_ld, res, attr);
 			if (vals == NULL) {
@@ -358,15 +361,17 @@ ldapcheck_validate(ad, stage, ap, priv)
 				prop_push(attr, *val, clearprop, priv);
 
 			ldap_value_free(vals);
-
-			attr = ldap_next_attribute(lc->lc_ld, res, ber);
+			ldap_memfree(attr);
 		}
-		
-		res = ldap_next_entry(lc->lc_ld, res);
+
+		if (ber != NULL)
+			ber_free(ber, 0);
 	}
 
 	retval = 0;
 bad:
+	if (res0)
+		ldap_msgfree(res0);
 	if (lud)
 		ldap_free_urldesc(lud);
 	if (url)
