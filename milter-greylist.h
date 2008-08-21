@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.72 2008/08/03 05:00:06 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.73 2008/08/21 21:05:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -36,6 +36,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
+
+#ifdef USE_DKIM
+#include <dkim.h>
+#endif
 
 #include <libmilter/mfapi.h>
 #include "config.h"
@@ -202,6 +206,10 @@ struct mlfi_priv {
 #ifdef USE_DNSRBL
 	LIST_HEAD(, dnsrbl_list) priv_dnsrbl;
 #endif
+#ifdef USE_DKIM
+	DKIM *priv_dkim;
+	DKIM_STAT priv_dkimstat;
+#endif
 };
 
 sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);
@@ -209,6 +217,7 @@ sfsistat mlfi_helo(SMFICTX *, char *);
 sfsistat mlfi_envfrom(SMFICTX *, char **);
 sfsistat mlfi_envrcpt(SMFICTX *, char **);
 sfsistat mlfi_header(SMFICTX *, char *, char *);
+sfsistat mlfi_eoh(SMFICTX *);
 sfsistat mlfi_body(SMFICTX *, unsigned char *, size_t);
 sfsistat mlfi_eom(SMFICTX *);
 sfsistat mlfi_close(SMFICTX *);

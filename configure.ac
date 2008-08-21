@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.234 2008/08/09 11:57:33 manu Exp $
+# $Id: configure.ac,v 1.235 2008/08/21 21:05:35 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -88,6 +88,14 @@ AC_ARG_WITH(libbind,
 ])
 LDFLAGS=$SAVEDLDFLAGS
 CFLAGS=$SAVEDCFLAGS
+AC_ARG_WITH(openssl,
+	[  --with-openssl=DIR  Find OpenSSL in DIR],
+	[LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
+AC_ARG_WITH(libdkim, 
+	[  --with-libdkim=DIR  Find Sendmail's libdkim in DIR],
+	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_DKIM"
+	    LIBS="-lcrypto -ldkim $LIBS"
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
 AC_ARG_WITH(openldap, 
 	[  --with-openldap=DIR  Find OpenLDAP in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_LDAP -DLDAP_DEPRECATED" 

@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.53 2008/08/03 05:00:06 manu Exp $ */
+/* $Id: conf.c,v 1.54 2008/08/21 21:05:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.53 2008/08/03 05:00:06 manu Exp $");
+__RCSID("$Id: conf.c,v 1.54 2008/08/21 21:05:35 manu Exp $");
 #endif
 #endif
 
@@ -71,6 +71,9 @@ __RCSID("$Id: conf.c,v 1.53 2008/08/03 05:00:06 manu Exp $");
 #endif
 #ifdef USE_LDAP
 #include "ldapcheck.h"
+#endif
+#ifdef USE_DKIM
+#include "dkimcheck.h"
 #endif
 #include "autowhite.h"
 #include "conf.h"
@@ -186,6 +189,9 @@ conf_load_internal(timestamp)
 #endif
 #ifdef USE_LDAP
 		ldapcheck_clear();
+#endif
+#ifdef USE_DKIM
+		dkimcheck_clear();
 #endif
 		all_list_clear();
 		macro_clear();
@@ -449,6 +455,7 @@ conf_defaults(c)
 	c->c_dracdb = DRACDB;
 	c->c_nodrac = 0;
 	c->c_maxpeek = 0;
+	c->c_dkim = NULL;
 
 	return;
 }

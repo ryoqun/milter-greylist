@@ -30,6 +30,7 @@ noaccessdb	[Nn][Oo][Aa][Cc][Cc][Ee][Ss][Ss][Dd][Bb]
 extendedregex	[Ee][Xx][Tt][Ee][Nn][Dd][Ee][Dd][Rr][Ee][Gg][Ee][Xx]
 nospf		[Nn][Oo][Ss][Pp][Ff]
 spf		[Ss][Pp][Ff]
+dkimcheck	[Dd][Kk][Ii][Mm]
 pass		[Pp][Aa][Ss][Ss]
 fail		[Ff][Aa][Ii][Ll]
 softfail	[Ss][Oo][Ff][Tt][Ff][Aa][Ii][Ll]
@@ -117,6 +118,7 @@ prop		"$"[-_A-Za-z0-9]+
 
 %s S_REGEX 
 %s S_SPF
+%s S_DKIM
 %x S_CLOCKSPEC1 S_CLOCKSPEC2
 
 
@@ -127,7 +129,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.79 2008/08/03 05:00:06 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.80 2008/08/21 21:05:35 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -182,6 +184,7 @@ prop		"$"[-_A-Za-z0-9]+
 {delayedreject}	{ return DELAYEDREJECT; }
 {nospf}		{ return NOSPF; }
 {spf}		{ BEGIN(S_SPF); return SPF; }
+{dkimcheck}	{ BEGIN(S_DKIM); return DKIMCHECK; }
 {pass}		{ BEGIN(0); 
 		  yylval.spf_status = MGSPF_PASS; return SPF_STATUS; }
 {fail}		{ BEGIN(0); 

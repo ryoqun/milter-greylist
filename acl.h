@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.33 2008/08/03 05:00:06 manu Exp $ */
+/* $Id: acl.h,v 1.34 2008/08/21 21:05:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -52,7 +52,8 @@ typedef enum { A_GREYLIST, A_WHITELIST, A_BLACKLIST, } acl_type_t;
 typedef enum { AS_NONE, AS_RCPT, AS_DATA, AS_ANY, } acl_stage_t;
 typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK, AT_OPNUM, 
 	       AT_CLOCKSPEC, AT_DNSRBL, AT_URLCHECK, AT_MACRO, 
-	       AT_LIST, AT_PROP, AT_SPF, AT_LDAPCHECK } acl_data_type_t;
+	       AT_LIST, AT_PROP, AT_SPF, AT_DKIM, 
+	       AT_LDAPCHECK } acl_data_type_t;
 
 typedef enum {
 	AC_NONE,
@@ -97,6 +98,7 @@ typedef enum {
 	AC_TLS_RE,
 	AC_TLS_LIST,
 	AC_SPF,
+	AC_DKIM,
 	AC_MSGSIZE,
 	AC_RCPTCOUNT,
 	AC_CLOCKSPEC,
@@ -183,6 +185,9 @@ typedef union acl_data {
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
      defined(HAVE_SPF2_10) || defined(HAVE_SPF2))
 	enum spf_status spf_status;
+#endif
+#ifdef USE_DKIM
+	enum spf_status dkim_status;
 #endif
 } acl_data_t;
 
@@ -330,4 +335,5 @@ int myregexec(struct mlfi_priv *, acl_data_t *,
 #define EXF_PROP	(1 << 25)
 #define EXF_HELO	(1 << 26)
 #define EXF_LDAPCHECK	(1 << 27)
+#define	EXF_DKIM	(1 << 28)
 #endif /* _ACL_H_ */

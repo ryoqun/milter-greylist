@@ -857,6 +857,8 @@ Optional Packages:
   --with-libmilter=DIR   Find libmilter in DIR
   --with-libpthread=DIR  Find libpthread in DIR
   --with-libbind=DIR	Find libbind in DIR
+  --with-openssl=DIR  Find OpenSSL in DIR
+  --with-libdkim=DIR  Find Sendmail's libdkim in DIR
   --with-openldap=DIR  Find OpenLDAP in DIR
   --with-libcurl=DIR  Find libcurl in DIR
   --with-libGeoIP=DIR  Find libGeoIP in DIR
@@ -3284,6 +3286,20 @@ fi
 fi;
 LDFLAGS=$SAVEDLDFLAGS
 CFLAGS=$SAVEDCFLAGS
+
+# Check whether --with-openssl or --without-openssl was given.
+if test "${with_openssl+set}" = set; then
+  withval="$with_openssl"
+  LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+fi;
+
+# Check whether --with-libdkim or --without-libdkim was given.
+if test "${with_libdkim+set}" = set; then
+  withval="$with_libdkim"
+  CFLAGS=$CFLAGS" -I$withval/include -DUSE_DKIM"
+	    LIBS="-lcrypto -ldkim $LIBS"
+	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+fi;
 
 # Check whether --with-openldap or --without-openldap was given.
 if test "${with_openldap+set}" = set; then

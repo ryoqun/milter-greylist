@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.41 2007/12/29 19:06:49 manu Exp $ */
+/* $Id: conf.h,v 1.42 2008/08/21 21:05:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -106,6 +106,7 @@ struct conf_rec {
 	char c_syncsrcport_storage[NUMLEN + 1];
 	char c_dracdb_storage[QSTRLEN + 1];
 	size_t c_maxpeek;
+	DKIM_LIB *c_dkim;
 };
 
 /* c_forced flags */

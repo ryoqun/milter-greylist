@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.76 2008/08/03 05:00:06 manu Exp $ */
+/* $Id: acl.c,v 1.77 2008/08/21 21:05:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.76 2008/08/03 05:00:06 manu Exp $");
+__RCSID("$Id: acl.c,v 1.77 2008/08/21 21:05:35 manu Exp $");
 #endif
 #endif
 
@@ -74,6 +74,9 @@ __RCSID("$Id: acl.c,v 1.76 2008/08/03 05:00:06 manu Exp $");
 #ifdef USE_LDAP
 #include "ldapcheck.h"
 #endif
+#ifdef USE_DKIM
+#include "dkimcheck.h"
+#endif
 #if defined(USE_CURL) || defined(USE_LDAP)
 #include "prop.h"
 #endif
@@ -83,6 +86,9 @@ __RCSID("$Id: acl.c,v 1.76 2008/08/03 05:00:06 manu Exp $");
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
      defined(HAVE_SPF2_10) || defined(HAVE_SPF2)) 
 #include "spf.h"
+#endif
+#ifdef USE_DKIM
+#include "dkimcheck.h"
 #endif
 #include "macro.h"
 #include "clock.h"
@@ -314,6 +320,12 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  AT_SPF, AC_NONE, AC_SPF,  EXF_SPF,
 	  acl_print_spf, acl_add_spf,
 	  NULL, spf_check },
+#endif
+#ifdef USE_DKIM
+	{ AC_DKIM, MULTIPLE_OK, AS_DATA, "dkim",
+	  AT_DKIM, AC_NONE, AC_DKIM,  EXF_DKIM,
+	  acl_print_dkim, acl_add_dkim,
+	  NULL, dkimcheck_validate },
 #endif
 	{ AC_MSGSIZE, MULTIPLE_OK, AS_DATA, "msgsize", 
 	  AT_OPNUM, AC_NONE, AC_MSGSIZE, EXF_MSGSIZE,
@@ -1986,6 +1998,14 @@ acl_filter(stage, ctx, priv)
 			snprintf(tmpstr, sizeof(tmpstr),
 			     "sender is%s SPF-compliant",
 			    (noretval & EXF_SPF) ? notstr : vstr);
+			ADD_REASON(whystr, tmpstr);
+		}		
+#endif
+#ifdef USE_DKIM
+		if (retval & EXF_DKIM) {
+			snprintf(tmpstr, sizeof(tmpstr),
+			     "sender is%s DKIM-compliant",
+			    (noretval & EXF_DKIM) ? notstr : vstr);
 			ADD_REASON(whystr, tmpstr);
 		}		
 #endif

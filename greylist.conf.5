@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.87 2008/08/03 05:00:06 manu Exp $
+.\" $Id: greylist.conf.5,v 1.88 2008/08/21 21:05:35 manu Exp $
 .\"
 .\" Copyright (c) 2004-2008 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -362,6 +362,15 @@ keyword. DATA-stage ACL cannot use the
 .I greylist
 action, on the other hand, the following clauses can be used to work on message
 content:
+.TP
+.I dkim
+DKIM status (if build with DKIM support). Possible values are 
+.I pass\fR,
+.I fail\fR,
+.I unknown\fR,
+.I error\fR,
+and
+.I none\fR,
 .TP
 .I header
 String or regular expression searched in message headers

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.205 2008/08/03 05:00:06 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.206 2008/08/21 21:05:35 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.205 2008/08/03 05:00:06 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.206 2008/08/21 21:05:35 manu Exp $");
 #endif
 #endif
 
@@ -98,6 +98,9 @@ static int check_drac(char *dotted_ip);
 #ifdef USE_LDAP
 #include "ldapcheck.h"
 #endif
+#ifdef USE_DKIM
+#include "dkimcheck.h"
+#endif
 #if defined(USE_CURL) || defined(USE_LDAP)
 #include "prop.h"
 #endif
@@ -127,6 +130,7 @@ static sfsistat real_helo(SMFICTX *, char *);
 static sfsistat real_envfrom(SMFICTX *, char **);
 static sfsistat real_envrcpt(SMFICTX *, char **);
 static sfsistat real_header(SMFICTX *, char *, char *);
+static sfsistat real_eoh(SMFICTX *);
 static sfsistat real_body(SMFICTX *, unsigned char *, size_t);
 static sfsistat real_eom(SMFICTX *);
 static sfsistat real_close(SMFICTX *);
@@ -141,7 +145,7 @@ struct smfiDesc smfilter =
 	mlfi_envfrom,	/* envelope sender filter */
 	mlfi_envrcpt,	/* envelope recipient filter */
 	mlfi_header,	/* header filter */
-	NULL,		/* end of header */
+	mlfi_eoh,	/* end of header */
 	mlfi_body,	/* body block filter */
 	mlfi_eom,	/* end of message */
 	NULL,		/* message aborted */
@@ -217,6 +221,18 @@ mlfi_header(ctx, header, value)
 
 	conf_retain();
 	r = real_header(ctx, header, value);
+	conf_release();
+	return r;
+}
+
+sfsistat
+mlfi_eoh(ctx)
+	SMFICTX *ctx;
+{
+	sfsistat r;
+
+	conf_retain();
+	r = real_eoh(ctx);
 	conf_release();
 	return r;
 }
@@ -325,6 +341,10 @@ real_connect(ctx, hostname, addr)
 
 #ifdef USE_GEOIP
 	geoip_set_ccode(priv);
+#endif
+#ifdef USE_DKIM
+	priv->priv_dkim = NULL;
+	priv->priv_dkimstat = DKIM_STAT_OK;
 #endif
 	return SMFIS_CONTINUE;
 }
@@ -658,6 +678,7 @@ real_header(ctx, name, value)
 	char *name;
 	char *value;
 {
+	sfsistat stat = SMFIS_CONTINUE;
 	struct header *h;
 	struct mlfi_priv *priv;
 	const char sep[] = ": ";
@@ -698,9 +719,32 @@ real_header(ctx, name, value)
 
 	TAILQ_INSERT_TAIL(&priv->priv_header, h, h_list);
 
+#ifdef USE_DKIM
+	if ((stat = dkimcheck_header(name, value, priv)) != SMFIS_CONTINUE)
+		return stat;
+#endif
 	return SMFIS_CONTINUE;
 }
 
+static sfsistat
+real_eoh(ctx)
+	SMFICTX *ctx;
+{
+#ifdef USE_DKIM
+	struct mlfi_priv *priv;
+	sfsistat stat = SMFIS_CONTINUE;
+
+	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) == NULL) {
+		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
+		return SMFIS_TEMPFAIL;
+	}
+
+	if ((stat = dkimcheck_eoh(priv)) != SMFIS_CONTINUE)
+		return stat;
+#endif /* USE_DKIM */
+
+	return SMFIS_CONTINUE;
+}
 
 static sfsistat
 real_body(ctx, chunk, size)
@@ -708,6 +752,7 @@ real_body(ctx, chunk, size)
 	unsigned char *chunk;
 	size_t size;
 {
+	sfsistat stat = SMFIS_CONTINUE;
 	struct mlfi_priv *priv;
 	struct body *b;
 	size_t linelen;
@@ -717,6 +762,11 @@ real_body(ctx, chunk, size)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+
+#ifdef USE_DKIM
+	if ((stat = dkimcheck_body(chunk, size, priv)) != SMFIS_CONTINUE)
+		return stat;
+#endif
 
 	/* Avoid copying the whole message to save CPU */
 	if ((priv->priv_msgcount > conf.c_maxpeek) || 
@@ -799,6 +849,7 @@ real_eom(ctx)
 	SMFICTX *ctx;
 {
 	struct mlfi_priv *priv;
+	sfsistat stat = SMFIS_CONTINUE;
 	char whystr [HDRLEN + 1];
 	struct smtp_reply rcpt_sr;
 	struct rcpt *rcpt;
@@ -832,6 +883,11 @@ real_eom(ctx)
 
 		TAILQ_INSERT_TAIL(&priv->priv_body, b, b_list);
 	}
+
+#ifdef USE_DKIM
+	if ((stat = dkimcheck_eom(priv)) != SMFIS_CONTINUE)
+		return stat;
+#endif
 
 	if (priv->priv_delayed_reject) {
 		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) 
@@ -1286,6 +1342,9 @@ main(argc, argv)
 #endif
 #ifdef USE_LDAP
 	ldapcheck_init();
+#endif
+#ifdef USE_DKIM
+	dkimcheck_init();
 #endif
 	macro_init();
 
