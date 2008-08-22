@@ -1,4 +1,4 @@
-/* $Id: geoip.h,v 1.1 2007/02/02 07:00:06 manu Exp $ */
+/* $Id: geoip.h,v 1.1.2.1 2008/08/22 21:54:44 manu Exp $ */
 
 /*
  * Copyright (c) 2007 Emmanuel Dreyfus
@@ -29,6 +29,7 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "spf.h"
 #include "acl.h"
 
 #ifndef _MG_GEOIP_H_

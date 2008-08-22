@@ -1,4 +1,5 @@
 4.0.1
+	Fix build of GeoIP code
 	Fix auth and tls clauses in ACL so that they accept regex
 	Update Debian startup script (Adam Katz)
 	Fix bogus ACL when using features not compiled in
