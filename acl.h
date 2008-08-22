@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.30 2007/11/06 11:39:33 manu Exp $ */
+/* $Id: acl.h,v 1.29.2.1 2008/08/22 21:44:16 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -52,7 +52,7 @@ typedef enum { A_GREYLIST, A_WHITELIST, A_BLACKLIST, } acl_type_t;
 typedef enum { AS_NONE, AS_RCPT, AS_DATA, AS_ANY, } acl_stage_t;
 typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK, AT_OPNUM, 
 	       AT_CLOCKSPEC, AT_DNSRBL, AT_URLCHECK, AT_MACRO, 
-	       AT_LIST, AT_PROP, AT_SPF } acl_data_type_t;
+	       AT_LIST, AT_PROP } acl_data_type_t;
 
 typedef enum {
 	AC_NONE,
@@ -149,6 +149,7 @@ struct acl_param {
 #define A_FREE_ECODE		0x04
 #define A_FREE_MSG		0x08
 #define A_FREE_REPORT		0x10
+#define A_DROP_ACL		0x40
 
 struct all_list_entry;
 
@@ -171,10 +172,6 @@ typedef union acl_data {
 #endif
 	struct acl_opnum_data opnum;
 	struct clockspec *clockspec;
-#if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
-     defined(HAVE_SPF2_10) || defined(HAVE_SPF2))
-	enum spf_status spf_status;
-#endif
 } acl_data_t;
 
 struct acl_clause_rec {
@@ -227,6 +224,7 @@ char *stage_string(acl_stage_t);
 struct acl_clause_rec *get_acl_clause_rec(acl_clause_t);
 struct acl_clause_rec *acl_list_item_fixup(acl_clause_t, acl_clause_t);
 void acl_init(void);
+void acl_drop(void);
 void acl_clear(void);
 void acl_add_clause(acl_clause_t, void *);
 void acl_negate_clause(void);
