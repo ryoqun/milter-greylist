@@ -30,13 +30,6 @@ noaccessdb	[Nn][Oo][Aa][Cc][Cc][Ee][Ss][Ss][Dd][Bb]
 extendedregex	[Ee][Xx][Tt][Ee][Nn][Dd][Ee][Dd][Rr][Ee][Gg][Ee][Xx]
 nospf		[Nn][Oo][Ss][Pp][Ff]
 spf		[Ss][Pp][Ff]
-pass		[Pp][Aa][Ss][Ss]
-fail		[Ff][Aa][Ii][Ll]
-softfail	[Ss][Oo][Ff][Tt][Ff][Aa][Ii][Ll]
-neutral		[Nn][Ee][Uu][Tt][Rr][Aa][Ll]
-unknown		[Uu][Nn][Kk][Nn][Oo][Ww][Nn]
-error		[Ee][Rr][Rr][Oo][Rr]
-self		[Ss][Ee][Ll][Ff]
 delayedreject	[Dd][Ee][Ll][Aa][Yy][Ee][Dd][Rr][Ee][Jj][Ee][Cc][Tt]
 testmode	[Tt][Ee][Ss][Tt][Mm][Oo][Dd][Ee]
 greylist	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt]:?		
@@ -114,7 +107,6 @@ neg		"!"
 prop		"$"[-_A-Za-z0-9]+
 
 %s S_REGEX 
-%s S_SPF
 %x S_CLOCKSPEC1 S_CLOCKSPEC2
 
 
@@ -125,7 +117,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.77 2007/11/07 04:05:14 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.75.2.1 2008/08/22 21:52:27 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -171,31 +163,15 @@ prop		"$"[-_A-Za-z0-9]+
 {lazyaw}	{ return LAZYAW; }
 {greylist}	{ return GREYLIST; }
 {noauth}	{ return NOAUTH; }
-{auth}		{ return AUTH; }
-{tls}		{ return TLS; }
+{auth}		{ BEGIN(S_REGEX); return AUTH; }
+{tls}		{ BEGIN(S_REGEX); return TLS; }
 {msgsize}	{ return MSGSIZE; }
 {rcptcount}	{ return RCPTCOUNT; }
 {noaccessdb}	{ return NOACCESSDB; }
 {extendedregex}	{ return EXTENDEDREGEX; }
 {delayedreject}	{ return DELAYEDREJECT; }
 {nospf}		{ return NOSPF; }
-{spf}		{ BEGIN(S_SPF); return SPF; }
-{pass}		{ BEGIN(0); 
-		  yylval.spf_status = MGSPF_PASS; return SPF_STATUS; }
-{fail}		{ BEGIN(0); 
-		  yylval.spf_status = MGSPF_FAIL; return SPF_STATUS; }
-{softfail}	{ BEGIN(0); 
-		  yylval.spf_status = MGSPF_SOFTFAIL; return SPF_STATUS; }
-{neutral}	{ BEGIN(0); 
-		  yylval.spf_status = MGSPF_NEUTRAL; return SPF_STATUS; }
-{unknown}	{ BEGIN(0); 
-		  yylval.spf_status = MGSPF_UNKNOWN; return SPF_STATUS; }
-{error}		{ BEGIN(0); 
-		  yylval.spf_status = MGSPF_ERROR; return SPF_STATUS; }
-{self}		{ BEGIN(0); 
-		  yylval.spf_status = MGSPF_SELF; return SPF_STATUS; }
-<S_SPF>{none}	{ BEGIN(0); 
-		  yylval.spf_status = MGSPF_NONE; return SPF_STATUS; }
+{spf}		{ return SPF; }
 {quiet}		{ return QUIET; }
 {testmode}	{ return TESTMODE; }
 {verbose}	{ return VERBOSE; }
@@ -227,8 +203,8 @@ prop		"$"[-_A-Za-z0-9]+
 {user}		{ return USER; }
 {nodetach}	{ return NODETACH; }
 {report}	{ return REPORT; }
-<INITIAL>{none}	{ return NONE; }
 {stat}		{ return STAT; }
+{none}		{ return NONE; }
 {delays}	{ return DELAYS; }
 {nodelays}	{ return NODELAYS; }
 {gldelay}	{ return GLXDELAY; }
