@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.77 2008/08/21 21:05:35 manu Exp $ */
+/* $Id: acl.c,v 1.78 2008/08/23 11:04:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.77 2008/08/21 21:05:35 manu Exp $");
+__RCSID("$Id: acl.c,v 1.78 2008/08/23 11:04:06 manu Exp $");
 #endif
 #endif
 
@@ -73,9 +73,6 @@ __RCSID("$Id: acl.c,v 1.77 2008/08/21 21:05:35 manu Exp $");
 #endif
 #ifdef USE_LDAP
 #include "ldapcheck.h"
-#endif
-#ifdef USE_DKIM
-#include "dkimcheck.h"
 #endif
 #if defined(USE_CURL) || defined(USE_LDAP)
 #include "prop.h"
