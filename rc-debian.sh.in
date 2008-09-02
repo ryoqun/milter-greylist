@@ -86,9 +86,16 @@ case "$1" in
 	echo "$NAME."
 	;;
 
+  status)
+  	PID=`pidof $DAEMON`
+	if [ x$PID = x ]; then
+	  echo "$DAEMON is not running"
+	else
+	  echo "$DESC is running with pid[$PID]"
+	fi
   *)
 	N=/etc/init.d/$SNAME
-	echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
+	echo "Usage: $N {start|stop|restart|reload|force-reload|status}" >&2
 	exit 1
 	;;
 esac

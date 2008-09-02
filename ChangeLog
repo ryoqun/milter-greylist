@@ -1,6 +1,7 @@
 4.1.6
 	Experimental DKIM support
 	libspf2 support in .spec file, for RPM generation (Joe Pruett)
+	status support in Debian startup script (Bernhard Schneider)
 4.1.5
 	Fix huge memory leaks in native LDAP support
 4.1.4
