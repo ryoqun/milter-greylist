@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.199 2007/11/06 11:39:33 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.198.2.1 2008/09/06 17:42:01 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.199 2007/11/06 11:39:33 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.198.2.1 2008/09/06 17:42:01 manu Exp $");
 #endif
 #endif
 
@@ -80,12 +80,12 @@ static int check_drac(char *dotted_ip);
 #include <libmilter/mfapi.h>
 
 #include "dump.h"
-#include "spf.h"
 #include "acl.h"
 #include "list.h"
 #include "conf.h"
 #include "pending.h"
 #include "sync.h"
+#include "spf.h"
 #include "autowhite.h"
 #include "stat.h"
 #include "milter-greylist.h"
@@ -116,6 +116,9 @@ static sfsistat stat_from_code(char *);
 static void cleanup_pidfile(char *);
 static void cleanup_sock(char *);
 static int mg_setreply(SMFICTX *, struct mlfi_priv *, char *);
+#ifndef USE_POSTFIX
+static char *local_ipstr(struct mlfi_priv *);
+#endif
 static sfsistat real_connect(SMFICTX *, char *, _SOCK_ADDR *);
 static sfsistat real_helo(SMFICTX *, char *);
 static sfsistat real_envfrom(SMFICTX *, char **);
@@ -1037,6 +1040,10 @@ real_close(ctx)
 #ifdef USE_DNSRBL
 		dnsrbl_list_cleanup(priv);
 #endif     
+#ifdef USE_GEOIP
+		if (priv->priv_ccode)
+			free(priv->priv_ccode);
+#endif
 		free(priv);
 		smfi_setpriv(ctx, NULL);
 	}
@@ -2870,7 +2877,7 @@ fstring_escape(fstring)
 }
 
 #ifndef USE_POSTFIX
-char *
+static char *
 local_ipstr(priv)
 	struct mlfi_priv *priv;
 {
