@@ -1,4 +1,4 @@
-/* $Id: p0f.c,v 1.1 2008/09/07 00:13:34 manu Exp $ */
+/* $Id: p0f.c,v 1.2 2008/09/07 11:54:21 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: p0f.c,v 1.1 2008/09/07 00:13:34 manu Exp $");
+__RCSID("$Id: p0f.c,v 1.2 2008/09/07 11:54:21 manu Exp $");
 #endif
 #endif
 #include <sys/types.h>
@@ -127,12 +127,25 @@ p0f_cmp(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
-	char *data = (char *)ad->string;
+	char *data;
 
+       if (priv->priv_p0f == NULL)
+               return 0;
+
+	mg_log(LOG_DEBUG, "ad = %p, ap = %p, priv = %p", ad, ap, priv);
+	mg_log(LOG_DEBUG, "ad->string = %p", ad->string);
+	data = (char *)ad->string;
+	mg_log(LOG_DEBUG, "data = %p, priv->priv_p0f = %p", 
+		data, priv->priv_p0f);
+	mg_log(LOG_DEBUG, "data = \"%s\"", data);
+	mg_log(LOG_DEBUG, "priv->priv_p0f = \"%s\"", priv->priv_p0f);
 	if (strcasestr(priv->priv_p0f, data) != NULL)
 		return 1;
 	return 0;
 }
+
+       if (priv->priv_p0f == NULL)
+               return 0;
 
 int
 p0f_regexec(ad, stage, ap, priv)
@@ -199,9 +212,10 @@ p0f_lookup(priv)
 		return -1;
 	}
 
+	p0f_clear();
+
 	if (rep.magic != QUERY_MAGIC) {
 		mg_log(LOG_ERR, "Unexpected p0f magic = %d", rep.magic);
-		p0f_clear();
 		return -1;
 	}
 
