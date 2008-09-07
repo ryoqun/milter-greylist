@@ -1,4 +1,4 @@
-/* $Id: dkimcheck.h,v 1.2 2008/09/07 00:13:34 manu Exp $ */
+/* $Id: p0f.h,v 1.1 2008/09/07 00:13:34 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -29,26 +29,18 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DKIMCHECK_H_
-#define _DKIMCHECK_H_
+#ifndef _P0F_H_
+#define _P0F_H_
 
 #include "config.h"
 
-#ifdef USE_DKIM
+void p0f_init(void);
+void p0f_clear(void);
+int p0f_cmp(acl_data_t *, acl_stage_t,
+	    struct acl_param *, struct mlfi_priv *);
+int p0f_regexec(acl_data_t *, acl_stage_t,
+	        struct acl_param *, struct mlfi_priv *);
+void p0f_sock_set(char *);
+int p0f_lookup(struct mlfi_priv *);
 
-#include <dkim.h>
-
-void dkimcheck_init(void);
-void dkimcheck_clear(void);
-void dkimcheck_free(struct mlfi_priv *);
-sfsistat dkimcheck_header(char *, char *, struct mlfi_priv *);
-sfsistat dkimcheck_eoh(struct mlfi_priv *);
-sfsistat dkimcheck_body(unsigned char *, size_t, struct mlfi_priv *);
-sfsistat dkimcheck_eom(struct mlfi_priv *);
-int dkimcheck_validate(acl_data_t *, acl_stage_t,
-		       struct acl_param *, struct mlfi_priv *);
-char *acl_print_dkim(acl_data_t *, char *, size_t);
-void acl_add_dkim(acl_data_t *, void *);
-
-#endif /* USE_DKIM */
-#endif /* _DKIMCHECK_H_ */
+#endif /* _P0F_H_ */

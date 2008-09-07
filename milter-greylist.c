@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.206 2008/08/21 21:05:35 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.207 2008/09/07 00:13:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.206 2008/08/21 21:05:35 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.207 2008/09/07 00:13:34 manu Exp $");
 #endif
 #endif
 
@@ -106,6 +106,9 @@ static int check_drac(char *dotted_ip);
 #endif
 #ifdef USE_GEOIP
 #include "geoip.h"
+#endif
+#ifdef USE_P0F
+#include "p0f.h"
 #endif
 #include "macro.h"
 
@@ -345,6 +348,9 @@ real_connect(ctx, hostname, addr)
 #ifdef USE_DKIM
 	priv->priv_dkim = NULL;
 	priv->priv_dkimstat = DKIM_STAT_OK;
+#endif
+#ifdef USE_P0F
+	p0f_lookup(priv);
 #endif
 	return SMFIS_CONTINUE;
 }
@@ -1099,6 +1105,17 @@ real_close(ctx)
 #ifdef USE_DNSRBL
 		dnsrbl_list_cleanup(priv);
 #endif     
+#ifdef USE_GEOIP
+		if (priv->priv_ccode != NULL)
+			free((char *)priv->priv_ccode);
+#endif
+#ifdef USE_P0F
+		if (priv->priv_p0f != NULL)
+			free(priv->priv_p0f);
+#endif
+#ifdef USE_DKIM
+		dkimcheck_free(priv);
+#endif
 		free(priv);
 		smfi_setpriv(ctx, NULL);
 	}
@@ -2480,6 +2497,28 @@ fstring_expand(priv, rcpt, fstring)
 				mystrncat(&outstr, 
 					  priv->priv_ccode, 
 					  &outmaxlen);
+#else
+			fstr_len =  0;
+#endif
+			break;
+		}
+		case 'F': {	/* System fingerprint from P0F */
+#ifdef USE_P0F
+			char *string = NULL;
+
+			fstr_len =  2;
+			switch (ptok[1]) {
+			case 'x':	/* Type + detail */
+				string = priv->priv_p0f;
+				break;
+			default:
+				fstr_len = 0;
+				break;
+			}
+
+			if (string != NULL)
+				mystrncat(&outstr, string, &outmaxlen);
+			break;
 #else
 			fstr_len =  0;
 #endif

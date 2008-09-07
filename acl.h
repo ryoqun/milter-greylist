@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.34 2008/08/21 21:05:35 manu Exp $ */
+/* $Id: acl.h,v 1.35 2008/09/07 00:13:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -105,6 +105,9 @@ typedef enum {
 	AC_CLOCKSPEC_LIST,
 	AC_GEOIP,
 	AC_GEOIP_LIST,
+	AC_P0F,
+	AC_P0F_RE,
+	AC_P0F_LIST,
 } acl_clause_t;
 
 struct acl_clause;
@@ -336,4 +339,5 @@ int myregexec(struct mlfi_priv *, acl_data_t *,
 #define EXF_HELO	(1 << 26)
 #define EXF_LDAPCHECK	(1 << 27)
 #define	EXF_DKIM	(1 << 28)
+#define EXF_P0F		(1 << 29)
 #endif /* _ACL_H_ */

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.73 2008/08/21 21:05:35 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.74 2008/09/07 00:13:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -209,6 +209,9 @@ struct mlfi_priv {
 #ifdef USE_DKIM
 	DKIM *priv_dkim;
 	DKIM_STAT priv_dkimstat;
+#endif
+#ifdef USE_P0F
+	char *priv_p0f;
 #endif
 };
 

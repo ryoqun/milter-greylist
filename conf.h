@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.43 2008/09/02 04:15:33 manu Exp $ */
+/* $Id: conf.h,v 1.44 2008/09/07 00:13:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -108,6 +108,9 @@ struct conf_rec {
 	size_t c_maxpeek;
 #ifdef USE_DKIM	
 	DKIM_LIB *c_dkim;
+#endif
+#ifdef USE_P0F
+	char c_p0fsock[QSTRLEN + 1];
 #endif
 };
 

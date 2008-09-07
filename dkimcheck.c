@@ -1,4 +1,4 @@
-/* $Id: dkimcheck.c,v 1.1 2008/08/21 21:05:35 manu Exp $ */
+/* $Id: dkimcheck.c,v 1.2 2008/09/07 00:13:34 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dkimcheck.c,v 1.1 2008/08/21 21:05:35 manu Exp $");
+__RCSID("$Id: dkimcheck.c,v 1.2 2008/09/07 00:13:34 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
@@ -342,6 +342,17 @@ acl_add_dkim(ad, data)
 		break;
 	}
 
+	return;
+}
+
+void
+dkimcheck_free(priv)
+	struct mlfi_priv *priv;
+{
+	if (priv->priv_dkim != NULL) {
+		dkim_free(priv->priv_dkim);
+		priv->priv_dkim = NULL;
+	}
 	return;
 }
 

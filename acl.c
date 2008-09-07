@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.78 2008/08/23 11:04:06 manu Exp $ */
+/* $Id: acl.c,v 1.79 2008/09/07 00:13:34 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.78 2008/08/23 11:04:06 manu Exp $");
+__RCSID("$Id: acl.c,v 1.79 2008/09/07 00:13:34 manu Exp $");
 #endif
 #endif
 
@@ -79,6 +79,9 @@ __RCSID("$Id: acl.c,v 1.78 2008/08/23 11:04:06 manu Exp $");
 #endif
 #ifdef USE_GEOIP
 #include "geoip.h"
+#endif
+#ifdef USE_P0F
+#include "p0f.h"
 #endif
 #if (defined(HAVE_SPF) || defined(HAVE_SPF_ALT) || \
      defined(HAVE_SPF2_10) || defined(HAVE_SPF2)) 
@@ -347,6 +350,20 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  acl_free_string, geoip_filter },
 	{ AC_GEOIP_LIST, MULTIPLE_OK, AS_ANY, "geoip_list", 
 	  AT_LIST, AC_NONE, AC_NONE, EXF_GEOIP,
+	  acl_print_list, acl_add_list, 
+	  NULL, acl_list_filter },
+#endif
+#ifdef USE_P0F
+	{ AC_P0F, MULTIPLE_OK, AS_ANY, "p0f", 
+	  AT_STRING, AC_P0F_LIST, AC_STRING, EXF_P0F,
+	  acl_print_string, acl_add_string,
+	  acl_free_string, p0f_cmp },
+	{ AC_P0F_RE, UNIQUE, AS_ANY, "p0f_re", 
+	  AT_REGEX, AC_P0F_LIST, AC_REGEX, EXF_DOMAIN,
+	  acl_print_regex, acl_add_regex,
+	  acl_free_regex, p0f_regexec },
+	{ AC_P0F_LIST, MULTIPLE_OK, AS_ANY, "p0f_list", 
+	  AT_LIST, AC_NONE, AC_NONE, EXF_P0F,
 	  acl_print_list, acl_add_list, 
 	  NULL, acl_list_filter },
 #endif

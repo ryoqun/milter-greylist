@@ -1,9 +1,9 @@
-# $Id: configure.ac,v 1.235 2008/08/21 21:05:35 manu Exp $
+# $Id: configure.ac,v 1.236 2008/09/07 00:13:34 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.57)
-AC_INIT(milter-greylist, 4.1.5, manu@netbsd.org)
+AC_INIT(milter-greylist, 4.1.6, manu@netbsd.org)
 AC_CONFIG_SRCDIR([milter-greylist.c])
 AC_CONFIG_HEADER([config.h])
 
@@ -423,6 +423,9 @@ AC_ARG_ENABLE(stdio-hack,
 AC_ARG_ENABLE(drac,
 	[  --enable-drac	Enable DRAC support],
 	[if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_DRAC"; fi])
+AC_ARG_ENABLE(p0f, 
+	[  --enable-p0f		Enable p0f support],
+	[if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_P0F"; fi])
 
 # Check for libmilter. For sendmail-8.12.1, -lsm is required too.
 # This uses a gross hack on the second AC_CHECK_LIB first argument, but using 

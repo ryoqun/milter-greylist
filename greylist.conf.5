@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.88 2008/08/21 21:05:35 manu Exp $
+.\" $Id: greylist.conf.5,v 1.89 2008/09/07 00:13:34 manu Exp $
 .\"
 .\" Copyright (c) 2004-2008 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -75,6 +75,8 @@ keyword, and by any set of the following clauses:
 (if build with SPF support),
 .I geoip\fR
 (if build with GeoIP support),
+.I p0f\fR
+(if build with p0f support),
 .I ldapcheck\fR
 (if build with --with-openldap),
 .I urlcheck\fR
@@ -160,6 +162,17 @@ must be upper case, and is only available if
 was built with GeoIP support. The 
 .I geoipdb 
 statement can be used to specify the location of GeoIP database. 
+.TP
+.I p0f
+This is used to match against the remote system OS fingerprint genre and
+detail,obtained from p0f. It is only available if 
+.B milter-greylist
+was built with p0f support. 
+.I p0f
+clauses can be used with a quoted string for case-insensitive substring
+match, or against regular expressions. The
+.I p0fsock
+statement can be used to speficy the location of the p0f socket.
 .TP
 .I auth
 This is used to select a user that succeeded SMTP AUTH. In order to select
@@ -1053,6 +1066,11 @@ Offset to GMT (e.g.: -0100)
 Sender IP country code, as reported by GeoIP. This is only available if
 .B milter-greylist
 was built with GeoIP support
+.TP
+.I %Fx
+p0f OS fingerprint genre and detail. This is only available if
+.B milter-greylist
+was built with p0f support.
 .TP
 .I %V
 Shortcut to "milter-greylist-%v (%Mj [%M{if_addr}]); %T{%a, %d %b %Y %T} %G (%T{%Z})"

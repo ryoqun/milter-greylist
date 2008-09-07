@@ -1,4 +1,6 @@
 4.1.6
+	Fix a memory leak in GeoIP code
+	Experimental p0f support
 	Experimental DKIM support
 	libspf2 support in .spec file, for RPM generation (Joe Pruett)
 	status support in Debian startup script (Bernhard Schneider)

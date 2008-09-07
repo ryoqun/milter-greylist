@@ -169,16 +169,13 @@
 #define PACKAGE_NAME "milter-greylist"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "milter-greylist 4.1.5"
+#define PACKAGE_STRING "milter-greylist 4.1.6"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "milter-greylist"
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "4.1.5"
-
-/* Define to 1 if the C compiler supports function prototypes. */
-#define PROTOTYPES 1
+#define PACKAGE_VERSION "4.1.6"
 
 /* Define to the type of arg 1 for `select'. */
 #define SELECT_TYPE_ARG1 int
