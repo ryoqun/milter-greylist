@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.208 2008/09/07 11:39:32 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.209 2008/09/07 11:40:36 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.208 2008/09/07 11:39:32 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.209 2008/09/07 11:40:36 manu Exp $");
 #endif
 #endif
 
@@ -350,6 +350,7 @@ real_connect(ctx, hostname, addr)
 	priv->priv_dkimstat = DKIM_STAT_OK;
 #endif
 #ifdef USE_P0F
+	priv->priv_p0f = NULL;
 	p0f_lookup(priv);
 #endif
 	return SMFIS_CONTINUE;
