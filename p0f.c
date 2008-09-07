@@ -1,4 +1,4 @@
-/* $Id: p0f.c,v 1.4 2008/09/07 16:46:46 manu Exp $ */
+/* $Id: p0f.c,v 1.5 2008/09/07 23:21:03 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: p0f.c,v 1.4 2008/09/07 16:46:46 manu Exp $");
+__RCSID("$Id: p0f.c,v 1.5 2008/09/07 23:21:03 manu Exp $");
 #endif
 #endif
 #include <sys/types.h>
@@ -173,7 +173,7 @@ p0f_lookup(priv)
 		return -1;
 
 	if ((daddr = smfi_getsymval(priv->priv_ctx, "{if_addr}")) == NULL) {
-		mg_log(LOG_DEBUG, "smfi_getsymval failed for {daemon_addr}");
+		mg_log(LOG_DEBUG, "smfi_getsymval failed for {if_addr}");
 		return -1;
 	}
 	if ((dport = smfi_getsymval(priv->priv_ctx, "{daemon_port}")) == NULL) {
