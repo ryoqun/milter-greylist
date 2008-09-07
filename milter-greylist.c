@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.198.2.1 2008/09/06 17:42:01 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.198.2.2 2008/09/07 11:38:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.198.2.1 2008/09/06 17:42:01 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.198.2.2 2008/09/07 11:38:43 manu Exp $");
 #endif
 #endif
 
@@ -1040,10 +1040,6 @@ real_close(ctx)
 #ifdef USE_DNSRBL
 		dnsrbl_list_cleanup(priv);
 #endif     
-#ifdef USE_GEOIP
-		if (priv->priv_ccode)
-			free(priv->priv_ccode);
-#endif
 		free(priv);
 		smfi_setpriv(ctx, NULL);
 	}
