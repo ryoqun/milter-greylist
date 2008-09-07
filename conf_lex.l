@@ -131,7 +131,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.81 2008/09/07 00:13:34 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.82 2008/09/07 16:50:16 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -229,7 +229,7 @@ prop		"$"[-_A-Za-z0-9]+
 {ldapconf}	{ return LDAPCONF; }
 {ldapcheck}	{ return LDAPCHECK; }
 {p0fsock}	{ return P0FSOCK; }
-{p0f}		{ return P0F; }
+{p0f}		{ BEGIN(S_REGEX); return P0F; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }
