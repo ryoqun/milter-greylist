@@ -1,4 +1,4 @@
-# $Id: Makefile.in,v 1.62 2008/09/07 00:13:34 manu Exp $
+# $Id: Makefile.in,v 1.63 2008/09/07 02:12:15 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,7 +29,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-CFLAGS= 	@CFLAGS@ -D_BSD_SOURCE -I${SRCDIR} -I.
+CFLAGS= 	@CFLAGS@ -D_BSD_SOURCE -I${SRCDIR} -I. @CPPFLAGS@
 LDFLAGS=	@LDFLAGS@
 LIBS= 		@LIBS@
 prefix=		@prefix@
@@ -129,7 +129,7 @@ install-db:
 install: install-daemon-to-bin install-man install-conf install-db
 
 depend:
-	${MKDEP} ${CFLAGS} ${SRC}
+	${MKDEP} ${CPPFLAGS} ${CFLAGS} ${SRC}
 
 clean:
 	${RM} -f milter-greylist ${OBJ} ${GENSRC} \

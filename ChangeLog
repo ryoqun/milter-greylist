@@ -1,4 +1,5 @@
 4.1.6
+	Honour $CPPFLAGS in Makefile (Greg Troxel)
 	Fix a memory leak in GeoIP code
 	Experimental p0f support
 	Experimental DKIM support
