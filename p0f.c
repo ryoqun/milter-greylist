@@ -1,4 +1,4 @@
-/* $Id: p0f.c,v 1.5 2008/09/07 23:21:03 manu Exp $ */
+/* $Id: p0f.c,v 1.6 2008/09/09 03:13:09 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: p0f.c,v 1.5 2008/09/07 23:21:03 manu Exp $");
+__RCSID("$Id: p0f.c,v 1.6 2008/09/09 03:13:09 manu Exp $");
 #endif
 #endif
 #include <sys/types.h>
@@ -210,12 +210,18 @@ p0f_lookup(priv)
 	}
 
 	if (read(p0fsock, &rep, sizeof(rep)) != sizeof(rep)) {
-		mg_log(LOG_ERR, "writing to \"%s\" failed", conf.c_p0fsock);
+		mg_log(LOG_ERR, "reading from \"%s\" failed", conf.c_p0fsock);
 		p0f_clear();
 		return -1;
 	}
 
 	p0f_clear();
+
+	if (rep.id != req.id) {
+		mg_log(LOG_ERR, "p0f reply id mismatch %x expected %x",
+		       rep.id, req.id);
+		return -1;
+	}
 
 	if (rep.magic != QUERY_MAGIC) {
 		mg_log(LOG_ERR, "Unexpected p0f magic = %d", rep.magic);
