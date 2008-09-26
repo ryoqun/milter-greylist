@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.33 2008/08/03 05:00:06 manu Exp $ */
+/* $Id: urlcheck.c,v 1.34 2008/09/26 17:00:51 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.33 2008/08/03 05:00:06 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.34 2008/09/26 17:00:51 manu Exp $");
 #endif
 #endif
 
@@ -1146,6 +1146,11 @@ answer_getline(key, value, ap)
 
 	if (strcasecmp(key, "milterGreylistFlushAddr") == 0) {
 		ap->ap_flags |= A_FLUSHADDR;
+		goto out;
+	}
+
+	if (strcasecmp(key, "milterGreylistNoLog") == 0) {
+		ap->ap_flags |= A_NOLOG;
 		goto out;
 	}
 

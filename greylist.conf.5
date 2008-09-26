@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.89 2008/09/07 00:13:34 manu Exp $
+.\" $Id: greylist.conf.5,v 1.90 2008/09/26 17:00:51 manu Exp $
 .\"
 .\" Copyright (c) 2004-2008 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -262,6 +262,7 @@ An ACL entry can also hold various optional parameter used on match:
 .I delay\fR,
 .I autowhite\fR,
 .I flushaddr\fR,
+.I nolog\fR,
 .I code\fR,
 .I ecode\fR,
 .I report\fR,
@@ -294,6 +295,11 @@ ACL, it is useful for freeing the database from entries set up by a
 machine which is known to be a spamer. Example:
 .IP
   racl blacklist dnsrbl "known-spamers" flushaddr
+.TP
+.I nolog
+Do not generate syslog message if this rule matches. Example:
+.IP
+  racl whitelist default nolog
 .TP
 .I code
 .TP
@@ -931,6 +937,33 @@ as a non root user.  Here is an example:
   user "smmsp"
 .SH MISCELLANEOUS
 These options have no command line equivalent:
+.TP
+.I logfac
+Sets the syslog facility for messages.  Can be set to any of the standard
+facilities:
+.I kern\fR,
+.I user\fR,
+.I mail\fR,
+.I daemon\fR,
+.I auth\fR,
+.I syslog\fR,
+.I lpr\fR,
+.I news\fR,
+.I uucp\fR,
+.I cron\fR,
+.I authpriv\fR,
+.I ftp\fR,
+.I local0\fR,
+.I local1\fR,
+.I local2\fR,
+.I local3\fR,
+.I local4\fR,
+.I local5\fR,
+.I local6\fR,
+.I local7\fR.
+Can also be set to
+.I none
+to disable syslog output completely.
 .TP
 .I timeout
 is used to control how long greylist tuples are retained in the database. 

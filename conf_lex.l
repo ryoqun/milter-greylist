@@ -88,6 +88,7 @@ clear		[Cc][Ll][Ee][Aa][Rr]
 unset		[Uu][Nn][Ss][Ee][Tt]
 list		[Ll][Ii][Ss][Tt]
 flushaddr	[Ff][Ll][Uu][Ss][Hh][Aa][Dd][Dd][Rr]
+nolog		[Nn][Oo][Ll][Oo][Gg]
 code		[Cc][Oo][Dd][Ee]
 ecode		[Ee][Cc][Oo][Dd][Ee]
 msg		[Mm][Ss][Gg]
@@ -98,6 +99,28 @@ geoipdb		[Gg][Ee][Oo][Ii][Pp][Dd][Bb]
 geoip		[Gg][Ee][Oo][Ii][Pp]
 ldapconf	[Ll][Dd][Aa][Pp][Cc][Oo][Nn][Ff]
 ldapcheck	[Ll][Dd][Aa][Pp][Cc][Hh][Ee][Cc][Kk]
+logfac		[Ll][Oo][Gg][Ff][Aa][Cc]
+log_kern	[Kk][Ee][Rr][Nn]
+log_user	[Uu][Ss][Ee][Rr]
+log_mail	[Mm][Aa][Ii][Ll]
+log_daemon	[Dd][Aa][Ee][Mm][Oo][Nn]
+log_auth	[Aa][Uu][Tt][Hh]
+log_syslog	[Ss][Yy][Ss][Ll][Oo][Gg]
+log_lpr		[Ll][Pp][Rr]
+log_news	[Nn][Ee][Ww][Ss]
+log_uucp	[Uu][Uu][Cc][Pp]
+log_cron	[Cc][Rr][Oo][Nn]
+log_authpriv	[Aa][Uu][Tt][Hh][Pp][Rr][Ii][Vv]
+log_ftp		[Ff][Tt][Pp]
+log_local0	[Ll][Oo][Cc][Aa][Ll]0
+log_local1	[Ll][Oo][Cc][Aa][Ll]1
+log_local2	[Ll][Oo][Cc][Aa][Ll]2
+log_local3	[Ll][Oo][Cc][Aa][Ll]3
+log_local4	[Ll][Oo][Cc][Aa][Ll]4
+log_local5	[Ll][Oo][Cc][Aa][Ll]5
+log_local6	[Ll][Oo][Cc][Aa][Ll]6
+log_local7	[Ll][Oo][Cc][Aa][Ll]7
+
 p0fsock		[Pp]0[Ff][Ss][Oo][Cc][Kk]
 p0f		[Pp]0[Ff]
 openlist	"{"
@@ -121,6 +144,7 @@ prop		"$"[-_A-Za-z0-9]+
 %s S_REGEX 
 %s S_SPF
 %s S_DKIM
+%x S_LOGFAC
 %x S_CLOCKSPEC1 S_CLOCKSPEC2
 
 
@@ -131,7 +155,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.82 2008/09/07 16:50:16 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.83 2008/09/26 17:00:51 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -218,6 +242,7 @@ prop		"$"[-_A-Za-z0-9]+
 {unset}  	{ return UNSET; }
 {list}  	{ return LIST; }
 {flushaddr}  	{ return FLUSHADDR; }
+{nolog}  	{ return NOLOG; }
 {code}  	{ return CODE; }
 {ecode}  	{ return ECODE; }
 {msg}	  	{ return MSG; }
@@ -237,6 +262,28 @@ prop		"$"[-_A-Za-z0-9]+
 {socket}	{ return SOCKET; }
 {user}		{ return USER; }
 {nodetach}	{ return NODETACH; }
+{logfac}	{ BEGIN(S_LOGFAC); return LOGFAC; }
+<S_LOGFAC>{log_kern}	{ BEGIN(0); return LOGFAC_KERN; }
+<S_LOGFAC>{log_user}	{ BEGIN(0); return LOGFAC_USER; }
+<S_LOGFAC>{log_mail}	{ BEGIN(0); return LOGFAC_MAIL; }
+<S_LOGFAC>{log_daemon}	{ BEGIN(0); return LOGFAC_DAEMON; }
+<S_LOGFAC>{log_auth}	{ BEGIN(0); return LOGFAC_AUTH; }
+<S_LOGFAC>{log_syslog}	{ BEGIN(0); return LOGFAC_SYSLOG; }
+<S_LOGFAC>{log_lpr}	{ BEGIN(0); return LOGFAC_LPR; }
+<S_LOGFAC>{log_news}	{ BEGIN(0); return LOGFAC_NEWS; }
+<S_LOGFAC>{log_uucp}	{ BEGIN(0); return LOGFAC_UUCP; }
+<S_LOGFAC>{log_cron}	{ BEGIN(0); return LOGFAC_CRON; }
+<S_LOGFAC>{log_authpriv}	{ BEGIN(0); return LOGFAC_AUTHPRIV; }
+<S_LOGFAC>{log_ftp}	{ BEGIN(0); return LOGFAC_FTP; }
+<S_LOGFAC>{log_local0}	{ BEGIN(0); return LOGFAC_LOCAL0; }
+<S_LOGFAC>{log_local1}	{ BEGIN(0); return LOGFAC_LOCAL1; }
+<S_LOGFAC>{log_local2}	{ BEGIN(0); return LOGFAC_LOCAL2; }
+<S_LOGFAC>{log_local3}	{ BEGIN(0); return LOGFAC_LOCAL3; }
+<S_LOGFAC>{log_local4}	{ BEGIN(0); return LOGFAC_LOCAL4; }
+<S_LOGFAC>{log_local5}	{ BEGIN(0); return LOGFAC_LOCAL5; }
+<S_LOGFAC>{log_local6}	{ BEGIN(0); return LOGFAC_LOCAL6; }
+<S_LOGFAC>{log_local7}	{ BEGIN(0); return LOGFAC_LOCAL7; }
+<S_LOGFAC>{none}	{ BEGIN(0); return NONE; }
 {report}	{ return REPORT; }
 <INITIAL>{none}	{ return NONE; }
 {stat}		{ return STAT; }

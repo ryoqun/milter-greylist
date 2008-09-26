@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.79 2008/09/07 00:13:34 manu Exp $ */
+/* $Id: acl.c,v 1.80 2008/09/26 17:00:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.79 2008/09/07 00:13:34 manu Exp $");
+__RCSID("$Id: acl.c,v 1.80 2008/09/26 17:00:51 manu Exp $");
 #endif
 #endif
 
@@ -1179,6 +1179,12 @@ acl_add_flushaddr(void) {
 }
 
 void
+acl_add_nolog(void) {
+	gacl->a_flags |= A_NOLOG;
+	return;	
+}
+
+void
 acl_add_netblock(ad, data)
 	acl_data_t *ad;
 	void *data;
@@ -1932,6 +1938,9 @@ acl_filter(stage, ctx, priv)
 		if (ap.ap_flags & A_FLUSHADDR)
 			pending_del_addr(sa, salen, queueid, acl->a_line);
 
+		if (ap.ap_flags & A_NOLOG)
+			retval |= EXF_NOLOG;
+
 		if (conf.c_debug || conf.c_acldebug) {
 			char aclstr[HDRLEN + 1];
 
@@ -1955,7 +1964,7 @@ acl_filter(stage, ctx, priv)
 		priv->priv_sr.sr_autowhite = conf.c_autowhite_validity;
 	}
 
-	if (retval & EXF_WHITELIST) {
+	if (retval & EXF_WHITELIST && (! (retval & EXF_NOLOG))) {
 		whystr[0] = '\0';
 		if (retval & EXF_ADDR) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
@@ -2034,7 +2043,7 @@ acl_filter(stage, ctx, priv)
 		ADD_REASON(whystr, tmpstr);
 
 		mg_log(LOG_INFO, "%s: skipping greylist because %s",
-		    queueid, whystr);
+			queueid, whystr);
 	}
 	error = 0;
 out:
@@ -2192,6 +2201,11 @@ acl_entry(entrystr, len, acl)
 
 	if (acl->a_flags & A_FLUSHADDR) {
 		snprintf(tempstr, sizeof(tempstr), "[flushaddr] ");
+		mystrlcat(entrystr, tempstr, len);
+	}
+
+	if (acl->a_flags & A_NOLOG) {
+		snprintf(tempstr, sizeof(tempstr), "[nolog] ");
 		mystrlcat(entrystr, tempstr, len);
 	}
 

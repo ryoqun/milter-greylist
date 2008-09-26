@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.35 2008/09/07 00:13:34 manu Exp $ */
+/* $Id: acl.h,v 1.36 2008/09/26 17:00:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -158,6 +158,7 @@ struct acl_param {
 #define A_FREE_REPORT		0x10
 #define A_FREE_ID		0x20
 #define A_DROP_ACL		0x40
+#define A_NOLOG			0x80
 
 struct all_list_entry;
 
@@ -252,6 +253,7 @@ void acl_negate_clause(void);
 void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
 void acl_add_flushaddr(void);
+void acl_add_nolog(void);
 void acl_add_id(char *);
 void acl_add_code(char *);
 void acl_add_ecode(char *);
@@ -338,6 +340,7 @@ int myregexec(struct mlfi_priv *, acl_data_t *,
 #define EXF_PROP	(1 << 25)
 #define EXF_HELO	(1 << 26)
 #define EXF_LDAPCHECK	(1 << 27)
+#define EXF_NOLOG	(1 << 28)
 #define	EXF_DKIM	(1 << 28)
 #define EXF_P0F		(1 << 29)
 #endif /* _ACL_H_ */

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.209 2008/09/07 11:40:36 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.210 2008/09/26 17:00:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.209 2008/09/07 11:40:36 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.210 2008/09/26 17:00:51 manu Exp $");
 #endif
 #endif
 
@@ -519,6 +519,7 @@ real_envrcpt(ctx, envrcpt)
 	char *greylist;
 	char addrstr[IPADDRSTRLEN];
 	char rcpt[ADDRLEN + 1];
+	int save_nolog;
 
 	/*
 	 * Strip spaces from the recipient address
@@ -614,10 +615,12 @@ real_envrcpt(ctx, envrcpt)
 			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
 			    priv->priv_sr.sr_acl_line);
 
-		mg_log(LOG_INFO, 
-		    "%s: addr %s[%s] from %s to %s blacklisted%s",
-		    priv->priv_queueid, priv->priv_hostname, addrstr, 
-		    priv->priv_from, rcpt, aclstr);
+		if (!(priv->priv_sr.sr_whitelist & EXF_NOLOG)) {
+			mg_log(LOG_INFO, 
+				"%s: addr %s[%s] from %s to %s blacklisted%s",
+				priv->priv_queueid, priv->priv_hostname, addrstr, 
+				priv->priv_from, rcpt, aclstr);
+		}
 
 		set_sr_defaults(priv, code, ecode, msg);
 		mg_setreply(ctx, priv, rcpt);
@@ -626,8 +629,9 @@ real_envrcpt(ctx, envrcpt)
 
 	/* 
 	 * Check if the tuple {sender IP, sender e-mail, recipient e-mail}
-	 * was autowhitelisted
+	 * was autowhitelisted.
 	 */
+	save_nolog = priv->priv_sr.sr_whitelist & EXF_NOLOG;
 	priv->priv_sr.sr_whitelist = autowhite_check(SA(&priv->priv_addr),
 	    priv->priv_addrlen, priv->priv_from, rcpt, priv->priv_queueid,
 	    priv->priv_sr.sr_delay, priv->priv_sr.sr_autowhite);
@@ -669,6 +673,7 @@ real_envrcpt(ctx, envrcpt)
 	/*
 	 * Log temporary failure and report to the client.
 	 */
+	priv->priv_sr.sr_whitelist |= save_nolog;
 	log_and_report_greylisting(ctx, priv, *envrcpt);
 	return mg_stat(priv, SMFIS_TEMPFAIL);
 
@@ -930,10 +935,12 @@ real_eom(ctx)
 		iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
 		    sizeof(addrstr));
 
-		mg_log(LOG_INFO, 
-		    "%s: addr %s[%s] from %s blacklisted%s",
-		    priv->priv_queueid, priv->priv_hostname, addrstr, 
-		    priv->priv_from, aclstr);
+		if (!(priv->priv_sr.sr_whitelist & EXF_NOLOG)) {
+			mg_log(LOG_INFO, 
+				"%s: addr %s[%s] from %s blacklisted%s",
+				priv->priv_queueid, priv->priv_hostname, addrstr, 
+				priv->priv_from, aclstr);
+		}
 
 		set_sr_defaults(priv, code, ecode, msg);
 		mg_setreply(ctx, priv, NULL);
@@ -1381,7 +1388,7 @@ main(argc, argv)
 	conf_retain();
 	nodetach = conf.c_nodetach;
 
-	openlog("milter-greylist", 0, LOG_MAIL);
+	openlog("milter-greylist", 0, conf.c_logfac);
 	conf_cold = 0;
 	
 	if (conf.c_socket == NULL) {
@@ -1884,10 +1891,12 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	else
 		aclstr[0] = '\0';
 
-	mg_log(LOG_INFO, 
-	    "%s: addr %s[%s] from %s to %s delayed%s for %02d:%02d:%02d%s",
-	    priv->priv_queueid, priv->priv_hostname, addrstr, 
-	    priv->priv_from, rcpt, delayed_rj, h, mn, s, aclstr);
+	if (!(priv->priv_sr.sr_whitelist & EXF_NOLOG)) {
+		mg_log(LOG_INFO, 
+			"%s: addr %s[%s] from %s to %s delayed%s for %02d:%02d:%02d%s",
+			priv->priv_queueid, priv->priv_hostname, addrstr, 
+			priv->priv_from, rcpt, delayed_rj, h, mn, s, aclstr);
+	}
 
 	set_sr_defaults(priv, code, ecode, msg);
 	mg_setreply(ctx, priv, rcpt);
@@ -2048,8 +2057,19 @@ mg_log(int level, char *fmt, ...) {
 	}
 
 	if (!conf_cold) {
+		int logfac;
+		if (!GET_CONF()) {
+			conf_retain();
+			logfac = conf.c_logfac;
+			conf_release();
+		} else {
+			logfac = conf.c_logfac;
+		}
+		if (logfac == -1) {
+			return;
+		}
 		va_start(ap, fmt);
-		vsyslog(level, fmt, ap);
+		vsyslog(logfac | level, fmt, ap);
 		va_end(ap);
 	}
 

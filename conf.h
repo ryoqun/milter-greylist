@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.44 2008/09/07 00:13:34 manu Exp $ */
+/* $Id: conf.h,v 1.45 2008/09/26 17:00:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -96,6 +96,7 @@ struct conf_rec {
 	int c_nodrac;
 	int c_dump_no_time_translation;
 	int c_logexpired;
+	int c_logfac;
 	char c_pidfile_storage[QSTRLEN + 1];
 	char c_dumpfile_storage[QSTRLEN + 1];
 	char c_socket_storage[QSTRLEN + 1];
