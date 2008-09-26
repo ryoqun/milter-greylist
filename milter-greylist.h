@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.75 2008/09/26 20:40:01 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.76 2008/09/26 23:35:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -215,6 +215,10 @@ struct mlfi_priv {
 #endif
 #ifdef USE_P0F
 	char *priv_p0f;
+#endif
+#ifdef USE_SPAMD
+	int priv_spamd_flags;
+	int priv_spamd_score10;
 #endif
 };
 

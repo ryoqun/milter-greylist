@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.57 2008/09/26 17:00:51 manu Exp $ */
+/* $Id: conf.c,v 1.58 2008/09/26 23:35:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.57 2008/09/26 17:00:51 manu Exp $");
+__RCSID("$Id: conf.c,v 1.58 2008/09/26 23:35:44 manu Exp $");
 #endif
 #endif
 
@@ -77,6 +77,9 @@ __RCSID("$Id: conf.c,v 1.57 2008/09/26 17:00:51 manu Exp $");
 #endif
 #ifdef USE_P0F
 #include "p0f.h"
+#endif
+#ifdef USE_SPAMD
+#include "spamd.h"
 #endif
 #include "autowhite.h"
 #include "conf.h"
@@ -467,6 +470,10 @@ conf_defaults(c)
 #endif
 #ifdef USE_P0F
 	c->c_p0fsock[0] = '\0';
+#endif
+#ifdef USE_SPAMD
+	c->c_spamdsock[0] = '\0';
+	c->c_spamdsocktype[0] = '\0';
 #endif
 	return;
 }

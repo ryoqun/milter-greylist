@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.90 2008/09/26 17:00:51 manu Exp $
+.\" $Id: greylist.conf.5,v 1.91 2008/09/26 23:35:44 manu Exp $
 .\"
 .\" Copyright (c) 2004-2008 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -377,10 +377,10 @@ keyword are evaluated at the RCPT stage of the SMTP transaction. It is
 also possible to have ACL evaluated at the DATA stage of the SMTP transaction,
 using the 
 .I dacl 
-keyword. DATA-stage ACL cannot use the
+keyword. DATA-stage ACL can only use the
 .I greylist
-action, on the other hand, the following clauses can be used to work on message
-content:
+action if the RCPT stage exits on whitelist default. The following
+clauses can be used to work on message content:
 .TP
 .I dkim
 DKIM status (if build with DKIM support). Possible values are 
@@ -402,6 +402,32 @@ Operator followed by a message size (k or M suffix allowed for kilobytes
 or megabytes). Example:
 .IP
   dacl blacklist msgsize >= 4M msg "No more than 4 MB please"
+.TP
+.I spamd
+SpamAssassin score (if build with SpamAssassin support). If used without
+comparison operator
+.I spamd
+is true if the score is above threshold. The
+.I spamdsock
+keyword can be used to specify the location of the spamd socket.
+.IP
+Example 1:
+.nf
+
+  spamdsock unix "/var/spamassassin/spamd.sock"
+  racl whitelist default 
+  dacl greylist spamd
+.fi
+.IP
+Example 2:
+.nf
+
+  spamdsock inet "127.0.0.1:783"
+  racl whitelist default 
+  dacl blacklist spamd > 15 msg "Your message is considered spam."
+  dacl greylist  spamd > 10 delay 2h
+  dacl greylist  spamd > 5  delay 1h
+.fi
 .PP
 Note that at DATA stage, the
 .I rcpt
@@ -411,6 +437,7 @@ match an exact set of recipients, you can use multiple
 clauses along with a
 .I rcptcount
 clause.
+.PP
 .SH LISTS
 It is often useful to group several users or sender IP addresses in a single
 ACL. This can be done with lists. Lists must be first defined and given 

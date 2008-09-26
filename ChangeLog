@@ -1,4 +1,6 @@
 4.1.6
+	Spamassassin support (Manuel Badzong)
+	Support for DATA-stage greylisting (Manuel Badzong)
 	Allow syslog facility to be configured (Joe Pruett)
 	Allow logging to be disabled on a per-ACL basis (Joe Pruett)
 	Honour $CPPFLAGS in Makefile (Greg Troxel)

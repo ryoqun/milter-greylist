@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.237 2008/09/26 20:40:01 manu Exp $
+# $Id: configure.ac,v 1.238 2008/09/26 23:35:44 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -442,6 +442,11 @@ AC_ARG_ENABLE(drac,
 AC_ARG_ENABLE(p0f, 
 	[  --enable-p0f		Enable p0f support],
 	[if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_P0F"; fi])
+
+# Check for SpamAssassin
+AC_ARG_ENABLE(spamassassin, 
+	[  --enable-spamassassin	Enable SpamAssassin support],
+	[if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_SPAMD"; fi])
 
 # Check for libmilter. For sendmail-8.12.1, -lsm is required too.
 # This uses a gross hack on the second AC_CHECK_LIB first argument, but using 

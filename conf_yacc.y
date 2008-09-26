@@ -1,4 +1,4 @@
-%token TNUMBER ADDR IPADDR IP6ADDR CIDR HELO FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR NOLOG CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL GLHEADER BODY MAXPEEK STAT POSTMSG FORK GETPROP CLEAR PROP AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME GEOIPDB GEOIP PASS FAIL SOFTFAIL NEUTRAL UNKNWON ERROR SELF SPF_STATUS LDAPCONF LDAPCHECK LOGFAC LOGFAC_KERN LOGFAC_USER LOGFAC_MAIL LOGFAC_DAEMON LOGFAC_AUTH LOGFAC_SYSLOG LOGFAC_LPR LOGFAC_NEWS LOGFAC_UUCP LOGFAC_CRON LOGFAC_AUTHPRIV LOGFAC_FTP LOGFAC_LOCAL0 LOGFAC_LOCAL1 LOGFAC_LOCAL2 LOGFAC_LOCAL3 LOGFAC_LOCAL4 LOGFAC_LOCAL5 LOGFAC_LOCAL6 LOGFAC_LOCAL7 P0F P0FSOCK DKIMCHECK
+%token TNUMBER ADDR IPADDR IP6ADDR CIDR HELO FROM RCPT EMAIL PEER AUTOWHITE GREYLIST NOAUTH NOACCESSDB EXTENDEDREGEX NOSPF QUIET TESTMODE VERBOSE PIDFILE GLDUMPFILE QSTRING TDELAY SUBNETMATCH SUBNETMATCH6 SOCKET USER NODETACH REGEX REPORT NONE DELAYS NODELAYS ALL LAZYAW GLDUMPFREQ GLTIMEOUT DOMAIN DOMAINNAME SYNCADDR SYNCSRCADDR PORT ACL WHITELIST DEFAULT STAR DELAYEDREJECT DB NODRAC DRAC DUMP_NO_TIME_TRANSLATION LOGEXPIRED GLXDELAY DNSRBL LIST OPENLIST CLOSELIST BLACKLIST FLUSHADDR NOLOG CODE ECODE MSG SM_MACRO UNSET URLCHECK RACL DACL GLHEADER BODY MAXPEEK STAT POSTMSG FORK GETPROP CLEAR PROP AUTH TLS SPF MSGSIZE RCPTCOUNT OP NO SLASH MINUS COMMA TIME GEOIPDB GEOIP PASS FAIL SOFTFAIL NEUTRAL UNKNWON ERROR SELF SPF_STATUS LDAPCONF LDAPCHECK LOGFAC LOGFAC_KERN LOGFAC_USER LOGFAC_MAIL LOGFAC_DAEMON LOGFAC_AUTH LOGFAC_SYSLOG LOGFAC_LPR LOGFAC_NEWS LOGFAC_UUCP LOGFAC_CRON LOGFAC_AUTHPRIV LOGFAC_FTP LOGFAC_LOCAL0 LOGFAC_LOCAL1 LOGFAC_LOCAL2 LOGFAC_LOCAL3 LOGFAC_LOCAL4 LOGFAC_LOCAL5 LOGFAC_LOCAL6 LOGFAC_LOCAL7 P0F P0FSOCK DKIMCHECK SPAMDSOCK SPAMDSOCKT SPAMD
 
 %{
 #include "config.h"
@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.91 2008/09/26 17:05:02 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.92 2008/09/26 23:35:44 manu Exp $");
 #endif
 #endif
 
@@ -42,6 +42,9 @@ __RCSID("$Id: conf_yacc.y,v 1.91 2008/09/26 17:05:02 manu Exp $");
 #ifdef USE_P0F
 #include "p0f.h"
 #endif
+#ifdef USE_SPAMD
+#include "spamd.h"
+#endif
 #include "stat.h"
 #include "clock.h"
 #include "spf.h"
@@ -75,6 +78,7 @@ void conf_error(char *);
 	char prop[QSTRLEN + 1];
 	enum spf_status spf_status;
 	enum spf_status dkim_status;
+	char spamdsockt[QSTRLEN + 1];
 	}
 %type <ipaddr> IPADDR;
 %type <ip6addr> IP6ADDR;
@@ -88,6 +92,7 @@ void conf_error(char *);
 %type <op> OP;
 %type <prop> PROP;
 %type <spf_status> SPF_STATUS;
+%type <spamdsockt> SPAMDSOCKT;
 
 %%
 lines	:	lines netblock '\n' 
@@ -138,6 +143,7 @@ lines	:	lines netblock '\n'
 	|	lines ldapcheckdef '\n'
 	|	lines ldapconfdef '\n'
 	|	lines p0fsockdef '\n'
+	|	lines spamdsockdef '\n'
 	|	lines listdef '\n'
 	|	lines '\n'
 	|
@@ -388,6 +394,20 @@ p0fsockdef:	P0FSOCK QSTRING	{
 #else
 				mg_log(LOG_INFO, 
 				    "p0f support not compiled in, "
+				    "ignore line %d", 
+				    conf_line);
+#endif
+				}
+	;
+spamdsockdef:	SPAMDSOCK SPAMDSOCKT QSTRING	{
+#ifdef USE_SPAMD
+				char path[QSTRLEN + 1];
+
+				spamd_sock_set($2, 
+					       quotepath(path, $3, QSTRLEN));
+#else
+				mg_log(LOG_INFO, 
+				    "spamassassin support not compiled in, "
 				    "ignore line %d", 
 				    conf_line);
 #endif
@@ -670,6 +690,8 @@ acl_clause:	helo_clause
 	|	geoip_clause
 	|	prop_clause
 	|	propregex_clause
+	|	spamd_clause
+	|	spamd_score_clause
 	;
 
 acl_values:	acl_value
@@ -749,6 +771,32 @@ p0fregex_clause:	P0F REGEX {
 			mg_log(LOG_INFO, 
 			    "p0f support not compiled in, ignore line %d", 
 			    conf_line);
+#endif
+			}
+	;
+spamd_clause:		SPAMD {
+#ifdef USE_SPAMD
+				acl_add_clause(AC_SA, NULL);
+#else
+				mg_log(LOG_INFO, 
+				       "spamassassin support "
+				       "not compiled in, ignore line %d", 
+				       conf_line);
+#endif
+			}
+	;
+spamd_score_clause:	SPAMD OP TNUMBER {
+#ifdef USE_SPAMD
+				struct acl_opnum_data aond;
+
+				aond.op = $2;
+				aond.num = atoi($3);
+				
+				acl_add_clause(AC_SASCORE, &aond);
+#else
+				mg_log(LOG_INFO, 
+				       "spamassassin support not compiled in, ignore line %d", 
+				 conf_line);
 #endif
 			}
 	;

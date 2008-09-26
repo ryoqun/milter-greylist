@@ -123,6 +123,9 @@ log_local7	[Ll][Oo][Cc][Aa][Ll]7
 
 p0fsock		[Pp]0[Ff][Ss][Oo][Cc][Kk]
 p0f		[Pp]0[Ff]
+spamdsock	[Ss][Pp][Aa][Mm][Dd][Ss][Oo][Cc][Kk]
+spamdsockt	[Ii][Nn][Ee][Tt]|[Uu][Nn][Ii][Xx]
+spamd		[Ss][Pp][Aa][Mm][Dd]
 openlist	"{"
 closelist	"}"
 nextln		"\\".*"\n"
@@ -155,7 +158,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.83 2008/09/26 17:00:51 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.84 2008/09/26 23:35:44 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -255,6 +258,13 @@ prop		"$"[-_A-Za-z0-9]+
 {ldapcheck}	{ return LDAPCHECK; }
 {p0fsock}	{ return P0FSOCK; }
 {p0f}		{ BEGIN(S_REGEX); return P0F; }
+{spamdsock}	{ return SPAMDSOCK; }
+{spamdsockt}	{ 
+			strncpy(yylval.spamdsockt, yytext, QSTRLEN);
+			yylval.spamdsockt[QSTRLEN] = '\0';
+			return SPAMDSOCKT;
+		}
+{spamd}		{ return SPAMD; }
 {pidfile}	{ return PIDFILE; }
 {dumpfile}	{ return GLDUMPFILE; }
 {subnetmatch}	{ return SUBNETMATCH; }

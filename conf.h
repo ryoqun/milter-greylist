@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.45 2008/09/26 17:00:51 manu Exp $ */
+/* $Id: conf.h,v 1.46 2008/09/26 23:35:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -112,6 +112,10 @@ struct conf_rec {
 #endif
 #ifdef USE_P0F
 	char c_p0fsock[QSTRLEN + 1];
+#endif
+#ifdef USE_SPAMD
+	char c_spamdsock[QSTRLEN + 1];
+	char c_spamdsocktype[QSTRLEN + 1];
 #endif
 };
 

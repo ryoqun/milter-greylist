@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.36 2008/09/26 17:00:51 manu Exp $ */
+/* $Id: acl.h,v 1.37 2008/09/26 23:35:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -108,6 +108,8 @@ typedef enum {
 	AC_P0F,
 	AC_P0F_RE,
 	AC_P0F_LIST,
+	AC_SA,
+	AC_SASCORE,
 } acl_clause_t;
 
 struct acl_clause;
@@ -306,6 +308,7 @@ int acl_rcptcount_cmp(acl_data_t *, acl_stage_t,
 		      struct acl_param *, struct mlfi_priv *);
 int acl_msgsize_cmp(acl_data_t *, acl_stage_t, 
 		    struct acl_param *, struct mlfi_priv *);
+int acl_opnum_cmp(int, enum operator, int);
 int myregexec(struct mlfi_priv *, acl_data_t *, 
 	      struct acl_param *, const char *);
 
@@ -343,4 +346,5 @@ int myregexec(struct mlfi_priv *, acl_data_t *,
 #define EXF_NOLOG	(1 << 28)
 #define	EXF_DKIM	(1 << 28)
 #define EXF_P0F		(1 << 29)
+#define EXF_SA		(1 << 30)
 #endif /* _ACL_H_ */

@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.80 2008/09/26 17:00:51 manu Exp $ */
+/* $Id: acl.c,v 1.81 2008/09/26 23:35:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.80 2008/09/26 17:00:51 manu Exp $");
+__RCSID("$Id: acl.c,v 1.81 2008/09/26 23:35:44 manu Exp $");
 #endif
 #endif
 
@@ -89,6 +89,9 @@ __RCSID("$Id: acl.c,v 1.80 2008/09/26 17:00:51 manu Exp $");
 #endif
 #ifdef USE_DKIM
 #include "dkimcheck.h"
+#endif
+#ifdef USE_SPAMD
+#include "spamd.h"
 #endif
 #include "macro.h"
 #include "clock.h"
@@ -366,6 +369,14 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  AT_LIST, AC_NONE, AC_NONE, EXF_P0F,
 	  acl_print_list, acl_add_list, 
 	  NULL, acl_list_filter },
+#endif
+#ifdef USE_SPAMD
+	{ AC_SA, MULTIPLE_OK, AS_DATA, "spamd",
+	  AT_NONE, AC_NONE, AC_NONE,  EXF_SA,
+	  acl_print_null, NULL, NULL, spamd_isspam },
+	{ AC_SASCORE, MULTIPLE_OK, AS_DATA, "spamd score",
+	  AT_OPNUM, AC_NONE, AC_NONE,  EXF_SA,
+	  acl_print_opnum, acl_add_opnum, NULL, spamd_score },
 #endif
 };
 
@@ -1623,12 +1634,6 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 			conf_dacl_end = 1;
 			conf_acl_end = 0;
 		}
-
-		if (acl_type == A_GREYLIST) {
-			mg_log(LOG_ERR, "greylist action in DATA stage ACL "
-			    "at line %d", conf_line - 1);
-			exit(EX_DATAERR);
-		}
 	} else {
 		if (conf_racl_end != 0)
 			mg_log(LOG_WARNING, "ignored racl entry after racl "
@@ -1670,7 +1675,7 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 			mg_log(LOG_DEBUG, "register acl first BLACKLIST");
 			break;
 		default:
-			mg_log(LOG_ERR, "unecpected acl_type %d", acl_type);
+			mg_log(LOG_ERR, "unexpected acl_type %d", acl_type);
 			exit(EX_SOFTWARE);
 			break;
 		}
@@ -1713,12 +1718,6 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 			conf_dacl_end = 1;
 			conf_acl_end = 0;
 		}
-
-		if (acl_type == A_GREYLIST) {
-			mg_log(LOG_ERR, "greylist action in DATA stage ACL "
-			    "at line %d", conf_line - 1);
-			exit(EX_DATAERR);
-		}
 	} else {
 		if (conf_racl_end != 0)
 			mg_log(LOG_WARNING, "ignored racl entry after racl "
@@ -1756,7 +1755,7 @@ acl_register_entry_last(acl_stage, acl_type)/* acllist must be write-locked */
 			mg_log(LOG_DEBUG, "register acl last BLACKLIST");
 			break;
 		default:
-			mg_log(LOG_ERR, "unecpected acl_type %d", acl_type);
+			mg_log(LOG_ERR, "unexpected acl_type %d", acl_type);
 			exit(EX_SOFTWARE);
 			break;
 		}
@@ -1954,7 +1953,7 @@ acl_filter(stage, ctx, priv)
 		/*
 		 * No match: use the default action
 		 */
-		if (testmode)
+		if (testmode || stage == AS_DATA)
 			retval = EXF_WHITELIST;
 		else
 			retval = EXF_GREYLIST;
@@ -1964,7 +1963,7 @@ acl_filter(stage, ctx, priv)
 		priv->priv_sr.sr_autowhite = conf.c_autowhite_validity;
 	}
 
-	if (retval & EXF_WHITELIST && (! (retval & EXF_NOLOG))) {
+	if (retval & EXF_WHITELIST) {
 		whystr[0] = '\0';
 		if (retval & EXF_ADDR) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.210 2008/09/26 17:00:51 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.211 2008/09/26 23:35:44 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.210 2008/09/26 17:00:51 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.211 2008/09/26 23:35:44 manu Exp $");
 #endif
 #endif
 
@@ -353,6 +353,9 @@ real_connect(ctx, hostname, addr)
 	priv->priv_p0f = NULL;
 	p0f_lookup(priv);
 #endif
+#ifdef USE_SPAMD
+	priv->priv_spamd_flags = 0;
+#endif
 	return SMFIS_CONTINUE;
 }
 
@@ -597,6 +600,7 @@ real_envrcpt(ctx, envrcpt)
 		mg_log(LOG_ERR, "ACL evaluation failure");
 		return SMFIS_TEMPFAIL;
 	}
+
 	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST) {
 		priv->priv_sr.sr_elapsed = 0;
 		goto exit_accept;
@@ -865,6 +869,10 @@ real_eom(ctx)
 	char whystr [HDRLEN + 1];
 	struct smtp_reply rcpt_sr;
 	struct rcpt *rcpt;
+	time_t remaining;
+	int whitelist;
+	int envrcpt_continue = 0;
+	int accept = 1;
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) == NULL) {
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
@@ -907,9 +915,11 @@ real_eom(ctx)
 		return mg_stat(priv, SMFIS_TEMPFAIL);
 	}
 
+	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST && 
+	    priv->priv_sr.sr_whitelist & EXF_DEFAULT)
+		envrcpt_continue = 1;
+
 	/* 
-	 * Check DATA-stage ACL. This can only cause blacklist or whitelist
-	 * action. 
 	 * We save data obtained from RCPT and we will restore it afterward
 	 */
 	memcpy(&rcpt_sr, &priv->priv_sr, sizeof(rcpt_sr));
@@ -947,6 +957,51 @@ real_eom(ctx)
 		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
+	if (priv->priv_sr.sr_whitelist & EXF_GREYLIST && envrcpt_continue) {
+		/* 
+	 	 * Check if the tuple {sender IP, sender e-mail, 
+		 * recipient e-mail} was autowhitelisted 
+	 	 */
+		priv->priv_sr.sr_whitelist &= ~EXF_NONE;
+		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) {
+			whitelist = 
+			    autowhite_check(SA(&priv->priv_addr),
+	    				    priv->priv_addrlen, 
+					    priv->priv_from, 
+					    rcpt->r_addr, 
+					    priv->priv_queueid,
+	    				    priv->priv_sr.sr_delay,
+					    priv->priv_sr.sr_autowhite);
+			priv->priv_sr.sr_whitelist |= whitelist;
+
+			if ((whitelist == EXF_NONE) && 
+			    !pending_check(SA(&priv->priv_addr), 
+					   priv->priv_addrlen,
+	    				   priv->priv_from, 
+					   rcpt->r_addr, 
+					   &remaining, 
+					   &priv->priv_sr.sr_elapsed,
+	    				   priv->priv_queueid, 
+					   priv->priv_sr.sr_delay, 
+	    				   priv->priv_sr.sr_autowhite))
+				accept = 0;
+		}
+
+		if (accept) {
+			if (priv->priv_sr.sr_elapsed > priv->priv_max_elapsed)
+				priv->priv_max_elapsed = 
+				    priv->priv_sr.sr_elapsed;
+				goto passed;
+		}
+
+		priv->priv_sr.sr_remaining = remaining;
+		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) 
+			log_and_report_greylisting(ctx, priv, rcpt->r_addr);
+
+		return mg_stat(priv, SMFIS_TEMPFAIL);
+	}
+
+passed:
 	/* Restore the info collected from RCPT stage */
 	smtp_reply_free(&priv->priv_sr);
 	memcpy(&priv->priv_sr, &rcpt_sr, sizeof(rcpt_sr));
@@ -1059,7 +1114,6 @@ real_eom(ctx)
 
 		goto out;
 	}
-
 
 	if (conf.c_report & C_DELAYS) {
 		char *hdrstr;
