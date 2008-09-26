@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.h,v 1.74 2008/09/07 00:13:34 manu Exp $ */
+/* $Id: milter-greylist.h,v 1.75 2008/09/26 20:40:01 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -38,6 +38,9 @@
 #include <netdb.h>
 
 #ifdef USE_DKIM
+#ifdef HAVE_STDBOOL_H
+#include <stdbool.h>
+#endif
 #include <dkim.h>
 #endif
 

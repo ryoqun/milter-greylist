@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.236 2008/09/07 00:13:34 manu Exp $
+# $Id: configure.ac,v 1.237 2008/09/26 20:40:01 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -91,11 +91,6 @@ CFLAGS=$SAVEDCFLAGS
 AC_ARG_WITH(openssl,
 	[  --with-openssl=DIR  Find OpenSSL in DIR],
 	[LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
-AC_ARG_WITH(libdkim, 
-	[  --with-libdkim=DIR  Find Sendmail's libdkim in DIR],
-	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_DKIM"
-	    LIBS="-lcrypto -ldkim $LIBS"
-	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"])
 AC_ARG_WITH(openldap, 
 	[  --with-openldap=DIR  Find OpenLDAP in DIR],
 	[CFLAGS=$CFLAGS" -I$withval/include -DUSE_LDAP -DLDAP_DEPRECATED" 
@@ -119,7 +114,7 @@ AC_ARG_WITH(libdmalloc,
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h sys/param.h netdb.h getopt.h sys/cdefs.h arpa/nameser.h])
+AC_CHECK_HEADERS([arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h sys/param.h netdb.h getopt.h sys/cdefs.h arpa/nameser.h stdbool.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_TYPE_PID_T
@@ -262,6 +257,27 @@ AC_ARG_WITH(libspf,
 ])
 LDFLAGS=$SAVEDLDFLAGS
 CFLAGS=$SAVEDCFLAGS
+
+# Try to configure for libdkim
+SAVEDLDFLAGS=$LDFLAGS
+SAVEDCFLAGS=$CFLAGS
+AC_ARG_WITH(libdkim, 
+	[  --with-libdkim=DIR  Find Sendmail's libdkim in DIR],
+	[LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+	    CFLAGS=$CFLAGS" -I$withval/include"
+	    AC_CHECK_LIB([dkim -lsm -lcrypto], dkim_init, [
+		SAVEDLDFLAGS=$LDFLAGS
+		SAVEDCFLAGS=$CFLAGS
+		LIBS=$LIBS" -ldkim -lcrypto"
+		AC_DEFINE([USE_DKIM], [], [we use libdkim])
+		], [echo "libdkim not found, check config.log for details"
+		    echo "Remove --with-dkim to build without DKIM support"
+		    exit 1;])
+])
+LDFLAGS=$SAVEDLDFLAGS
+CFLAGS=$SAVEDCFLAGS
+
+
 
 AC_ARG_ENABLE(rpath,
 	[  --disable-rpath	do not hardcode runtime library paths],

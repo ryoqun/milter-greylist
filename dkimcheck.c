@@ -1,4 +1,4 @@
-/* $Id: dkimcheck.c,v 1.2 2008/09/07 00:13:34 manu Exp $ */
+/* $Id: dkimcheck.c,v 1.3 2008/09/26 20:40:01 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,10 +36,13 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dkimcheck.c,v 1.2 2008/09/07 00:13:34 manu Exp $");
+__RCSID("$Id: dkimcheck.c,v 1.3 2008/09/26 20:40:01 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
+#ifdef HAVE_STDBOOL_H
+#include <stdbool.h>
+#endif
 #include <dkim.h>
 #include <errno.h>
 #include <err.h>
