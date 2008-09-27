@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.1 2008/09/26 23:35:44 manu Exp $ */
+/* $Id: spamd.c,v 1.2 2008/09/27 22:08:47 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.1 2008/09/26 23:35:44 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.2 2008/09/27 22:08:47 manu Exp $");
 #endif
 #endif
 
@@ -83,7 +83,7 @@ static void spamd_rcvhdr(struct mlfi_priv *, char *, int);
 static char *spamd_trim(char *);
 static int spamd_read(int, char *, size_t);
 static int spamd_write(int, char *, size_t);
-static int spamd_sockat(char *, char *);
+static int spamd_socket(char *, char *);
 static int spamd_unix_socket(char *);
 static int spamd_inet_socket(char *, char *);
 
@@ -107,6 +107,12 @@ spamd_isspam(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
+	if (stage != AS_DATA) {
+		mg_log(LOG_ERR, 
+		       "spamassassin filter called at non DATA stage");
+		exit(EX_SOFTWARE);
+	}
+
 	if (!(priv->priv_spamd_flags & SPAMD_HAS_STATUS))
 		if (spamd_check(ad, stage, ap, priv) == -1)
 			return -1;
@@ -124,6 +130,12 @@ spamd_score(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
+	if (stage != AS_DATA) {
+		mg_log(LOG_ERR, 
+		       "spamassassin filter called at non DATA stage");
+		exit(EX_SOFTWARE);
+	}
+
 	if (!(priv->priv_spamd_flags & SPAMD_HAS_STATUS))
 		if (spamd_check(ad, stage, ap, priv) == -1)
 			return -1;
@@ -150,14 +162,8 @@ spamd_check(ad, stage, ap, priv)
 	char rcvhdr[SPAMD_BUFLEN];
 	char *p, *q;
 
-	if (stage != AS_DATA) {
-		mg_log(LOG_ERR, 
-		       "spamassassin filter called at non DATA stage");
-		exit(EX_SOFTWARE);
-	}
-
 	if (priv->priv_spamd_flags & SPAMD_HAS_STATUS)
-		goto out;
+		return 0;
 
 	spamd_rcvhdr(priv, rcvhdr, SPAMD_BUFLEN);
 
@@ -165,7 +171,7 @@ spamd_check(ad, stage, ap, priv)
 	  "CHECK SPAMC/1.2\r\nContent-length: %d\r\n\r\n",
 	  priv->priv_msgcount + strlen(rcvhdr));
 
-	if ((sock = spamd_sockat(conf.c_spamdsocktype, 
+	if ((sock = spamd_socket(conf.c_spamdsocktype, 
 				 conf.c_spamdsock)) == -1)
 		return -1;
 	 
@@ -269,12 +275,6 @@ spamd_check(ad, stage, ap, priv)
 
 	priv->priv_spamd_score10 = (int) (atof(p) * 10);
 	priv->priv_spamd_flags = SPAMD_HAS_STATUS;
-
-out:
-	if (acl_opnum_cmp(priv->priv_spamd_score10, 
-			  ad->opnum.op,
-			  ad->opnum.num * 10))
-		return 1;
 
 	return 0;
 }
@@ -392,7 +392,7 @@ spamd_write(fd, buf, count)
 }
 
 static int
-spamd_sockat(type, path)
+spamd_socket(type, path)
 	char *type;
 	char *path;
 {
@@ -476,7 +476,7 @@ spamd_inet_socket(host, port)
 		if (sock == -1)
 			continue;
 
-		if (connect(sock, res->ai_addr, res->ai_addrlen) != 0)
+		if (connect(sock, res->ai_addr, res->ai_addrlen) == 0)
 			break;
 
 		close(sock);
