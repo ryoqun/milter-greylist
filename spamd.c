@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.2 2008/09/27 22:08:47 manu Exp $ */
+/* $Id: spamd.c,v 1.3 2008/09/27 22:21:22 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.2 2008/09/27 22:08:47 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.3 2008/09/27 22:21:22 manu Exp $");
 #endif
 #endif
 
@@ -317,14 +317,14 @@ spamd_rcvhdr(priv, str, len)
 		memcpy(&rcpt, LIST_FIRST(&priv->priv_rcpt), sizeof(rcpt));
 
 		snprintf(str, len,
-	  		 "Recieved: from %s (%s [%s])\r\n\tby %s (%s) "
+	  		 "Received: from %s (%s [%s])\r\n\tby %s (%s) "
 			 "with SMTP id %s\r\n\tfor %s; %s\r\n",
 			  priv->priv_helo, priv->priv_hostname, 
 			  ipstr, myhostname, "milter-greylist", 
 			  priv->priv_queueid, rcpt.r_addr, now);
 	} else {
 		snprintf(str, len,
-	  		 "Recieved: from %s (%s [%s])\r\n\tby %s (%s) "
+	  		 "Received: from %s (%s [%s])\r\n\tby %s (%s) "
 			 "with SMTP id %s;\r\n\t%s\r\n",
 			 priv->priv_helo, priv->priv_hostname, 
 			 ipstr, myhostname, "milter-greylist", 
