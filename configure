@@ -848,6 +848,7 @@ Optional Features:
   --enable-stdio-hack   Use workaround for Solaris stdio limitation
   --enable-drac	Enable DRAC support
   --enable-p0f		Enable p0f support
+  --enable-spamassassin	Enable SpamAssassin support
   --enable-dnsrbl	Enable DNSRBL support
   --enable-postfix	Enable Postfix support
 
@@ -859,7 +860,6 @@ Optional Packages:
   --with-libpthread=DIR  Find libpthread in DIR
   --with-libbind=DIR	Find libbind in DIR
   --with-openssl=DIR  Find OpenSSL in DIR
-  --with-libdkim=DIR  Find Sendmail's libdkim in DIR
   --with-openldap=DIR  Find OpenLDAP in DIR
   --with-libcurl=DIR  Find libcurl in DIR
   --with-libGeoIP=DIR  Find libGeoIP in DIR
@@ -868,6 +868,7 @@ Optional Packages:
   --with-libspf2_10=DIR  Find libspf2 1.0 in DIR
   --with-libspf_alt=DIR  Find libspf_alt in DIR
   --with-libspf=DIR  Find libspf in DIR
+  --with-libdkim=DIR  Find Sendmail's libdkim in DIR
   --with-thread-safe-resolver   Resolver is thread-safe
   --with-user=USERNAME   The user that will run milter-greylist
   --with-conffile=PATH Location of config file
@@ -3294,14 +3295,6 @@ if test "${with_openssl+set}" = set; then
   LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
 fi;
 
-# Check whether --with-libdkim or --without-libdkim was given.
-if test "${with_libdkim+set}" = set; then
-  withval="$with_libdkim"
-  CFLAGS=$CFLAGS" -I$withval/include -DUSE_DKIM"
-	    LIBS="-lcrypto -ldkim $LIBS"
-	    LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
-fi;
-
 # Check whether --with-openldap or --without-openldap was given.
 if test "${with_openldap+set}" = set; then
   withval="$with_openldap"
@@ -3838,7 +3831,8 @@ done
 
 
 
-for ac_header in arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h sys/param.h netdb.h getopt.h sys/cdefs.h arpa/nameser.h
+
+for ac_header in arpa/inet.h fcntl.h netinet/in.h stdlib.h string.h strings.h sys/socket.h sys/time.h syslog.h unistd.h sys/param.h netdb.h getopt.h sys/cdefs.h arpa/nameser.h stdbool.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if eval "test \"\${$as_ac_Header+set}\" = set"; then
@@ -6552,6 +6546,103 @@ fi;
 LDFLAGS=$SAVEDLDFLAGS
 CFLAGS=$SAVEDCFLAGS
 
+# Try to configure for libdkim
+SAVEDLDFLAGS=$LDFLAGS
+SAVEDCFLAGS=$CFLAGS
+
+# Check whether --with-libdkim or --without-libdkim was given.
+if test "${with_libdkim+set}" = set; then
+  withval="$with_libdkim"
+  LDFLAGS=$LDFLAGS" -L$withval/lib -Wl,$rpath$withval/lib"
+	    CFLAGS=$CFLAGS" -I$withval/include"
+	    echo "$as_me:$LINENO: checking for dkim_init in -ldkim -lsm -lcrypto" >&5
+echo $ECHO_N "checking for dkim_init in -ldkim -lsm -lcrypto... $ECHO_C" >&6
+if test "${ac_cv_lib_dkim__lsm__lcrypto_dkim_init+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-ldkim -lsm -lcrypto  $LIBS"
+cat >conftest.$ac_ext <<_ACEOF
+/* confdefs.h.  */
+_ACEOF
+cat confdefs.h >>conftest.$ac_ext
+cat >>conftest.$ac_ext <<_ACEOF
+/* end confdefs.h.  */
+
+/* Override any gcc2 internal prototype to avoid an error.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+/* We use char because int might match the return type of a gcc2
+   builtin and then its argument prototype would still apply.  */
+char dkim_init ();
+int
+main ()
+{
+dkim_init ();
+  ;
+  return 0;
+}
+_ACEOF
+rm -f conftest.$ac_objext conftest$ac_exeext
+if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
+  (eval $ac_link) 2>conftest.er1
+  ac_status=$?
+  grep -v '^ *+' conftest.er1 >conftest.err
+  rm -f conftest.er1
+  cat conftest.err >&5
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); } &&
+	 { ac_try='test -z "$ac_c_werror_flag"
+			 || test ! -s conftest.err'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; } &&
+	 { ac_try='test -s conftest$ac_exeext'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }; then
+  ac_cv_lib_dkim__lsm__lcrypto_dkim_init=yes
+else
+  echo "$as_me: failed program was:" >&5
+sed 's/^/| /' conftest.$ac_ext >&5
+
+ac_cv_lib_dkim__lsm__lcrypto_dkim_init=no
+fi
+rm -f conftest.err conftest.$ac_objext \
+      conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+echo "$as_me:$LINENO: result: $ac_cv_lib_dkim__lsm__lcrypto_dkim_init" >&5
+echo "${ECHO_T}$ac_cv_lib_dkim__lsm__lcrypto_dkim_init" >&6
+if test $ac_cv_lib_dkim__lsm__lcrypto_dkim_init = yes; then
+
+		SAVEDLDFLAGS=$LDFLAGS
+		SAVEDCFLAGS=$CFLAGS
+		LIBS=$LIBS" -ldkim -lcrypto"
+
+cat >>confdefs.h <<\_ACEOF
+#define USE_DKIM
+_ACEOF
+
+
+else
+  echo "libdkim not found, check config.log for details"
+		    echo "Remove --with-dkim to build without DKIM support"
+		    exit 1;
+fi
+
+
+fi;
+LDFLAGS=$SAVEDLDFLAGS
+CFLAGS=$SAVEDCFLAGS
+
+
+
 # Check whether --enable-rpath or --disable-rpath was given.
 if test "${enable_rpath+set}" = set; then
   enableval="$enable_rpath"
@@ -7945,6 +8036,13 @@ fi;
 if test "${enable_p0f+set}" = set; then
   enableval="$enable_p0f"
   if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_P0F"; fi
+fi;
+
+# Check for SpamAssassin
+# Check whether --enable-spamassassin or --disable-spamassassin was given.
+if test "${enable_spamassassin+set}" = set; then
+  enableval="$enable_spamassassin"
+  if test x$enableval = xyes; then CFLAGS=$CFLAGS" -DUSE_SPAMD"; fi
 fi;
 
 # Check for libmilter. For sendmail-8.12.1, -lsm is required too.

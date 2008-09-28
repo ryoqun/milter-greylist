@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.116 2008/09/07 00:13:34 manu Exp $
+# $Id: Makefile,v 1.117 2008/09/28 19:54:51 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -29,7 +29,7 @@
 # OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-CFLAGS= 	-g -O2 -Wall -I/usr/pkg/include -D_BSD_SOURCE -I${SRCDIR} -I.
+CFLAGS= 	-g -O2 -Wall -I/usr/pkg/include -D_BSD_SOURCE -I${SRCDIR} -I. 
 LDFLAGS=	 -L/usr/pkg/lib -Wl,--rpath=/usr/pkg/lib
 LIBS= 		 -lpthread -lresolv -lmilter
 prefix=		/usr/local
@@ -56,10 +56,10 @@ TRUE=		true
 OBJ= 		milter-greylist.o pending.o sync.o dnsrbl.o list.o macro.o \
 		conf_yacc.o dump_yacc.o conf.o autowhite.o dump.o spf.o \
 		acl.o urlcheck.o stat.o clock.o geoip.o fd_pool.o prop.o \
-		ldapcheck.o dkimcheck.o p0f.o
+		ldapcheck.o dkimcheck.o p0f.o spamd.o
 SRC= 		milter-greylist.c pending.c sync.c conf.c macro.c stat.c \
 		clock.c autowhite.c dump.c spf.c acl.c dnsrbl.c list.c \
-		urlcheck.c geoip.c prop.c ldapcheck.c dkimcheck.c p0f.c
+		urlcheck.c geoip.c prop.c ldapcheck.c dkimcheck.c p0f.c spamd.c
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c  
 
 VPATH=		${SRCDIR}
@@ -129,7 +129,7 @@ install-db:
 install: install-daemon-to-bin install-man install-conf install-db
 
 depend:
-	${MKDEP} ${CFLAGS} ${SRC}
+	${MKDEP} ${CPPFLAGS} ${CFLAGS} ${SRC}
 
 clean:
 	${RM} -f milter-greylist ${OBJ} ${GENSRC} \

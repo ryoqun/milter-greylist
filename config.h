@@ -2,7 +2,7 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
 /* Build environnement */
-#define BUILD_ENV "manu@adipocyte:/home/manu/milter-greylist-current Thu Aug 21 13:12:15 UTC 2008"
+#define BUILD_ENV "manu@adipocyte:/home/manu/milter-greylist-current Sun Sep 28 12:13:33 UTC 2008"
 
 /* Define to 1 if you have the <arpa/inet.h> header file. */
 #define HAVE_ARPA_INET_H 1
@@ -95,6 +95,9 @@
    zero-length file name argument. */
 /* #undef HAVE_STAT_EMPTY_STRING_BUG */
 
+/* Define to 1 if you have the <stdbool.h> header file. */
+#define HAVE_STDBOOL_H 1
+
 /* Define to 1 if you have the <stdint.h> header file. */
 #define HAVE_STDINT_H 1
 
@@ -177,6 +180,9 @@
 /* Define to the version of this package. */
 #define PACKAGE_VERSION "4.1.6"
 
+/* Define to 1 if the C compiler supports function prototypes. */
+#define PROTOTYPES 1
+
 /* Define to the type of arg 1 for `select'. */
 #define SELECT_TYPE_ARG1 int
 
@@ -196,6 +202,9 @@
 
 /* Define to 1 if you can safely include both <sys/time.h> and <time.h>. */
 #define TIME_WITH_SYS_TIME 1
+
+/* we use libdkim */
+/* #undef USE_DKIM */
 
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */

@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.37 2008/09/26 23:35:44 manu Exp $ */
+/* $Id: acl.h,v 1.38 2008/09/28 19:54:51 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -117,6 +117,7 @@ struct acl_param;
 
 #include "pending.h"
 #include "milter-greylist.h"
+#include "spf.h"
 
 #define ACL_WRLOCK WRLOCK(acl_lock) 
 #define ACL_RDLOCK RDLOCK(acl_lock) 

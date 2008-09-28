@@ -1,8 +1,8 @@
-# $Id: milter-greylist.spec,v 1.97 2008/09/07 00:13:34 manu Exp $
+# $Id: milter-greylist.spec,v 1.98 2008/09/28 19:54:51 manu Exp $
 # Contributed by Ivan F. Martinez
 
 %define ver 4.1.6
-%define rel 2
+%define rel 1
 
 %define user root
 %{?build_user:%define user %{build_user}}
@@ -15,9 +15,6 @@
 
 %define libbind 0
 %{?build_libbind:%define libbind 1}
-
-%define libspf2 0
-%{?build_libspf2:%define libspf2 1}
 
 %if ! %{postfix}
 Summary: GreyList milter for Sendmail
@@ -44,9 +41,6 @@ BuildRequires: flex
 BuildRequires: bison
 %if %{libbind}
 BuildRequires: bind-libbind-devel
-%endif
-%if %{libspf2}
-BuildRequires: libspf2-devel
 %endif
 
 %description
@@ -80,9 +74,7 @@ before the second attempt.
 %endif
 %if %{libbind}
 	--with-libbind
-%endif
-%if %{libspf2}
-	--with-libspf2
+
 %endif
 
 %{__make} %{?_smp_mflags}
@@ -166,9 +158,6 @@ fi
 %attr(0600,%{user},root) %ghost %{_localstatedir}/milter-greylist/greylist.db
 
 %changelog
-* Tue Aug 26 2008 Joe Pruett <joey@spiretech.com>
-- added build_spf2
-
 * Thu Jan  4 2007 Nerijus Baliunas <nerijus|users.sourceforge.net> 3.1.4-1
 - added build_user, build_postfix, build_dnsrbl, build_libbind definitions
 
