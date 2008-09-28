@@ -5,8 +5,8 @@
 	Allow syslog facility to be configured (Joe Pruett)
 	Allow logging to be disabled on a per-ACL basis (Joe Pruett)
 	Honour $CPPFLAGS in Makefile (Greg Troxel)
-	Experimental p0f support
-	Experimental DKIM support
+	p0f support
+	Experimental DKIM support (nobody tested it)
 	libspf2 support in .spec file, for RPM generation (Joe Pruett)
 	status support in Debian startup script (Bernhard Schneider)
 4.1.5
