@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.211 2008/09/26 23:35:44 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.212 2008/09/28 19:53:11 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.211 2008/09/26 23:35:44 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.212 2008/09/28 19:53:11 manu Exp $");
 #endif
 #endif
 
@@ -694,7 +694,7 @@ real_header(ctx, name, value)
 	char *name;
 	char *value;
 {
-	sfsistat stat = SMFIS_CONTINUE;
+	sfsistat stat;
 	struct header *h;
 	struct mlfi_priv *priv;
 	const char sep[] = ": ";
@@ -735,6 +735,8 @@ real_header(ctx, name, value)
 
 	TAILQ_INSERT_TAIL(&priv->priv_header, h, h_list);
 
+	stat = SMFIS_CONTINUE;
+
 #ifdef USE_DKIM
 	if ((stat = dkimcheck_header(name, value, priv)) != SMFIS_CONTINUE)
 		return stat;
@@ -768,7 +770,7 @@ real_body(ctx, chunk, size)
 	unsigned char *chunk;
 	size_t size;
 {
-	sfsistat stat = SMFIS_CONTINUE;
+	sfsistat stat;
 	struct mlfi_priv *priv;
 	struct body *b;
 	size_t linelen;
@@ -778,6 +780,8 @@ real_body(ctx, chunk, size)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+
+	stat = SMFIS_CONTINUE;
 
 #ifdef USE_DKIM
 	if ((stat = dkimcheck_body(chunk, size, priv)) != SMFIS_CONTINUE)
@@ -865,7 +869,7 @@ real_eom(ctx)
 	SMFICTX *ctx;
 {
 	struct mlfi_priv *priv;
-	sfsistat stat = SMFIS_CONTINUE;
+	sfsistat stat;
 	char whystr [HDRLEN + 1];
 	struct smtp_reply rcpt_sr;
 	struct rcpt *rcpt;
@@ -903,6 +907,8 @@ real_eom(ctx)
 
 		TAILQ_INSERT_TAIL(&priv->priv_body, b, b_list);
 	}
+
+	stat = SMFIS_CONTINUE;
 
 #ifdef USE_DKIM
 	if ((stat = dkimcheck_eom(priv)) != SMFIS_CONTINUE)
@@ -2398,7 +2404,7 @@ fstring_expand(priv, rcpt, fstring)
 				break;
 			}
 			break;
-		case 's':	/* site part of sender or reciever e-mail */
+		case 's':	/* site part of sender or receiver e-mail */
 				/* Or domain part of DNS address */
 			fstr_len = 2;
 
