@@ -158,7 +158,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.84 2008/09/26 23:35:44 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.85 2008/09/28 02:02:03 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -187,9 +187,9 @@ prop		"$"[-_A-Za-z0-9]+
 {gt}		{	yylval.op = OP_GT; return OP; }
 {le}		{	yylval.op = OP_LE; return OP; }
 {ge}		{	yylval.op = OP_GE; return OP; }
-{no}		{ return NO; }
-{not}		{ return NO; }
-{neg}		{ return NO; }
+<INITIAL>{no}	{ return NO; }
+<INITIAL>{not}	{ return NO; }
+<INITIAL>{neg}	{ return NO; }
 {prop}		{ 
 			strncpy(yylval.prop, yytext, QSTRLEN);
 			yylval.qstring[QSTRLEN] = '\0';

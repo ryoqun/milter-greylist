@@ -1,4 +1,5 @@
 4.1.6
+	Fix parse bug for "domain no" clause
 	Spamassassin support (Manuel Badzong)
 	Support for DATA-stage greylisting (Manuel Badzong)
 	Allow syslog facility to be configured (Joe Pruett)
