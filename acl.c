@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.81 2008/09/26 23:35:44 manu Exp $ */
+/* $Id: acl.c,v 1.82 2008/09/30 03:56:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.81 2008/09/26 23:35:44 manu Exp $");
+__RCSID("$Id: acl.c,v 1.82 2008/09/30 03:56:03 manu Exp $");
 #endif
 #endif
 
@@ -1953,8 +1953,10 @@ acl_filter(stage, ctx, priv)
 		/*
 		 * No match: use the default action
 		 */
-		if (testmode || stage == AS_DATA)
+		if (testmode)
 			retval = EXF_WHITELIST;
+		else if (stage == AS_DATA)
+			retval = EXF_WHITELIST | EXF_NOLOG;
 		else
 			retval = EXF_GREYLIST;
 		retval |= EXF_DEFAULT;
@@ -1963,7 +1965,7 @@ acl_filter(stage, ctx, priv)
 		priv->priv_sr.sr_autowhite = conf.c_autowhite_validity;
 	}
 
-	if (retval & EXF_WHITELIST) {
+	if ((retval & EXF_NOLOG) == 0 && retval & EXF_WHITELIST) {
 		whystr[0] = '\0';
 		if (retval & EXF_ADDR) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));
