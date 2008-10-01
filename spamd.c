@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.3 2008/09/27 22:21:22 manu Exp $ */
+/* $Id: spamd.c,v 1.4 2008/10/01 23:19:02 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.3 2008/09/27 22:21:22 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.4 2008/10/01 23:19:02 manu Exp $");
 #endif
 #endif
 
@@ -451,7 +451,7 @@ spamd_inet_socket(host, port)
 	char *host;
 	char *port;
 {
-	struct addrinfo *res;
+	struct addrinfo *ai, *res;
 	struct addrinfo hints;
 	int e;
 	int sock = -1;
@@ -462,14 +462,14 @@ spamd_inet_socket(host, port)
 	hints.ai_flags = AI_ADDRCONFIG;
 #endif
 
-	if ((e = getaddrinfo(host, port, &hints, &res))) {
+	if ((e = getaddrinfo(host, port, &hints, &ai))) {
 		mg_log(LOG_ERR, 
 		       "spamd getaddrinfo failed: %s", 
 		       gai_strerror(e));
 		return -1;
 	}
 
-	for (;res != NULL; res = res->ai_next) {
+	for (res = ai; res != NULL; res = res->ai_next) {
 		sock = socket(res->ai_family, 
 			      res->ai_socktype, 
 			      res->ai_protocol);
@@ -483,7 +483,7 @@ spamd_inet_socket(host, port)
 		sock = -1;
 	}
 
-	freeaddrinfo(res);
+	freeaddrinfo(ai);
 	if (sock == -1) {
 		mg_log(LOG_ERR, 
 		       "spamd connection to %s:%s failed: %s", 

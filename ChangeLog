@@ -1,4 +1,5 @@
 4.1.7
+	Fix memory leak in SpamAssassin code (Manuel Badzong)
 	Make implicit default rule at DATA stage silent (Greg Troxel)
 4.1.6
 	Fix parse bug for "domain no" clause
