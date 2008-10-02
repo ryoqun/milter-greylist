@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.4 2008/10/01 23:19:02 manu Exp $ */
+/* $Id: spamd.c,v 1.5 2008/10/02 19:09:39 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.4 2008/10/01 23:19:02 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.5 2008/10/02 19:09:39 manu Exp $");
 #endif
 #endif
 
@@ -87,7 +87,6 @@ static int spamd_socket(char *, char *);
 static int spamd_unix_socket(char *);
 static int spamd_inet_socket(char *, char *);
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void
 spamd_sock_set(type, sock)
@@ -291,6 +290,7 @@ spamd_rcvhdr(priv, str, len)
 	char now[SPAMD_BUFLEN];
 	time_t t;
 	struct tm *tm;
+	struct tm tm_buffer;
 
 	iptostring(SA(&priv->priv_addr), 
 		   priv->priv_addrlen, 
@@ -301,17 +301,19 @@ spamd_rcvhdr(priv, str, len)
 		strcpy(myhostname, "unknown");
 	}
 
-	/*
-	 * localtime isn't thread-safe.
+	/* strftime format specifier for timezone offset %z is not 
+	 * generally available (GNU only). For portability we force timezone
+	 * GMT (offset +0), the timestamp remains correct anyhow.
+	 * This does not harm SA processing of Received lines.
+	 * Especially this line will neither flow back to the MTA nor
+	 * show up at the recipient ...
 	 */
 	t = time(NULL);
-	pthread_mutex_lock(&mutex);
-	tm = localtime(&t);
-	if (strftime(now, len, "%a, %d %b %Y %H:%M:%S %z", tm) == 0) {
+	tm = gmtime_r(&t, &tm_buffer);
+	if (strftime(now, len, "%a, %d %b %Y %H:%M:%S +0000", tm) == 0) {
 		mg_log(LOG_WARNING, "spamd strftime failed");
 		now[0] = '\0';
 	}
-	pthread_mutex_unlock(&mutex);
 
 	if (priv->priv_rcptcount == 1) {
 		memcpy(&rcpt, LIST_FIRST(&priv->priv_rcpt), sizeof(rcpt));
