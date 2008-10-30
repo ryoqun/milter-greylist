@@ -158,7 +158,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.85 2008/09/28 02:02:03 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.86 2008/10/30 04:39:39 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -226,7 +226,7 @@ prop		"$"[-_A-Za-z0-9]+
 		  yylval.spf_status = MGSPF_UNKNOWN; return SPF_STATUS; }
 {error}		{ BEGIN(0); 
 		  yylval.spf_status = MGSPF_ERROR; return SPF_STATUS; }
-{self}		{ BEGIN(0); 
+<S_SPF>{self}	{ BEGIN(0); 
 		  yylval.spf_status = MGSPF_SELF; return SPF_STATUS; }
 <S_SPF>{none}	{ BEGIN(0); 
 		  yylval.spf_status = MGSPF_NONE; return SPF_STATUS; }

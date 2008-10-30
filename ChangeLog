@@ -1,4 +1,5 @@
 4.1.7
+	Make sure DKIM code does not use invalid pointers
 	Add libspf2 support to .spec file for RPM (Joe Pruett)
 	Solaris build fix (Johann Klasek)
 	Fix memory leak in SpamAssassin code (Manuel Badzong)

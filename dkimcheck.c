@@ -1,4 +1,4 @@
-/* $Id: dkimcheck.c,v 1.3 2008/09/26 20:40:01 manu Exp $ */
+/* $Id: dkimcheck.c,v 1.4 2008/10/30 04:39:39 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dkimcheck.c,v 1.3 2008/09/26 20:40:01 manu Exp $");
+__RCSID("$Id: dkimcheck.c,v 1.4 2008/10/30 04:39:39 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
@@ -62,6 +62,7 @@ __RCSID("$Id: dkimcheck.c,v 1.3 2008/09/26 20:40:01 manu Exp $");
 #include "milter-greylist.h"
 #include "dkimcheck.h"
 
+static DKIM_LIB *dkim_ptr = NULL;
 static sfsistat dkimcheck_error(struct mlfi_priv *);
 
 static sfsistat
@@ -116,7 +117,7 @@ dkimcheck_error(priv)
 void
 dkimcheck_init(void)
 {
-	if ((conf.c_dkim = dkim_init(NULL, NULL)) == NULL) {
+	if ((dkim_ptr = dkim_init(NULL, NULL)) == NULL) {
 		mg_log(LOG_ERR, "dkim_init() failed");
 		exit(EX_OSERR);
 	}
@@ -130,8 +131,9 @@ dkimcheck_clear(void)
 	/*
 	 * XXX This probably leaves stale handles for messages being processed
 	 */
-	if (conf.c_dkim != NULL)
-		dkim_close(conf.c_dkim);
+	if (dkim_ptr != NULL)
+		dkim_close(dkim_ptr);
+	dkim_ptr = NULL;
 
 	dkimcheck_init();
 	return;
@@ -157,7 +159,7 @@ dkimcheck_header(name, value, priv)
 		if (priv->priv_dkimstat != DKIM_STAT_OK)
 			return SMFIS_CONTINUE;
 
-		priv->priv_dkim = dkim_verify(conf.c_dkim, priv->priv_queueid,
+		priv->priv_dkim = dkim_verify(dkim_ptr, priv->priv_queueid,
 					      NULL, &priv->priv_dkimstat);
 		if (priv->priv_dkim == NULL) {
 			mg_log(LOG_ERR, "dkim_verify() failed: %s",

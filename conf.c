@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.58 2008/09/26 23:35:44 manu Exp $ */
+/* $Id: conf.c,v 1.59 2008/10/30 04:39:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.58 2008/09/26 23:35:44 manu Exp $");
+__RCSID("$Id: conf.c,v 1.59 2008/10/30 04:39:39 manu Exp $");
 #endif
 #endif
 
@@ -465,9 +465,6 @@ conf_defaults(c)
 	c->c_nodrac = 0;
 	c->c_maxpeek = 0;
 	c->c_logfac = LOG_MAIL;
-#ifdef USE_DKIM
-	c->c_dkim = NULL;
-#endif
 #ifdef USE_P0F
 	c->c_p0fsock[0] = '\0';
 #endif
