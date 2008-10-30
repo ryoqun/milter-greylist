@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.212 2008/09/28 19:53:11 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.213 2008/10/30 04:41:39 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.212 2008/09/28 19:53:11 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.213 2008/10/30 04:41:39 manu Exp $");
 #endif
 #endif
 
@@ -353,9 +353,6 @@ real_connect(ctx, hostname, addr)
 	priv->priv_p0f = NULL;
 	p0f_lookup(priv);
 #endif
-#ifdef USE_SPAMD
-	priv->priv_spamd_flags = 0;
-#endif
 	return SMFIS_CONTINUE;
 }
 
@@ -418,6 +415,10 @@ real_envfrom(ctx, envfrom)
 	if (priv->priv_buf)
 		free(priv->priv_buf);
 	priv->priv_msgcount = 0;
+
+#ifdef USE_SPAMD
+	priv->priv_spamd_flags = 0;
+#endif
 
 	/* 
 	 * Now let's handle this new message...

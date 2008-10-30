@@ -1,4 +1,6 @@
 4.1.7
+	Fixes a flaw in SpamAssassin initialization (Manuel Badzong)
+        Support SpamAssassin spf and dkim checks (Manuel Badzong)
 	Make sure DKIM code does not use invalid pointers
 	Add libspf2 support to .spec file for RPM (Joe Pruett)
 	Solaris build fix (Johann Klasek)

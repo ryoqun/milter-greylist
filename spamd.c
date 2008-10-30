@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.5 2008/10/02 19:09:39 manu Exp $ */
+/* $Id: spamd.c,v 1.6 2008/10/30 04:41:39 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.5 2008/10/02 19:09:39 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.6 2008/10/30 04:41:39 manu Exp $");
 #endif
 #endif
 
@@ -177,27 +177,16 @@ spamd_check(ad, stage, ap, priv)
 	if (spamd_write(sock, buffer, strlen(buffer)) == -1)
 		return -1;
 
-	TAILQ_FOREACH(h, &priv->priv_header, h_list) {
-		/*
-		 * Insert received header before other received headers.
-		 */
-		if (rcvhdr[0] && !strncasecmp(h->h_line, "Received", 8)) {
-			if (spamd_write(sock, rcvhdr, strlen(rcvhdr)) == -1)
-				return -1;
-			rcvhdr[0] = 0;
-		}
-		if (spamd_write(sock, h->h_line, strlen(h->h_line)) == -1)
-			return -1;
-	}
-
 	/*
-	 * No received header found.
+	 * Insert received header on top.
 	 */
-	if (rcvhdr[0]) {
+	if (rcvhdr[0])
 		if (spamd_write(sock, rcvhdr, strlen(rcvhdr)) == -1)
 			return -1;
-		rcvhdr[0] = 0;
-	}
+
+	TAILQ_FOREACH(h, &priv->priv_header, h_list)
+		if (spamd_write(sock, h->h_line, strlen(h->h_line)) == -1)
+			return -1;
 			
 	TAILQ_FOREACH(b, &priv->priv_body, b_list)
 		if (spamd_write(sock, b->b_lines, strlen(b->b_lines)) == -1)
@@ -319,17 +308,17 @@ spamd_rcvhdr(priv, str, len)
 		memcpy(&rcpt, LIST_FIRST(&priv->priv_rcpt), sizeof(rcpt));
 
 		snprintf(str, len,
-	  		 "Received: from %s (%s [%s])\r\n\tby %s (%s) "
-			 "with SMTP id %s\r\n\tfor %s; %s\r\n",
+	  		 "Received: from %s (%s [%s])\r\n\tby %s (envelope-sender <%s>) "
+			 "(%s) with SMTP id %s\r\n\tfor %s; %s\r\n",
 			  priv->priv_helo, priv->priv_hostname, 
-			  ipstr, myhostname, "milter-greylist", 
+			  ipstr, myhostname, priv->priv_from, "milter-greylist", 
 			  priv->priv_queueid, rcpt.r_addr, now);
 	} else {
 		snprintf(str, len,
-	  		 "Received: from %s (%s [%s])\r\n\tby %s (%s) "
-			 "with SMTP id %s;\r\n\t%s\r\n",
+	  		 "Received: from %s (%s [%s])\r\n\tby %s (envelope-sender <%s>) "
+			 "(%s) with SMTP id %s;\r\n\t%s\r\n",
 			 priv->priv_helo, priv->priv_hostname, 
-			 ipstr, myhostname, "milter-greylist", 
+			 ipstr, myhostname, priv->priv_from, "milter-greylist", 
 			 priv->priv_queueid, now);
 	}
 
