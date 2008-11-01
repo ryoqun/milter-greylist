@@ -1,4 +1,5 @@
 4.1.7
+	Removes duplicate <> in SpamAssassin headers (Manuel Badzong)
 	Fixes a flaw in SpamAssassin initialization (Manuel Badzong)
         Support SpamAssassin spf and dkim checks (Manuel Badzong)
 	Make sure DKIM code does not use invalid pointers

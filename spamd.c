@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.6 2008/10/30 04:41:39 manu Exp $ */
+/* $Id: spamd.c,v 1.7 2008/11/01 02:48:15 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.6 2008/10/30 04:41:39 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.7 2008/11/01 02:48:15 manu Exp $");
 #endif
 #endif
 
@@ -308,18 +308,21 @@ spamd_rcvhdr(priv, str, len)
 		memcpy(&rcpt, LIST_FIRST(&priv->priv_rcpt), sizeof(rcpt));
 
 		snprintf(str, len,
-	  		 "Received: from %s (%s [%s])\r\n\tby %s (envelope-sender <%s>) "
+	  		 "Received: from %s (%s [%s])\r\n\tby %s "
+			 "(envelope-sender %s) "
 			 "(%s) with SMTP id %s\r\n\tfor %s; %s\r\n",
 			  priv->priv_helo, priv->priv_hostname, 
-			  ipstr, myhostname, priv->priv_from, "milter-greylist", 
-			  priv->priv_queueid, rcpt.r_addr, now);
+			  ipstr, myhostname, priv->priv_from, 
+			  "milter-greylist", priv->priv_queueid, 
+			  rcpt.r_addr, now);
 	} else {
 		snprintf(str, len,
-	  		 "Received: from %s (%s [%s])\r\n\tby %s (envelope-sender <%s>) "
+	  		 "Received: from %s (%s [%s])\r\n\tby %s "
+			 "(envelope-sender %s) "
 			 "(%s) with SMTP id %s;\r\n\t%s\r\n",
 			 priv->priv_helo, priv->priv_hostname, 
-			 ipstr, myhostname, priv->priv_from, "milter-greylist", 
-			 priv->priv_queueid, now);
+			 ipstr, myhostname, priv->priv_from, 
+			 "milter-greylist", priv->priv_queueid, now);
 	}
 
 	return;
