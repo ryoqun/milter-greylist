@@ -1,4 +1,5 @@
 4.1.7
+	Add option to match exact domain instead of substrings (Rick Adams)
 	Make sure no message chunks is skip at Data stage ACL (Manuel Badzong)
 	Removes duplicate <> in SpamAssassin headers (Manuel Badzong)
 	Fixes a flaw in SpamAssassin initialization (Manuel Badzong)

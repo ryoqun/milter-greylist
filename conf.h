@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.47 2008/10/30 04:39:39 manu Exp $ */
+/* $Id: conf.h,v 1.48 2008/11/06 11:23:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -107,6 +107,7 @@ struct conf_rec {
 	char c_syncsrcport_storage[NUMLEN + 1];
 	char c_dracdb_storage[QSTRLEN + 1];
 	size_t c_maxpeek;
+	int c_domainexact;
 #ifdef USE_P0F
 	char c_p0fsock[QSTRLEN + 1];
 #endif
@@ -134,6 +135,7 @@ struct conf_rec {
 #define C_LAZYAW	0x02000
 #define C_MATCHMASK6	0x04000
 #define C_ACLDEBUG	0x08000
+#define C_DOMAINEXACT	0x10000
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
 /* c_report */

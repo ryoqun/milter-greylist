@@ -143,6 +143,7 @@ no		[Nn][Oo]
 not		[Nn][Oo][Tt]
 neg		"!"
 prop		"$"[-_A-Za-z0-9]+
+domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 
 %s S_REGEX 
 %s S_SPF
@@ -158,7 +159,7 @@ prop		"$"[-_A-Za-z0-9]+
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.86 2008/10/30 04:39:39 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.87 2008/11/06 11:23:53 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -314,6 +315,7 @@ prop		"$"[-_A-Za-z0-9]+
 {whitelist}	{ return WHITELIST; }
 {blacklist}	{ return BLACKLIST; }
 {default}	{ return DEFAULT; }
+{domainexact}	{ return DOMAINEXACT; }
 <INITIAL>{star}		{ return STAR; }
 <S_CLOCKSPEC2>{star}	{ return STAR; }
 <S_CLOCKSPEC2>{slash}	{ return SLASH; }

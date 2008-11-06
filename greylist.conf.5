@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.92 2008/09/27 12:54:30 manu Exp $
+.\" $Id: greylist.conf.5,v 1.93 2008/11/06 11:23:53 manu Exp $
 .\"
 .\" Copyright (c) 2004-2008 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -115,6 +115,12 @@ domain:
 .IP
   racl whitelist domain example.net
 .IP
+Suffix search matching  means, for example, that gle.com will match 
+google.com. If you want domain names to match on subdomain boundaries 
+(e.g.  gle.com will match mail.gle.com and gle.com but not google.com) 
+then enable 
+.I domainexact
+.PP
 The name resolution is made by Sendmail, which hands it to 
 .B milter-greylist(8)\fR.
 As a result, it is impossible to use DNS aliases here. On the other
@@ -253,10 +259,14 @@ When regular expressions are not used,
 .I from\fR,
 and
 .I rcpt
-perform a case insensitive substring match with leading and trailing brackets,
-spaces and tabs stripped out. 
+perform a case insensitive substring match with leading and trailing
+brackets, spaces and tabs stripped out. 
 .I domain
-performs a case insensitive suffix match.
+performs a case insensitive suffix match.  This means, for example, 
+that gle.com will match google.com. If you want domain names to match 
+on subdomain boundaries (e.g.  gle.com will match mail.gle.com and 
+gle.com but not google.com) then enable 
+.I domainexact
 .PP
 An ACL entry can also hold various optional parameter used on match: 
 .I delay\fR,
@@ -1010,6 +1020,16 @@ searches.
 .I lazyaw
 Make auto-whitelist look at just the IP instead of the (sender IP,
 sender e-mail address, recipient e-mail address) tuple.
+.TP
+.I domainexact
+match on subdomain boundaries instead of the default suffix matching.
+E.g. if
+.I domainexact
+is not enabled (the default) then gle.com will match google.com in 
+addtion to gle.com. If 
+.I domainexact
+is enabled then, domain names will match on subdomain boundaries (e.g.  gle.com will
+match mail.gle.com and gle.com but not google.com)
 .TP
 .I drac db
 Tell where the DRAC DB file is. This is only available if DRAC support

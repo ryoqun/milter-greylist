@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.82 2008/09/30 03:56:03 manu Exp $ */
+/* $Id: acl.c,v 1.83 2008/11/06 11:23:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.82 2008/09/30 03:56:03 manu Exp $");
+__RCSID("$Id: acl.c,v 1.83 2008/11/06 11:23:53 manu Exp $");
 #endif
 #endif
 
@@ -497,6 +497,12 @@ acl_domain_cmp(ad, stage, ap, priv)
 
 	if (didx >= 0)
 		return (0);
+
+	if ( (conf.c_domainexact == 1) &&(hidx >= 0) && (host[hidx] != '.')) {
+		mg_log(LOG_INFO, "domainexact option overrides %s suffix "
+		       "match of %s", domain, host);
+		return (0);
+	}
 
 	return (1);
 }
