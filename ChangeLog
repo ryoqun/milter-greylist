@@ -1,4 +1,5 @@
 4.1.7
+	Make sure no message chunks is skip at Data stage ACL (Manuel Badzong)
 	Removes duplicate <> in SpamAssassin headers (Manuel Badzong)
 	Fixes a flaw in SpamAssassin initialization (Manuel Badzong)
         Support SpamAssassin spf and dkim checks (Manuel Badzong)

@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.213 2008/10/30 04:41:39 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.214 2008/11/06 03:56:08 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.213 2008/10/30 04:41:39 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.214 2008/11/06 03:56:08 manu Exp $");
 #endif
 #endif
 
@@ -817,19 +817,18 @@ real_body(ctx, chunk, size)
 		priv->priv_msgcount += strlen(crlf);
 	}
 
-
 	for (i = size - 1; i >= 0; i--) {
 		if (chunk[i] == '\n')
 			break;
 	}
+	++i; /* Use i as byte counter */
 
-	if (chunk[i] == '\n') { /* We have a newline */
+	if (chunk[i - 1] == '\n') { /* We have a newline */
 		if ((b = malloc(sizeof(*b))) == NULL) {
 			mg_log(LOG_ERR, "malloc() failed: %s", strerror(errno));
 			exit(EX_OSERR);
 		}
 	
-		i++; /* Include the \n in this chunk */
 		linelen = priv->priv_buflen + i;
 
 		if ((b->b_lines = malloc(linelen + 1)) == NULL) {
@@ -843,6 +842,7 @@ real_body(ctx, chunk, size)
 			free(priv->priv_buf);
 			priv->priv_buf = NULL;
 		}
+
 		memcpy(b->b_lines + priv->priv_buflen, chunk, i + 1);
 		b->b_lines[linelen] = '\0';
 		priv->priv_buflen = 0;
@@ -850,16 +850,18 @@ real_body(ctx, chunk, size)
 		TAILQ_INSERT_TAIL(&priv->priv_body, b, b_list);
 
 		priv->priv_msgcount += linelen;
-	} else { /* No newline in chunk, keep it for later */
+	}
+
+	if(i < size) { /* keep the remains for later */
 		if ((priv->priv_buf = realloc(priv->priv_buf, 
-		    priv->priv_buflen + size)) == NULL) {
+		    priv->priv_buflen + size - i)) == NULL) {
 			mg_log(LOG_ERR, 
 			    "realloc() failed: %s", 
 			    strerror(errno));
 			exit(EX_OSERR);
 		}
-		memcpy(&priv->priv_buf[priv->priv_buflen], chunk, size);
-		priv->priv_buflen += size;
+		memcpy(&priv->priv_buf[priv->priv_buflen], chunk + i, size - i);
+		priv->priv_buflen += size - i;
 	}
 
 	return SMFIS_CONTINUE;
@@ -889,10 +891,9 @@ real_eom(ctx)
 	priv->priv_sr.sr_elapsed = priv->priv_max_elapsed;
 
 	/* 
-	 * If we got no newline at all, at least 
-	 * we can save the current buffer 
+	 * save the remaining buffer
 	 */
-	if (TAILQ_EMPTY(&priv->priv_body) && (priv->priv_buflen > 0)) {
+	if (priv->priv_buflen > 0) {
 		struct body *b;
 
 		if ((b = malloc(sizeof(*b))) == NULL) {
