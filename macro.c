@@ -1,4 +1,4 @@
-/* $Id: macro.c,v 1.7 2007/11/06 11:39:33 manu Exp $ */
+/* $Id: macro.c,v 1.8 2008/11/10 17:38:11 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: macro.c,v 1.7 2007/11/06 11:39:33 manu Exp $");
+__RCSID("$Id: macro.c,v 1.8 2008/11/10 17:38:11 manu Exp $");
 #endif
 #endif
 
@@ -85,7 +85,6 @@ macro_check(ad, stage, ap, priv)
 	SMFICTX *ctx;
 	struct macro_entry *me;
 	char *value;
-	int extended;
 	int retval = 0;
 
 	ctx = priv->priv_ctx;
@@ -103,11 +102,9 @@ macro_check(ad, stage, ap, priv)
 			retval = 1;
 		break;
 	case M_REGEX:
-		if (value != NULL) {
-			extended = (conf.c_extendedregex ? REG_EXTENDED : 0);
-			if (regexec(me->m_regex, value, 0, NULL, 0) == 0)
+		if (value != NULL &&
+		    regexec(me->m_regex, value, 0, NULL, 0) == 0)
 				retval = 1;
-		}
 		break;
 	default:
 		mg_log(LOG_ERR, "unexpecte me->m_type = %d", me->m_type);
