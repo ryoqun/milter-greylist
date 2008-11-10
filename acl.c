@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.72.2.1 2008/08/22 21:44:16 manu Exp $ */
+/* $Id: acl.c,v 1.72.2.2 2008/11/10 11:18:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.72.2.1 2008/08/22 21:44:16 manu Exp $");
+__RCSID("$Id: acl.c,v 1.72.2.2 2008/11/10 11:18:13 manu Exp $");
 #endif
 #endif
 
@@ -1565,10 +1565,6 @@ acl_register_entry_first(acl_stage, acl_type)/* acllist must be write-locked */
 		return NULL;
 	}
 
-	if ((acl = malloc(sizeof(*acl))) == NULL) {
-		mg_log(LOG_ERR, "ACL malloc failed: %s", strerror(errno));
-		exit(EX_OSERR);
-	}
 	acl = gacl;
 	acl->a_type = acl_type;
 	acl->a_stage = acl_stage;
