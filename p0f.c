@@ -1,4 +1,4 @@
-/* $Id: p0f.c,v 1.6 2008/09/09 03:13:09 manu Exp $ */
+/* $Id: p0f.c,v 1.7 2008/11/11 00:12:52 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: p0f.c,v 1.6 2008/09/09 03:13:09 manu Exp $");
+__RCSID("$Id: p0f.c,v 1.7 2008/11/11 00:12:52 manu Exp $");
 #endif
 #endif
 #include <sys/types.h>
@@ -165,6 +165,7 @@ p0f_lookup(priv)
 	size_t len;
 	char sastr[IPADDRSTRLEN + 1];
 	char dastr[IPADDRSTRLEN + 1];
+	char dpstr[IPADDRSTRLEN + 1];
 
 	/*
 	 * The p0f query interface semms to only support IPv4
@@ -177,8 +178,18 @@ p0f_lookup(priv)
 		return -1;
 	}
 	if ((dport = smfi_getsymval(priv->priv_ctx, "{daemon_port}")) == NULL) {
-		mg_log(LOG_DEBUG, "smfi_getsymval failed for {daemon_port}");
-		return -1;
+		struct servent *s;
+
+		mg_log(LOG_WARNING, "smfi_getsymval failed for {daemon_port}, "
+				    "using default smtp port");
+		if ((s = getservbyname("smtp", "tcp")) == NULL) {
+			mg_log(LOG_ERR,
+			       "getservbyname(\"smtp\", \"tcp\") failed");
+			exit (EX_OSFILE);
+		}
+
+		(void)snprintf(dpstr, sizeof(dpstr), "%d", s->s_port);
+		dport = dpstr;
 	}
 
 	if (p0f_reconnect() != 0)
