@@ -1,4 +1,4 @@
-dnl $Id: milter-greylist.m4,v 1.1 2004/12/17 22:37:43 manu Exp $
+dnl $Id: milter-greylist.m4,v 1.2 2008/11/11 02:01:03 manu Exp $
 dnl Contributed by Ivan F. Martinez
 dnl
 dnl This file configure sendmail to use milter-greylist
@@ -44,6 +44,7 @@ dnl add variables used by milter-greylist
 dnl
 ifelse(regexp(confMILTER_MACROS_CONNECT,`\<j\>'),`-1',`xxconcat(`confMILTER_MACROS_CONNECT',`, j')',`')dnl
 ifelse(index(confMILTER_MACROS_CONNECT,`{if_addr}'),`-1',`xxconcat(`confMILTER_MACROS_CONNECT',`, {if_addr}')',`')dnl
+ifelse(index(confMILTER_MACROS_CONNECT,`{daemon_port}'),`-1',`xxconcat(`confMILTER_MACROS_CONNECT',`, {daemon_port}')',`')dnl
 dnl
 ifelse(index(confMILTER_MACROS_HELO,`{verify}'),`-1',`xxconcat(`confMILTER_MACROS_HELO',`, {verify}')',`')dnl
 ifelse(index(confMILTER_MACROS_HELO,`{cert_subject}'),`-1',`xxconcat(`confMILTER_MACROS_HELO',`, {cert_subject}')',`')dnl

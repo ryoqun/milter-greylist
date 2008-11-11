@@ -1,4 +1,5 @@
 4.1.7
+	Add p0f-required macros in milter-greylist.m4 (Joel Bertrand)
 	Fix memory leak (Constantine A. Murenin)
 	Add option to match exact domain instead of substrings (Rick Adams)
 	Make sure no message chunks is skip at Data stage ACL (Manuel Badzong)
