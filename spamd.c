@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.7 2008/11/01 02:48:15 manu Exp $ */
+/* $Id: spamd.c,v 1.8 2008/11/19 01:21:06 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.7 2008/11/01 02:48:15 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.8 2008/11/19 01:21:06 manu Exp $");
 #endif
 #endif
 
@@ -52,6 +52,7 @@ __RCSID("$Id: spamd.c,v 1.7 2008/11/01 02:48:15 manu Exp $");
 #include <sysexits.h>
 #include <syslog.h>
 
+#include "spf.h"
 #include "acl.h"
 #include "conf.h"
 #include "queue.h"
