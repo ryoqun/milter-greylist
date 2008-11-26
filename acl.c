@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.85 2008/11/26 05:20:13 manu Exp $ */
+/* $Id: acl.c,v 1.86 2008/11/26 11:07:54 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.85 2008/11/26 05:20:13 manu Exp $");
+__RCSID("$Id: acl.c,v 1.86 2008/11/26 11:07:54 manu Exp $");
 #endif
 #endif
 
@@ -600,10 +600,10 @@ myregexec(priv, ad, ap, string)
 	 */
 	for (i = 1; i < nmatch; i++) {
 		if (pmatch[i].rm_so == -1) {
-			mg_log(LOG_ERR, "unexpected void backreference no %d "
+			mg_log(LOG_DEBUG, "unexpected void backreference no %d "
 			    "in regex %s against \"%s\"", 
 			    i, ad->regex.re_copy, string);
-			exit(EX_SOFTWARE);
+			break;
 		}	
 
 		len = pmatch[i].rm_eo - pmatch[i].rm_so + 1;
