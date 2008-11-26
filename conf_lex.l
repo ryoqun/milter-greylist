@@ -93,6 +93,7 @@ code		[Cc][Oo][Dd][Ee]
 ecode		[Ee][Cc][Oo][Dd][Ee]
 msg		[Mm][Ss][Gg]
 header		[Hh][Ee][Aa][Dd][Ee][Rr]
+addheader	[Aa][Dd][Dd][Hh][Ee][Aa][Dd][Ee][Rr]
 body		[Bb][Oo][Dd][Yy]
 maxpeek		[Mm][Aa][Xx][Pp][Ee][Ee][Kk]
 geoipdb		[Gg][Ee][Oo][Ii][Pp][Dd][Bb]
@@ -159,7 +160,7 @@ domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.87 2008/11/06 11:23:53 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.88 2008/11/26 05:20:13 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -192,6 +193,7 @@ domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 <INITIAL>{not}	{ return NO; }
 <INITIAL>{neg}	{ return NO; }
 {prop}		{ 
+			BEGIN(S_REGEX);
 			strncpy(yylval.prop, yytext, QSTRLEN);
 			yylval.qstring[QSTRLEN] = '\0';
 			return PROP;
@@ -251,6 +253,7 @@ domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 {ecode}  	{ return ECODE; }
 {msg}	  	{ return MSG; }
 {header}	{ BEGIN(S_REGEX); return GLHEADER; }
+{addheader}	{ return ADDHEADER; }
 {body}		{ BEGIN(S_REGEX); return BODY; }
 {maxpeek}	{ return MAXPEEK; }
 {geoipdb}	{ return GEOIPDB; }

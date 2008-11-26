@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.93 2008/11/06 11:23:53 manu Exp $
+.\" $Id: greylist.conf.5,v 1.94 2008/11/26 05:20:13 manu Exp $
 .\"
 .\" Copyright (c) 2004-2008 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -276,6 +276,7 @@ An ACL entry can also hold various optional parameter used on match:
 .I code\fR,
 .I ecode\fR,
 .I report\fR,
+.I addheader\fR,
 and
 .I msg\fR
 .TP
@@ -343,6 +344,12 @@ passed greylisting (see
 This string can be substituted as documented in the
 .B FORMAT STRINGS
 section.
+.TP
+.I addheader
+This quoted string is a RFC822 header that gets added to the message. 
+Format string substitution is supported. No check is done for header
+length standard compliance, so make sure the substituted string is
+shorter than 2048 characters.
 .PP
 Entries in the access-list are evaluated sequentially, so order is
 very important. The first matching entry is used to decide if 

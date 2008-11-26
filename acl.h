@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.38 2008/09/28 19:54:51 manu Exp $ */
+/* $Id: acl.h,v 1.39 2008/11/26 05:20:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -90,7 +90,7 @@ typedef enum {
 	AC_URLCHECK_LIST,
 	AC_LDAPCHECK,
 	AC_PROP,
-	AC_PROPRE,
+	AC_PROP_RE,
 	AC_AUTH,
 	AC_AUTH_RE,
 	AC_AUTH_LIST,
@@ -149,19 +149,21 @@ struct acl_param {
 	char *ap_ecode;
 	char *ap_msg;
 	char *ap_report;
+	char *ap_addheader;
 	int ap_nmatch;
 	char **ap_pmatch;
 };
 
 /* a_flags */
-#define A_FLUSHADDR		0x01
-#define A_FREE_CODE		0x02
-#define A_FREE_ECODE		0x04
-#define A_FREE_MSG		0x08
-#define A_FREE_REPORT		0x10
-#define A_FREE_ID		0x20
-#define A_DROP_ACL		0x40
-#define A_NOLOG			0x80
+#define A_FLUSHADDR		0x001
+#define A_FREE_CODE		0x002
+#define A_FREE_ECODE		0x004
+#define A_FREE_MSG		0x008
+#define A_FREE_REPORT		0x010
+#define A_FREE_ID		0x020
+#define A_DROP_ACL		0x040
+#define A_NOLOG			0x080
+#define A_FREE_ADDHEADER	0x100
 
 struct all_list_entry;
 
@@ -239,6 +241,7 @@ struct acl_entry {
 	char *a_ecode;
 	char *a_msg;
 	char *a_report;
+	char *a_addheader;
 	TAILQ_ENTRY(acl_entry) a_list;
 };
 
@@ -262,6 +265,7 @@ void acl_add_code(char *);
 void acl_add_ecode(char *);
 void acl_add_msg(char *);
 void acl_add_report(char *);
+void acl_add_addheader(char *);
 struct acl_entry *acl_register_entry_first(acl_stage_t, acl_type_t);
 struct acl_entry *acl_register_entry_last(acl_stage_t, acl_type_t);
 int acl_filter(acl_stage_t, SMFICTX *, struct mlfi_priv *);

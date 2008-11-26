@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.214 2008/11/06 03:56:08 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.215 2008/11/26 05:20:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.214 2008/11/06 03:56:08 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.215 2008/11/26 05:20:13 manu Exp $");
 #endif
 #endif
 
@@ -1010,6 +1010,25 @@ real_eom(ctx)
 	}
 
 passed:
+	/* Add custom header from DATA stage ACL */
+	if (priv->priv_sr.sr_addheader) {
+		char *hdrname;
+		char *hdrvalue;
+		char *sep = ": ";
+
+		hdrname = fstring_expand(priv, NULL, 
+					 priv->priv_sr.sr_addheader);
+		if ((hdrvalue = strstr(hdrname, sep)) == NULL) {
+			mg_log(LOG_ERR, "bad header \"%s\"", hdrname);
+		} else {
+			*hdrvalue = '\0';
+			hdrvalue += strlen(sep);
+			smfi_addheader(ctx, hdrname, hdrvalue);
+		}
+
+		free(hdrname);
+	}
+
 	/* Restore the info collected from RCPT stage */
 	smtp_reply_free(&priv->priv_sr);
 	memcpy(&priv->priv_sr, &rcpt_sr, sizeof(rcpt_sr));
@@ -1138,6 +1157,25 @@ passed:
 	}
 
 out:
+	/* Add custom header from DATA stage ACL */
+	if (priv->priv_sr.sr_addheader) {
+		char *hdrname;
+		char *hdrvalue;
+		char *sep = ": ";
+
+		hdrname = fstring_expand(priv, NULL, 
+					 priv->priv_sr.sr_addheader);
+		if ((hdrvalue = strstr(hdrname, sep)) == NULL) {
+			mg_log(LOG_ERR, "bad header \"%s\"", hdrname);
+		} else {
+			*hdrvalue = '\0';
+			hdrvalue += strlen(sep);
+			smfi_addheader(ctx, hdrname, hdrvalue);
+		}
+
+		free(hdrname);
+	}
+
 	return mg_stat(priv, SMFIS_CONTINUE);
 }
 
@@ -2035,6 +2073,7 @@ smtp_reply_free(sr)
 	free(sr->sr_msg_x);
 	free(sr->sr_report);
 	free(sr->sr_report_x);
+	free(sr->sr_addheader);
 
 	if (sr->sr_pmatch) {
 		int i;		

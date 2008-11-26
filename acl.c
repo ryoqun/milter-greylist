@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.84 2008/11/10 11:16:14 manu Exp $ */
+/* $Id: acl.c,v 1.85 2008/11/26 05:20:13 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.84 2008/11/10 11:16:14 manu Exp $");
+__RCSID("$Id: acl.c,v 1.85 2008/11/26 05:20:13 manu Exp $");
 #endif
 #endif
 
@@ -288,8 +288,8 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  AT_PROP, AC_NONE, AC_PROP, EXF_PROP,
 	  acl_print_prop_string, acl_add_prop_string,
 	  acl_free_prop_string, prop_string_validate },
-	{ AC_PROP, MULTIPLE_OK, AS_ANY, "propre", 
-	  AT_PROP, AC_NONE, AC_PROPRE, EXF_PROP,
+	{ AC_PROP_RE, MULTIPLE_OK, AS_ANY, "prop_re", 
+	  AT_PROP, AC_NONE, AC_PROP_RE, EXF_PROP,
 	  acl_print_prop_regex, acl_add_prop_regex,
 	  acl_free_prop_regex, prop_regex_validate },
 #endif
@@ -1098,7 +1098,7 @@ acl_add_regex(ad, data)
 	for (cp = regexstr; *cp; cp++) {
 		if (skip)
 			continue;
-		if ((cp[0] == '\\') && (cp[0] != '\0') && (cp[1] == '(')) 
+		if (cp[0] == '(') 
 			ad->regex.nmatch++;
 	}
 
@@ -1178,6 +1178,8 @@ acl_free_entry(acl)
 		free(acl->a_msg);
 	if (acl->a_report != NULL)
 		free(acl->a_report);
+	if (acl->a_addheader != NULL)
+		free(acl->a_addheader);
 	free(acl);
 
 	return;
@@ -1826,6 +1828,7 @@ acl_filter(stage, ctx, priv)
 		ap.ap_ecode = acl->a_ecode;
 		ap.ap_msg = acl->a_msg;
 		ap.ap_report = acl->a_report;
+		ap.ap_addheader = acl->a_addheader;
 		ap.ap_nmatch = 0;
 		ap.ap_pmatch = NULL;
 
@@ -1920,6 +1923,13 @@ acl_filter(stage, ctx, priv)
 				exit(EX_OSERR);
 			}
 		}
+		if (ap.ap_addheader) {
+			priv->priv_sr.sr_addheader = strdup(ap.ap_addheader);
+			if (priv->priv_sr.sr_addheader == NULL) {
+				mg_log(LOG_ERR, "strdup failed");
+				exit(EX_OSERR);
+			}
+		}
 
 		priv->priv_sr.sr_nmatch = ap.ap_nmatch;
 		priv->priv_sr.sr_pmatch = ap.ap_pmatch;
@@ -1935,6 +1945,8 @@ acl_filter(stage, ctx, priv)
 			free(ap.ap_msg);
 		if (ap.ap_flags & A_FREE_REPORT)
 			free(ap.ap_report);
+		if (ap.ap_flags & A_FREE_ADDHEADER)
+			free(ap.ap_addheader);
 
 		if (ap.ap_flags & A_FLUSHADDR)
 			pending_del_addr(sa, salen, queueid, acl->a_line);
@@ -2235,6 +2247,11 @@ acl_entry(entrystr, len, acl)
 		    "[report \"%s\"] ", acl->a_report);
 		mystrlcat(entrystr, tempstr, len);
 	}
+	if (acl->a_addheader) {
+		snprintf(tempstr, sizeof(tempstr), 
+		    "[addheader \"%s\"] ", acl->a_addheader);
+		mystrlcat(entrystr, tempstr, len);
+	}
 
 	if (def)
 		mystrlcat(entrystr, "default", len);
@@ -2472,6 +2489,28 @@ acl_add_report(report)
 		
 	if (conf.c_debug || conf.c_acldebug)
 		mg_log(LOG_DEBUG, "load acl report \"%s\"", report);
+
+	return;
+}
+
+void 
+acl_add_addheader(hdr)
+	char *hdr;
+{
+	if (gacl->a_addheader) {
+		mg_log(LOG_ERR,
+		    "addheader specified twice in ACL line %d", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	if ((gacl->a_addheader = strdup(hdr)) == NULL) {
+		mg_log(LOG_ERR,
+		    "malloc failed in ACL line %d", conf_line);
+		exit(EX_OSERR);
+	}
+		
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl addheader \"%s\"", hdr);
 
 	return;
 }

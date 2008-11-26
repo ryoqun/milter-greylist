@@ -1,4 +1,7 @@
 4.1.8
+	Allow regex on properties
+	Allow extended regex substitution 
+	Custom headers can now be added to the message
 	Fix build with both SpamAssassin and SPF (Joel Bertrand)
 4.1.7
 	Add p0f-required macros in milter-greylist.m4 (Joel Bertrand)
