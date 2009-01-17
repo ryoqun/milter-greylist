@@ -66,6 +66,7 @@ time		[Tt][Ii][Mm][Ee]
 domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
 syncaddr	[Ss][Yy][Nn][Cc][Aa][Dd][Dd][Rr]:?
 syncsrcaddr	[Ss][Yy][Nn][Cc][Ss][Rr][Cc][Aa][Dd][Dd][Rr]:?
+syncmaxqlen	[Ss][Yy][Nn][Cc][Mm][Aa][Xx][Qq][Ll][Ee][Nn]:?
 port		[Pp][Oo][Rr][Tt]
 acl		[Aa][Cc][Ll]
 racl		[Rr][Aa][Cc][Ll]
@@ -160,7 +161,7 @@ domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.88 2008/11/26 05:20:13 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.89 2009/01/17 04:32:55 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -311,6 +312,7 @@ domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 {domain}	{ BEGIN(S_REGEX); return DOMAIN; }
 {syncaddr}	{ return SYNCADDR; }
 {syncsrcaddr}	{ return SYNCSRCADDR; }
+{syncmaxqlen}	{ return SYNCMAXQLEN; }
 {port}		{ return PORT; }
 {acl}		{ return ACL; }
 {racl}		{ return RACL; }

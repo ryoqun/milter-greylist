@@ -1,3 +1,5 @@
+4.1.9
+	Workaround "peer queue overflow" bugs (Laurence Moindrot, Jean Benoit)
 4.1.8
 	Allow regex on properties
 	Allow extended regex substitution 

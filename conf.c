@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.60 2008/11/06 11:23:53 manu Exp $ */
+/* $Id: conf.c,v 1.61 2009/01/17 04:32:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.60 2008/11/06 11:23:53 manu Exp $");
+__RCSID("$Id: conf.c,v 1.61 2009/01/17 04:32:55 manu Exp $");
 #endif
 #endif
 
@@ -473,5 +473,6 @@ conf_defaults(c)
 	c->c_spamdsock[0] = '\0';
 	c->c_spamdsocktype[0] = '\0';
 #endif
+	c->c_syncmaxqlen = SYNC_MAXQLEN;
 	return;
 }

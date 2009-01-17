@@ -1,4 +1,4 @@
-/* $Id: conf.h,v 1.48 2008/11/06 11:23:53 manu Exp $ */
+/* $Id: conf.h,v 1.49 2009/01/17 04:32:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -86,6 +86,7 @@ struct conf_rec {
 	char *c_syncport;
 	char *c_syncsrcaddr;
 	char *c_syncsrcport;
+	int c_syncmaxqlen;
 	int c_nodetach;
 	int c_report;
 	int c_lazyaw;

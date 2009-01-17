@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.81 2008/06/03 10:26:19 manu Exp $ */
+/* $Id: sync.c,v 1.82 2009/01/17 04:32:55 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.81 2008/06/03 10:26:19 manu Exp $");
+__RCSID("$Id: sync.c,v 1.82 2009/01/17 04:32:55 manu Exp $");
 #endif
 #endif
 
@@ -234,7 +234,7 @@ sync_queue_poke(peer, sync)
 	int r = 0;
 
 	pthread_mutex_lock(&peer->p_mtx);
-	if (peer->p_qlen < SYNC_MAXQLEN) {
+	if (peer->p_qlen < conf.c_syncmaxqlen) {
 		TAILQ_INSERT_HEAD(&peer->p_deferred, sync, s_list);
 		peer->p_qlen++;
 		r = 1;
@@ -274,6 +274,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	char *keyw;
 	char awstr[LINELEN + 1];
 	int bw;
+	int errcount = 0;
 
 	if ((peer->p_stream == NULL) && (peer_connect(peer) != 0))
 		return -1;
@@ -335,6 +336,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	sync_waitdata(peer->p_socket);
 	if (fgets(line, LINELEN, peer->p_stream) == NULL) {
 		if (errno == EAGAIN) {
+			errcount++;
 			if ( feof(peer->p_stream) ) {
 				mg_log(LOG_ERR, "lost connection with peer %s: "
 		  		  "%s (%d entries queued)", 
@@ -343,7 +345,11 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 				peer->p_stream = NULL;
 				return -1;
 			}
-			goto get_more;
+			if (errcount < 5) {
+				goto get_more;
+			} else {
+				mg_log(LOG_ERR, "too many read error with peer %s", peer->p_name);
+			}
 		}
 		mg_log(LOG_ERR, "lost connection with peer %s: "
 		    "%s (%d entries queued)", 
@@ -1287,6 +1293,19 @@ sync_waitdata(fd)
 	timeout.tv_usec = 0;
 
 	retval = select(fd + 1, &fdr, NULL, &fde, &timeout); 
+
+	if (retval == 0) {
+		mg_log(LOG_ERR, "sync_waitdata : select timeout");
+		
+	} else {
+		if (retval < 0) {
+			mg_log(LOG_ERR, "sync_waitdata : error");
+		} else {
+			if (FD_ISSET(fd,&fde)) {
+				mg_log(LOG_ERR, "sync_waitdata : exception fd is set");
+			}
+		}
+	}
 
 	return retval;
 }
