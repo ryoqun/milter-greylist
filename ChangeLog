@@ -1,3 +1,6 @@
+4.1.11
+	Evaluate list clases in forward order (Rudy Eschauzier)
+	Fix crashes on regex substring matches (Rudy Eschauzier)
 4.1.10
 	Build fix as some commits were missing
 4.1.9

@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.87 2009/01/02 00:45:09 manu Exp $ */
+/* $Id: acl.c,v 1.88 2009/02/08 20:26:20 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.87 2009/01/02 00:45:09 manu Exp $");
+__RCSID("$Id: acl.c,v 1.88 2009/02/08 20:26:20 manu Exp $");
 #endif
 #endif
 
@@ -562,23 +562,6 @@ myregexec(priv, ad, ap, string)
 	int i;
 
 	/* 
-	 * Add room for matched strings
-	 */
-	len = (ap->ap_nmatch + ad->regex.nmatch) * sizeof(*ap->ap_pmatch);;
-	if (len > 0) {
-		if ((ap->ap_pmatch = realloc(ap->ap_pmatch, len)) == NULL) {
-			mg_log(LOG_ERR, "realloc failed: %s", strerror(errno));
-			exit(EX_OSERR);
-		}
-	}
-	/* Move the previous matches to the end of the array */
-	if (ap->ap_nmatch != 0) {
-		memmove(&ap->ap_pmatch[ad->regex.nmatch], 
-		    &ap->ap_pmatch[0], ap->ap_nmatch * sizeof(char *));
-		bzero(&ap->ap_pmatch[0], ad->regex.nmatch * sizeof(char *));
-	}
-
-	/* 
 	 * Placeholder for information from regexec, +1 for \0 
 	 */
 	nmatch = ad->regex.nmatch + 1;
@@ -596,7 +579,26 @@ myregexec(priv, ad, ap, string)
 		goto out;
 
 	/* 
-	 * Gather the strings, skiping the first one (\0) 
+	 * Add room for matched parenthesized substrings
+	 */
+	len = (ap->ap_nmatch + ad->regex.nmatch) * sizeof(*ap->ap_pmatch);;
+	if (len > 0) {
+		if ((ap->ap_pmatch = realloc(ap->ap_pmatch, len)) == NULL) {
+			mg_log(LOG_ERR, "realloc failed: %s", strerror(errno));
+			exit(EX_OSERR);
+		}
+	}
+	/* Move the previous matches to the end of the array */
+	if (ap->ap_nmatch != 0) {
+		memmove(&ap->ap_pmatch[ad->regex.nmatch], 
+			&ap->ap_pmatch[0], ap->ap_nmatch * sizeof(char *));
+	}
+	bzero(&ap->ap_pmatch[0], ad->regex.nmatch * sizeof(char *));
+
+	ap->ap_nmatch += ad->regex.nmatch;
+
+	/* 
+	 * Gather the strings, skipping the first one (\0) 
 	 */
 	for (i = 1; i < nmatch; i++) {
 		if (pmatch[i].rm_so == -1) {
@@ -621,8 +623,6 @@ myregexec(priv, ad, ap, string)
 			    ad->regex.re_copy, string, i, ap->ap_pmatch[i - 1]);
 	}
 out:
-	ap->ap_nmatch += ad->regex.nmatch;
-
 	if (pmatch != NULL)
 		free(pmatch);
 
@@ -861,7 +861,7 @@ acl_list_filter(ad, stage, ap, priv)
 			       
 	ale = ad->list;
 	
-	LIST_FOREACH(le, &ale->al_head, l_list) {
+	STAILQ_FOREACH(le, &ale->al_head, l_list) {
 		retval = (*le->l_acr->acr_filter)(&le->l_data, stage, ap, priv);
 		if (retval != 0)
 			return retval;
@@ -1811,6 +1811,12 @@ acl_filter(stage, ctx, priv)
 
 	ACL_RDLOCK;
 
+	ap.ap_nmatch = 0;
+	ap.ap_pmatch = NULL;
+
+	/*
+	 * Run through all ACL entries
+	 */
 	TAILQ_FOREACH(acl, &acl_head, a_list) {
 		if (acl->a_stage != stage)
 			continue;
@@ -1829,9 +1835,25 @@ acl_filter(stage, ctx, priv)
 		ap.ap_msg = acl->a_msg;
 		ap.ap_report = acl->a_report;
 		ap.ap_addheader = acl->a_addheader;
+
+		/*
+		 * Free pointers to stored parenthesized substrings 
+		 * before each ACL entry.
+		 */
+		if (ap.ap_pmatch) {
+			int i;
+
+			for (i = 0; i < ap.ap_nmatch; i++)
+				if (ap.ap_pmatch[i] != NULL)
+					free(ap.ap_pmatch[i]);
+			free(ap.ap_pmatch);
+		}
 		ap.ap_nmatch = 0;
 		ap.ap_pmatch = NULL;
 
+		/*
+		 * Run through all clauses of ACL entry
+		 */
 		TAILQ_FOREACH(ac, &acl->a_clause, ac_list) {
 			if ((found = (*ac->ac_acr->acr_filter)
 			    (&ac->ac_data, stage, &ap, priv)) == -1)
@@ -1840,6 +1862,10 @@ acl_filter(stage, ctx, priv)
 			if (ac->ac_negation == NEGATED)
 				found = (found == 0) ? 1 : 0;
 
+			/*
+			 * All clauses of an ACL entry need to match, so
+			 * exit when not found.
+			 */
 			if (found == 0)
 				break;
 
@@ -1848,14 +1874,13 @@ acl_filter(stage, ctx, priv)
 			if (ac->ac_negation == NEGATED)
 				noretval |= ac->ac_acr->acr_exf;
 		}
-		if (found == 0)
-			continue;
 
 		/*
-		 * We found an entry that matches, exit the evaluation
-		 * loop
+		 * We catch the first ACL entry that matches, so exit
+		 * evaluation loop when found.
 		 */
-		break;
+		if (found != 0)
+			break;
 	}
 
 	if (acl) {

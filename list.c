@@ -1,4 +1,4 @@
-/* $Id: list.c,v 1.16 2007/11/06 11:39:33 manu Exp $ */
+/* $Id: list.c,v 1.17 2009/02/08 20:26:20 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: list.c,v 1.16 2007/11/06 11:39:33 manu Exp $");
+__RCSID("$Id: list.c,v 1.17 2009/02/08 20:26:20 manu Exp $");
 #endif
 #endif
 
@@ -119,7 +119,7 @@ all_list_get(type, name)
 	ale->al_acr = get_acl_clause_rec(type);
 	strncpy(ale->al_name, name, sizeof(ale->al_name));
 	ale->al_name[sizeof(ale->al_name) - 1] = '\0';
-	LIST_INIT(&ale->al_head);
+	STAILQ_INIT(&ale->al_head);
 
 	LIST_INSERT_HEAD(&all_list_head, ale, al_list);
 
@@ -132,9 +132,9 @@ all_list_put(ale)
 {
 	struct list_entry *le;
 
-	while(!LIST_EMPTY(&ale->al_head)) {
-		le = LIST_FIRST(&ale->al_head);
-		LIST_REMOVE(le, l_list);
+	while(!STAILQ_EMPTY(&ale->al_head)) {
+		le = STAILQ_FIRST(&ale->al_head);
+		STAILQ_REMOVE(&ale->al_head, le, list_entry, l_list);
 
 		if (le->l_acr->acr_free)
 			(*le->l_acr->acr_free)(&le->l_data);
@@ -160,7 +160,7 @@ list_add(ale, type, data)
 	le->l_acr = get_acl_clause_rec(type);
 	(*le->l_acr->acr_add)(&le->l_data, data);
 
-	LIST_INSERT_HEAD(&ale->al_head, le, l_list);
+	STAILQ_INSERT_TAIL(&ale->al_head, le, l_list);
 
 	if (conf.c_debug || conf.c_acldebug) {
 		char buf[1024];
@@ -184,7 +184,7 @@ all_list_settype(ale, l_type)
 	list_acr = get_acl_clause_rec(l_type);
 
 	/* Fix each item type */
-	LIST_FOREACH(le, &ale->al_head, l_list) {
+	STAILQ_FOREACH(le, &ale->al_head, l_list) {
 		if (le->l_acr->acr_stage != AS_NONE) 
 			continue;
 
