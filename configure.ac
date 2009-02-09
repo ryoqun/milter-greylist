@@ -1,4 +1,4 @@
-# $Id: configure.ac,v 1.242 2009/02/08 20:26:20 manu Exp $
+# $Id: configure.ac,v 1.243 2009/02/09 02:26:14 manu Exp $
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
@@ -490,7 +490,7 @@ oldqueue=no
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
 		#include <sys/queue.h>
 	],[
-		#ifndef TAILQ_FIRST
+		#ifndef STAILQ_FIRST
 		error Your <sys/queue.h> is outdated
 		#endif
 	])], [oldqueue=no], 

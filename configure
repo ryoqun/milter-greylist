@@ -8391,7 +8391,7 @@ int
 main ()
 {
 
-		#ifndef TAILQ_FIRST
+		#ifndef STAILQ_FIRST
 		error Your <sys/queue.h> is outdated
 		#endif
 

@@ -1,3 +1,5 @@
+4.1.12
+	Build fix for missing STAILQ_* macros
 4.1.11
 	Evaluate list clases in forward order (Rudy Eschauzier)
 	Fix crashes on regex substring matches (Rudy Eschauzier)
