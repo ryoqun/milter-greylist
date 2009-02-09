@@ -1,4 +1,4 @@
-/* $Id: list.h,v 1.7 2009/02/08 20:26:20 manu Exp $ */
+/* $Id: list.h,v 1.8 2009/02/09 04:12:07 manu Exp $ */
 
 /*
  * Copyright (c) 2006 Emmanuel Dreyfus
@@ -39,14 +39,14 @@ extern struct all_list_entry *glist;
 struct list_entry {
 	struct acl_clause_rec *l_acr;
 	acl_data_t l_data;
-	STAILQ_ENTRY(list_entry) l_list;
+	TAILQ_ENTRY(list_entry) l_list;
 };
 
 struct all_list_entry {
 	struct acl_clause_rec *al_acr;
 	char al_name[QSTRLEN + 1];
 	LIST_ENTRY(all_list_entry) al_list;
-	STAILQ_HEAD(,list_entry) al_head;
+	TAILQ_HEAD(,list_entry) al_head;
 };
 
 void all_list_init(void);

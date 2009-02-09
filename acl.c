@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.88 2009/02/08 20:26:20 manu Exp $ */
+/* $Id: acl.c,v 1.89 2009/02/09 04:12:07 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.88 2009/02/08 20:26:20 manu Exp $");
+__RCSID("$Id: acl.c,v 1.89 2009/02/09 04:12:07 manu Exp $");
 #endif
 #endif
 
@@ -861,7 +861,7 @@ acl_list_filter(ad, stage, ap, priv)
 			       
 	ale = ad->list;
 	
-	STAILQ_FOREACH(le, &ale->al_head, l_list) {
+	TAILQ_FOREACH(le, &ale->al_head, l_list) {
 		retval = (*le->l_acr->acr_filter)(&le->l_data, stage, ap, priv);
 		if (retval != 0)
 			return retval;
