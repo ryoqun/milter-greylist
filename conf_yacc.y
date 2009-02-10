@@ -22,7 +22,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.96 2009/01/18 13:03:50 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.96.2.1 2009/02/10 23:07:36 manu Exp $");
 #endif
 #endif
 
@@ -465,8 +465,26 @@ logfac:	LOGFAC NONE { conf.c_logfac = -1; }
 	|	LOGFAC LOGFAC_NEWS { conf.c_logfac = LOG_NEWS; }
 	|	LOGFAC LOGFAC_UUCP { conf.c_logfac = LOG_UUCP; }
 	|	LOGFAC LOGFAC_CRON { conf.c_logfac = LOG_CRON; }
-	|	LOGFAC LOGFAC_AUTHPRIV { conf.c_logfac = LOG_AUTHPRIV; }
-	|	LOGFAC LOGFAC_FTP { conf.c_logfac = LOG_FTP; }
+	|	LOGFAC LOGFAC_AUTHPRIV {
+#ifdef LOG_AUTHPRIV
+		      conf.c_logfac = LOG_AUTHPRIV;
+#else
+		      mg_log(LOG_ERR, "Your system does not support "
+		      		      "authpriv syslog facility, line %d",
+		      		      conf_line);
+		      exit(EX_DATAERR);
+#endif
+		}
+	|	LOGFAC LOGFAC_FTP {
+#ifdef LOG_FTP
+		      conf.c_logfac = LOG_FTP;
+#else
+		      mg_log(LOG_ERR, "Your system does not support "
+		      		      "ftp syslog facility, line %d",
+		      		      conf_line);
+		      exit(EX_DATAERR);
+#endif
+		}
 	|	LOGFAC LOGFAC_LOCAL0 { conf.c_logfac = LOG_LOCAL0; }
 	|	LOGFAC LOGFAC_LOCAL1 { conf.c_logfac = LOG_LOCAL1; }
 	|	LOGFAC LOGFAC_LOCAL2 { conf.c_logfac = LOG_LOCAL2; }
