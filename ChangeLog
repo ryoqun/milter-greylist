@@ -1,3 +1,5 @@
+4.1.13
+	Fix socket mode in sample config file
 4.1.12
 	Build fix for missing STAILQ_* macros
 4.1.11
