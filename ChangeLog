@@ -1,4 +1,5 @@
 4.2b2
+	Fix buffer overflow in SpamAssassin support (Enrico Scholz)
 	Build fix on Tru64 and Solaris
 4.2b1
 	Fix socket mode in sample config file
