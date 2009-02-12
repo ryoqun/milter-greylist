@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.8 2008/11/19 01:21:06 manu Exp $ */
+/* $Id: spamd.c,v 1.9 2009/02/12 16:53:32 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.8 2008/11/19 01:21:06 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.9 2009/02/12 16:53:32 manu Exp $");
 #endif
 #endif
 
@@ -286,10 +286,11 @@ spamd_rcvhdr(priv, str, len)
 		   priv->priv_addrlen, 
 		   ipstr, sizeof(ipstr));
 
-	if (gethostname(myhostname, SPAMD_BUFLEN)) {
+	if (gethostname(myhostname, sizeof(myhostname) - 1)) {
 		mg_log(LOG_WARNING, "spamd gethostname failed");
 		strcpy(myhostname, "unknown");
 	}
+	myhostname[sizeof(myhostname) - 1] = '\0';
 
 	/* strftime format specifier for timezone offset %z is not 
 	 * generally available (GNU only). For portability we force timezone
