@@ -1,4 +1,4 @@
-/* $Id: p0f.c,v 1.7 2008/11/11 00:12:52 manu Exp $ */
+/* $Id: p0f.c,v 1.8 2009/02/21 22:54:32 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: p0f.c,v 1.7 2008/11/11 00:12:52 manu Exp $");
+__RCSID("$Id: p0f.c,v 1.8 2009/02/21 22:54:32 manu Exp $");
 #endif
 #endif
 #include <sys/types.h>
@@ -283,6 +283,9 @@ p0f_reconnect(void)
 
 	if (p0fsock != -1)
 		return 0;
+
+	if (!conf.c_p0fsock[0])
+		return -1;
 
 	if ((p0fsock = socket(PF_UNIX,SOCK_STREAM,0)) == -1) {
 		mg_log(LOG_ERR, "socket(PF_UNIX, SOCK_STREAM, 0) failed");
