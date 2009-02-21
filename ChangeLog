@@ -1,4 +1,5 @@
 4.2b2
+	Do not complain about unreachable p0f daemon if it is unconfigured
 	Fix buffer overflow in SpamAssassin support (Enrico Scholz)
 	Build fix on Tru64 and Solaris
 4.2b1
