@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.8.2.1 2009/02/12 16:53:42 manu Exp $ */
+/* $Id: spamd.c,v 1.8.2.2 2009/02/22 00:00:54 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.8.2.1 2009/02/12 16:53:42 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.8.2.2 2009/02/22 00:00:54 manu Exp $");
 #endif
 #endif
 
@@ -169,7 +169,7 @@ spamd_check(ad, stage, ap, priv)
 
 	snprintf(buffer, SPAMD_BUFLEN,
 	  "CHECK SPAMC/1.2\r\nContent-length: %d\r\n\r\n",
-	  priv->priv_msgcount + strlen(rcvhdr));
+	  (unsigned int)(priv->priv_msgcount + strlen(rcvhdr)));
 
 	if ((sock = spamd_socket(conf.c_spamdsocktype, 
 				 conf.c_spamdsock)) == -1)
@@ -286,7 +286,7 @@ spamd_rcvhdr(priv, str, len)
 		   priv->priv_addrlen, 
 		   ipstr, sizeof(ipstr));
 
-	if (gethostname(myhostname, sizeof(myhostname) - 1)) {
+	if (gethostname(myhostname, sizeof(myhostname))) {
 		mg_log(LOG_WARNING, "spamd gethostname failed");
 		strcpy(myhostname, "unknown");
 	}
