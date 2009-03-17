@@ -1,4 +1,4 @@
-/* $Id: prop.c,v 1.1 2008/08/03 09:48:44 manu Exp $ */
+/* $Id: prop.c,v 1.1.2.1 2009/03/17 11:32:33 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: prop.c,v 1.1 2008/08/03 09:48:44 manu Exp $");
+__RCSID("$Id: prop.c,v 1.1.2.1 2009/03/17 11:32:33 manu Exp $");
 #endif
 #endif
 
@@ -62,7 +62,6 @@ __RCSID("$Id: prop.c,v 1.1 2008/08/03 09:48:44 manu Exp $");
 #include "spf.h"
 #include "acl.h"
 #include "conf.h"
-#include "urlcheck.h"
 #include "sync.h"
 #include "prop.h"
 

@@ -1,4 +1,6 @@
-4.2b2
+4.2rc2
+	Build with OpenLDAP but not CURL (Matthias Scheler)
+4.2rc1
 	Do not complain about unreachable p0f daemon if it is unconfigured
 	Fix buffer overflow in SpamAssassin support (Enrico Scholz)
 	Build fix on Tru64 and Solaris
