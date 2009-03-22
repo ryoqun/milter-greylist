@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.35 2007/12/29 19:06:49 manu Exp $ */
+/* $Id: dump.c,v 1.35.2.1 2009/03/22 04:27:26 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.35 2007/12/29 19:06:49 manu Exp $");
+__RCSID("$Id: dump.c,v 1.35.2.1 2009/03/22 04:27:26 manu Exp $");
 #endif
 #endif
 
@@ -287,7 +287,15 @@ dump_perform(final)
 	fprintf(dump, "#\n# Summary: %d records, %d greylisted, %d "
 	    "whitelisted\n#\n", done, greylisted_count, whitelisted_count);
 
-	Fclose(dump);
+	/*
+	 * Ensure that the data is really flushed to disk.
+	 * Some systems might delay the data write from kernel buffer
+	 * to disk even after the file is closed
+	 */
+	(void)fflush(dump);
+	(void)fsync(fileno(dump));
+	(void)Fclose(dump);
+
 	if (s_buffer)
 		free(s_buffer);
 

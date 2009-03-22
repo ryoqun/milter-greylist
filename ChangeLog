@@ -1,4 +1,5 @@
 4.2rc2
+	Make sure dump is really on disk even with a buggy ext4fs
 	Build with OpenLDAP but not CURL (Matthias Scheler)
 4.2rc1
 	Do not complain about unreachable p0f daemon if it is unconfigured
