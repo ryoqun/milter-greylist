@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.94.2.1 2009/04/02 04:09:28 manu Exp $
+.\" $Id: greylist.conf.5,v 1.94.2.2 2009/04/03 04:16:33 manu Exp $
 .\"
 .\" Copyright (c) 2004-2009 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -807,7 +807,9 @@ keyword:
 .IP
   ldapconf "ldap://localhost ldaps://ldap.example.net"
 .PP
-If one of the server goes down, milter-greylist will try the next one.
+If one of the server goes down, milter-greylist will try the next one. 
+An optional network timeout, in seconds, can be appended after the quoted 
+string.
 When
 .I ldaps://
 is used, the system's 
