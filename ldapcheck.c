@@ -1,4 +1,4 @@
-/* $Id: ldapcheck.c,v 1.4 2008/08/09 11:57:33 manu Exp $ */
+/* $Id: ldapcheck.c,v 1.5 2009/04/03 04:15:27 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: ldapcheck.c,v 1.4 2008/08/09 11:57:33 manu Exp $");
+__RCSID("$Id: ldapcheck.c,v 1.5 2009/04/03 04:15:27 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
@@ -76,6 +76,7 @@ static char *url_encode_percent(char *);
 
 static struct ldapcheck_list ldapcheck_list;
 static struct ldapconf_list ldapconf_list;
+static struct timeval ldap_timeout;
 
 int ldapcheck_gflags = 0;
 
@@ -85,6 +86,7 @@ ldapcheck_init(void) {
 	SIMPLEQ_INIT(&ldapconf_list);
 
 	ldapcheck_gflags = 0;
+	memset(&ldap_timeout, 0, sizeof(ldap_timeout));
 
 	return;
 }
@@ -130,6 +132,16 @@ ldapcheck_conf_add(urls)
 			if ((p = strtok_r(NULL, sep, &lasts)) != NULL)
 				ldapcheck_conf_addone(p);
 	}
+
+	return;
+}
+
+void
+ldapcheck_timeout_set(timeout)
+	int timeout;
+{
+	ldap_timeout.tv_sec = timeout;
+	ldap_timeout.tv_usec = 0;
 
 	return;
 }
@@ -214,6 +226,31 @@ ldapcheck_connect(lc)
 		       "ldap_set_option failed for LDAP URL \"%s\": %s", 
 		       lc->lc_url, ldap_err2string(error));
 		goto bad;
+	}
+
+	
+	if (ldap_timeout.tv_sec != 0) {
+		option = LDAP_OPT_TIMEOUT;
+		if ((error = ldap_set_option(lc->lc_ld, 
+					     option, 
+					     &ldap_timeout)) != 0) {
+			mg_log(LOG_WARNING,
+			       "ldap_set_option failed for "
+			       "LDAP URL \"%s\": %s", 
+			       lc->lc_url, ldap_err2string(error));
+			goto bad;
+		}
+
+		option = LDAP_OPT_NETWORK_TIMEOUT;
+		if ((error = ldap_set_option(lc->lc_ld, 
+					     option, 
+					     &ldap_timeout)) != 0) {
+			mg_log(LOG_WARNING,
+			       "ldap_set_option failed for "
+			       "LDAP URL \"%s\": %s", 
+			       lc->lc_url, ldap_err2string(error));
+			goto bad;
+		}
 	}
 
 	error = ldap_simple_bind_s(lc->lc_ld, lc->lc_dn, lc->lc_pwd);
@@ -315,19 +352,13 @@ ldapcheck_validate(ad, stage, ap, priv)
 					  0,		/* sizelimit */
 					  &res0);
 
-		if (error == LDAP_SERVER_DOWN) {
-			(void)ldapcheck_disconnect(lc);
-			mg_log(LOG_ERR, 
-			       "LDAP URL \"%s\" unreachable", lc->lc_url);
-			continue;
-		}
+		if (error == 0)
+			break;
 
-		if (error != 0) 
-			mg_log(LOG_ERR, 
-			       "ldap_search_ext_s(\"%s\") failed: %s", 
-			       url, ldap_err2string(error));
-
-		break;
+		(void)ldapcheck_disconnect(lc);
+		mg_log(LOG_ERR, 
+		       "LDAP URL \"%s\" unreachable: %s", 
+		       url, ldap_err2string(error));
 	}
 
 	if ((lc == NULL) || (lc->lc_ld == NULL)) {

@@ -22,7 +22,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.97 2009/02/10 23:05:55 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.98 2009/04/03 04:15:27 manu Exp $");
 #endif
 #endif
 
@@ -1312,7 +1312,7 @@ urlcheckdef_fork:	 FORK {
 			}
 		;
 
-ldapconfdef:	LDAPCONF QSTRING {
+ldapconfdef:	LDAPCONF QSTRING ldaptimeout {
 #ifdef USE_LDAP
 			char uris[QSTRLEN + 1];
 
@@ -1324,6 +1324,18 @@ ldapconfdef:	LDAPCONF QSTRING {
 #endif
 		}
 	;
+ldaptimeout:	TNUMBER {
+#ifdef USE_LDAP
+			ldapcheck_timeout_set(atoi($1));
+#else
+			mg_log(LOG_INFO, 
+			    "LDAP support not compiled in, ignore  line %d", 
+			    conf_line);
+#endif
+		}
+	|
+	;
+
 macrodef_regex:		SM_MACRO QSTRING QSTRING REGEX {
 				char name[QSTRLEN + 1];
 				char macro[QSTRLEN + 1];
