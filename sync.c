@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.82 2009/01/17 04:32:55 manu Exp $ */
+/* $Id: sync.c,v 1.83 2009/04/04 03:09:43 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.82 2009/01/17 04:32:55 manu Exp $");
+__RCSID("$Id: sync.c,v 1.83 2009/04/04 03:09:43 manu Exp $");
 #endif
 #endif
 
@@ -160,8 +160,9 @@ peer_clear(void) {
 }
 
 void 
-peer_add(peername)
+peer_add(peername, sockettimeout)
 	char *peername;
+        time_t sockettimeout;
 {
 	struct peer *peer;
 
@@ -174,6 +175,7 @@ peer_add(peername)
 	peer->p_qlen = 0;
 	peer->p_stream = NULL;
 	peer->p_flags = 0;
+	peer->p_socket_timeout = sockettimeout;
 	TAILQ_INIT(&peer->p_deferred);
 	pthread_mutex_init(&peer->p_mtx, NULL);
 
@@ -333,7 +335,7 @@ sync_send(peer, type, pending, autowhite) /* peer list is read-locked */
 	 * Check the return code 
 	 */
 	get_more:
-	sync_waitdata(peer->p_socket);
+	sync_waitdata(peer->p_socket, peer->p_socket_timeout);
 	if (fgets(line, LINELEN, peer->p_stream) == NULL) {
 		if (errno == EAGAIN) {
 			errcount++;
@@ -592,7 +594,7 @@ peer_connect(peer)	/* peer list is read-locked */
 		mg_log(LOG_ERR, "cannot set line buffering with peer %s: %s", 
 		    peer->p_name, strerror(errno));
 
-	sync_waitdata(s);	
+	sync_waitdata(s, peer->p_socket_timeout);	
 	if (fgets(line, LINELEN, stream) == NULL) {
 		mg_log(LOG_ERR, "Lost connection with peer %s: "
 		    "%s (%d entries queued)", 
@@ -1274,10 +1276,10 @@ sync_help(stream)
 	return;
 }
 
-#define COM_TIMEOUT 3
 int
-sync_waitdata(fd)
+sync_waitdata(fd, stimeout)
 	int fd;
+	time_t stimeout;
 {
 	fd_set fdr, fde;
 	struct timeval timeout;
@@ -1289,10 +1291,10 @@ sync_waitdata(fd)
 	FD_ZERO(&fde);
 	FD_SET(fd, &fde);
 
-	timeout.tv_sec = COM_TIMEOUT;
+	timeout.tv_sec = stimeout;
 	timeout.tv_usec = 0;
 
-	retval = select(fd + 1, &fdr, NULL, &fde, &timeout); 
+	retval = select(fd + 1, &fdr, NULL, &fde, stimeout == 0 ? NULL : &timeout); 
 
 	if (retval == 0) {
 		mg_log(LOG_ERR, "sync_waitdata : select timeout");
@@ -1536,7 +1538,7 @@ select_protocol(peer, s, stream)
 
 		fflush(stream);
 
-		sync_waitdata(s);	
+		sync_waitdata(s, peer->p_socket_timeout);	
 		if (fgets(line, LINELEN, stream) == NULL) {
 			mg_log(LOG_ERR, "Lost connection with peer %s: "
 			    "%s (%d entries queued)", 

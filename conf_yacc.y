@@ -22,7 +22,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.98 2009/04/03 04:15:27 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.99 2009/04/04 03:09:43 manu Exp $");
 #endif
 #endif
 
@@ -258,7 +258,7 @@ domainregex:	DOMAIN REGEX	 {
 			acl_register_entry_first(AS_RCPT, A_WHITELIST);
 		}
 	;
-peeraddr:	PEER IPADDR	{
+peeraddr:	PEER IPADDR GLTIMEOUT TDELAY	{
 			char addr[IPADDRSTRLEN];
 
 			if (IP4TOSTRING($2, addr) == NULL) {
@@ -267,7 +267,81 @@ peeraddr:	PEER IPADDR	{
 				    conf_line);
 				exit(EX_DATAERR);
 			}
-			peer_add(addr);
+			peer_add(addr, (time_t)humanized_atoi($4));
+		}
+	|	PEER IP6ADDR GLTIMEOUT TDELAY	{
+#ifdef AF_INET6
+			char addr[IPADDRSTRLEN];
+
+			if (IP6TOSTRING($2, addr) == NULL) {
+				mg_log(LOG_ERR, 
+				    "invalid IPv6 address line %d",
+				    conf_line);
+				exit(EX_DATAERR);
+			}
+			peer_add(addr, (time_t)humanized_atoi($4));
+#else
+			mg_log(LOG_INFO,
+			    "IPv6 is not supported, ignore line %d",
+			    conf_line);
+#endif
+		}
+	|	PEER DOMAINNAME GLTIMEOUT TDELAY	{
+#ifdef HAVE_GETADDRINFO
+			peer_add($2, (time_t)humanized_atoi($4));
+#else
+			mg_log(LOG_INFO,
+			    "FQDN in peer is not supported, "
+			    "ignore line %d", conf_line);
+#endif
+		}
+	|	PEER IPADDR GLTIMEOUT TNUMBER	{
+			char addr[IPADDRSTRLEN];
+
+			if (IP4TOSTRING($2, addr) == NULL) {
+				mg_log(LOG_ERR,
+				    "invalid IPv4 address line %d",
+				    conf_line);
+				exit(EX_DATAERR);
+			}
+			peer_add(addr, (time_t)humanized_atoi($4));
+		}
+	|	PEER IP6ADDR GLTIMEOUT TNUMBER	{
+#ifdef AF_INET6
+			char addr[IPADDRSTRLEN];
+
+			if (IP6TOSTRING($2, addr) == NULL) {
+				mg_log(LOG_ERR, 
+				    "invalid IPv6 address line %d",
+				    conf_line);
+				exit(EX_DATAERR);
+			}
+			peer_add(addr, (time_t)humanized_atoi($4));
+#else
+			mg_log(LOG_INFO,
+			    "IPv6 is not supported, ignore line %d",
+			    conf_line);
+#endif
+		}
+	|	PEER DOMAINNAME GLTIMEOUT TNUMBER	{
+#ifdef HAVE_GETADDRINFO
+			peer_add($2, (time_t)humanized_atoi($4));
+#else
+			mg_log(LOG_INFO,
+			    "FQDN in peer is not supported, "
+			    "ignore line %d", conf_line);
+#endif
+		}
+	|	PEER IPADDR	{
+			char addr[IPADDRSTRLEN];
+
+			if (IP4TOSTRING($2, addr) == NULL) {
+				mg_log(LOG_ERR,
+				    "invalid IPv4 address line %d",
+				    conf_line);
+				exit(EX_DATAERR);
+			}
+			peer_add(addr, (time_t)COM_TIMEOUT);
 		}
 	|	PEER IP6ADDR	{
 #ifdef AF_INET6
@@ -279,7 +353,7 @@ peeraddr:	PEER IPADDR	{
 				    conf_line);
 				exit(EX_DATAERR);
 			}
-			peer_add(addr);
+			peer_add(addr, (time_t)COM_TIMEOUT);
 #else
 			mg_log(LOG_INFO,
 			    "IPv6 is not supported, ignore line %d",
@@ -288,7 +362,7 @@ peeraddr:	PEER IPADDR	{
 		}
 	|	PEER DOMAINNAME	{
 #ifdef HAVE_GETADDRINFO
-			peer_add($2);
+			peer_add($2, (time_t)COM_TIMEOUT);
 #else
 			mg_log(LOG_INFO,
 			    "FQDN in peer is not supported, "

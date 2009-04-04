@@ -1,4 +1,5 @@
 4.3.1
+	Make MX sync timeout peer-configurable (Attila Bruncsak)
 	Fix a crash when LDAP server is down
 	Update contributor list
 	Make sure dump is really on disk even with a buggy ext4fs
