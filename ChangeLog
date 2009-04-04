@@ -1,3 +1,5 @@
+4.2.2
+	Make MX sync timeout peer-configurable (Attila Bruncsak)
 4.2.1
 	Fix a crash when a LDAP server is down
 4.2

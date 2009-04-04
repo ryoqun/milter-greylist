@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.94.2.2 2009/04/03 04:16:33 manu Exp $
+.\" $Id: greylist.conf.5,v 1.94.2.3 2009/04/04 03:20:26 manu Exp $
 .\"
 .\" Copyright (c) 2004-2009 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -518,8 +518,16 @@ an example:
 .PP
   peer 192.0.2.18
   peer 192.0.2.17
+  peer 192.0.2.22 timeout 7
+  peer 192.0.2.38 timeout 5m
 .PP
 You can list the local machine in the peer statements, it will be ignored.
+.PP
+The
+.I timeout
+clause sets a peer communication timeout to have proper retrial
+in case of slow MX peer. The default value is 3 seconds. The special value of
+0 disables the connection retrials.
 .PP
 By default, milter-greylist will listen on all interfaces using TCP port
 5252 or the port number given by service named mxglsync if defined in 

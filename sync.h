@@ -1,4 +1,4 @@
-/* $Id: sync.h,v 1.21 2008/06/03 10:26:19 manu Exp $ */
+/* $Id: sync.h,v 1.21.2.1 2009/04/04 03:20:26 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
@@ -48,6 +48,9 @@
 
 #define MXGLSYNC_BACKLOG 5 /* Maximum connections */
 
+/* socket communication default time out */
+#define COM_TIMEOUT 3
+
 #ifdef HAVE_MISSING_SOCKLEN_T
 typedef unsigned int socklen_t;
 #endif
@@ -63,6 +66,7 @@ struct peer {
 	char *p_name;
 	FILE *p_stream;
 	int p_socket;
+	time_t p_socket_timeout;
 	/* p_mtx protects p_deferred and p_qlen.
 	 * peer list must be read or rw locked before. */
 	pthread_mutex_t p_mtx;
@@ -87,7 +91,7 @@ struct sync {
 
 void peer_init(void);
 void peer_clear(void);
-void peer_add(char *);
+void peer_add(char *, time_t);
 int peer_connect(struct peer *);
 void peer_create(struct pending *);
 void peer_delete(struct pending *, time_t);
@@ -104,7 +108,7 @@ void sync_master_stop(void);
 void *sync_master(void *);
 void sync_server(void *);
 void sync_help(FILE *);
-int sync_waitdata(int);
+int sync_waitdata(int, time_t);
 
 
 #endif /* _SYNC_H_ */
