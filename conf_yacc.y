@@ -22,7 +22,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.96.2.3 2009/04/04 03:20:26 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.96.2.4 2009/04/04 03:21:02 manu Exp $");
 #endif
 #endif
 
@@ -1398,7 +1398,16 @@ ldapconfdef:	LDAPCONF QSTRING ldaptimeout {
 #endif
 		}
 	;
-ldaptimeout:	TNUMBER {
+ldaptimeout:	GLTIMEOUT TDELAY {
+#ifdef USE_LDAP
+			ldapcheck_timeout_set(humanized_atoi(atoi($2)));
+#else
+			mg_log(LOG_INFO, 
+			    "LDAP support not compiled in, ignore  line %d", 
+			    conf_line);
+#endif
+		}
+	|	TNUMBER {	/* 4.2.1 backward compatiblity */
 #ifdef USE_LDAP
 			ldapcheck_timeout_set(atoi($1));
 #else

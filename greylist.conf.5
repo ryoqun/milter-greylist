@@ -1,5 +1,5 @@
 .\"
-.\" $Id: greylist.conf.5,v 1.94.2.3 2009/04/04 03:20:26 manu Exp $
+.\" $Id: greylist.conf.5,v 1.94.2.4 2009/04/04 03:21:02 manu Exp $
 .\"
 .\" Copyright (c) 2004-2009 Emmanuel Dreyfus
 .\" All rights reserved.
@@ -811,13 +811,10 @@ except that properties are always collected: the only available option is
 .PP
 A list of LDAP URL to use can be specified with the
 .I ldapconf 
-keyword:
+keyword. The network timeout is optional.
 .IP
-  ldapconf "ldap://localhost ldaps://ldap.example.net"
+  ldapconf "ldap://localhost ldaps://ldap.example.net" timeout 2s
 .PP
-If one of the server goes down, milter-greylist will try the next one. 
-An optional network timeout, in seconds, can be appended after the quoted 
-string.
 When
 .I ldaps://
 is used, the system's 
