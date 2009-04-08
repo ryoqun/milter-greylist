@@ -1,4 +1,4 @@
-/* $Id: ldapcheck.c,v 1.4.2.1 2009/04/03 04:16:33 manu Exp $ */
+/* $Id: ldapcheck.c,v 1.4.2.2 2009/04/08 11:14:41 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: ldapcheck.c,v 1.4.2.1 2009/04/03 04:16:33 manu Exp $");
+__RCSID("$Id: ldapcheck.c,v 1.4.2.2 2009/04/08 11:14:41 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
@@ -63,6 +63,8 @@ struct ldapconf_entry {
 	char *lc_dn;
 	char *lc_pwd;
 	LDAP *lc_ld;
+	int lc_refcount;
+	pthread_mutex_t lc_lock;
 	SIMPLEQ_ENTRY(ldapconf_entry) lc_list;
 };
 
@@ -73,6 +75,8 @@ static void ldapcheck_conf_addone(char *);
 static int ldapcheck_connect(struct ldapconf_entry *);
 static int ldapcheck_disconnect(struct ldapconf_entry *);
 static char *url_encode_percent(char *);
+static inline void ldapcheck_lock(struct ldapconf_entry *);
+static inline void ldapcheck_unlock(struct ldapconf_entry *);
 
 static struct ldapcheck_list ldapcheck_list;
 static struct ldapconf_list ldapconf_list;
@@ -110,7 +114,12 @@ ldapcheck_conf_addone(url)
 	lc->lc_dn = NULL;
 	lc->lc_pwd = NULL;
 	lc->lc_ld = NULL;
-	(void)ldapcheck_connect(lc);
+	lc->lc_refcount = 0;
+	if (pthread_mutex_init(&lc->lc_lock, NULL) != 0) {
+		mg_log(LOG_ERR, "pthread_mutex_init() failed: %s",
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
 
 	SIMPLEQ_INSERT_TAIL(&ldapconf_list, lc, lc_list);
 
@@ -195,6 +204,7 @@ ldapcheck_def_add(name, url, flags)
 }
 
 
+/* lc must be locked */
 static int
 ldapcheck_connect(lc)
 	struct ldapconf_entry *lc;
@@ -268,10 +278,10 @@ ldapcheck_connect(lc)
 
 bad:
 	mg_log(LOG_WARNING, "LDAP URL \"%s\" unreachable", lc->lc_url);
-	(void)ldapcheck_disconnect(lc);
 	return -1;
 }
 
+/* lc must be locked */
 static int
 ldapcheck_disconnect(lc)
 	struct ldapconf_entry *lc;
@@ -280,6 +290,25 @@ ldapcheck_disconnect(lc)
 
 	if (lc->lc_ld == NULL)
 		return 0;
+
+	/* Sanity check */
+	if (lc->lc_refcount < 0) {
+		mg_log(LOG_ERR, "bad refcount for LDAP URL \"%s\"", lc->lc_url);
+		exit(EX_OSERR);
+	}
+	
+	/* 
+	 * Another thread is still using this connexion. We cannot dispose
+	 * it immediatly, so we just return. If the fault is permanent, 
+	 * the other threads will get more errors, and the last one will
+	 * be able to disconnect. If the fault is transcient, other threads
+	 * may have more success, so we do not need to disconnect.
+	 */
+	if (lc->lc_refcount > 0) {
+		mg_log(LOG_DEBUG, "LDAP URL has refcount %d \"%s\"", 
+		       lc->lc_url, lc->lc_refcount);
+		return 0;
+	}
 
 	if ((error = ldap_unbind_s(lc->lc_ld)) != 0)
 		mg_log(LOG_ERR, "ldap_unbind_s() failed: %s",
@@ -301,7 +330,7 @@ ldapcheck_validate(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
-	struct ldapconf_entry *lc;
+	struct ldapconf_entry *lc = NULL;
 	char *rcpt;
 	struct ldapcheck_entry *lce;
 	LDAPURLDesc *lud = NULL;
@@ -329,9 +358,23 @@ ldapcheck_validate(ad, stage, ap, priv)
 	}
 
 	SIMPLEQ_FOREACH(lc, &ldapconf_list, lc_list) {
-		if (lc->lc_ld == NULL)
-			if (ldapcheck_connect(lc) != 0)
+		ldapcheck_lock(lc);
+		lc->lc_refcount++;
+		ldapcheck_unlock(lc);
+
+		if (lc->lc_ld == NULL) {
+			int error;
+
+			ldapcheck_lock(lc);
+			error = ldapcheck_connect(lc);
+			if (error != 0) {
+				lc->lc_refcount--;
+				(void)ldapcheck_disconnect(lc);
+			}
+			ldapcheck_unlock(lc);
+			if (error != 0)
 				continue;
+		}
 
 		if (conf.c_debug)
 			mg_log(LOG_DEBUG, 
@@ -355,7 +398,11 @@ ldapcheck_validate(ad, stage, ap, priv)
 		if (error == 0)
 			break;
 
+		ldapcheck_lock(lc);
+		lc->lc_refcount--;
 		(void)ldapcheck_disconnect(lc);
+		ldapcheck_unlock(lc);
+
 		mg_log(LOG_ERR, 
 		       "LDAP URL \"%s\" unreachable: %s", 
 		       url, ldap_err2string(error));
@@ -405,6 +452,13 @@ bad:
 		ldap_msgfree(res0);
 	if (lud)
 		ldap_free_urldesc(lud);
+
+	if (lc != NULL) {
+		ldapcheck_lock(lc);
+		lc->lc_refcount--;
+		ldapcheck_unlock(lc);
+	}
+
 	if (url)
 		free(url);
 	
@@ -434,7 +488,9 @@ ldapcheck_clear(void)	/* acllist must be write locked */
 		lc = SIMPLEQ_FIRST(&ldapconf_list);
 		SIMPLEQ_REMOVE(&ldapconf_list, lc, ldapconf_entry, lc_list);
 
+		ldapcheck_lock(lc);
 		ldapcheck_disconnect(lc);
+		ldapcheck_unlock(lc);
 
 		if (lc->lc_url)
 			free(lc->lc_url);
@@ -557,5 +613,32 @@ url_encode(url)
 	return out;
 }
 #endif
+
+
+static inline void
+ldapcheck_lock(lc)
+	struct ldapconf_entry *lc;
+{
+	if (pthread_mutex_lock(&lc->lc_lock) != 0) {
+		mg_log(LOG_ERR, "pthread_mutex_lock failed "
+		    "in urlcheck_clear: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	return;
+}
+
+static inline void
+ldapcheck_unlock(lc)
+	struct ldapconf_entry *lc;
+{
+	if (pthread_mutex_unlock(&lc->lc_lock) != 0) {
+		mg_log(LOG_ERR, "pthread_mutex_unlock failed "
+		    "in urlcheck_clear: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	return;
+}
 
 #endif /* USE_LDAP */
