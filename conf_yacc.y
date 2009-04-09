@@ -22,7 +22,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.100 2009/04/04 03:19:39 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.101 2009/04/09 03:36:30 manu Exp $");
 #endif
 #endif
 
@@ -1400,7 +1400,7 @@ ldapconfdef:	LDAPCONF QSTRING ldaptimeout {
 	;
 ldaptimeout:	GLTIMEOUT TDELAY {
 #ifdef USE_LDAP
-			ldapcheck_timeout_set(humanized_atoi(atoi($2)));
+			ldapcheck_timeout_set(humanized_atoi($2));
 #else
 			mg_log(LOG_INFO, 
 			    "LDAP support not compiled in, ignore  line %d", 
