@@ -1,4 +1,4 @@
-/* $Id: ldapcheck.c,v 1.6 2009/04/08 11:13:15 manu Exp $ */
+/* $Id: ldapcheck.c,v 1.7 2009/04/09 03:27:20 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: ldapcheck.c,v 1.6 2009/04/08 11:13:15 manu Exp $");
+__RCSID("$Id: ldapcheck.c,v 1.7 2009/04/09 03:27:20 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
@@ -305,7 +305,7 @@ ldapcheck_disconnect(lc)
 	 * may have more success, so we do not need to disconnect.
 	 */
 	if (lc->lc_refcount > 0) {
-		mg_log(LOG_DEBUG, "LDAP URL has refcount %d \"%s\"", 
+		mg_log(LOG_DEBUG, "LDAP URL \"%s\" has refcount %d", 
 		       lc->lc_url, lc->lc_refcount);
 		return 0;
 	}
