@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.215 2008/11/26 05:20:13 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.216 2009/04/16 12:33:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.215 2008/11/26 05:20:13 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.216 2009/04/16 12:33:19 manu Exp $");
 #endif
 #endif
 
@@ -611,14 +611,12 @@ real_envrcpt(ctx, envrcpt)
 	 * Blacklist overrides autowhitelisting...
 	 */
 	if (priv->priv_sr.sr_whitelist & EXF_BLACKLIST) {
-		char aclstr[16];
+		char *aclstr;
 		char *code = "551";
 		char *ecode = "5.7.1";
 		char *msg = "Go away!";
 
-		if (priv->priv_sr.sr_acl_line != 0)
-			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
-			    priv->priv_sr.sr_acl_line);
+		aclstr = fstring_expand(priv, NULL, " (ACL %a)");
 
 		if (!(priv->priv_sr.sr_whitelist & EXF_NOLOG)) {
 			mg_log(LOG_INFO, 
@@ -629,6 +627,7 @@ real_envrcpt(ctx, envrcpt)
 
 		set_sr_defaults(priv, code, ecode, msg);
 		mg_setreply(ctx, priv, rcpt);
+		free(aclstr);
 		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
@@ -939,16 +938,15 @@ real_eom(ctx)
 	}
 
 	if (priv->priv_sr.sr_whitelist & EXF_BLACKLIST) {
-		char aclstr[16];
+		char *aclstr;
 		char addrstr[IPADDRSTRLEN];
 		char *code = "551";
 		char *ecode = "5.7.1";
 		char *msg = "Go away!";
 
 		smtp_reply_free(&rcpt_sr);
-		if (priv->priv_sr.sr_acl_line != 0)
-			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
-			    priv->priv_sr.sr_acl_line);
+
+		aclstr = fstring_expand(priv, NULL, " (ACL %a)");
 
 		iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
 		    sizeof(addrstr));
@@ -962,6 +960,7 @@ real_eom(ctx)
 
 		set_sr_defaults(priv, code, ecode, msg);
 		mg_setreply(ctx, priv, NULL);
+		free(aclstr);
 		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
@@ -1129,7 +1128,7 @@ passed:
 			/* Silently ignore other codes, just report ACL */	
 			if (priv->priv_last_whitelist != 0) {
 				priv->priv_last_whitelist = 0;
-				mystrlcat (whystr, "ACL %A matched", HDRLEN);
+				mystrlcat (whystr, "ACL %a matched", HDRLEN);
 			}
 
 			mystrlcat (whystr, ", not delayed by %V", HDRLEN);
@@ -1959,7 +1958,7 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	char addrstr[IPADDRSTRLEN];
 	time_t remaining;
 	char *delayed_rj;
-	char aclstr[16];
+	char *aclstr;
 	char *code = "451";
 	char *ecode = "4.7.1";
 	char *msg = conf.c_quiet ?
@@ -1985,11 +1984,7 @@ log_and_report_greylisting(ctx, priv, rcpt)
 	else
 		delayed_rj = "";
 
-	if (priv->priv_sr.sr_acl_line != 0)
-		snprintf(aclstr, sizeof(aclstr), " (ACL %d)", 
-		    priv->priv_sr.sr_acl_line);
-	else
-		aclstr[0] = '\0';
+	aclstr = fstring_expand(priv, NULL, " (ACL %a)");
 
 	if (!(priv->priv_sr.sr_whitelist & EXF_NOLOG)) {
 		mg_log(LOG_INFO, 
@@ -2000,6 +1995,7 @@ log_and_report_greylisting(ctx, priv, rcpt)
 
 	set_sr_defaults(priv, code, ecode, msg);
 	mg_setreply(ctx, priv, rcpt);
+	free(aclstr);
 	return;
 }
 

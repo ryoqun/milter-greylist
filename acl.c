@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.89 2009/02/09 04:12:07 manu Exp $ */
+/* $Id: acl.c,v 1.90 2009/04/16 12:33:19 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.89 2009/02/09 04:12:07 manu Exp $");
+__RCSID("$Id: acl.c,v 1.90 2009/04/16 12:33:19 manu Exp $");
 #endif
 #endif
 
@@ -1783,6 +1783,7 @@ acl_filter(stage, ctx, priv)
 	char addrstr[IPADDRSTRLEN];
 	char whystr[HDRLEN];
 	char tmpstr[HDRLEN];
+	char *aclstr;
 	int error = -1;
 	int retval = 0;
 	int noretval = 0;
@@ -2076,10 +2077,12 @@ acl_filter(stage, ctx, priv)
 			ADD_REASON(whystr, "this is the default action");
 		}
 		iptostring(sa, salen, addrstr, sizeof(addrstr));
+		aclstr = fstring_expand(priv, NULL, "%a");
 		snprintf(tmpstr, sizeof(tmpstr),
-		    "(from=%s, rcpt=%s, addr=%s[%s]) ACL %d", from, 
+		    "(from=%s, rcpt=%s, addr=%s[%s]) ACL %s", from, 
 		    (cur_rcpt != NULL) ? cur_rcpt : "(nil)",
-		    hostname, addrstr, priv->priv_sr.sr_acl_line);
+		    hostname, addrstr, aclstr);
+		free(aclstr);
 		ADD_REASON(whystr, tmpstr);
 
 		mg_log(LOG_INFO, "%s: skipping greylist because %s",
