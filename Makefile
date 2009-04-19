@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.123 2009/04/16 12:42:53 manu Exp $
+# $Id: Makefile,v 1.124 2009/04/19 00:55:32 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -54,11 +54,11 @@ YACC=		bison -y
 TRUE=		true
 
 OBJ= 		milter-greylist.o pending.o sync.o dnsrbl.o list.o macro.o \
-		conf_yacc.o dump_yacc.o conf.o autowhite.o dump.o spf.o \
+		conf_yacc.o dump_yacc.o conf.o store.o dump.o spf.o \
 		acl.o urlcheck.o stat.o clock.o geoip.o fd_pool.o prop.o \
 		ldapcheck.o dkimcheck.o p0f.o spamd.o
 SRC= 		milter-greylist.c pending.c sync.c conf.c macro.c stat.c \
-		clock.c autowhite.c dump.c spf.c acl.c dnsrbl.c list.c \
+		clock.c store.c dump.c spf.c acl.c dnsrbl.c list.c \
 		urlcheck.c geoip.c prop.c ldapcheck.c dkimcheck.c p0f.c spamd.c
 GENSRC=		conf_yacc.c conf_lex.c dump_yacc.c dump_lex.c  
 

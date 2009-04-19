@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.216 2009/04/16 12:33:19 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.217 2009/04/19 00:55:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.216 2009/04/16 12:33:19 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.217 2009/04/19 00:55:32 manu Exp $");
 #endif
 #endif
 
@@ -86,7 +86,7 @@ static int check_drac(char *dotted_ip);
 #include "conf.h"
 #include "pending.h"
 #include "sync.h"
-#include "autowhite.h"
+#include "store.h"
 #include "stat.h"
 #include "milter-greylist.h"
 #ifdef USE_DNSRBL
@@ -524,6 +524,7 @@ real_envrcpt(ctx, envrcpt)
 	char addrstr[IPADDRSTRLEN];
 	char rcpt[ADDRLEN + 1];
 	int save_nolog;
+	struct tuple_fields tuple;
 
 	/*
 	 * Strip spaces from the recipient address
@@ -631,32 +632,38 @@ real_envrcpt(ctx, envrcpt)
 		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
-	/* 
-	 * Check if the tuple {sender IP, sender e-mail, recipient e-mail}
-	 * was autowhitelisted.
-	 */
 	save_nolog = priv->priv_sr.sr_whitelist & EXF_NOLOG;
-	priv->priv_sr.sr_whitelist = autowhite_check(SA(&priv->priv_addr),
-	    priv->priv_addrlen, priv->priv_from, rcpt, priv->priv_queueid,
-	    priv->priv_sr.sr_delay, priv->priv_sr.sr_autowhite);
-
-	if (priv->priv_sr.sr_whitelist != EXF_NONE) {
-		priv->priv_sr.sr_elapsed = 0;
-		goto exit_accept;
-	}
 
 	/*
 	 * Check if the tuple {sender IP, sender e-mail, recipient e-mail}
-	 * is in the greylist and if it ca now be accepted. If it is not
-	 * in the greylist, it will be added.
+	 * is in the greylist or autowhite list and if it can now be 
+	 * accepted. If in greylist, the greylist entry will change to 
+	 * autowhite entry. If it is not in the greylist, it will be added.
 	 */
-	if (pending_check(SA(&priv->priv_addr), priv->priv_addrlen,
-	    priv->priv_from, rcpt, &remaining, &priv->priv_sr.sr_elapsed,
-	    priv->priv_queueid, priv->priv_sr.sr_delay, 
-	    priv->priv_sr.sr_autowhite) != 0) {
+
+	tuple.sa = SA(&priv->priv_addr);
+	tuple.salen = priv->priv_addrlen;
+	tuple.from = priv->priv_from;
+	tuple.rcpt = rcpt;
+	tuple.remaining = &remaining;
+	tuple.elapsed = &priv->priv_sr.sr_elapsed;
+	tuple.queueid = priv->priv_queueid;
+	tuple.gldelay = priv->priv_sr.sr_delay;
+	tuple.autowhite = priv->priv_sr.sr_autowhite;
+
+	switch(mg_tuple_check(tuple)) {
+	case T_AUTOWHITE:			/* autowhite listed */
+		priv->priv_sr.sr_elapsed = 0;
+		goto exit_accept;
+		break;
+	case T_PENDING:			/* greylisted */
 		if (priv->priv_sr.sr_elapsed > priv->priv_max_elapsed)
 			priv->priv_max_elapsed = priv->priv_sr.sr_elapsed;
 		goto exit_accept;
+		break;
+	default:			/* first encounter */
+		;
+		break;
 	}
 
 	priv->priv_sr.sr_remaining = remaining;
@@ -876,9 +883,9 @@ real_eom(ctx)
 	struct smtp_reply rcpt_sr;
 	struct rcpt *rcpt;
 	time_t remaining;
-	int whitelist;
 	int envrcpt_continue = 0;
 	int accept = 1;
+	struct tuple_fields tuple;
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) == NULL) {
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
@@ -965,40 +972,43 @@ real_eom(ctx)
 	}
 
 	if (priv->priv_sr.sr_whitelist & EXF_GREYLIST && envrcpt_continue) {
-		/* 
-	 	 * Check if the tuple {sender IP, sender e-mail, 
-		 * recipient e-mail} was autowhitelisted 
-	 	 */
-		priv->priv_sr.sr_whitelist &= ~EXF_NONE;
+		/*
+		 * Multiple recipients for a single message. Here we check 
+		 * each recipient individually for greylisting and autowhite 
+		 * listing.
+		 */
+/*		priv->priv_sr.sr_whitelist &= ~EXF_NONE; */ /* XXXmanu */
 		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) {
-			whitelist = 
-			    autowhite_check(SA(&priv->priv_addr),
-	    				    priv->priv_addrlen, 
-					    priv->priv_from, 
-					    rcpt->r_addr, 
-					    priv->priv_queueid,
-	    				    priv->priv_sr.sr_delay,
-					    priv->priv_sr.sr_autowhite);
-			priv->priv_sr.sr_whitelist |= whitelist;
 
-			if ((whitelist == EXF_NONE) && 
-			    !pending_check(SA(&priv->priv_addr), 
-					   priv->priv_addrlen,
-	    				   priv->priv_from, 
-					   rcpt->r_addr, 
-					   &remaining, 
-					   &priv->priv_sr.sr_elapsed,
-	    				   priv->priv_queueid, 
-					   priv->priv_sr.sr_delay, 
-	    				   priv->priv_sr.sr_autowhite))
+			tuple.sa = SA(&priv->priv_addr);
+			tuple.salen = priv->priv_addrlen;
+			tuple.from = priv->priv_from;
+			tuple.rcpt = rcpt->r_addr;
+			tuple.remaining = &remaining;
+			tuple.elapsed = &priv->priv_sr.sr_elapsed;
+			tuple.queueid = priv->priv_queueid;
+			tuple.gldelay = priv->priv_sr.sr_delay;
+			tuple.autowhite = priv->priv_sr.sr_autowhite;
+
+			switch(mg_tuple_check(tuple)) {
+			case T_AUTOWHITE:	/* autowhite listed */
+				priv->priv_sr.sr_whitelist |= 
+				    (EXF_WHITELIST | EXF_AUTO);
+				break;
+			case T_PENDING:		/* greylisted */
+				break;
+			default:		/* first encounter */
 				accept = 0;
+				break;
+			}
+
 		}
 
 		if (accept) {
 			if (priv->priv_sr.sr_elapsed > priv->priv_max_elapsed)
 				priv->priv_max_elapsed = 
 				    priv->priv_sr.sr_elapsed;
-				goto passed;
+			goto passed;
 		}
 
 		priv->priv_sr.sr_remaining = remaining;
@@ -1450,10 +1460,8 @@ main(argc, argv)
 	conf_init();
 	all_list_init();
 	acl_init ();
-	pending_init();
 	peer_init();
-	autowhite_init();
-	dump_init();
+
 #ifdef USE_DNSRBL
 	dnsrbl_init();
 #endif
@@ -1521,10 +1529,9 @@ main(argc, argv)
 	(void)smfi_setconn(conf.c_socket);
 
 	/*
-	 * Reload a saved greylist
-	 * No lock needed here either.
+	 * Initialize the storage backend
 	 */
-	dump_reload();
+	mg_init();
 
 	/*
 	 * If no body/header search exists, don't install the hooks,
@@ -1663,15 +1670,9 @@ main(argc, argv)
 	pthread_sigmask(SIG_BLOCK, &set, NULL);
 
 	/*
-	 * Start the dumper thread
+	 * Start the storage backend background thread
 	 */
-	dumper_start();
-
-	/*
-	 * Run the peer MX greylist sync threads
-	 */
-	sync_master_restart();
-	sync_sender_start();
+	mg_start();
 
 	/*
 	 * Here we go!
@@ -1688,8 +1689,9 @@ main(argc, argv)
 	dump_perform(1);
 	conf_release();
 #else
-	dumper_stop();
+	mg_tuple_stop();	/* stop storage background threads */
 #endif
+	mg_tuple_close();	/* close storage backend */
 	return exitval;
 }
 

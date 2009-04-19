@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.36 2009/03/22 04:26:52 manu Exp $ */
+/* $Id: dump.c,v 1.37 2009/04/19 00:55:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.36 2009/03/22 04:26:52 manu Exp $");
+__RCSID("$Id: dump.c,v 1.37 2009/04/19 00:55:32 manu Exp $");
 #endif
 #endif
 
@@ -67,7 +67,6 @@ __RCSID("$Id: dump.c,v 1.36 2009/03/22 04:26:52 manu Exp $");
 #include "conf.h"
 #include "sync.h"
 #include "dump.h"
-#include "autowhite.h"
 #include "milter-greylist.h"
 
 #ifdef USE_DMALLOC
@@ -208,7 +207,6 @@ dump_perform(final)
 	char newdumpfile[MAXPATHLEN + 1];
 	int done;
 	int greylisted_count;
-	int whitelisted_count;
 	char *s_buffer = NULL;
 	int dirty;
 
@@ -281,11 +279,10 @@ dump_perform(final)
 	
 	dump_header(dump);
 	greylisted_count = pending_textdump(dump);
-	whitelisted_count = autowhite_textdump(dump);
-	done = greylisted_count + whitelisted_count;
 
-	fprintf(dump, "#\n# Summary: %d records, %d greylisted, %d "
-	    "whitelisted\n#\n", done, greylisted_count, whitelisted_count);
+	done = greylisted_count;
+
+	fprintf(dump, "#\n# Summary: %d records\n#\n", done);
 
 	/*
 	 * Ensure that the data is really flushed to disk.
@@ -330,12 +327,10 @@ dump_reload(void) {
 	} else {
 		dump_in = dump;
 		PENDING_LOCK;
-		AUTOWHITE_LOCK;
 
 		dump_parse();
 		dump_dispose_input_file();
 
-		AUTOWHITE_UNLOCK;
 		PENDING_UNLOCK;
 		Fclose(dump);
 

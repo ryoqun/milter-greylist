@@ -6,7 +6,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump_yacc.y,v 1.20 2007/07/08 21:02:28 manu Exp $");
+__RCSID("$Id: dump_yacc.y,v 1.21 2009/04/19 00:55:32 manu Exp $");
 #endif
 #endif
 
@@ -18,7 +18,6 @@ __RCSID("$Id: dump_yacc.y,v 1.20 2007/07/08 21:02:28 manu Exp $");
 #endif
 #include "conf.h"
 #include "pending.h"
-#include "autowhite.h"
 
 int dump_lex(void);
 void dump_error(char *);
@@ -48,12 +47,12 @@ lines	:	lines greyentry '\n'
 	;
 greyentry :	IPADDR EMAIL EMAIL TIME	{
 			pending_get(SA(&$1), sizeof(struct sockaddr_in), $2,
-			    $3, $4);
+			    $3, $4, T_PENDING);
 		}
 	|	IP6ADDR EMAIL EMAIL TIME {
 #ifdef AF_INET6
 			pending_get(SA(&$1), sizeof(struct sockaddr_in6), $2,
-			    $3, $4);
+			    $3, $4, T_PENDING);
 #else
 			printf("IPv6 is not supported, ignore line %d\n",
 			    dump_line);
@@ -61,13 +60,13 @@ greyentry :	IPADDR EMAIL EMAIL TIME	{
 		}
 	;
 autoentry :	IPADDR EMAIL EMAIL TIME AUTO { 
-			autowhite_get(SA(&$1), sizeof(struct sockaddr_in), $2,
-			    $3, $4);
+			pending_get(SA(&$1), sizeof(struct sockaddr_in), $2,
+			    $3, $4, T_AUTOWHITE);
 		}
 	|	IP6ADDR EMAIL EMAIL TIME AUTO {
 #ifdef AF_INET6
-			autowhite_get(SA(&$1), sizeof(struct sockaddr_in6), $2,
-			    $3, $4);
+			pending_get(SA(&$1), sizeof(struct sockaddr_in6), $2,
+			    $3, $4, T_AUTOWHITE);
 #else
 			printf("IPv6 is not supported, ignore line %d\n",
 			    dump_line);

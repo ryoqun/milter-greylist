@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.83 2009/04/04 03:09:43 manu Exp $ */
+/* $Id: sync.c,v 1.84 2009/04/19 00:55:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.83 2009/04/04 03:09:43 manu Exp $");
+__RCSID("$Id: sync.c,v 1.84 2009/04/19 00:55:32 manu Exp $");
 #endif
 #endif
 
@@ -56,7 +56,6 @@ __RCSID("$Id: sync.c,v 1.83 2009/04/04 03:09:43 manu Exp $");
 #include "pending.h"
 #include "sync.h"
 #include "conf.h"
-#include "autowhite.h"
 #include "milter-greylist.h"
 
 #ifdef USE_DMALLOC
@@ -1203,19 +1202,17 @@ eol:
 			int dirty = 0;
 			PENDING_LOCK;
 			/* delay = -1 means unused: we supply the date */
-			if (pending_get(SA(&addr), addrlen, from, rcpt, date))
+			if (pending_get(SA(&addr), addrlen, from, rcpt, 
+					date, T_PENDING))
 				++dirty;
 			PENDING_UNLOCK;
 			dump_touch(dirty);
 		}
 		if (action == PS_DELETE) {
-			pending_del(SA(&addr), addrlen, from, rcpt, date);
-			autowhite_add(SA(&addr), addrlen, from, 
-			    rcpt, &aw, "(mxsync)");
+			pending_del(SA(&addr), addrlen, from, rcpt, date, aw);
 		}
 		if (action == PS_FLUSH) {
 			pending_del_addr(SA(&addr), addrlen, NULL, 0);
-			autowhite_del_addr(SA(&addr), addrlen);
 		}
 
 		/* Flush modifications to disk */

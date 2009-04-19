@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.86 2007/11/22 04:25:37 manu Exp $ */
+/* $Id: pending.c,v 1.87 2009/04/19 00:55:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.86 2007/11/22 04:25:37 manu Exp $");
+__RCSID("$Id: pending.c,v 1.87 2009/04/19 00:55:32 manu Exp $");
 #endif
 #endif
 
@@ -67,7 +67,6 @@ __RCSID("$Id: pending.c,v 1.86 2007/11/22 04:25:37 manu Exp $");
 #include "dump.h"
 #include "conf.h"
 #include "pending.h"
-#include "autowhite.h"
 #include "milter-greylist.h"
 
 #ifdef USE_DMALLOC
@@ -107,15 +106,21 @@ pending_init(void) {
 	return;
 }
 
-/* pending_lock must be locked */
+/* 
+ * flag time-out on greylist and aw entries 
+ * pending_lock must be locked
+ */
 int 
-pending_timeout(pending, now)
+pending_timeout(pending, now)	
 	struct pending *pending;
 	struct timeval *now;
 {
 	int dirty = 0;
+	long pt = pending->p_tv.tv_sec;
+	long nt = now->tv_sec;
 
-	if (now->tv_sec - pending->p_tv.tv_sec > conf.c_timeout) {
+	if ((pending->p_type == T_PENDING && nt - pt > conf.c_timeout) ||
+	    (pending->p_type == T_AUTOWHITE && pt < nt)) {
 		if (conf.c_debug || conf.c_logexpired) {
 			mg_log(LOG_DEBUG,
 			    "(local): %s from %s to %s: greylisted "
@@ -123,7 +128,7 @@ pending_timeout(pending, now)
 			    pending->p_addr, pending->p_from,
 			    pending->p_rcpt);
 		}
-		pending_put(pending);
+		pending_rem(pending);
 		dirty = 1;
 	}
 
@@ -132,22 +137,25 @@ pending_timeout(pending, now)
 
 /* pending_lock must be locked */
 struct pending *
-pending_get(sa, salen, from, rcpt, date)  
+pending_get(sa, salen, from, rcpt, date, tupletype)  
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *from;
 	char *rcpt;
 	time_t date;
+	tuple_t tupletype;
 {
 	struct pending *pending;
 	struct timeval tv;
 	char addr[IPADDRSTRLEN];
+	int h, mn, s;
 
 	if ((pending = malloc(sizeof(*pending))) == NULL)
 		goto out;
 
 	bzero((void *)pending, sizeof(pending));
 	pending->p_tv.tv_sec = date;
+	pending->p_type = tupletype;
 
 	if ((pending->p_sa = malloc(salen)) == NULL) {
 		free(pending);
@@ -187,44 +195,82 @@ pending_get(sa, salen, from, rcpt, date)
 
 	(void)gettimeofday(&tv, NULL);
 
+	h = (pending->p_tv.tv_sec - tv.tv_sec) / 3600;
+	mn = (((pending->p_tv.tv_sec - tv.tv_sec) % 3600) / 60);
+	s = ((pending->p_tv.tv_sec - tv.tv_sec) % 3600) % 60;
+
 	if (conf.c_debug) {
-		mg_log(LOG_DEBUG, "created: %s from %s to %s delayed for %lds",
-		    pending->p_addr, pending->p_from, pending->p_rcpt, 
-		    pending->p_tv.tv_sec - tv.tv_sec);
+		mg_log(LOG_DEBUG, 
+		    "created: %s %s from %s to %s %s %02d:%02d:%02d",
+		    tupletype == T_AUTOWHITE ? "AUTO" : "",
+		    pending->p_addr, pending->p_from, pending->p_rcpt,
+		    tupletype == T_AUTOWHITE ? "valid for" : "delayed for",
+		    h, mn, s);
 	}
 
 out:
 	return pending;
 }
 
+
 /* pending_lock must be locked */
 void
-pending_put(pending) 
+pending_rem(pending) 
 	struct pending *pending;
 {
+	TAILQ_REMOVE(&pending_head, pending, p_list);
+	TAILQ_REMOVE(&pending_buckets[BUCKET_HASH(pending->p_sa, 
+	pending->p_from, pending->p_rcpt, PENDING_BUCKETS)].b_pending_head,
+	pending, pb_list); 
+	pending_free(pending);
+}
+
+
+/* pending_lock must be locked */
+void
+pending_put(pending, aw_date) 
+	struct pending *pending;
+	time_t aw_date;
+{
+	struct timeval tv;
+	time_t now;
+
 	if (conf.c_debug) {
 		mg_log(LOG_DEBUG, "removed: %s from %s to %s",
 		    pending->p_addr, pending->p_from, pending->p_rcpt);
 	}
 
-	TAILQ_REMOVE(&pending_head, pending, p_list);
-	TAILQ_REMOVE(&pending_buckets[BUCKET_HASH(pending->p_sa, 
-	    pending->p_from, pending->p_rcpt, PENDING_BUCKETS)].b_pending_head,
-	    pending, pb_list); 
-	
-	pending_free(pending);
+	(void)gettimeofday(&tv, NULL);
+	now = tv.tv_sec;
+
+	/* 
+	 * autowhite expiration in the future? 
+	 */
+	if (aw_date > now) {	
+		/* 
+		 * change greylist entry to autowhite 
+		 */
+		pending->p_type=T_AUTOWHITE; 	
+		pending->p_tv.tv_sec = aw_date;
+	} else {	
+		/*
+		 * otherwise remove greylist entry 
+		 */
+		pending_rem(pending);
+	}
 
 	return;
 }
 
 
 void
-pending_del(sa, salen, from, rcpt, time)
+pending_del(sa, salen, from, rcpt, time, aw)
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *from;
 	char *rcpt;
 	time_t time;
+	time_t aw;
 {
 	char addr[IPADDRSTRLEN];
 	struct pending *pending;
@@ -255,7 +301,7 @@ pending_del(sa, salen, from, rcpt, time)
 		    (strcmp(from, pending->p_from) == 0) &&
 		    (strcmp(rcpt, pending->p_rcpt) == 0) &&
 		    (pending->p_tv.tv_sec == time)) {
-			pending_put(pending);
+			pending_put(pending, aw);
 			++dirty;
 			break;
 		}
@@ -268,7 +314,7 @@ pending_del(sa, salen, from, rcpt, time)
 	return;
 }
 
-int
+tuple_t
 pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	struct sockaddr *sa;
 	socklen_t salen;
@@ -291,11 +337,16 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	struct pending_bucket *b;
 	ipaddr *mask = NULL;
 	time_t date;
+	int h, mn, s;
 
 	(void)gettimeofday(&tv, NULL);
 	now = tv.tv_sec;
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
-		return 1;
+		return T_NONE;
+
+	h = aw / 3600;
+	mn = ((aw % 3600) / 60);
+	s = (aw % 3600) % 60;
 
 	b = &pending_buckets[BUCKET_HASH(sa, from, rcpt, PENDING_BUCKETS)];
 	PENDING_LOCK;
@@ -303,19 +354,14 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	    pending; pending = next) {
 		next = TAILQ_NEXT(pending, pb_list);
 
-		if (pending_timeout(pending, &tv)) {
+		/* 
+		 * flag stale greylist and aw entries
+		 */
+		if (pending_timeout(pending, &tv)) { 
 			++dirty;
 			continue;
 		}
 
-		/*
-		 * The time the entry shall be accepted
-		 */
-		accepted = pending->p_tv.tv_sec;
-
-		/*
-		 * Look for our entry.
-		 */
 		switch (pending->p_sa->sa_family) {
 		case AF_INET:
 			mask = (ipaddr *)&conf.c_match_mask;
@@ -325,38 +371,82 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 			mask = (ipaddr *)&conf.c_match_mask6;
 			break;
 #endif
-		}
-		if (ip_match(sa, pending->p_sa, mask) &&
-		    (strcmp(from, pending->p_from) == 0) &&
-		    (strcmp(rcpt, pending->p_rcpt) == 0)) {
-			rest = accepted - now;
-
-			if (rest <= 0) {
+			}
+		/* 
+		 * autowhite or greylist entry? 
+		 */
+		switch(pending->p_type) {
+		case T_AUTOWHITE:		/* autowhite listed */
+			if (aw == 0)
+				continue;
+			/*
+			 * Look for our record
+			 */
+			if (ip_match(sa, pending->p_sa, mask) &&
+			    ((conf.c_lazyaw == 1) ||
+			    ((strcasecmp(from, pending->p_from) == 0) &&
+			    (strcasecmp(rcpt, pending->p_rcpt) == 0)))) {
 				date = now + aw;
 				peer_delete(pending, date);
-				pending_put(pending);
-				autowhite_add(sa, salen, from, rcpt, 
-				    &date, queueid);
-				rest = 0;
+				pending_put(pending, date);
 				++dirty;
-			}
 
-			goto out;
+				mg_log(LOG_INFO, 
+				    "%s: addr %s from %s rcpt %s: "
+				    "autowhitelisted for another "
+				    "%02d:%02d:%02d",
+				    queueid, addr, from, rcpt, h, mn, s);
+
+				goto out_aw;
+			}
+			break;
+
+		case T_PENDING:			/* greylisted */
+			/*
+			 * The time the entry shall be accepted
+			 */
+			accepted = pending->p_tv.tv_sec;
+
+			/*
+			 * Look for our entry.
+			 */
+			if (ip_match(sa, pending->p_sa, mask) &&
+			    (strcmp(from, pending->p_from) == 0) &&
+			    (strcmp(rcpt, pending->p_rcpt) == 0)) {
+				rest = accepted - now;
+
+				/* 
+				 * found; change to autowhite 
+				 */
+				if (rest <= 0) {
+					date = now + aw;
+					peer_delete(pending, date);
+					pending_put(pending, date);
+					rest = 0;
+					++dirty;
+				}
+
+				goto out;
+			}
+			break;
+
+		default:			/* Error */
+			break;
 		}
 	}
 
 	/* 
-	 * It was not found. Create it and propagagte it to peers.
+	 * Tuple was not found. Create it and propagate it to peers.
 	 * Error handling is useless here, we will tempfail anyway
-	 */
+	*/
 	accepted = now + delay;
 	rest = 0;
-	pending = pending_get(sa, salen, from, rcpt, accepted);
+	pending = pending_get(sa, salen, from, rcpt, accepted, T_PENDING);
 	if (pending) {
 		++dirty;
 		peer_create(pending);
 		rest = pending->p_tv.tv_sec - now;
-	} /* otherwise return 1 and accept the mail */
+	} /* otherwise return T_PENDING and accept the mail */
 
 out:
 	PENDING_UNLOCK;
@@ -373,9 +463,13 @@ out:
 	}
 
 	if (rest <= 0)
-		return 1;
+		return T_PENDING;
 	else
-		return 0;
+		return T_NONE;
+
+out_aw:
+	PENDING_UNLOCK;
+	return T_AUTOWHITE;
 }
 
 int
@@ -392,7 +486,7 @@ pending_textdump(stream)
 
 	gettimeofday(&now, NULL);
 
-	fprintf(stream, "\n\n#\n# greylisted tuples\n#\n");
+	fprintf(stream, "\n\n#\n# stored tuples\n#\n");
 	fprintf(stream, "# Sender IP\t%s\t%s\tTime accepted\n", 
 	    "Sender e-mail", "Recipient e-mail");
 
@@ -404,18 +498,20 @@ pending_textdump(stream)
 			continue;
 
 		if (conf.c_dump_no_time_translation) {
-			fprintf(stream, "%s\t%s\t%s\t%ld\n", 
+			fprintf(stream, "%s\t%s\t%s\t%ld %s\n", 
 			    pending->p_addr, pending->p_from, 
-			    pending->p_rcpt, (long)pending->p_tv.tv_sec);
+			    pending->p_rcpt, (long)pending->p_tv.tv_sec,
+			    pending->p_type == T_AUTOWHITE ? "AUTO" : "");
 		} else {
 			ti = pending->p_tv.tv_sec;
 			localtime_r(&ti, &tm);
 			strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
 		
-			fprintf(stream, "%s\t%s\t%s\t%ld # %s\n", 
+			fprintf(stream, "%s\t%s\t%s\t%ld%s# %s\n", 
 			    pending->p_addr, pending->p_from, 
-			    pending->p_rcpt, 
-			    (long)pending->p_tv.tv_sec, textdate);
+			    pending->p_rcpt, (long)pending->p_tv.tv_sec,
+			    pending->p_type == T_AUTOWHITE ? " AUTO " : " ",
+			    textdate);
 		}
 		
 		done++;
@@ -643,7 +739,6 @@ pending_del_addr(sa, salen, queueid, acl_line)
 	struct pending *next;
 	int sync_flush_done = 0;
 	int count_pending = 0;
-	int count_white = 0;
         char aclstr[16];
 
 	if (!iptostring(sa, salen, addr, sizeof(addr)))
@@ -658,7 +753,7 @@ pending_del_addr(sa, salen, queueid, acl_line)
 				peer_flush(pending);
 				sync_flush_done = 1;
 			}
-			pending_put(pending);
+			pending_rem(pending);
 			count_pending++;
 		}
 
@@ -666,15 +761,15 @@ pending_del_addr(sa, salen, queueid, acl_line)
 	PENDING_UNLOCK;
 	dump_touch(count_pending);
 
-	/* And flush autowhite list as well... */
-	count_white = autowhite_del_addr(sa, salen);
 	
 	if (queueid != NULL) {
 		*aclstr = '\0';
         	if (acl_line != 0)
-			snprintf(aclstr, sizeof(aclstr), " (ACL %d)", acl_line);
-		mg_log(LOG_INFO, "%s: addr %s flushed, removed %d grey and %d autowhite%s",
-			queueid, addr, count_pending, count_white, aclstr);
+			snprintf(aclstr, sizeof(aclstr), 
+			    " (ACL %d)", acl_line);
+		mg_log(LOG_INFO, 
+		    "%s: addr %s flushed, removed %d grey and autowhite%s",
+		    queueid, addr, count_pending, aclstr);
 	}
 	return;
 }

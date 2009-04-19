@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.37 2006/08/30 04:57:58 manu Exp $ */
+/* $Id: pending.h,v 1.38 2009/04/19 00:55:32 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
@@ -46,6 +46,10 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#ifndef AUTOWHITE_VALIDITY
+#define AUTOWHITE_VALIDITY (24 * 3600) /* 1 day */
+#endif
+
 #ifndef GLDELAY
 #define GLDELAY	1800	/* 1800 seconds = 30 minutes */
 #endif
@@ -60,6 +64,12 @@
 
 #include "milter-greylist.h"
 
+typedef enum {
+	T_AUTOWHITE = 2,
+	T_PENDING = 1,
+	T_NONE = 0
+} tuple_t;
+
 TAILQ_HEAD(pendinglist, pending);
 
 struct pending {
@@ -68,8 +78,11 @@ struct pending {
 	socklen_t p_salen;
 	char *p_from;
 	char *p_rcpt;
-	struct timeval p_tv;
-	int p_refcnt;
+	struct timeval p_tv;	/* activation time for pending, 
+				   expiration time for autowhite */
+	int p_refcnt;		/* mutex; pending entry is 
+				   shared with sync queue */
+        tuple_t	p_type;		/* pending or autowhite entry? */
 	TAILQ_ENTRY(pending) p_list;
 	TAILQ_ENTRY(pending) pb_list;
 };
@@ -84,11 +97,13 @@ extern pthread_mutex_t pending_lock;
 
 void pending_init(void);
 struct pending *pending_get(struct sockaddr *, socklen_t, char *, char *,
+    time_t, tuple_t);
+tuple_t pending_check(struct sockaddr *, socklen_t, char *, char *, 
+    time_t *, time_t *, char *, time_t, time_t);
+void pending_del(struct sockaddr *, socklen_t, char *, char *, time_t, 
     time_t);
-int pending_check(struct sockaddr *, socklen_t, char *, char *, time_t *,
-    time_t *, char *, time_t, time_t);
-void pending_del(struct sockaddr *, socklen_t, char *, char *, time_t);
-void pending_put(struct pending *);
+void pending_rem(struct pending *);
+void pending_put(struct pending *, time_t);
 int pending_textdump(FILE *);
 struct pending *pending_ref(struct pending *);
 void pending_free(struct pending *);

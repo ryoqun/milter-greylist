@@ -1,4 +1,4 @@
-/* $Id: conf.c,v 1.61 2009/01/17 04:32:55 manu Exp $ */
+/* $Id: conf.c,v 1.62 2009/04/19 00:55:32 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: conf.c,v 1.61 2009/01/17 04:32:55 manu Exp $");
+__RCSID("$Id: conf.c,v 1.62 2009/04/19 00:55:32 manu Exp $");
 #endif
 #endif
 
@@ -81,7 +81,6 @@ __RCSID("$Id: conf.c,v 1.61 2009/01/17 04:32:55 manu Exp $");
 #ifdef USE_SPAMD
 #include "spamd.h"
 #endif
-#include "autowhite.h"
 #include "conf.h"
 #include "sync.h"
 #include "pending.h"
