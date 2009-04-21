@@ -1,4 +1,4 @@
-/* $Id: pending.c,v 1.87 2009/04/19 00:55:32 manu Exp $ */
+/* $Id: pending.c,v 1.88 2009/04/21 03:28:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: pending.c,v 1.87 2009/04/19 00:55:32 manu Exp $");
+__RCSID("$Id: pending.c,v 1.88 2009/04/21 03:28:45 manu Exp $");
 #endif
 #endif
 
@@ -472,17 +472,20 @@ out_aw:
 	return T_AUTOWHITE;
 }
 
-int
+tuple_cnt_t
 pending_textdump(stream)
 	FILE *stream;
 {
 	struct timeval now;
 	struct pending *pending;
 	struct pending *next;
-	int done = 0;
+	tuple_cnt_t done;
 	char textdate[DATELEN + 1];
 	struct tm tm;
 	time_t ti;
+
+	done.pending = 0;
+	done.autowhite = 0;
 
 	gettimeofday(&now, NULL);
 
@@ -513,8 +516,11 @@ pending_textdump(stream)
 			    pending->p_type == T_AUTOWHITE ? " AUTO " : " ",
 			    textdate);
 		}
-		
-		done++;
+
+		if (pending->p_type == T_AUTOWHITE)
+			done.autowhite++;
+		else
+			done.pending++;
 	}
 	PENDING_UNLOCK;
 

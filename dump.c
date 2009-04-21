@@ -1,4 +1,4 @@
-/* $Id: dump.c,v 1.37 2009/04/19 00:55:32 manu Exp $ */
+/* $Id: dump.c,v 1.38 2009/04/21 03:28:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: dump.c,v 1.37 2009/04/19 00:55:32 manu Exp $");
+__RCSID("$Id: dump.c,v 1.38 2009/04/21 03:28:45 manu Exp $");
 #endif
 #endif
 
@@ -203,10 +203,10 @@ dump_perform(final)
 {
 	FILE *dump;
 	int dumpfd;
+	int done;
 	struct timeval tv1, tv2, tv3;
 	char newdumpfile[MAXPATHLEN + 1];
-	int done;
-	int greylisted_count;
+	tuple_cnt_t greylisted_count;
 	char *s_buffer = NULL;
 	int dirty;
 
@@ -280,9 +280,12 @@ dump_perform(final)
 	dump_header(dump);
 	greylisted_count = pending_textdump(dump);
 
-	done = greylisted_count;
+	done = greylisted_count.pending + greylisted_count.autowhite;
 
-	fprintf(dump, "#\n# Summary: %d records\n#\n", done);
+	fprintf(dump, "#\n# Summary: %d records, %d greylisted, "
+		"%d whitelisted\n#\n", done,
+		greylisted_count.pending, 
+		greylisted_count.autowhite);
 
 	/*
 	 * Ensure that the data is really flushed to disk.

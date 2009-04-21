@@ -1,6 +1,8 @@
 #ifndef _STORE_H_
 #define _STORE_H_
 
+/* XXXmanu license ? */
+
 struct tuple_fields {
 	struct sockaddr *sa;
 	socklen_t salen;

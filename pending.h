@@ -1,4 +1,4 @@
-/* $Id: pending.h,v 1.38 2009/04/19 00:55:32 manu Exp $ */
+/* $Id: pending.h,v 1.39 2009/04/21 03:28:45 manu Exp $ */
 /* vim: set sw=8 ts=8 sts=8 noet cino=(0: */
 
 /*
@@ -91,6 +91,11 @@ struct pending_bucket {
 	TAILQ_HEAD(, pending) b_pending_head;
 };
 
+typedef struct {
+	int pending;
+	int autowhite;
+} tuple_cnt_t;
+
 #define PENDING_LOCK pthread_mutex_lock(&pending_lock);
 #define PENDING_UNLOCK pthread_mutex_unlock(&pending_lock);
 extern pthread_mutex_t pending_lock;
@@ -104,7 +109,7 @@ void pending_del(struct sockaddr *, socklen_t, char *, char *, time_t,
     time_t);
 void pending_rem(struct pending *);
 void pending_put(struct pending *, time_t);
-int pending_textdump(FILE *);
+tuple_cnt_t pending_textdump(FILE *);
 struct pending *pending_ref(struct pending *);
 void pending_free(struct pending *);
 int ip_match(struct sockaddr *, struct sockaddr *, ipaddr *);

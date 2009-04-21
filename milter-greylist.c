@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.217 2009/04/19 00:55:32 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.218 2009/04/21 03:28:45 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.217 2009/04/19 00:55:32 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.218 2009/04/21 03:28:45 manu Exp $");
 #endif
 #endif
 
@@ -977,7 +977,7 @@ real_eom(ctx)
 		 * each recipient individually for greylisting and autowhite 
 		 * listing.
 		 */
-/*		priv->priv_sr.sr_whitelist &= ~EXF_NONE; */ /* XXXmanu */
+		priv->priv_sr.sr_whitelist &= ~EXF_NONE;
 		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) {
 
 			tuple.sa = SA(&priv->priv_addr);
