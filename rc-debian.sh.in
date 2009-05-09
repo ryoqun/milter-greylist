@@ -76,7 +76,25 @@ case "$1" in
 	echo "$NAME."
 	;;
 
-  restart|force-reload|reload)
+  restart|force-reload)
+	echo -n "Restarting $DESC: "
+	start-stop-daemon --stop --pidfile $PIDFILE --name $PNAME \
+	    --retry 5 --oknodo
+	start-stop-daemon --start --pidfile $PIDFILE --name $PNAME \
+	    $NICE --oknodo --startas $DAEMON -- $OPTIONS $DOPTIONS
+
+	echo "$NAME."
+	;;
+
+  reload)
+	echo -n "Checking config: "
+	if sudo -u $USER $DAEMON -c 2>&1 |grep -v 'config .* okay$' |grep . >&2
+	then
+	  echo "failed.  Quitting with error, no action taken."
+	  exit 1
+	else
+	  echo "passed."
+	fi
 	echo -n "Restarting $DESC: "
 	start-stop-daemon --stop --pidfile $PIDFILE --name $PNAME \
 	    --retry 5 --oknodo
