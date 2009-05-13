@@ -1,4 +1,4 @@
-/* $Id: spamd.c,v 1.10 2009/02/21 23:59:29 manu Exp $ */
+/* $Id: spamd.c,v 1.11 2009/05/13 02:50:58 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Manuel Badzong, Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: spamd.c,v 1.10 2009/02/21 23:59:29 manu Exp $");
+__RCSID("$Id: spamd.c,v 1.11 2009/05/13 02:50:58 manu Exp $");
 #endif
 #endif
 
@@ -277,6 +277,9 @@ spamd_rcvhdr(priv, str, len)
 	struct rcpt rcpt;
 	char ipstr[IPADDRSTRLEN];
 	char myhostname[ADDRLEN + 1];
+	char hostname[ADDRLEN + 2] = { 0 };
+	char faddr[SPAMD_BUFLEN] = { 0 };
+	char raddr[SPAMD_BUFLEN] = ";\r\n\t";
 	char now[SPAMD_BUFLEN];
 	time_t t;
 	struct tm *tm;
@@ -285,6 +288,20 @@ spamd_rcvhdr(priv, str, len)
 	iptostring(SA(&priv->priv_addr), 
 		   priv->priv_addrlen, 
 		   ipstr, sizeof(ipstr));
+
+	if (strncmp(ipstr, priv->priv_hostname + 1, strlen(ipstr))) {
+		strncpy(hostname, priv->priv_hostname, sizeof(hostname) - 2);
+		hostname[strlen(hostname)] = ' ';
+	}
+
+	if (priv->priv_from[0] == '<')
+		strncpy(faddr, priv->priv_from + 1,
+		        strlen(priv->priv_from) - 2);
+
+	if (priv->priv_rcptcount == 1) {
+		memcpy(&rcpt, LIST_FIRST(&priv->priv_rcpt), sizeof(rcpt));
+		snprintf(raddr, sizeof(raddr), "\r\n\tfor %s; ", rcpt.r_addr);
+	}
 
 	if (gethostname(myhostname, sizeof(myhostname))) {
 		mg_log(LOG_WARNING, "spamd gethostname failed");
@@ -306,26 +323,21 @@ spamd_rcvhdr(priv, str, len)
 		now[0] = '\0';
 	}
 
-	if (priv->priv_rcptcount == 1) {
-		memcpy(&rcpt, LIST_FIRST(&priv->priv_rcpt), sizeof(rcpt));
-
-		snprintf(str, len,
-	  		 "Received: from %s (%s [%s])\r\n\tby %s "
-			 "(envelope-sender %s) "
-			 "(%s) with SMTP id %s\r\n\tfor %s; %s\r\n",
-			  priv->priv_helo, priv->priv_hostname, 
-			  ipstr, myhostname, priv->priv_from, 
-			  "milter-greylist", priv->priv_queueid, 
-			  rcpt.r_addr, now);
-	} else {
-		snprintf(str, len,
-	  		 "Received: from %s (%s [%s])\r\n\tby %s "
-			 "(envelope-sender %s) "
-			 "(%s) with SMTP id %s;\r\n\t%s\r\n",
-			 priv->priv_helo, priv->priv_hostname, 
-			 ipstr, myhostname, priv->priv_from, 
-			 "milter-greylist", priv->priv_queueid, now);
-	}
+	/*
+	 * Received: from uchoosem.com (207-36-31-72.ptr.primarydns.com [207.36.31.72])
+	 * 	by mx01.i-is.com (8.12.11/8.12.11) with ESMTP id k32GfMBr059052
+	 * 	for <kcj@oakis.com>; Sun, 2 Apr 2006 12:41:22 -0400 (EDT)
+	 * 	(envelope-from richlawryhotpopcomHN@uchoosem.com)
+	 */
+	snprintf(str, len,
+		 "Received: from %s (%s[%s])\r\n"
+		 "\tby %s (%s) with ESMTP id %s"
+		 "%s%s\r\n"
+		 "\t(envelope-from %s)\r\n",
+		 priv->priv_helo, hostname, ipstr,
+		 myhostname, PACKAGE_STRING, priv->priv_queueid,
+		 raddr, now,
+		 faddr);
 
 	return;
 }
