@@ -1,4 +1,4 @@
-/* $Id: milter-greylist.c,v 1.218 2009/04/21 03:28:45 manu Exp $ */
+/* $Id: milter-greylist.c,v 1.219 2009/05/23 22:55:25 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: milter-greylist.c,v 1.218 2009/04/21 03:28:45 manu Exp $");
+__RCSID("$Id: milter-greylist.c,v 1.219 2009/05/23 22:55:25 manu Exp $");
 #endif
 #endif
 
@@ -654,6 +654,7 @@ real_envrcpt(ctx, envrcpt)
 	switch(mg_tuple_check(tuple)) {
 	case T_AUTOWHITE:			/* autowhite listed */
 		priv->priv_sr.sr_elapsed = 0;
+		priv->priv_sr.sr_whitelist = EXF_WHITELIST | EXF_AUTO;
 		goto exit_accept;
 		break;
 	case T_PENDING:			/* greylisted */
