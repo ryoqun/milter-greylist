@@ -1,4 +1,4 @@
-/* $Id: sync.c,v 1.85 2009/05/14 19:15:37 manu Exp $ */
+/* $Id: sync.c,v 1.86 2009/05/23 22:50:53 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: sync.c,v 1.85 2009/05/14 19:15:37 manu Exp $");
+__RCSID("$Id: sync.c,v 1.86 2009/05/23 22:50:53 manu Exp $");
 #endif
 #endif
 
@@ -68,6 +68,10 @@ struct sync_master_sock {
 	int runs;
 	int sock;
 };
+
+#define SMS_RUNNING		1
+#define SMS_NOTRUNNING		0
+#define SMS_DISABLED		-1
 
 /* errors returned by stdio that should not cause an exit */
 static int sync_ignored_errno[] = { 
@@ -658,73 +662,85 @@ sync_master_restart(void) {
 	pthread_t tid;
 	int empty;
 	int error;
+	int sync_master6_runs = SMS_NOTRUNNING;
+	int sync_master4_runs = SMS_NOTRUNNING;
 
 	PEER_RDLOCK;
 	empty = LIST_EMPTY(&peer_head);
 	PEER_UNLOCK;
 
-	if (!empty) {
-	    pthread_mutex_lock(&sync_master_lock);
-	    if (! sync_master4.runs
-		&& (conf.c_syncaddr == NULL || !strchr(conf.c_syncaddr, ':'))) {
-		if (conf.c_syncaddr != NULL && !strchr(conf.c_syncaddr, ':'))
-		    sync_listen(conf.c_syncaddr, conf.c_syncport,
-				&sync_master4);
-		else
-		    sync_listen("0.0.0.0", conf.c_syncport, &sync_master4);
-		if (!sync_master4.runs) {
-		    mg_log(LOG_ERR,
-			"cannot start MX sync for IPv4, socket failed: %s",
-			strerror(errno));
-		    exit(EX_OSERR);
+	pthread_mutex_lock(&sync_master_lock);
+	if (empty || (sync_master4.runs && sync_master6.runs))
+		goto last;
+
+	if (conf.c_syncaddr != NULL) {
+		if (strchr(conf.c_syncaddr, ':')) {
+			if (sync_master6.runs != SMS_RUNNING) {
+				sync_listen(conf.c_syncaddr, conf.c_syncport,
+					    &sync_master6);
+				sync_master6_runs = sync_master6.runs;
+			}
+			sync_master4.runs = SMS_DISABLED;
 		} else {
-		    if ((error = pthread_create(&tid, NULL, sync_master,
-			(void *)&sync_master4)) != 0) {
-			    mg_log(LOG_ERR, 
-				"Cannot run MX sync thread for IPv4: %s",
-				strerror(error));
-			    exit(EX_OSERR);
-		    }
-		    if ((error = pthread_detach(tid)) != 0) {
-			    mg_log(LOG_ERR, 
-				"pthread_detach failed for IPv4 MX sync: %s",
-				strerror(error));
-			    exit(EX_OSERR);
-		    }
+			if (sync_master4.runs != SMS_RUNNING) {
+				sync_listen(conf.c_syncaddr, conf.c_syncport,
+					    &sync_master4);
+				sync_master4_runs = sync_master4.runs;
+			}
+			sync_master6.runs = SMS_DISABLED;
 		}
-	    }
+	} else {
+
 #ifdef AF_INET6
-	    if (! sync_master6.runs
-		&& (conf.c_syncaddr == NULL || strchr(conf.c_syncaddr, ':'))) {
-		if (conf.c_syncaddr != NULL && strchr(conf.c_syncaddr, ':'))
-		    sync_listen(conf.c_syncaddr, conf.c_syncport,
-				&sync_master6);
-		else
-		    sync_listen("::", conf.c_syncport, &sync_master6);
-		if (!sync_master6.runs) {
-		    mg_log(LOG_ERR,
-			"cannot start MX sync for IPv6, socket failed: %s",
-			strerror(errno));
-		    exit(EX_OSERR);
-		} else {
-		    if ((error = pthread_create(&tid, NULL, sync_master,
-			(void *)&sync_master6)) != 0) {
-			    mg_log(LOG_ERR, 
-				"Cannot run MX sync thread for IPv6: %s",
-				strerror(error));
-			    exit(EX_OSERR);
-		    }
-		    if ((error = pthread_detach(tid)) != 0) {
-			    mg_log(LOG_ERR, 
-				"pthread_detach failed for IPv6 MX sync: %s",
-				strerror(error));
-			    exit(EX_OSERR);
-		    }
+		if (sync_master6.runs != SMS_RUNNING) {
+			sync_listen("::", conf.c_syncport, &sync_master6);
+			sync_master6_runs = sync_master6.runs;
 		}
-	    }
 #endif
-	pthread_mutex_unlock(&sync_master_lock);
+		if (sync_master4.runs != SMS_RUNNING) {
+			sync_listen("0.0.0.0", conf.c_syncport, &sync_master4);
+			sync_master4_runs = sync_master4.runs;
+		}
 	}
+
+	if (sync_master4.runs != SMS_RUNNING &&
+	    sync_master6.runs != SMS_RUNNING) {
+		mg_log(LOG_ERR, "cannot start MX sync, socket failed: %s",
+		    strerror(errno));
+		exit(EX_OSERR);
+	}
+	if (sync_master6_runs == SMS_RUNNING) {
+		if ((error = pthread_create(&tid, NULL, sync_master,
+		    (void *)&sync_master6)) != SMS_NOTRUNNING) {
+			mg_log(LOG_ERR, 
+			    "Cannot run MX sync thread for IPv6: %s",
+			    strerror(error));
+			exit(EX_OSERR);
+		}
+		if ((error = pthread_detach(tid)) != 0) {
+			mg_log(LOG_ERR, 
+			    "pthread_detach failed for IPv6 MX sync: %s",
+			    strerror(error));
+			exit(EX_OSERR);
+		}
+	}
+	if (sync_master4_runs == SMS_RUNNING) {
+		if ((error = pthread_create(&tid, NULL, sync_master,
+		    (void *)&sync_master4)) != 0) {
+			mg_log(LOG_ERR, 
+			    "Cannot run MX sync thread for IPv4: %s",
+			    strerror(error));
+			exit(EX_OSERR);
+		}
+		if ((error = pthread_detach(tid)) != 0) {
+			mg_log(LOG_ERR, 
+			    "pthread_detach failed for IPv4 MX sync: %s",
+			    strerror(error));
+			exit(EX_OSERR);
+		}
+	}
+last:
+	pthread_mutex_unlock(&sync_master_lock);
 }
 
 void *
@@ -799,7 +815,7 @@ sync_master(arg)
 			pthread_mutex_lock(&sync_master_lock);
 			close(sms->sock);
 			sms->sock = -1;
-			sms->runs = 0;
+			sms->runs = SMS_NOTRUNNING;
 			pthread_mutex_unlock(&sync_master_lock);
 			conf_release();
 			return NULL;
@@ -893,10 +909,10 @@ sync_listen(addr, port, sms)
 	int optval;
 	int s;
 
-	sms->runs = 1;
+	sms->runs = SMS_RUNNING;
 	laddrlen = sizeof(laddr);
 	if (ipfromstring(addr, SA(&laddr), &laddrlen, AF_UNSPEC) != 1) {
-		sms->runs = 0;
+		sms->runs = SMS_DISABLED;
 		return;
 	}
 
@@ -924,12 +940,12 @@ sync_listen(addr, port, sms)
 		break;
 #endif
 	default:
-		sms->runs = 0;
+		sms->runs = SMS_DISABLED;
 		return;
 	}
 
 	if ((s = socket(SA(&laddr)->sa_family, SOCK_STREAM, proto)) == -1) {
-		sms->runs = 0;
+		sms->runs = SMS_DISABLED;
 		return;
 	}
 
@@ -939,15 +955,6 @@ sync_listen(addr, port, sms)
 		mg_log(LOG_ERR, "cannot set SO_REUSEADDR: %s",
 		    strerror(errno));
 	}
-
-#ifdef SO_REUSEPORT
-	optval = 1;
-	if ((setsockopt(s, SOL_SOCKET, SO_REUSEPORT,
-	    &optval, sizeof(optval))) != 0) {
-		mg_log(LOG_ERR, "cannot set SO_REUSEPORT: %s",
-		    strerror(errno));
-	}
-#endif
 
 	optval = 1;
 	if ((setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
@@ -970,7 +977,7 @@ sync_listen(addr, port, sms)
 	if (bind(s, SA(&laddr), laddrlen) != 0) {
 		mg_log(LOG_ERR, "cannot start MX sync, bind failed: %s",
 		    strerror(errno));
-		sms->runs = 0;
+		sms->runs = SMS_DISABLED;
 		close(s);
 		return;
 	}
@@ -978,7 +985,7 @@ sync_listen(addr, port, sms)
 	if (listen(s, MXGLSYNC_BACKLOG) != 0) {
 		mg_log(LOG_ERR, "cannot start MX sync, listen failed: %s",
 		    strerror(errno));
-		sms->runs = 0;
+		sms->runs = SMS_DISABLED;
 		close(s);
 		return;
 	}

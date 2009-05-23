@@ -1,5 +1,5 @@
 4.3.3	
-	Fix race condition stopping MX sync on config reload (Attila Bruncsak)
+	Fix MX sync stop on config reload (Attila Bruncsak, Hajimu UMEMOTO)
 	Improve Debian startup script (Adam Katz)
 	Make SpamAssassin headers Sendmail-like (Petar Bogdanovic)
 4.3.2
