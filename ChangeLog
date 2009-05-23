@@ -1,4 +1,4 @@
-4.3.3	
+4.3.3	 
 	Header for autowhitelisted messages bug fix (Attila Bruncsak)
 	Fix MX sync stop on config reload (Attila Bruncsak, Hajimu UMEMOTO)
 	Improve Debian startup script (Adam Katz)
