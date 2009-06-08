@@ -1,4 +1,4 @@
-/* $Id: urlcheck.c,v 1.34 2008/09/26 17:00:51 manu Exp $ */
+/* $Id: urlcheck.c,v 1.35 2009/06/08 23:40:06 manu Exp $ */
 
 /*
  * Copyright (c) 2006-2007 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: urlcheck.c,v 1.34 2008/09/26 17:00:51 manu Exp $");
+__RCSID("$Id: urlcheck.c,v 1.35 2009/06/08 23:40:06 manu Exp $");
 #endif
 #endif
 
@@ -111,7 +111,6 @@ static int find_boundary(struct mlfi_priv *, char *);
 static size_t curl_post(void *, size_t, size_t, void *);
 static int answer_parse(struct iovec *, struct acl_param *, int, 
 			struct mlfi_priv *);
-static int answer_getline(char *, char *, struct acl_param *);
 static struct urlcheck_cnx *get_cnx(struct urlcheck_entry *);
 static void urlcheck_validate_pipe(struct urlcheck_data *, 
 				   struct urlcheck_entry *, 
@@ -1076,7 +1075,7 @@ answer_parse(data, ap, flags, priv)
 		    buf[idx - 1] = '\0';
 		idx++;
 
-		if (answer_getline(linep, valp, ap) == -1) {
+		if (acl_modify_by_prop(linep, valp, ap) == -1) {
 			if (!(flags & U_GETPROP))
 				mg_log(LOG_DEBUG, 
 				    "ignoring unexpected \"%s\" => \"%s\"",
@@ -1102,104 +1101,6 @@ answer_parse(data, ap, flags, priv)
 	}
 
 	return retval;
-}
-
-static int
-answer_getline(key, value, ap)
-	char *key;
-	char *value;
-	struct acl_param *ap;
-{
-#ifdef URLCHECK_DEBUG
-	if (conf.c_debug)
-		mg_log(LOG_DEBUG, "urlcheck got \"%s\" => \"%s\"",
-		    key, value);
-#endif
-	if (strcasecmp(key, "milterGreylistStatus") == 0) {
-		if ((strcasecmp(value, "Ok") == 0) ||
-		    (strcasecmp(value, "TRUE") == 0))
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistAction") == 0) {
-		if (strcasecmp(value, "greylist") == 0)
-			ap->ap_type = A_GREYLIST;
-		else if (strcasecmp(value, "blacklist") == 0)
-			ap->ap_type = A_BLACKLIST;
-		else if (strcasecmp(value, "whitelist") == 0)
-			ap->ap_type = A_WHITELIST;
-		else 
-			mg_log(LOG_WARNING, "ignored greylist-type \"%s\"",
-			    value);
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistDelay") == 0) {
-		ap->ap_delay = humanized_atoi(value);
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistAutowhite") == 0) {
-		ap->ap_autowhite = humanized_atoi(value);
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistFlushAddr") == 0) {
-		ap->ap_flags |= A_FLUSHADDR;
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistNoLog") == 0) {
-		ap->ap_flags |= A_NOLOG;
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistCode") == 0) {
-		if ((ap->ap_code = strdup(value)) == NULL) {
-			mg_log(LOG_ERR, "strdup(\"%s\") failed: %s",
-			    key, strerror(errno));
-			exit(EX_OSERR);
-		}
-		ap->ap_flags |= A_FREE_CODE;
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistEcode") == 0) {
-		if ((ap->ap_ecode = strdup(value)) == NULL) {
-			mg_log(LOG_ERR, "strdup(\"%s\") failed: %s",
-			    key, strerror(errno));
-			exit(EX_OSERR);
-		}
-		ap->ap_flags |= A_FREE_ECODE;
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistMsg") == 0) {
-		if ((ap->ap_msg = strdup(value)) == NULL) {
-			mg_log(LOG_ERR, "strdup(\"%s\") failed: %s",
-			    key, strerror(errno));
-			exit(EX_OSERR);
-		}
-		ap->ap_flags |= A_FREE_MSG;
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistReport") == 0) {
-		if ((ap->ap_report = strdup(value)) == NULL) {
-			mg_log(LOG_ERR, "strdup(\"%s\") failed: %s",
-			    key, strerror(errno));
-			exit(EX_OSERR);
-		}
-		ap->ap_flags |= A_FREE_REPORT;
-		goto out;
-	}
-
-	if (strcasecmp(key, "milterGreylistIgnore") == 0)
-		goto out;
-
-	return -1;
-out:
-	return 0;
 }
 
 #endif /* USE_CURL */

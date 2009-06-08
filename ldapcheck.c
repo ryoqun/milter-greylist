@@ -1,4 +1,4 @@
-/* $Id: ldapcheck.c,v 1.7 2009/04/09 03:27:20 manu Exp $ */
+/* $Id: ldapcheck.c,v 1.8 2009/06/08 23:40:06 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -36,7 +36,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: ldapcheck.c,v 1.7 2009/04/09 03:27:20 manu Exp $");
+__RCSID("$Id: ldapcheck.c,v 1.8 2009/06/08 23:40:06 manu Exp $");
 #endif
 #endif
 #include <ctype.h>
@@ -71,7 +71,7 @@ struct ldapconf_entry {
 SIMPLEQ_HEAD(ldapconf_list, ldapconf_entry);
 LIST_HEAD(ldapcheck_list, ldapcheck_entry);
 
-static void ldapcheck_conf_addone(char *);
+static void ldapcheck_conf_addone(char *, char *, char *);
 static int ldapcheck_connect(struct ldapconf_entry *);
 static int ldapcheck_disconnect(struct ldapconf_entry *);
 static char *url_encode_percent(char *);
@@ -81,6 +81,8 @@ static inline void ldapcheck_unlock(struct ldapconf_entry *);
 static struct ldapcheck_list ldapcheck_list;
 static struct ldapconf_list ldapconf_list;
 static struct timeval ldap_timeout;
+static char *ldap_binddn;
+static char *ldap_bindpw;
 
 int ldapcheck_gflags = 0;
 
@@ -96,8 +98,10 @@ ldapcheck_init(void) {
 }
 
 static void
-ldapcheck_conf_addone(url)
+ldapcheck_conf_addone(url, binddn, bindpw)
 	char *url;
+	char *binddn;
+	char *bindpw;
 {
 	struct ldapconf_entry *lc;
 
@@ -113,6 +117,16 @@ ldapcheck_conf_addone(url)
 
 	lc->lc_dn = NULL;
 	lc->lc_pwd = NULL;
+	if ((binddn != NULL) && (lc->lc_dn = strdup(binddn)) == NULL) {
+		mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
+	if ((bindpw != NULL) && (lc->lc_pwd = strdup(bindpw)) == NULL) {
+		mg_log(LOG_ERR, "strdup failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+
 	lc->lc_ld = NULL;
 	lc->lc_refcount = 0;
 	if (pthread_mutex_init(&lc->lc_lock, NULL) != 0) {
@@ -127,19 +141,24 @@ ldapcheck_conf_addone(url)
 }
 
 void
-ldapcheck_conf_add(urls)
+ldapcheck_conf_add(urls, binddn, bindpw)
 	char *urls;
+	char *binddn;
+	char *bindpw;
 {
 	char *lasts = NULL;
 	char *p;
 	char *sep = "\t ";
-
+	if (conf.c_debug || conf.c_acldebug) {
+		mg_log(LOG_DEBUG, "bind options dn =\"%s\", pwd = \"%s\"\n",
+		       binddn, bindpw);
+	}
 	if ((p = strtok_r(urls, sep, &lasts)) != NULL) {
-		ldapcheck_conf_addone(p);
+		ldapcheck_conf_addone(p, binddn, bindpw);
 
 		while (p)
 			if ((p = strtok_r(NULL, sep, &lasts)) != NULL)
-				ldapcheck_conf_addone(p);
+				ldapcheck_conf_addone(p, binddn, bindpw);
 	}
 
 	return;
@@ -264,10 +283,10 @@ ldapcheck_connect(lc)
 	}
 
 	error = ldap_simple_bind_s(lc->lc_ld, lc->lc_dn, lc->lc_pwd);
-	if (error != 0) {
+	if (error != LDAP_SUCCESS) {
 		mg_log(LOG_WARNING,
-		       "ldap_simple_bind_s failed for LDAP URL \"%s\": %s",
-		       lc->lc_url, ldap_err2string(error));
+		       "ldap_simple_bind_s (%s/%s) failed for LDAP URL \"%s\": %s",
+		       lc->lc_dn, lc->lc_pwd, lc->lc_url, ldap_err2string(error));
 		goto bad;
 	}
 
@@ -338,7 +357,7 @@ ldapcheck_validate(ad, stage, ap, priv)
 	struct timeval tv1, tv2, tv3;
 	LDAPMessage *res0 = NULL;
 	LDAPMessage *res = NULL;
-	int error;
+	int error,pushed = 0 ;
 	int retval = -1;
 	int clearprop;
 
@@ -430,13 +449,21 @@ ldapcheck_validate(ad, stage, ap, priv)
 			
 			vals = ldap_get_values(lc->lc_ld, res, attr);
 			if (vals == NULL) {
-				mg_log(LOG_ERR, "ldap_get_values for URL \"%s\""
-						"returns vals = NULL", url);
-				goto bad;
+				mg_log(LOG_ERR, "ldap_get_values for URL \"%s\" attr %s "
+						"returns vals = NULL", attr, url);
+				ldap_value_free(vals);
+				ldap_memfree(attr);
+				continue;
 			}
 
-			for (val = vals; *val; val++) 
+			for (val = vals; *val; val++)
+			{
+				acl_modify_by_prop(attr, *val, ap);
 				prop_push(attr, *val, clearprop, priv);
+				pushed++;
+				if (conf.c_acldebug) mg_log(LOG_DEBUG,
+					"acl debug: pushed prop %s: %s", attr,*val);
+			}
 
 			ldap_value_free(vals);
 			ldap_memfree(attr);
@@ -446,7 +473,7 @@ ldapcheck_validate(ad, stage, ap, priv)
 			ber_free(ber, 0);
 	}
 
-	retval = 0;
+	retval = pushed ? 1 : 0 ;
 bad:
 	if (res0)
 		ldap_msgfree(res0);

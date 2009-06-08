@@ -1,4 +1,4 @@
-/* $Id: ldapcheck.h,v 1.2 2009/04/03 04:15:27 manu Exp $ */
+/* $Id: ldapcheck.h,v 1.3 2009/06/08 23:40:06 manu Exp $ */
 
 /*
  * Copyright (c) 2008 Emmanuel Dreyfus
@@ -51,7 +51,7 @@ struct ldapcheck_entry {
 extern int ldapcheck_gflags;
 
 void ldapcheck_init(void);
-void ldapcheck_conf_add(char *);
+void ldapcheck_conf_add(char *, char *, char *);
 void ldapcheck_timeout_set(int);
 struct ldapcheck_entry *ldapcheck_def_add(char *, char *, int);
 struct ldapcheck_entry *ldapcheck_byname(char *);

@@ -14,7 +14,8 @@
 %token LOGFAC_NEWS LOGFAC_UUCP LOGFAC_CRON LOGFAC_AUTHPRIV LOGFAC_FTP
 %token LOGFAC_LOCAL0 LOGFAC_LOCAL1 LOGFAC_LOCAL2 LOGFAC_LOCAL3 LOGFAC_LOCAL4
 %token LOGFAC_LOCAL5 LOGFAC_LOCAL6 LOGFAC_LOCAL7 P0F P0FSOCK DKIMCHECK
-%token SPAMDSOCK SPAMDSOCKT SPAMD DOMAINEXACT ADDHEADER NOLOG
+%token SPAMDSOCK SPAMDSOCKT SPAMD DOMAINEXACT ADDHEADER NOLOG LDAPBINDDN 
+%token LDAPBINDPW 
 
 %{
 #include "config.h"
@@ -22,7 +23,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID  
-__RCSID("$Id: conf_yacc.y,v 1.101 2009/04/09 03:36:30 manu Exp $");
+__RCSID("$Id: conf_yacc.y,v 1.102 2009/06/08 23:40:06 manu Exp $");
 #endif
 #endif
 
@@ -1386,17 +1387,35 @@ urlcheckdef_fork:	 FORK {
 			}
 		;
 
-ldapconfdef:	LDAPCONF QSTRING ldaptimeout {
+ldapconfdef:	LDAPCONF QSTRING ldaptimeout 
+		LDAPBINDDN QSTRING LDAPBINDPW QSTRING {
 #ifdef USE_LDAP
 			char uris[QSTRLEN + 1];
-
-			ldapcheck_conf_add(quotepath(uris, $2, QSTRLEN));
+			char bdn[QSTRLEN +1 ];
+			char bpw[QSTRLEN + 1 ];
+			ldapcheck_conf_add(
+				quotepath(uris, $2, QSTRLEN),
+				quotepath(bdn, $5, QSTRLEN),
+				quotepath(bpw, $7, QSTRLEN));
 #else
 			mg_log(LOG_INFO, 
 			    "LDAP support not compiled in, ignore  line %d", 
 			    conf_line);
 #endif
 		}
+	| LDAPCONF QSTRING ldaptimeout { /* 4.2.1 backward compatiblity */ 
+	#ifdef USE_LDAP
+				char uris[QSTRLEN + 1];
+				char *bdn = NULL;
+				char *bpw = NULL;
+				ldapcheck_conf_add(
+					quotepath(uris, $2, QSTRLEN), bdn, bpw);
+	#else
+				mg_log(LOG_INFO, 
+				    "LDAP support not compiled in, ignore  line %d", 
+				    conf_line);
+	#endif
+			}
 	;
 ldaptimeout:	GLTIMEOUT TDELAY {
 #ifdef USE_LDAP

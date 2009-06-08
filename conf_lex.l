@@ -61,6 +61,8 @@ delay		-?[0-9]+[smhdw]?
 qstring		"\""([^"\n]|\\\")+"\""
 regex		"/"([^/\n]|\\"/")+"/"
 dumpfreq	[Dd][Uu][Mm][Pp][Ff][Rr][Ee][Qq]:?
+binddn		[Bb][Ii][Nn][Dd][Dd][Nn]
+bindpw		[Bb][Ii][Nn][Dd][Pp][Ww]
 timeout		[Tt][Ii][Mm][Ee][Oo][Uu][Tt]:?
 time		[Tt][Ii][Mm][Ee]
 domain		[Dd][Oo][Mm][Aa][Ii][Nn]:?
@@ -161,7 +163,7 @@ domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 	#ifndef HAVE_BROKEN_RCSID
 	#include <sys/cdefs.h>
 	#ifdef __RCSID
-	__RCSID("$Id: conf_lex.l,v 1.89 2009/01/17 04:32:55 manu Exp $");
+	__RCSID("$Id: conf_lex.l,v 1.90 2009/06/08 23:40:06 manu Exp $");
 	#endif
 	#endif
 	#endif
@@ -308,6 +310,8 @@ domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 {all}		{ return ALL; }
 {dumpfreq}	{ return GLDUMPFREQ; }
 {timeout}	{ return GLTIMEOUT; }
+{binddn}	{ return LDAPBINDDN; }
+{bindpw}	{ return LDAPBINDPW; }
 {time}		{ BEGIN(S_CLOCKSPEC1); return TIME; }
 {domain}	{ BEGIN(S_REGEX); return DOMAIN; }
 {syncaddr}	{ return SYNCADDR; }

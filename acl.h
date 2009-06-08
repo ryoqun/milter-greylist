@@ -1,4 +1,4 @@
-/* $Id: acl.h,v 1.39 2008/11/26 05:20:13 manu Exp $ */
+/* $Id: acl.h,v 1.40 2009/06/08 23:40:06 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -316,7 +316,7 @@ int acl_msgsize_cmp(acl_data_t *, acl_stage_t,
 int acl_opnum_cmp(int, enum operator, int);
 int myregexec(struct mlfi_priv *, acl_data_t *, 
 	      struct acl_param *, const char *);
-
+int acl_modify_by_prop(char *, char *, struct acl_param *);
 /* acl_filter() return codes */
 #define	EXF_UNSET	0
 #define	EXF_GREYLIST	(1 << 0)
