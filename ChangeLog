@@ -1,4 +1,5 @@
 4.3.3 
+	Fix off-by one bug in DATA stage filtering (Pascal Lalonde)
 	Allow ACL override by ldapcheck clauses (Piotr Wadas)
 	Header for autowhitelisted messages bug fix (Attila Bruncsak)
 	Fix MX sync stop on config reload (Attila Bruncsak, Hajimu UMEMOTO)
