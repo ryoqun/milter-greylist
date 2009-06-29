@@ -1,9 +1,9 @@
-# $Id: README,v 1.63 2008/09/26 23:35:44 manu Exp $
+# $Id: README,v 1.64 2009/06/29 10:20:00 manu Exp $
 ###########################################################################
 
 		     ======================================
 		       milter-greylist installation notes 
-		       $Date: 2008/09/26 23:35:44 $
+		       $Date: 2009/06/29 10:20:00 $
 		     ======================================
 
 		       Emmanuel Dreyfus <manu@netbsd.org>
@@ -483,7 +483,7 @@ the URL could be a ldap:// query, though this has not been experimented
 yet. 
 
 
- 15 Using LDAP natively
+ 14 Using LDAP natively
  ======================
 
 It is possible to use URL checks against an LDAP URL, but that method
