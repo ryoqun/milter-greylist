@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.91 2009/06/08 23:40:06 manu Exp $ */
+/* $Id: acl.c,v 1.92 2009/07/05 21:40:21 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.91 2009/06/08 23:40:06 manu Exp $");
+__RCSID("$Id: acl.c,v 1.92 2009/07/05 21:40:21 manu Exp $");
 #endif
 #endif
 
@@ -2350,7 +2350,7 @@ acl_add_autowhite(delay)
 	gacl->a_autowhite = delay;
 		
 	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl delay %ld", (long)delay);
+		mg_log(LOG_DEBUG, "load acl autowhite %ld", (long)delay);
 
 	return;
 }
