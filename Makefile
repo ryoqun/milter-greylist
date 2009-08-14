@@ -1,4 +1,4 @@
-# $Id: Makefile,v 1.122.2.5 2009/04/09 03:03:27 manu Exp $
+# $Id: Makefile,v 1.122.2.6 2009/08/14 00:31:15 manu Exp $
 
 #
 # Copyright (c) 2004 Emmanuel Dreyfus
@@ -39,7 +39,7 @@ LOCALSTATEDIR=	${prefix}/var
 SRCDIR=		.
 BINDIR=		${exec_prefix}/bin
 SBINDIR=        ${exec_prefix}/sbin
-MANDIR=		${prefix}/man
+MANDIR=		${prefix}/share/man
 USER=		root
 
 CC=		gcc
@@ -50,7 +50,7 @@ TEST=		test
 SED=		sed
 INSTALL=	/usr/bin/install -c
 LEX=		flex
-YACC=		bison -y
+YACC=		yacc
 TRUE=		true
 
 OBJ= 		milter-greylist.o pending.o sync.o dnsrbl.o list.o macro.o \
