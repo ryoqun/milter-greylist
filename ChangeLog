@@ -1,5 +1,6 @@
 4.2.3
 	Fix unallocated memory use for ldapcheck and urlcheck property matching
+	Fix off-by one bug in DATA stage filtering (Pascal Lalonde)
 4.2.2
 	Fix LDAP thread safety issues
 	Make LDAP queries timeout configurable
