@@ -1,6 +1,8 @@
+4.2.3
+	Fix unallocated memory use for ldapcheck and urlcheck property matching
 4.2.2
 	Fix LDAP thread safety issues
-	Make LDAP querries timeout configurable
+	Make LDAP queries timeout configurable
 	Make MX sync timeout peer-configurable (Attila Bruncsak)
 4.2.1
 	Fix a crash when a LDAP server is down

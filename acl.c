@@ -1,4 +1,4 @@
-/* $Id: acl.c,v 1.89 2009/02/09 04:12:07 manu Exp $ */
+/* $Id: acl.c,v 1.89.2.1 2009/08/14 00:11:03 manu Exp $ */
 
 /*
  * Copyright (c) 2004-2007 Emmanuel Dreyfus
@@ -34,7 +34,7 @@
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #ifdef __RCSID
-__RCSID("$Id: acl.c,v 1.89 2009/02/09 04:12:07 manu Exp $");
+__RCSID("$Id: acl.c,v 1.89.2.1 2009/08/14 00:11:03 manu Exp $");
 #endif
 #endif
 
@@ -1423,7 +1423,13 @@ acl_add_prop_string(ad, data)
 		exit(EX_OSERR);
 	}
 
-	acl_add_string((void *)&ad->prop->upd_data, upd->upd_data);
+	if ((ad->prop->upd_data = malloc(sizeof(acl_data_t))) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	memset(ad->prop->upd_data, 0, sizeof(acl_data_t));
+
+	acl_add_string((void *)ad->prop->upd_data, upd->upd_data);
 
 	return;
 }
@@ -1446,8 +1452,14 @@ acl_add_prop_regex(ad, data)
 		exit(EX_OSERR);
 	}
 
-	acl_add_regex((void *)&ad->prop->upd_data, upd->upd_data);
+	if ((ad->prop->upd_data = malloc(sizeof(acl_data_t))) == NULL) {
+		mg_log(LOG_ERR, "acl malloc failed: %s", strerror(errno));
+		exit(EX_OSERR);
+	}
+	memset(ad->prop->upd_data, 0, sizeof(acl_data_t));
 
+	acl_add_regex((void *)ad->prop->upd_data, upd->upd_data);
+	
 	return;
 }
 
@@ -1460,8 +1472,7 @@ acl_print_prop_string(ad, buf, len)
 	size_t written;
 
 	written = snprintf(buf, len, "$%s ", ad->prop->upd_name);
-	acl_print_string((void *)&ad->prop->upd_data, 
-	    buf + written, len - written);
+	acl_print_string(ad->prop->upd_data, buf + written, len - written);
 
 	return buf;
 }
@@ -1475,8 +1486,7 @@ acl_print_prop_regex(ad, buf, len)
 	size_t written;
 
 	written = snprintf(buf, len, "$%s ", ad->prop->upd_name);
-	acl_print_regex((void *)&ad->prop->upd_data, 
-	    buf + written, len - written);
+	acl_print_regex(ad->prop->upd_data, buf + written, len - written);
 
 	return buf;
 }
@@ -1485,8 +1495,9 @@ void
 acl_free_prop_string(ad)
 	acl_data_t *ad;
 {
-	free(ad->prop->upd_name);
 	acl_free_string((void *)&ad->prop->upd_data);
+	free(ad->prop->upd_data);
+	free(ad->prop->upd_name);
 	free(ad->prop);
 
 	return;
@@ -1495,8 +1506,9 @@ void
 acl_free_prop_regex(ad)
 	acl_data_t *ad;
 {
-	free(ad->prop->upd_name);
 	acl_free_regex((void *)&ad->prop->upd_data);
+	free(ad->prop->upd_data);
+	free(ad->prop->upd_name);
 	free(ad->prop);
 
 	return;
