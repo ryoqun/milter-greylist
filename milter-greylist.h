@@ -222,6 +222,7 @@ struct mlfi_priv {
 	int priv_spamd_score10;
 #endif
 	bool tarpitted;
+	time_t tarpit_duration;
 };
 
 sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);

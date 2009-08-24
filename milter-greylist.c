@@ -614,7 +614,7 @@ real_envrcpt(ctx, envrcpt)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST) {
+	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST || priv->priv_sr.sr_whitelist & EXF_TARPIT) {
 		priv->priv_sr.sr_elapsed = 0;
 		goto exit_accept;
 	}
@@ -986,7 +986,7 @@ real_eom(ctx)
 		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
-	if (priv->priv_sr.sr_whitelist & EXF_GREYLIST && envrcpt_continue) {
+	if (priv->priv_sr.sr_whitelist & EXF_GREYLIST && !(priv->priv_sr.sr_whitelist & EXF_TARPIT) && envrcpt_continue) {
 		/*
 		 * Multiple recipients for a single message. Here we check 
 		 * each recipient individually for greylisting and autowhite 

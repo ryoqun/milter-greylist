@@ -356,4 +356,5 @@ int acl_modify_by_prop(char *, char *, struct acl_param *);
 #define	EXF_DKIM	(1 << 28)
 #define EXF_P0F		(1 << 29)
 #define EXF_SA		(1 << 30)
+#define EXF_TARPIT      (1 << 31)
 #endif /* _ACL_H_ */

@@ -381,7 +381,7 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  acl_print_opnum, acl_add_opnum, NULL, spamd_score },
 #endif
 	{ AC_TARPIT, UNIQUE, AS_ANY, "tarpit",
-	  AT_TIME, AC_NONE, AC_NONE, EXF_NONE,
+	  AT_TIME, AC_NONE, AC_NONE, EXF_TARPIT,
 	  acl_print_time, acl_add_time,
 	  NULL, acl_tarpit_filter },
 };
@@ -562,8 +562,9 @@ acl_tarpit_filter(ad, stage, ap, priv)
 	struct mlfi_priv *priv;
 {
 	printf("acl_tarpit_filter(): sleeping %ld seconds....\n", ad->time);
-	sleep (ad->time);
+	//sleep (ad->time);
 	priv->tarpitted = 1;
+	priv->tarpit_duration = ad->time;
 	return 1;
 }
 
@@ -1952,6 +1953,14 @@ acl_filter(stage, ctx, priv)
 			mg_log(LOG_ERR, "corrupted acl list");
 			exit(EX_SOFTWARE);
 			break;
+		}
+
+		if (retval & EXF_GREYLIST && retval & EXF_TARPIT) {
+			printf("I should do the tarpit!!!!!\n");
+			printf("acl_filter(): sleeping %ld seconds....\n", priv->tarpit_duration);
+			sleep (priv->tarpit_duration);
+			//retval &= ~EXF_GREYLIST;
+			//retval |= EXF_WHITELIST;
 		}
 
 		priv->priv_sr.sr_acl_line = acl->a_line;
