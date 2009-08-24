@@ -561,8 +561,10 @@ acl_tarpit_filter(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
-	sleep (10);
-	return 0;
+	printf("sleeping %ld seconds....\n", ad->time);
+	sleep (ad->time);
+	priv->tarpitted = 1;
+	return 1;
 }
 
 int
@@ -1029,7 +1031,7 @@ acl_print_time(ad, buf, len)
 	char *buf;
 	size_t len;
 {
-	snprintf(buf, len, "Hello, acl_print_time");
+	snprintf(buf, len, "%d", (int)ad->time);
 	return buf;
 }
 
@@ -1137,7 +1139,8 @@ acl_add_time(ad, data)
 	acl_data_t *ad;
 	void *data;
 {
-	//ad.time = 
+	time_t *t = (time_t *) data;
+	ad->time = *t;
 	return;
 }
 

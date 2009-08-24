@@ -221,6 +221,7 @@ struct mlfi_priv {
 	int priv_spamd_flags;
 	int priv_spamd_score10;
 #endif
+	bool tarpitted;
 };
 
 sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);

@@ -950,7 +950,10 @@ helo_clause:		HELO QSTRING {
 				    quotepath(string, $2, QSTRLEN));
 			}
 	;
-tarpit_clause:		TARPIT TDELAY {	acl_add_clause(AC_TARPIT, $2); }
+tarpit_clause:		TARPIT TDELAY {	
+				time_t t = humanized_atoi($2);
+				acl_add_clause(AC_TARPIT, &t);
+			}
 heloregex_clause:	HELO REGEX { acl_add_clause(AC_HELO_RE, $2); }
 	;
 

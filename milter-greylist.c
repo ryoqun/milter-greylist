@@ -163,6 +163,7 @@ mlfi_connect(ctx, hostname, addr)
 	char *hostname;
 	_SOCK_ADDR *addr;
 {
+	printf("callback: mlfi_connect()\n");
 	sfsistat r;
 
 	conf_retain();
@@ -176,6 +177,7 @@ mlfi_helo(ctx, helostr)
 	SMFICTX *ctx;
 	char *helostr;
 {
+	printf("callback: mlfi_helo()\n");
 	sfsistat r;
 
 	conf_retain();
@@ -189,6 +191,7 @@ mlfi_envfrom(ctx, envfrom)
 	SMFICTX *ctx;
 	char **envfrom;
 {
+	printf("callback: mlfi_envfrom()\n");
 	sfsistat r;
 
 	/*
@@ -206,6 +209,7 @@ mlfi_envrcpt(ctx, envrcpt)
 	SMFICTX *ctx;
 	char **envrcpt;
 {
+	printf("callback: mlfi_envrcpt()\n");
 	sfsistat r;
 
 	conf_retain();
@@ -220,6 +224,7 @@ mlfi_header(ctx, header, value)
 	char *header;
 	char *value;
 {
+	printf("callback: mlfi_header()\n");
 	sfsistat r;
 
 	conf_retain();
@@ -232,6 +237,7 @@ sfsistat
 mlfi_eoh(ctx)
 	SMFICTX *ctx;
 {
+	printf("callback: mlfi_eoh()\n");
 	sfsistat r;
 
 	conf_retain();
@@ -246,6 +252,7 @@ mlfi_body(ctx, chunk, size)
 	unsigned char *chunk;
 	size_t size;
 {
+	printf("callback: mlfi_body()\n");
 	sfsistat r;
 
 	conf_retain();
@@ -258,6 +265,7 @@ sfsistat
 mlfi_eom(ctx)
 	SMFICTX *ctx;
 {
+	printf("callback: mlfi_eom()\n");
 	sfsistat r;
 
 	conf_retain();
@@ -270,6 +278,7 @@ sfsistat
 mlfi_close(ctx)
 	SMFICTX *ctx;
 {
+	printf("callback: mlfi_close()\n");
 	sfsistat r;
 
 	conf_retain();
@@ -353,6 +362,7 @@ real_connect(ctx, hostname, addr)
 	priv->priv_p0f = NULL;
 	p0f_lookup(priv);
 #endif
+	priv->tarpitted = 0;
 	return SMFIS_CONTINUE;
 }
 
@@ -364,10 +374,9 @@ real_helo(ctx, helostr)
 	struct mlfi_priv *priv;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
-
+	priv->tarpitted = 0;
 	strncpy_rmsp(priv->priv_helo, helostr, ADDRLEN);
 	priv->priv_helo[ADDRLEN] = '\0';
-	//acl_tarpit_filter(0,0,0,0);
 
 	return SMFIS_CONTINUE;
 }
@@ -416,7 +425,7 @@ real_envfrom(ctx, envfrom)
 	if (priv->priv_buf)
 		free(priv->priv_buf);
 	priv->priv_msgcount = 0;
-
+	priv->tarpitted = 0;
 #ifdef USE_SPAMD
 	priv->priv_spamd_flags = 0;
 #endif
@@ -599,6 +608,7 @@ real_envrcpt(ctx, envrcpt)
 	 */
 	reset_acl_values(priv);
 	priv->priv_cur_rcpt = rcpt;
+	priv->tarpitted = 0;
 	if (acl_filter(AS_RCPT, ctx, priv) != 0) {
 		mg_log(LOG_ERR, "ACL evaluation failure");
 		return SMFIS_TEMPFAIL;
@@ -765,6 +775,7 @@ real_eoh(ctx)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+	priv->tarpitted = 0;
 
 	if ((stat = dkimcheck_eoh(priv)) != SMFIS_CONTINUE)
 		return stat;
@@ -789,6 +800,7 @@ real_body(ctx, chunk, size)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+	priv->tarpitted = 0;
 
 	stat = SMFIS_CONTINUE;
 
@@ -897,6 +909,7 @@ real_eom(ctx)
 	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
         /* we want fstring_expand to expand %E to priv_max_elapsed here */
 	priv->priv_sr.sr_elapsed = priv->priv_max_elapsed;
+	priv->tarpitted = 0;
 
 	/* 
 	 * save the remaining buffer
@@ -1200,6 +1213,11 @@ real_close(ctx)
 	struct body *b;
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) != NULL) {
+		if (priv->tarpitted) {
+			printf("YOU ARE IMPATIENT\n");
+		} else {
+			//printf("\n");
+		}
 		smtp_reply_free(&priv->priv_sr);
 
 		while ((r = LIST_FIRST(&priv->priv_rcpt)) != NULL) {
