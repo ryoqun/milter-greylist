@@ -138,6 +138,8 @@ static sfsistat real_body(SMFICTX *, unsigned char *, size_t);
 static sfsistat real_eom(SMFICTX *);
 static sfsistat real_close(SMFICTX *);
 
+static void tarpit_reentry(struct mlfi_priv *);
+
 struct smfiDesc smfilter =
 {
 	"greylist",	/* filter name */
@@ -287,6 +289,17 @@ mlfi_close(ctx)
 	return r;
 }
 
+void
+tarpit_reentry(priv)
+	struct mlfi_priv *priv;
+{
+	if (priv->tarpitted) {
+		printf("tarpit_reentry(): Good job. you are such a patient guy!\n");
+		priv->tarpitted = 0;
+		//add to auto white-list
+	}
+}
+
 static sfsistat
 real_connect(ctx, hostname, addr)
 	SMFICTX *ctx;
@@ -374,7 +387,7 @@ real_helo(ctx, helostr)
 	struct mlfi_priv *priv;
 
 	priv = (struct mlfi_priv *) smfi_getpriv(ctx);
-	priv->tarpitted = 0;
+	tarpit_reentry (priv);
 	strncpy_rmsp(priv->priv_helo, helostr, ADDRLEN);
 	priv->priv_helo[ADDRLEN] = '\0';
 
@@ -425,7 +438,8 @@ real_envfrom(ctx, envfrom)
 	if (priv->priv_buf)
 		free(priv->priv_buf);
 	priv->priv_msgcount = 0;
-	priv->tarpitted = 0;
+	tarpit_reentry (priv);
+
 #ifdef USE_SPAMD
 	priv->priv_spamd_flags = 0;
 #endif
@@ -608,7 +622,8 @@ real_envrcpt(ctx, envrcpt)
 	 */
 	reset_acl_values(priv);
 	priv->priv_cur_rcpt = rcpt;
-	priv->tarpitted = 0;
+	tarpit_reentry (priv);
+
 	if (acl_filter(AS_RCPT, ctx, priv) != 0) {
 		mg_log(LOG_ERR, "ACL evaluation failure");
 		return SMFIS_TEMPFAIL;
@@ -724,7 +739,7 @@ real_header(ctx, name, value)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-
+	tarpit_reentry(priv);
 	len = strlen(name) + strlen(sep) + strlen(value) + strlen(crlf);
 	priv->priv_msgcount += len;
 
@@ -775,7 +790,8 @@ real_eoh(ctx)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	priv->tarpitted = 0;
+	tarpit_reentry (priv);
+
 
 	if ((stat = dkimcheck_eoh(priv)) != SMFIS_CONTINUE)
 		return stat;
@@ -800,7 +816,8 @@ real_body(ctx, chunk, size)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	priv->tarpitted = 0;
+	tarpit_reentry (priv);
+
 
 	stat = SMFIS_CONTINUE;
 
@@ -909,7 +926,8 @@ real_eom(ctx)
 	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
         /* we want fstring_expand to expand %E to priv_max_elapsed here */
 	priv->priv_sr.sr_elapsed = priv->priv_max_elapsed;
-	priv->tarpitted = 0;
+	tarpit_reentry (priv);
+
 
 	/* 
 	 * save the remaining buffer
