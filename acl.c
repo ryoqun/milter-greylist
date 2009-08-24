@@ -561,7 +561,7 @@ acl_tarpit_filter(ad, stage, ap, priv)
 	struct acl_param *ap;
 	struct mlfi_priv *priv;
 {
-	printf("sleeping %ld seconds....\n", ad->time);
+	printf("acl_tarpit_filter(): sleeping %ld seconds....\n", ad->time);
 	sleep (ad->time);
 	priv->tarpitted = 1;
 	return 1;
