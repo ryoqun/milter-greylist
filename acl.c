@@ -113,6 +113,7 @@ char *acl_print_regex(acl_data_t *, char *, size_t);
 char *acl_print_list(acl_data_t *, char *, size_t);
 char *acl_print_null(acl_data_t *, char *, size_t);
 char *acl_print_opnum(acl_data_t *, char *, size_t);
+char *acl_print_time(acl_data_t *, char *, size_t);
 int acl_opnum_cmp(int, enum operator, int);
 void acl_free_entry(struct acl_entry *);
 void acl_free_netblock(acl_data_t *);
@@ -127,6 +128,7 @@ void acl_add_macro(acl_data_t *, void *);
 void acl_add_opnum(acl_data_t *, void *);
 void acl_add_opnum_body(acl_data_t *, void *);
 void acl_add_list(acl_data_t *, void *);
+void acl_add_time(acl_data_t *, void *);
 char *acl_print_macro(acl_data_t *, char *, size_t);
 #ifdef USE_DNSRBL
 void acl_add_dnsrbl(acl_data_t *, void *);
@@ -378,6 +380,10 @@ struct acl_clause_rec acl_clause_rec[] = {
 	  AT_OPNUM, AC_NONE, AC_NONE,  EXF_SA,
 	  acl_print_opnum, acl_add_opnum, NULL, spamd_score },
 #endif
+	{ AC_TARPIT, UNIQUE, AS_ANY, "tarpit",
+	  AT_TIME, AC_NONE, AC_NONE, EXF_NONE,
+	  acl_print_time, acl_add_time,
+	  NULL, acl_tarpit_filter },
 };
 
 struct {
@@ -545,6 +551,17 @@ acl_body_strstr(ad, stage, ap, priv)
 		if (strstr(b->b_lines, ad->string) != NULL)
 			return 1;
 
+	return 0;
+}
+
+int
+acl_tarpit_filter(ad, stage, ap, priv)
+	acl_data_t *ad;
+	acl_stage_t stage;
+	struct acl_param *ap;
+	struct mlfi_priv *priv;
+{
+	sleep (10);
 	return 0;
 }
 
@@ -1006,6 +1023,16 @@ acl_print_opnum(ad, buf, len)
 	return buf;
 }
 
+char *
+acl_print_time(ad, buf, len)
+	acl_data_t *ad;
+	char *buf;
+	size_t len;
+{
+	snprintf(buf, len, "Hello, acl_print_time");
+	return buf;
+}
+
 void
 acl_add_string(ad, data)
 	acl_data_t *ad;
@@ -1102,6 +1129,15 @@ acl_add_regex(ad, data)
 			ad->regex.nmatch++;
 	}
 
+	return;
+}
+
+void
+acl_add_time(ad, data)
+	acl_data_t *ad;
+	void *data;
+{
+	//ad.time = 
 	return;
 }
 

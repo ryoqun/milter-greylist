@@ -53,7 +53,7 @@ typedef enum { AS_NONE, AS_RCPT, AS_DATA, AS_ANY, } acl_stage_t;
 typedef enum { AT_NONE, AT_STRING, AT_REGEX, AT_NETBLOCK, AT_OPNUM, 
 	       AT_CLOCKSPEC, AT_DNSRBL, AT_URLCHECK, AT_MACRO, 
 	       AT_LIST, AT_PROP, AT_SPF, AT_DKIM, 
-	       AT_LDAPCHECK } acl_data_type_t;
+	       AT_LDAPCHECK, AT_TIME } acl_data_type_t;
 
 typedef enum {
 	AC_NONE,
@@ -110,6 +110,7 @@ typedef enum {
 	AC_P0F_LIST,
 	AC_SA,
 	AC_SASCORE,
+	AC_TARPIT,
 } acl_clause_t;
 
 struct acl_clause;
@@ -198,6 +199,7 @@ typedef union acl_data {
 #ifdef USE_DKIM
 	enum spf_status dkim_status;
 #endif
+	time_t time;
 } acl_data_t;
 
 struct acl_clause_rec {
@@ -277,6 +279,8 @@ int acl_netblock_filter(acl_data_t *, acl_stage_t,
 			struct acl_param *, struct mlfi_priv *);
 int acl_list_filter(acl_data_t *, acl_stage_t, 
 		    struct acl_param *, struct mlfi_priv *);
+int acl_tarpit_filter(acl_data_t *, acl_stage_t,
+	            struct acl_param *, struct mlfi_priv *);
 int acl_helo_strstr(acl_data_t *, acl_stage_t, 
 		    struct acl_param *, struct mlfi_priv *);
 int acl_helo_regexec(acl_data_t *, acl_stage_t, 

@@ -15,7 +15,7 @@
 %token LOGFAC_LOCAL0 LOGFAC_LOCAL1 LOGFAC_LOCAL2 LOGFAC_LOCAL3 LOGFAC_LOCAL4
 %token LOGFAC_LOCAL5 LOGFAC_LOCAL6 LOGFAC_LOCAL7 P0F P0FSOCK DKIMCHECK
 %token SPAMDSOCK SPAMDSOCKT SPAMD DOMAINEXACT ADDHEADER NOLOG LDAPBINDDN 
-%token LDAPBINDPW 
+%token LDAPBINDPW TARPIT
 
 %{
 #include "config.h"
@@ -776,6 +776,7 @@ acl_clauses:	acl_clause
 	;
 
 acl_clause:	helo_clause
+	|	tarpit_clause
 	|	heloregex_clause
 	|	fromaddr_clause
 	|	fromregex_clause
@@ -949,7 +950,7 @@ helo_clause:		HELO QSTRING {
 				    quotepath(string, $2, QSTRLEN));
 			}
 	;
-
+tarpit_clause:		TARPIT TDELAY {	acl_add_clause(AC_TARPIT, $2); }
 heloregex_clause:	HELO REGEX { acl_add_clause(AC_HELO_RE, $2); }
 	;
 

@@ -42,6 +42,7 @@ delayedreject	[Dd][Ee][Ll][Aa][Yy][Ee][Dd][Rr][Ee][Jj][Ee][Cc][Tt]
 testmode	[Tt][Ee][Ss][Tt][Mm][Oo][Dd][Ee]
 greylist	[Gg][Rr][Ee][Yy][Ll][Ii][Ss][Tt]:?		
 autowhite	[Aa][Uu][Tt][Oo][Ww][Hh][Ii][Tt][Ee]:?
+tarpit		[Tt][Aa][Rr][Pp][Ii][Tt]:?
 pidfile		[Pp][Ii][Dd][Ff][Ii][Ll][Ee]:?
 dumpfile	[Dd][Uu][Mm][Pp][Ff][Ii][Ll][Ee]:?
 subnetmatch	[Ss][Uu][Bb][Nn][Ee][Tt][Mm][Aa][Tt][Cc][Hh]:?
@@ -207,6 +208,7 @@ domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 {rcpt}		{ BEGIN(S_REGEX); return RCPT; }
 {peer}		{ return PEER; }
 {autowhite}	{ return AUTOWHITE; }
+{tarpit}	{ return TARPIT; }
 {lazyaw}	{ return LAZYAW; }
 {greylist}	{ return GREYLIST; }
 {noauth}	{ return NOAUTH; }

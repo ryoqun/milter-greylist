@@ -367,6 +367,7 @@ real_helo(ctx, helostr)
 
 	strncpy_rmsp(priv->priv_helo, helostr, ADDRLEN);
 	priv->priv_helo[ADDRLEN] = '\0';
+	//acl_tarpit_filter(0,0,0,0);
 
 	return SMFIS_CONTINUE;
 }
