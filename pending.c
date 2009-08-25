@@ -346,7 +346,6 @@ void pending_force(sa, salen, from, rcpt, queueid, delay, aw, tuple_type)
 	for (pending = TAILQ_FIRST(&b->b_pending_head); 
 	    pending; pending = next) {
 		next = TAILQ_NEXT(pending, pb_list);
-		printf("pending_check(): looping another pending....\n");
 		/* 
 		 * flag stale greylist and aw entries
 		 */
@@ -435,7 +434,6 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	for (pending = TAILQ_FIRST(&b->b_pending_head); 
 	    pending; pending = next) {
 		next = TAILQ_NEXT(pending, pb_list);
-		printf("pending_check(): looping another pending....\n");
 		/* 
 		 * flag stale greylist and aw entries
 		 */

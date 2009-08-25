@@ -307,36 +307,12 @@ tarpit_reentry(priv)
 		//time_t nowdelay = now + priv->priv_sr.sr_delay;
 		//PENDING_LOCK;
 		struct rcpt *rcpt;
-		struct pending *pending;
-		int dirty = 0;
 		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) {
 			//printf("tarpit_reentry(): Yee! adding to auto-whitelist....\n");
 			pending_force(SA(&priv->priv_addr), priv->priv_addrlen, priv->priv_from, rcpt->r_addr, priv->priv_queueid, priv->priv_sr.sr_delay, priv->priv_sr.sr_autowhite, T_AUTOWHITE);
 			//peer_create(pending);
 			//peer_delete(pending, nowautowhite);
 			//pending_put(pending, nowautowhite);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-		}
-
-		//PENDING_UNLOCK;
-		if (dirty) {
-			dump_touch(dirty);
-			dump_flush();
 		}
 	}
 }
