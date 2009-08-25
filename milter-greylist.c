@@ -698,14 +698,12 @@ real_envrcpt(ctx, envrcpt)
 	switch(mg_tuple_check(tuple)) {
 	case T_AUTOWHITE:			/* autowhite listed */
 		printf("real_envrcpt(): T_AUTOWHITE\n");
-		priv->priv_sr.sr_whitelist &= ~EXF_TARPIT;
 		priv->priv_sr.sr_elapsed = 0;
 		priv->priv_sr.sr_whitelist = EXF_WHITELIST | EXF_AUTO;
 		goto exit_accept;
 		break;
 	case T_PENDING:			/* greylisted */
 		printf("real_envrcpt(): T_PENDING\n");
-		priv->priv_sr.sr_whitelist &= ~EXF_TARPIT;
 		if (priv->priv_sr.sr_elapsed > priv->priv_max_elapsed)
 			priv->priv_max_elapsed = priv->priv_sr.sr_elapsed;
 		goto exit_accept;
@@ -1036,7 +1034,7 @@ real_eom(ctx)
 		return mg_stat(priv, stat_from_code(priv->priv_sr.sr_code));
 	}
 
-	if (priv->priv_sr.sr_whitelist & EXF_GREYLIST && !(priv->priv_sr.sr_whitelist & EXF_TARPIT) && envrcpt_continue) {
+	if (priv->priv_sr.sr_whitelist & EXF_GREYLIST && envrcpt_continue) {
 		/*
 		 * Multiple recipients for a single message. Here we check 
 		 * each recipient individually for greylisting and autowhite 
@@ -1057,24 +1055,34 @@ real_eom(ctx)
 
 			switch(mg_tuple_check(tuple)) {
 			case T_AUTOWHITE:	/* autowhite listed */
+				printf("real_eom(): T_AUTOWHITE\n");
 				priv->priv_sr.sr_whitelist |= 
 				    (EXF_WHITELIST | EXF_AUTO);
 				break;
 			case T_PENDING:		/* greylisted */
+				printf("real_eom(): T_PENDING\n");
 				break;
-			default:		/* first encounter */
+			default:		/* first encounter */ /* XXX does this comment correctly reflect the current code???? */
+				printf("real_eom(): default:\n");
 				accept = 0;
 				break;
 			}
 
 		}
 
-		if (accept) {
+
+		if (priv->priv_sr.sr_whitelist & EXF_TARPIT) {
+			printf("real_eom(): sleeping %ld seconds....\n", priv->tarpit_duration);
+			sleep (priv->tarpit_duration);
+			priv->tarpitted = 1;
+		}
+		if (accept || priv->priv_sr.sr_whitelist & EXF_TARPIT) { /* WTF?? the call order real_eom() real_close() is valid... how on the hell can I differenciate the abrupt close and the normal close???? */
 			if (priv->priv_sr.sr_elapsed > priv->priv_max_elapsed)
 				priv->priv_max_elapsed = 
 				    priv->priv_sr.sr_elapsed;
 			goto passed;
 		}
+
 
 		priv->priv_sr.sr_remaining = remaining;
 		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) 
