@@ -563,7 +563,6 @@ acl_tarpit_filter(ad, stage, ap, priv)
 {
 	printf("acl_tarpit_filter(): sleeping %ld seconds....\n", ad->time);
 	//sleep (ad->time);
-	priv->tarpitted = 1;
 	priv->tarpit_duration = ad->time;
 	return 1;
 }
@@ -1955,13 +1954,7 @@ acl_filter(stage, ctx, priv)
 			break;
 		}
 
-		if (retval & EXF_GREYLIST && retval & EXF_TARPIT) {
-			printf("I should do the tarpit!!!!!\n");
-			printf("acl_filter(): sleeping %ld seconds....\n", priv->tarpit_duration);
-			sleep (priv->tarpit_duration);
-			//retval &= ~EXF_GREYLIST;
-			//retval |= EXF_WHITELIST;
-		}
+
 
 		priv->priv_sr.sr_acl_line = acl->a_line;
 

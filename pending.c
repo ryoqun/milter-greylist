@@ -135,6 +135,7 @@ pending_timeout(pending, now)
 	return dirty;
 }
 
+
 /* pending_lock must be locked */
 struct pending *
 pending_get(sa, salen, from, rcpt, date, tupletype)  
@@ -314,6 +315,87 @@ pending_del(sa, salen, from, rcpt, time, aw)
 	return;
 }
 
+void pending_force(sa, salen, from, rcpt, queueid, delay, aw, tuple_type)
+	struct sockaddr *sa;
+	socklen_t salen;
+	char *from;
+	char *rcpt;
+	char *queueid;
+	time_t delay;
+	time_t aw;
+	tuple_t tuple_type;
+{
+	char addr[IPADDRSTRLEN];
+	struct pending *pending;
+	struct pending *next;
+	struct timeval tv;
+	time_t now;
+	time_t rest;
+	time_t accepted;
+	int dirty = 0;
+	struct pending_bucket *b;
+	ipaddr *mask = NULL;
+	time_t date;
+	int h, mn, s;
+
+	(void)gettimeofday(&tv, NULL);
+	now = tv.tv_sec;
+
+	b = &pending_buckets[BUCKET_HASH(sa, from, rcpt, PENDING_BUCKETS)];
+	PENDING_LOCK;
+	for (pending = TAILQ_FIRST(&b->b_pending_head); 
+	    pending; pending = next) {
+		next = TAILQ_NEXT(pending, pb_list);
+		printf("pending_check(): looping another pending....\n");
+		/* 
+		 * flag stale greylist and aw entries
+		 */
+		if (pending_timeout(pending, &tv)) { 
+			++dirty;
+			continue;
+		}
+
+		switch (pending->p_sa->sa_family) {
+		case AF_INET:
+			mask = (ipaddr *)&conf.c_match_mask;
+			break;
+#ifdef AF_INET6
+		case AF_INET6:
+			mask = (ipaddr *)&conf.c_match_mask6;
+			break;
+#endif
+			}
+		/* 
+		 * autowhite or greylist entry? 
+		 */
+		if (pending->p_type == T_PENDING) {
+			/*
+			 * The time the entry shall be accepted
+			 */
+			accepted = pending->p_tv.tv_sec;
+
+			/*
+			 * Look for our entry.
+			 */
+			if (ip_match(sa, pending->p_sa, mask) &&
+			    (strcmp(from, pending->p_from) == 0) &&
+			    (strcmp(rcpt, pending->p_rcpt) == 0)) {
+				rest = accepted - now;
+
+				date = now + aw;
+				peer_delete(pending, date);
+				pending_put(pending, date);
+				rest = 0;
+				++dirty;
+
+				break;
+			}
+		}
+	}
+	PENDING_UNLOCK;
+}
+
+
 tuple_t
 pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	struct sockaddr *sa;
@@ -353,7 +435,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	for (pending = TAILQ_FIRST(&b->b_pending_head); 
 	    pending; pending = next) {
 		next = TAILQ_NEXT(pending, pb_list);
-
+		printf("pending_check(): looping another pending....\n");
 		/* 
 		 * flag stale greylist and aw entries
 		 */

@@ -296,7 +296,48 @@ tarpit_reentry(priv)
 	if (priv->tarpitted) {
 		printf("tarpit_reentry(): Good job. you are such a patient guy!\n");
 		priv->tarpitted = 0;
+
 		//add to auto white-list
+
+		//struct timeval tv;
+		//time_t now;
+		//(void)gettimeofday(&tv, NULL);
+		//now = tv.tv_sec;
+		//time_t nowautowhite = now + priv->priv_sr.sr_autowhite;
+		//time_t nowdelay = now + priv->priv_sr.sr_delay;
+		//PENDING_LOCK;
+		struct rcpt *rcpt;
+		struct pending *pending;
+		int dirty = 0;
+		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) {
+			//printf("tarpit_reentry(): Yee! adding to auto-whitelist....\n");
+			pending_force(SA(&priv->priv_addr), priv->priv_addrlen, priv->priv_from, rcpt->r_addr, priv->priv_queueid, priv->priv_sr.sr_delay, priv->priv_sr.sr_autowhite, T_AUTOWHITE);
+			//peer_create(pending);
+			//peer_delete(pending, nowautowhite);
+			//pending_put(pending, nowautowhite);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+		}
+
+		//PENDING_UNLOCK;
+		if (dirty) {
+			dump_touch(dirty);
+			dump_flush();
+		}
 	}
 }
 
@@ -376,6 +417,7 @@ real_connect(ctx, hostname, addr)
 	p0f_lookup(priv);
 #endif
 	priv->tarpitted = 0;
+	priv->tarpit_duration = 0;
 	return SMFIS_CONTINUE;
 }
 
@@ -629,7 +671,7 @@ real_envrcpt(ctx, envrcpt)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST || priv->priv_sr.sr_whitelist & EXF_TARPIT) {
+	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST) {
 		priv->priv_sr.sr_elapsed = 0;
 		goto exit_accept;
 	}
@@ -679,17 +721,25 @@ real_envrcpt(ctx, envrcpt)
 
 	switch(mg_tuple_check(tuple)) {
 	case T_AUTOWHITE:			/* autowhite listed */
+		priv->priv_sr.sr_whitelist &= ~EXF_TARPIT;
 		priv->priv_sr.sr_elapsed = 0;
 		priv->priv_sr.sr_whitelist = EXF_WHITELIST | EXF_AUTO;
 		goto exit_accept;
 		break;
 	case T_PENDING:			/* greylisted */
+		priv->priv_sr.sr_whitelist &= ~EXF_TARPIT;
 		if (priv->priv_sr.sr_elapsed > priv->priv_max_elapsed)
 			priv->priv_max_elapsed = priv->priv_sr.sr_elapsed;
 		goto exit_accept;
 		break;
 	default:			/* first encounter */
-		;
+		if (priv->priv_sr.sr_whitelist & EXF_TARPIT) {
+			printf("real_envrcpt(): sleeping %ld seconds....\n", priv->tarpit_duration);
+			sleep (priv->tarpit_duration);
+			priv->tarpitted = 1;
+			priv->priv_sr.sr_elapsed = 0;
+			goto exit_accept;
+		}
 		break;
 	}
 
