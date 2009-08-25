@@ -205,7 +205,7 @@ pending_get(sa, salen, from, rcpt, date, tupletype)
 		    "created: %s %s from %s to %s %s %02d:%02d:%02d",
 		    tupletype == T_AUTOWHITE ? "AUTO" : "",
 		    pending->p_addr, pending->p_from, pending->p_rcpt,
-		    tupletype == T_AUTOWHITE ? "valid for" : "delayed for",
+		    tupletype == T_AUTOWHITE ? "valid for" : "delayed遅延 for",
 		    h, mn, s);
 	}
 
@@ -415,6 +415,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	time_t rest;
 	time_t accepted;
 	int dirty = 0;
+	int first = 0;
 	struct pending_bucket *b;
 	ipaddr *mask = NULL;
 	time_t date;
@@ -527,6 +528,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 		peer_create(pending);
 		rest = pending->p_tv.tv_sec - now;
 	} /* otherwise return T_PENDING and accept the mail */
+	first = 1;
 
 out:
 	PENDING_UNLOCK;
@@ -545,7 +547,7 @@ out:
 	if (rest <= 0)
 		return T_PENDING;
 	else
-		return T_NONE;
+		return first ? T_NONEANDFIRST : T_NONE;
 
 out_aw:
 	PENDING_UNLOCK;

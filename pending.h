@@ -65,7 +65,7 @@
 #include "milter-greylist.h"
 
 typedef enum {
-	T_BAD_TARPIT = 3,
+	T_NONEANDFIRST = 3,
 	T_AUTOWHITE = 2,
 	T_PENDING = 1,
 	T_NONE = 0

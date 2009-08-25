@@ -697,18 +697,21 @@ real_envrcpt(ctx, envrcpt)
 
 	switch(mg_tuple_check(tuple)) {
 	case T_AUTOWHITE:			/* autowhite listed */
+		printf("real_envrcpt(): T_AUTOWHITE\n");
 		priv->priv_sr.sr_whitelist &= ~EXF_TARPIT;
 		priv->priv_sr.sr_elapsed = 0;
 		priv->priv_sr.sr_whitelist = EXF_WHITELIST | EXF_AUTO;
 		goto exit_accept;
 		break;
 	case T_PENDING:			/* greylisted */
+		printf("real_envrcpt(): T_PENDING\n");
 		priv->priv_sr.sr_whitelist &= ~EXF_TARPIT;
 		if (priv->priv_sr.sr_elapsed > priv->priv_max_elapsed)
 			priv->priv_max_elapsed = priv->priv_sr.sr_elapsed;
 		goto exit_accept;
 		break;
-	default:			/* first encounter */
+	case T_NONEANDFIRST:
+		printf("real_envrcpt(): T_NONEANDFIRST\n");
 		if (priv->priv_sr.sr_whitelist & EXF_TARPIT) {
 			printf("real_envrcpt(): sleeping %ld seconds....\n", priv->tarpit_duration);
 			sleep (priv->tarpit_duration);
@@ -716,6 +719,9 @@ real_envrcpt(ctx, envrcpt)
 			priv->priv_sr.sr_elapsed = 0;
 			goto exit_accept;
 		}
+		break;
+	default:			/* first encounter */
+		printf("real_envrcpt(): default:\n");
 		break;
 	}
 
@@ -1259,9 +1265,8 @@ real_close(ctx)
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) != NULL) {
 		if (priv->tarpitted) {
 			printf("YOU ARE IMPATIENT\n");
-		} else {
-			//printf("\n");
 		}
+
 		smtp_reply_free(&priv->priv_sr);
 
 		while ((r = LIST_FIRST(&priv->priv_rcpt)) != NULL) {
