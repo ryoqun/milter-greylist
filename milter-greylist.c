@@ -136,6 +136,7 @@ static sfsistat real_header(SMFICTX *, char *, char *);
 static sfsistat real_eoh(SMFICTX *);
 static sfsistat real_body(SMFICTX *, unsigned char *, size_t);
 static sfsistat real_eom(SMFICTX *);
+static sfsistat real_abort(SMFICTX *);
 static sfsistat real_close(SMFICTX *);
 
 static void tarpit_reentry(struct mlfi_priv *);
@@ -153,7 +154,7 @@ struct smfiDesc smfilter =
 	mlfi_eoh,	/* end of header */
 	mlfi_body,	/* body block filter */
 	mlfi_eom,	/* end of message */
-	NULL,		/* message aborted */
+	mlfi_abort,		/* message aborted */
 	mlfi_close,	/* connection cleanup */
 };
 
@@ -272,6 +273,19 @@ mlfi_eom(ctx)
 
 	conf_retain();
 	r = real_eom(ctx);
+	conf_release();
+	return r;
+}
+
+sfsistat
+mlfi_abort(ctx)
+	SMFICTX *ctx;
+{
+	printf("callback: mlfi_abort()\n");
+	sfsistat r;
+
+	conf_retain();
+	r = real_abort(ctx);
 	conf_release();
 	return r;
 }
@@ -1259,6 +1273,13 @@ out:
 	}
 
 	return mg_stat(priv, SMFIS_CONTINUE);
+}
+
+static sfsistat
+real_abort(ctx)
+	SMFICTX *ctx;
+{
+	return SMFIS_CONTINUE;
 }
 
 static sfsistat

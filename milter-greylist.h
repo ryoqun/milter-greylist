@@ -233,6 +233,7 @@ sfsistat mlfi_header(SMFICTX *, char *, char *);
 sfsistat mlfi_eoh(SMFICTX *);
 sfsistat mlfi_body(SMFICTX *, unsigned char *, size_t);
 sfsistat mlfi_eom(SMFICTX *);
+sfsistat mlfi_abort(SMFICTX *);
 sfsistat mlfi_close(SMFICTX *);
 void usage(char *);
 int humanized_atoi(char *);
