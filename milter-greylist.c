@@ -307,9 +307,9 @@ void
 tarpit_reentry(priv)
 	struct mlfi_priv *priv;
 {
-	if (priv->tarpitted) {
+	if (priv->tarpitted == 1) {
 		printf("tarpit_reentry(): Good job. you are such a patient guy!\n");
-		priv->tarpitted = 0;
+		priv->tarpitted = 2;
 
 		//add to auto white-list
 
@@ -320,13 +320,13 @@ tarpit_reentry(priv)
 		//time_t nowautowhite = now + priv->priv_sr.sr_autowhite;
 		//time_t nowdelay = now + priv->priv_sr.sr_delay;
 		//PENDING_LOCK;
-		struct rcpt *rcpt;
-		LIST_FOREACH(rcpt, &priv->priv_rcpt, r_list) {
-			//printf("tarpit_reentry(): Yee! adding to auto-whitelist....\n");
+		struct rcpt *rcpt = 0, *r;
+		LIST_FOREACH(r, &priv->priv_rcpt, r_list) {
+			rcpt = r;
+		} // XXX how can I get the last item of the list???
+		// I assume that tarpit_reentry is called immediately after real_envrcpt(), so the last recipient should be the one which I should put into autowhitelist.
+		if (rcpt) {
 			pending_force(SA(&priv->priv_addr), priv->priv_addrlen, priv->priv_from, rcpt->r_addr, priv->priv_queueid, priv->priv_sr.sr_delay, priv->priv_sr.sr_autowhite, T_AUTOWHITE);
-			//peer_create(pending);
-			//peer_delete(pending, nowautowhite);
-			//pending_put(pending, nowautowhite);
 		}
 	}
 }
@@ -725,9 +725,14 @@ real_envrcpt(ctx, envrcpt)
 	case T_NONEANDFIRST:
 		printf("real_envrcpt(): T_NONEANDFIRST\n");
 		if (priv->priv_sr.sr_whitelist & EXF_TARPIT) {
-			printf("real_envrcpt(): sleeping %ld seconds....\n", priv->tarpit_duration);
-			sleep (priv->tarpit_duration);
-			priv->tarpitted = 1;
+			if (priv->tarpitted == 0) { // this connection isn't tarpitted at all.
+				printf("real_envrcpt(): sleeping %ld seconds....\n", priv->tarpit_duration);
+				sleep (priv->tarpit_duration);
+				priv->tarpitted = 1;
+			} else if (priv->tarpitted == 2) { // this connection withstood tarpitting. :)
+				printf("real_envrcpt(): pending_force special case....\n");
+				pending_force(SA(&priv->priv_addr), priv->priv_addrlen, priv->priv_from, rcpt, priv->priv_queueid, priv->priv_sr.sr_delay, priv->priv_sr.sr_autowhite, T_AUTOWHITE);
+			}
 			priv->priv_sr.sr_elapsed = 0;
 			goto exit_accept;
 		}
@@ -1292,7 +1297,7 @@ real_close(ctx)
 	struct body *b;
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) != NULL) {
-		if (priv->tarpitted) {
+		if (priv->tarpitted == 1) {
 			printf("YOU ARE IMPATIENT\n");
 		}
 

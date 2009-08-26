@@ -221,7 +221,7 @@ struct mlfi_priv {
 	int priv_spamd_flags;
 	int priv_spamd_score10;
 #endif
-	bool tarpitted;
+	char tarpitted;
 	time_t tarpit_duration;
 };
 
