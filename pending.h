@@ -69,6 +69,7 @@
 #include "milter-greylist.h"
 
 typedef enum {
+	T_NONEANDFIRST = 3,
 	T_AUTOWHITE = 2,
 	T_PENDING = 1,
 	T_NONE = 0
@@ -109,6 +110,7 @@ struct pending *pending_get(struct sockaddr *, socklen_t, char *, char *,
     time_t, tuple_t);
 tuple_t pending_check(struct sockaddr *, socklen_t, char *, char *, 
     time_t *, time_t *, char *, time_t, time_t);
+void pending_force(struct sockaddr *, socklen_t, char *, char *, time_t);
 void pending_del(struct sockaddr *, socklen_t, char *, char *, time_t, 
     time_t);
 void pending_rem(struct pending *);

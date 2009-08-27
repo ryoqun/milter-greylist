@@ -334,6 +334,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	time_t rest;
 	time_t accepted;
 	int dirty = 0;
+	int first = 0;
 	struct pending_bucket *b;
 	ipaddr *mask = NULL;
 	time_t date;
@@ -447,7 +448,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 		peer_create(pending);
 		rest = pending->p_tv.tv_sec - now;
 	} /* otherwise return T_PENDING and accept the mail */
-
+	first = 1;
 out:
 	PENDING_UNLOCK;
 
@@ -465,11 +466,76 @@ out:
 	if (rest <= 0)
 		return T_PENDING;
 	else
-		return T_NONE;
+		return first ? T_NONEANDFIRST : T_NONE;
 
 out_aw:
 	PENDING_UNLOCK;
 	return T_AUTOWHITE;
+}
+
+void pending_force(sa, salen, from, rcpt, aw)
+	struct sockaddr *sa;
+	socklen_t salen;
+	char *from;
+	char *rcpt;
+	time_t aw;
+{
+	struct pending *pending;
+	struct pending *next;
+	struct timeval tv;
+	time_t now;
+	int dirty = 0;
+	struct pending_bucket *b;
+	ipaddr *mask = NULL;
+	time_t date;
+
+	(void)gettimeofday(&tv, NULL);
+	now = tv.tv_sec;
+
+	b = &pending_buckets[BUCKET_HASH(sa, from, rcpt, PENDING_BUCKETS)];
+	PENDING_LOCK;
+	for (pending = TAILQ_FIRST(&b->b_pending_head); 
+	    pending; pending = next) {
+		next = TAILQ_NEXT(pending, pb_list);
+		/* 
+		 * flag stale greylist and aw entries
+		 */
+		if (pending_timeout(pending, &tv)) { 
+			++dirty;
+			continue;
+		}
+
+		switch (pending->p_sa->sa_family) {
+		case AF_INET:
+			mask = (ipaddr *)&conf.c_match_mask;
+			break;
+#ifdef AF_INET6
+		case AF_INET6:
+			mask = (ipaddr *)&conf.c_match_mask6;
+			break;
+#endif
+			}
+
+		/*
+		 * Look for our entry.
+		 */
+		if (pending->p_type == T_PENDING &&
+		    ip_match(sa, pending->p_sa, mask) &&
+		    (strcmp(from, pending->p_from) == 0) &&
+		    (strcmp(rcpt, pending->p_rcpt) == 0)) {
+			date = now + aw;
+			peer_delete(pending, date);
+			pending_put(pending, date);
+			++dirty;
+
+			break;
+		}
+	}
+	PENDING_UNLOCK;
+	if (dirty) {
+		dump_touch(dirty);
+		dump_flush();
+	}
 }
 
 tuple_cnt_t
