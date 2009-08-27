@@ -222,6 +222,7 @@ struct mlfi_priv {
 	int priv_spamd_flags;
 	int priv_spamd_score10;
 #endif
+	int priv_tarpit;
 };
 
 sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);

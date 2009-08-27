@@ -124,6 +124,7 @@ static void smtp_reply_init(struct smtp_reply *);
 static void smtp_reply_free(struct smtp_reply *);
 static void add_recipient(struct mlfi_priv *, char *);
 static void set_sr_defaults(struct mlfi_priv *, char *, char *, char *);
+static void tarpit_reentry(struct mlfi_priv *);
 static sfsistat stat_from_code(char *);
 static void cleanup_pidfile(char *);
 static void cleanup_sock(char *);
@@ -278,6 +279,23 @@ mlfi_close(ctx)
 	return r;
 }
 
+void
+tarpit_reentry(priv)
+	struct mlfi_priv *priv;
+{
+	if (priv->priv_tarpit == 1) {
+		priv->priv_tarpit = 2;
+		/* Because this code path will be executed only and immediately
+		   after real_envrcpt(), we can use the rcpt at the head of
+		   priv_rcpt. */
+		struct rcpt *rcpt = priv->priv_rcpt.lh_first;
+
+		pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
+			      priv->priv_from, rcpt->r_addr,
+			      priv->priv_sr.sr_autowhite);
+	}
+}
+
 static sfsistat
 real_connect(ctx, hostname, addr)
 	SMFICTX *ctx;
@@ -353,6 +371,8 @@ real_connect(ctx, hostname, addr)
 	priv->priv_p0f = NULL;
 	p0f_lookup(priv);
 #endif
+	priv->priv_tarpit = 0;
+
 	return SMFIS_CONTINUE;
 }
 
@@ -536,6 +556,7 @@ real_envrcpt(ctx, envrcpt)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+	tarpit_reentry (priv);
 
 	if (!iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
 	    sizeof(addrstr)))
@@ -662,11 +683,26 @@ real_envrcpt(ctx, envrcpt)
 			priv->priv_max_elapsed = priv->priv_sr.sr_elapsed;
 		goto exit_accept;
 		break;
+	case T_NONEANDFIRST:
+		if (priv->priv_sr.sr_tarpit != -1) {
+			if (priv->priv_tarpit == 0) {
+				priv->priv_tarpit = 1;
+				sleep (priv->priv_sr.sr_tarpit);
+			} else if (priv->priv_tarpit == 2) {
+				pending_force(SA(&priv->priv_addr), 
+					      priv->priv_addrlen,
+					      priv->priv_from,
+					      rcpt,
+					      priv->priv_sr.sr_autowhite);
+			}
+			priv->priv_sr.sr_elapsed = 0;
+			goto exit_accept;
+		}
+		break;
 	default:			/* first encounter */
 		;
 		break;
 	}
-	printf("real_envrcpt(): tarpit: %d\n", priv->priv_sr.sr_tarpit);
 	priv->priv_sr.sr_remaining = remaining;
 
 	/*
@@ -713,6 +749,7 @@ real_header(ctx, name, value)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+	tarpit_reentry (priv);
 
 	len = strlen(name) + strlen(sep) + strlen(value) + strlen(crlf);
 	priv->priv_msgcount += len;
@@ -764,6 +801,7 @@ real_eoh(ctx)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+	tarpit_reentry (priv);
 
 	if ((stat = dkimcheck_eoh(priv)) != SMFIS_CONTINUE)
 		return stat;
@@ -788,6 +826,7 @@ real_body(ctx, chunk, size)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+	tarpit_reentry (priv);
 
 	stat = SMFIS_CONTINUE;
 
@@ -892,6 +931,7 @@ real_eom(ctx)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
+	tarpit_reentry (priv);
 
 	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
         /* we want fstring_expand to expand %E to priv_max_elapsed here */
