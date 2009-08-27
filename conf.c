@@ -441,6 +441,7 @@ conf_defaults(c)
 	c->c_testmode = 0;
 	c->c_delay = GLDELAY;
 	c->c_autowhite_validity = AUTOWHITE_VALIDITY;
+	c->c_tarpit = TARPIT_DURATION;
 	c->c_pidfile = NULL;
 	c->c_dumpfile = DUMPFILE;
 	c->c_dumpfile_mode = -1;

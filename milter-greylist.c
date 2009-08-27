@@ -666,7 +666,7 @@ real_envrcpt(ctx, envrcpt)
 		;
 		break;
 	}
-
+	printf("real_envrcpt(): tarpit: %d\n", priv->priv_sr.sr_tarpit);
 	priv->priv_sr.sr_remaining = remaining;
 
 	/*
@@ -1262,7 +1262,7 @@ main(argc, argv)
 	/* 
 	 * Process command line options 
 	 */
-	while ((ch = getopt(argc, argv, "Aa:cvDd:qw:f:hp:P:Tu:rSL:M:l")) != -1) {
+	while ((ch = getopt(argc, argv, "Aa:cvDd:qw:f:hp:P:Tu:rSL:M:lt:")) != -1) {
 		switch (ch) {
 		case 'A':
 			defconf.c_noauth = 1;
@@ -1279,6 +1279,18 @@ main(argc, argv)
 			    (time_t)humanized_atoi(optarg);
 			defconf.c_forced |= C_AUTOWHITE;
 			break;
+
+		case 't':
+			if (optarg == NULL) {
+				mg_log(LOG_ERR, "%s: -t needs an argument",
+				    argv[0]);
+				usage(argv[0]);
+			}
+			defconf.c_tarpit =
+			    (time_t)humanized_atoi(optarg);
+			defconf.c_forced |= C_TARPIT;
+			break;
+
 		case 'c':
 		        checkonly = 1;
 			break;
@@ -2056,6 +2068,7 @@ smtp_reply_init(sr)
 	/* sr->sr_elapsed = (time_t)0xdeadbeefU; */
 	sr->sr_delay = conf.c_delay;
 	sr->sr_autowhite = conf.c_autowhite_validity;
+	sr->sr_tarpit = conf.c_tarpit;
 
 	return;
 }

@@ -154,6 +154,7 @@ struct smtp_reply {
 	char *sr_acl_id;
 	time_t sr_delay;
 	time_t sr_autowhite;
+	time_t sr_tarpit;
 	char *sr_code;
 	char *sr_ecode;
 	char *sr_msg;

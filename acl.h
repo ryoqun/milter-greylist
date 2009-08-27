@@ -143,6 +143,7 @@ struct acl_param {
 	acl_type_t ap_type;
 	time_t ap_delay;
 	time_t ap_autowhite;
+	time_t ap_tarpit;
 	int ap_flags;
 	char *ap_id;
 	char *ap_code;
@@ -236,6 +237,7 @@ struct acl_entry {
 	TAILQ_HEAD(,acl_clause) a_clause;
 	time_t a_delay;
 	time_t a_autowhite;
+	time_t a_tarpit;
 	int a_flags;
 	char *a_code;
 	char *a_ecode;
@@ -258,6 +260,7 @@ void acl_add_clause(acl_clause_t, void *);
 void acl_negate_clause(void);
 void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
+void acl_add_tarpit(time_t);
 void acl_add_flushaddr(void);
 void acl_add_nolog(void);
 void acl_add_id(char *);

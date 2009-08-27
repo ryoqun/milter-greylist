@@ -54,6 +54,10 @@
 #define GLDELAY	1800	/* 1800 seconds = 30 minutes */
 #endif
 
+#ifndef TARPIT_DURATION
+#define TARPIT_DURATION -1 /* do not tarpit */
+#endif
+
 #ifndef TIMEOUT
 #define TIMEOUT (3600 * 24 * 5) /* 432000 seconds = 5 days */
 #endif

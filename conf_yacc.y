@@ -15,7 +15,7 @@
 %token LOGFAC_LOCAL0 LOGFAC_LOCAL1 LOGFAC_LOCAL2 LOGFAC_LOCAL3 LOGFAC_LOCAL4
 %token LOGFAC_LOCAL5 LOGFAC_LOCAL6 LOGFAC_LOCAL7 P0F P0FSOCK DKIMCHECK
 %token SPAMDSOCK SPAMDSOCKT SPAMD DOMAINEXACT ADDHEADER NOLOG LDAPBINDDN 
-%token LDAPBINDPW 
+%token LDAPBINDPW TARPIT
 
 %{
 #include "config.h"
@@ -131,6 +131,7 @@ lines	:	lines netblock '\n'
 	|	lines testmode '\n' 
 	|	lines autowhite '\n'
 	|	lines greylist '\n'
+	|	lines tarpit '\n'
 	|	lines pidfile '\n'
 	|	lines dumpfile '\n'
 	|	lines subnetmatch '\n'
@@ -386,6 +387,15 @@ greylist:	GREYLIST TDELAY	{ if (C_NOTFORCED(C_DELAY))
 				}
 	|	GREYLIST TNUMBER{ if (C_NOTFORCED(C_DELAY))
 					conf.c_delay =
+					    (time_t)humanized_atoi($2);
+				}
+	;
+tarpit:		TARPIT TDELAY 	{ if (C_NOTFORCED(C_TARPIT))
+					conf.c_tarpit =
+					    (time_t)humanized_atoi($2);
+				}
+	|	TARPIT TNUMBER	{ if (C_NOTFORCED(C_TARPIT))
+					conf.c_tarpit =
 					    (time_t)humanized_atoi($2);
 				}
 	;
@@ -819,6 +829,7 @@ acl_values:	acl_value
 
 acl_value:	greylist_value
 	|	autowhite_value
+	|	tarpit_value
 	|	code_value
 	|	ecode_value
 	|	msg_value
@@ -833,6 +844,9 @@ greylist_value:		GLXDELAY TDELAY
 	;
 autowhite_value:	AUTOWHITE TDELAY 
 			    { acl_add_autowhite((time_t)humanized_atoi($2)); }
+	;
+tarpit_value:		TARPIT TDELAY
+			    { acl_add_tarpit((time_t)humanized_atoi($2)); }
 	;
 flush_value:		FLUSHADDR { acl_add_flushaddr(); }
 	;

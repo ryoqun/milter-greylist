@@ -1135,6 +1135,7 @@ acl_init_entry(void)
 	memset(acl, 0, sizeof(*acl));
 	acl->a_delay = -1;
 	acl->a_autowhite = -1;
+	acl->a_tarpit = -1;
 	TAILQ_INIT(&acl->a_clause);
 
 	return acl;
@@ -1841,6 +1842,7 @@ acl_filter(stage, ctx, priv)
 		ap.ap_type = acl->a_type;
 		ap.ap_delay = acl->a_delay;
 		ap.ap_autowhite = acl->a_autowhite;
+		ap.ap_tarpit = acl->a_tarpit;
 		ap.ap_flags = acl->a_flags;
 		ap.ap_id = acl->a_id;
 		ap.ap_code = acl->a_code;
@@ -1922,6 +1924,8 @@ acl_filter(stage, ctx, priv)
 		priv->priv_sr.sr_autowhite =
 		    (ap.ap_autowhite != -1) ? 
 		    ap.ap_autowhite : conf.c_autowhite_validity;
+		priv->priv_sr.sr_tarpit =
+		    (ap.ap_tarpit != -1) ? ap.ap_tarpit : conf.c_tarpit;
 
 		if (ap.ap_id) {
 			priv->priv_sr.sr_acl_id = strdup(ap.ap_id);
@@ -2015,6 +2019,7 @@ acl_filter(stage, ctx, priv)
 
 		priv->priv_sr.sr_delay = conf.c_delay;
 		priv->priv_sr.sr_autowhite = conf.c_autowhite_validity;
+		priv->priv_sr.sr_tarpit = conf.c_tarpit;
 	}
 
 	if ((retval & EXF_NOLOG) == 0 && retval & EXF_WHITELIST) {
@@ -2253,6 +2258,11 @@ acl_entry(entrystr, len, acl)
 		    "[aw %ld] ", (long)acl->a_autowhite);
 		mystrlcat(entrystr, tempstr, len);
 	}
+	if (acl->a_tarpit != -1) {
+		snprintf(tempstr, sizeof(tempstr),
+		    "[tarpit %ld] ", (long)acl->a_tarpit);
+		mystrlcat(entrystr, tempstr, len);
+	}
 
 	if (acl->a_flags & A_FLUSHADDR) {
 		snprintf(tempstr, sizeof(tempstr), "[flushaddr] ");
@@ -2361,6 +2371,24 @@ acl_add_autowhite(delay)
 
 	gacl->a_autowhite = delay;
 		
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl autowhite %ld", (long)delay);
+
+	return;
+}
+
+void
+acl_add_tarpit(delay)
+	time_t delay;
+{
+	if (gacl->a_tarpit != -1) {
+		mg_log(LOG_ERR,
+		    "tarpit specified twice in ACL line %d", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	gacl->a_tarpit = delay;
+
 	if (conf.c_debug || conf.c_acldebug)
 		mg_log(LOG_DEBUG, "load acl autowhite %ld", (long)delay);
 
@@ -2590,6 +2618,10 @@ int
 
 	if (strcasecmp(key, "milterGreylistAutowhite") == 0) {
 		ap->ap_autowhite = humanized_atoi(value);
+		goto out;
+	}
+	if (strcasecmp(key, "milterGreylistTarpit") == 0) {
+		ap->ap_tarpit = humanized_atoi(value);
 		goto out;
 	}
 
