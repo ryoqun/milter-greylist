@@ -2390,7 +2390,7 @@ acl_add_tarpit(delay)
 	gacl->a_tarpit = delay;
 
 	if (conf.c_debug || conf.c_acldebug)
-		mg_log(LOG_DEBUG, "load acl autowhite %ld", (long)delay);
+		mg_log(LOG_DEBUG, "load acl tarpit %ld", (long)delay);
 
 	return;
 }

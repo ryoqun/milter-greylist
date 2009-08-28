@@ -222,7 +222,8 @@ struct mlfi_priv {
 	int priv_spamd_flags;
 	int priv_spamd_score10;
 #endif
-	int priv_tarpit;
+	bool priv_after_tarpit;
+	time_t priv_max_tarpitted;
 };
 
 sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);

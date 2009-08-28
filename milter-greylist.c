@@ -283,8 +283,8 @@ void
 tarpit_reentry(priv)
 	struct mlfi_priv *priv;
 {
-	if (priv->priv_tarpit == 1) {
-		priv->priv_tarpit = 2;
+	if (priv->priv_after_tarpit == 1) {
+		priv->priv_after_tarpit = 0;
 		/* Because this code path will be executed only and immediately
 		   after real_envrcpt(), we can use the rcpt at the head of
 		   priv_rcpt. */
@@ -371,7 +371,8 @@ real_connect(ctx, hostname, addr)
 	priv->priv_p0f = NULL;
 	p0f_lookup(priv);
 #endif
-	priv->priv_tarpit = 0;
+	priv->priv_after_tarpit = 0;
+	priv->priv_max_tarpitted = 0;
 
 	return SMFIS_CONTINUE;
 }
@@ -684,11 +685,12 @@ real_envrcpt(ctx, envrcpt)
 		goto exit_accept;
 		break;
 	case T_NONEANDFIRST:
-		if (priv->priv_sr.sr_tarpit != -1) {
-			if (priv->priv_tarpit == 0) {
-				priv->priv_tarpit = 1;
+		if (priv->priv_sr.sr_tarpit > 0) {
+			if (priv->priv_sr.sr_tarpit > priv->priv_max_tarpitted) {
+				priv->priv_max_tarpitted = priv->priv_sr.sr_tarpit;
+				priv->priv_after_tarpit = 1;
 				sleep (priv->priv_sr.sr_tarpit);
-			} else if (priv->priv_tarpit == 2) {
+			} else {
 				pending_force(SA(&priv->priv_addr), 
 					      priv->priv_addrlen,
 					      priv->priv_from,
