@@ -56,6 +56,9 @@ delays		[Dd][Ee][Ll][Aa][Yy][Ss]
 nodelays	[Nn][Oo][Dd][Ee][Ll][Aa][Yy][Ss]
 gldelay		[Dd][Ee][Ll][Aa][Yy]
 tarpit		[Tt][Aa][Rr][Pp][Ii][Tt]:?
+tarpitmode	[Tt][Aa][Rr][Pp][Ii][Tt][Mm][Oo][Dd][Ee]
+persession	[Pp][Ee][Rr][Ss][Ee][Ss][Ss][Ii][Oo][Nn]
+perresponse	[Pp][Ee][Rr][Rr][Ee][Ss][Pp][Oo][Nn][Ss][Ee]
 lazyaw		[Ll][Aa][Zz][Yy][Aa][Ww]
 all		[Aa][Ll][Ll]
 delay		-?[0-9]+[smhdw]?
@@ -309,6 +312,9 @@ domainexact	[Dd][Oo][Mm][Aa][Ii][Nn][Ee][Xx][Aa][Cc][Tt]
 {nodelays}	{ return NODELAYS; }
 {gldelay}	{ return GLXDELAY; }
 {tarpit}	{ return TARPIT; }
+{tarpitmode}	{ return TARPITMODE; }
+{persession}	{ return PERSESSION; }
+{perresponse}	{ return PERRESPONSE; }
 {all}		{ return ALL; }
 {dumpfreq}	{ return GLDUMPFREQ; }
 {timeout}	{ return GLTIMEOUT; }

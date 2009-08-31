@@ -145,8 +145,7 @@ typedef union {
 
 #endif
 
-#define TARPIT_TOTAL 0
-#define TARPIT_MAX 1
+enum tarpit_mode { TARPIT_PER_SESSION, TARPIT_PER_RESPONSE };
 
 struct smtp_reply {
 	int sr_whitelist;
@@ -158,7 +157,7 @@ struct smtp_reply {
 	time_t sr_delay;
 	time_t sr_autowhite;
 	time_t sr_tarpit;
-	int sr_tarpit_mode;
+	enum tarpit_mode sr_tarpit_mode;
 	char *sr_code;
 	char *sr_ecode;
 	char *sr_msg;

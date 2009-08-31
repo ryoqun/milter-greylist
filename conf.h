@@ -73,6 +73,7 @@ struct conf_rec {
 	int c_delay;
 	int c_autowhite_validity;
 	int c_tarpit;
+	enum tarpit_mode c_tarpit_mode;
 	char *c_pidfile;
 	char *c_dumpfile;
 	int c_dumpfile_mode;
@@ -139,6 +140,7 @@ struct conf_rec {
 #define C_ACLDEBUG	0x08000
 #define C_DOMAINEXACT	0x10000
 #define C_TARPIT	0x20000
+#define C_TARPITMODE	0x40000
 #define C_NOTFORCED(x) 	((conf.c_forced & (x)) == 0) 
 
 /* c_report */

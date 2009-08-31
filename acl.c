@@ -1136,6 +1136,7 @@ acl_init_entry(void)
 	acl->a_delay = -1;
 	acl->a_autowhite = -1;
 	acl->a_tarpit = -1;
+	acl->a_tarpit_mode = -1;
 	TAILQ_INIT(&acl->a_clause);
 
 	return acl;
@@ -1843,6 +1844,7 @@ acl_filter(stage, ctx, priv)
 		ap.ap_delay = acl->a_delay;
 		ap.ap_autowhite = acl->a_autowhite;
 		ap.ap_tarpit = acl->a_tarpit;
+		ap.ap_tarpit_mode = acl->a_tarpit_mode;
 		ap.ap_flags = acl->a_flags;
 		ap.ap_id = acl->a_id;
 		ap.ap_code = acl->a_code;
@@ -1926,8 +1928,9 @@ acl_filter(stage, ctx, priv)
 		    ap.ap_autowhite : conf.c_autowhite_validity;
 		priv->priv_sr.sr_tarpit =
 		    (ap.ap_tarpit != -1) ? ap.ap_tarpit : conf.c_tarpit;
-		priv->priv_sr.sr_tarpit_mode = TARPIT_MAX;
-		    /*(ap.ap_tarpit_mode != TARPIT_DEFAULT) ? ap.ap_tarpit_mode : conf.c_tarpit_mode;*/
+		priv->priv_sr.sr_tarpit_mode = 
+		    (ap.ap_tarpit_mode != -1) ?
+		    ap.ap_tarpit_mode : conf.c_tarpit_mode;
 
 		if (ap.ap_id) {
 			priv->priv_sr.sr_acl_id = strdup(ap.ap_id);
@@ -2022,7 +2025,7 @@ acl_filter(stage, ctx, priv)
 		priv->priv_sr.sr_delay = conf.c_delay;
 		priv->priv_sr.sr_autowhite = conf.c_autowhite_validity;
 		priv->priv_sr.sr_tarpit = conf.c_tarpit;
-		priv->priv_sr.sr_tarpit_mode = TARPIT_MAX;//conf.c_tarpit_mode;
+		priv->priv_sr.sr_tarpit_mode = conf.c_tarpit_mode;
 	}
 
 	if ((retval & EXF_NOLOG) == 0 && retval & EXF_WHITELIST) {
@@ -2261,9 +2264,18 @@ acl_entry(entrystr, len, acl)
 		    "[aw %ld] ", (long)acl->a_autowhite);
 		mystrlcat(entrystr, tempstr, len);
 	}
+
 	if (acl->a_tarpit != -1) {
 		snprintf(tempstr, sizeof(tempstr),
 		    "[tarpit %ld] ", (long)acl->a_tarpit);
+		mystrlcat(entrystr, tempstr, len);
+	}
+
+	if (acl->a_tarpit_mode != -1) {
+		snprintf(tempstr, sizeof(tempstr),
+		    "[tarpitmode %s] ",
+		    (acl->a_tarpit_mode == TARPIT_PER_SESSION) ?
+		        "persession" : "perresponse");
 		mystrlcat(entrystr, tempstr, len);
 	}
 
@@ -2394,6 +2406,25 @@ acl_add_tarpit(delay)
 
 	if (conf.c_debug || conf.c_acldebug)
 		mg_log(LOG_DEBUG, "load acl tarpit %ld", (long)delay);
+
+	return;
+}
+
+void
+acl_add_tarpitmode(mode)
+	enum tarpit_mode mode;
+{
+	if (gacl->a_tarpit_mode != -1) {
+		mg_log(LOG_ERR,
+		    "tarpitmode specified twice in ACL line %d", conf_line);
+		exit(EX_DATAERR);
+	}
+
+	gacl->a_tarpit_mode = mode;
+
+	if (conf.c_debug || conf.c_acldebug)
+		mg_log(LOG_DEBUG, "load acl tarpitmode %s",
+		   (mode == TARPIT_PER_SESSION) ? "persession" : "perresponse");
 
 	return;
 }

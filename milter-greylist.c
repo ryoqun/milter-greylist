@@ -689,11 +689,11 @@ real_envrcpt(ctx, envrcpt)
 	case T_CREATED:
 		if (priv->priv_sr.sr_tarpit <= 0)
 			break;
-
-		if (priv->priv_sr.sr_tarpit_mode == TARPIT_MAX &&
+		printf("real_rcpt(): priv->priv_sr.sr_tarpit_mode: %s\n", priv->priv_sr.sr_tarpit_mode == TARPIT_PER_SESSION ? "persession" : "perresponse");
+		if (priv->priv_sr.sr_tarpit_mode == TARPIT_PER_RESPONSE &&
 		    priv->priv_sr.sr_tarpit > priv->priv_max_tarpitted)
 			tarpit_duration = priv->priv_sr.sr_tarpit;
-		else if (priv->priv_sr.sr_tarpit_mode == TARPIT_TOTAL &&
+		else if (priv->priv_sr.sr_tarpit_mode == TARPIT_PER_SESSION &&
 			 priv->priv_sr.sr_tarpit > priv->priv_total_tarpitted)
 			tarpit_duration = priv->priv_sr.sr_tarpit -
 					      priv->priv_total_tarpitted;
@@ -715,9 +715,9 @@ real_envrcpt(ctx, envrcpt)
 		if (priv->priv_sr.sr_tarpit <= 0)
 			break;
 
-		if((priv->priv_sr.sr_tarpit_mode == TARPIT_MAX &&
+		if((priv->priv_sr.sr_tarpit_mode == TARPIT_PER_RESPONSE &&
 		    priv->priv_sr.sr_tarpit <= priv->priv_max_tarpitted) ||
-                   (priv->priv_sr.sr_tarpit_mode == TARPIT_TOTAL &&
+                   (priv->priv_sr.sr_tarpit_mode == TARPIT_PER_SESSION &&
 		    priv->priv_sr.sr_tarpit <= priv->priv_total_tarpitted)) {
 			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
 				      priv->priv_from, rcpt,
@@ -1326,7 +1326,7 @@ main(argc, argv)
 	/* 
 	 * Process command line options 
 	 */
-	while ((ch = getopt(argc, argv, "Aa:cvDd:qw:f:hp:P:Tu:rSL:M:lt:")) != -1) {
+	while ((ch = getopt(argc, argv, "Aa:cvDd:qw:f:hp:P:Tu:rSL:M:lt:m:")) != -1) {
 		switch (ch) {
 		case 'A':
 			defconf.c_noauth = 1;
@@ -1353,6 +1353,24 @@ main(argc, argv)
 			defconf.c_tarpit =
 			    (time_t)humanized_atoi(optarg);
 			defconf.c_forced |= C_TARPIT;
+			break;
+
+		case 'm':
+			if (optarg == NULL) {
+				mg_log(LOG_ERR, "%s: -m needs an argument",
+				    argv[0]);
+				usage(argv[0]);
+			}
+			if (!strcmp(optarg, "persession"))
+				defconf.c_tarpit_mode = TARPIT_PER_SESSION;
+			else if (!strcmp(optarg, "perresponse"))
+				defconf.c_tarpit_mode = TARPIT_PER_RESPONSE;
+			else {
+				mg_log(LOG_ERR, "%s: -m must be persession or "
+				    "perresponse", argv[0]);
+				usage(argv[0]);
+			}
+			defconf.c_forced |= C_TARPITMODE;
 			break;
 
 		case 'c':
@@ -1784,7 +1802,9 @@ usage(progname)
 	mg_log(LOG_ERR,
 	    "       [-u username[:groupname]] [-v] [-w greylist_delay] [-L cidrmask]");
 	mg_log(LOG_ERR,
-	    "       [-M prefixlen] [-P pidfile] -p socket");
+	    "       [-M prefixlen] [-P pidfile] -p socket [-t tarpit_duration]");
+	mg_log(LOG_ERR,
+	    "       [-m tarpitmode]");
 	exit(EX_USAGE);
 }
 

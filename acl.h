@@ -144,6 +144,7 @@ struct acl_param {
 	time_t ap_delay;
 	time_t ap_autowhite;
 	time_t ap_tarpit;
+	enum tarpit_mode ap_tarpit_mode;
 	int ap_flags;
 	char *ap_id;
 	char *ap_code;
@@ -238,6 +239,7 @@ struct acl_entry {
 	time_t a_delay;
 	time_t a_autowhite;
 	time_t a_tarpit;
+	enum tarpit_mode a_tarpit_mode;
 	int a_flags;
 	char *a_code;
 	char *a_ecode;
@@ -261,6 +263,7 @@ void acl_negate_clause(void);
 void acl_add_delay(time_t);
 void acl_add_autowhite(time_t);
 void acl_add_tarpit(time_t);
+void acl_add_tarpitmode(enum tarpit_mode);
 void acl_add_flushaddr(void);
 void acl_add_nolog(void);
 void acl_add_id(char *);

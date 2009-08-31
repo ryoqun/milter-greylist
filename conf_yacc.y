@@ -15,7 +15,7 @@
 %token LOGFAC_LOCAL0 LOGFAC_LOCAL1 LOGFAC_LOCAL2 LOGFAC_LOCAL3 LOGFAC_LOCAL4
 %token LOGFAC_LOCAL5 LOGFAC_LOCAL6 LOGFAC_LOCAL7 P0F P0FSOCK DKIMCHECK
 %token SPAMDSOCK SPAMDSOCKT SPAMD DOMAINEXACT ADDHEADER NOLOG LDAPBINDDN 
-%token LDAPBINDPW TARPIT
+%token LDAPBINDPW TARPIT TARPITMODE PERSESSION PERRESPONSE
 
 %{
 #include "config.h"
@@ -132,6 +132,7 @@ lines	:	lines netblock '\n'
 	|	lines autowhite '\n'
 	|	lines greylist '\n'
 	|	lines tarpit '\n'
+	|	lines tarpitmode '\n'
 	|	lines pidfile '\n'
 	|	lines dumpfile '\n'
 	|	lines subnetmatch '\n'
@@ -397,6 +398,15 @@ tarpit:		TARPIT TDELAY 	{ if (C_NOTFORCED(C_TARPIT))
 	|	TARPIT TNUMBER	{ if (C_NOTFORCED(C_TARPIT))
 					conf.c_tarpit =
 					    (time_t)humanized_atoi($2);
+				}
+	;
+tarpitmode:	TARPITMODE PERSESSION { if (C_NOTFORCED(C_TARPITMODE))
+					conf.c_tarpit_mode =
+					    TARPIT_PER_SESSION;
+				}
+	|	TARPITMODE PERRESPONSE { if (C_NOTFORCED(C_TARPITMODE))
+					conf.c_tarpit_mode =
+					    TARPIT_PER_RESPONSE;
 				}
 	;
 verbose:	VERBOSE	{ if (C_NOTFORCED(C_DEBUG)) conf.c_debug = 1; }
@@ -830,6 +840,7 @@ acl_values:	acl_value
 acl_value:	greylist_value
 	|	autowhite_value
 	|	tarpit_value
+	|	tarpitmode_value
 	|	code_value
 	|	ecode_value
 	|	msg_value
@@ -847,6 +858,11 @@ autowhite_value:	AUTOWHITE TDELAY
 	;
 tarpit_value:		TARPIT TDELAY
 			    { acl_add_tarpit((time_t)humanized_atoi($2)); }
+	;
+tarpitmode_value:	TARPITMODE PERSESSION
+			    { acl_add_tarpitmode(TARPIT_PER_SESSION); }
+	|		TARPITMODE PERRESPONSE
+			    { acl_add_tarpitmode(TARPIT_PER_RESPONSE); }
 	;
 flush_value:		FLUSHADDR { acl_add_flushaddr(); }
 	;
