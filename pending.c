@@ -473,12 +473,13 @@ out_aw:
 	return T_AUTOWHITE;
 }
 
-void pending_force(sa, salen, from, rcpt, aw)
+void pending_force(sa, salen, from, rcpt, aw, force)
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *from;
 	char *rcpt;
 	time_t aw;
+	force_t force;
 {
 	struct pending *pending;
 	struct pending *next;
@@ -523,9 +524,13 @@ void pending_force(sa, salen, from, rcpt, aw)
 		    ip_match(sa, pending->p_sa, mask) &&
 		    (strcmp(from, pending->p_from) == 0) &&
 		    (strcmp(rcpt, pending->p_rcpt) == 0)) {
-			date = now + aw;
-			peer_delete(pending, date);
-			pending_put(pending, date);
+			if (force == FORCE_AUTOWHITE) {
+				date = now + aw;
+				peer_delete(pending, date);
+				pending_put(pending, date);
+			} else if (force == FORCE_REMOVE) {
+				pending_rem(pending);
+			}
 			++dirty;
 
 			break;

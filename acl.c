@@ -2028,7 +2028,7 @@ acl_filter(stage, ctx, priv)
 		priv->priv_sr.sr_tarpit_mode = conf.c_tarpit_mode;
 	}
 
-	if ((retval & EXF_NOLOG) == 0 && retval & EXF_WHITELIST) {
+	if ((retval & EXF_NOLOG) == 0 && retval & EXF_WHITELIST && priv->priv_sr.sr_tarpit <= 0) {
 		whystr[0] = '\0';
 		if (retval & EXF_ADDR) {
 			iptostring(sa, salen, addrstr, sizeof(addrstr));

@@ -124,7 +124,7 @@ static void smtp_reply_init(struct smtp_reply *);
 static void smtp_reply_free(struct smtp_reply *);
 static void add_recipient(struct mlfi_priv *, char *);
 static void set_sr_defaults(struct mlfi_priv *, char *, char *, char *);
-static void tarpit_reentry(struct mlfi_priv *);
+static sfsistat tarpit_reentry(struct mlfi_priv *);
 static sfsistat stat_from_code(char *);
 static void cleanup_pidfile(char *);
 static void cleanup_sock(char *);
@@ -279,20 +279,27 @@ mlfi_close(ctx)
 	return r;
 }
 
-void
+static sfsistat
 tarpit_reentry(priv)
 	struct mlfi_priv *priv;
 {
-	if (priv->priv_after_tarpit == 1) {
-		priv->priv_after_tarpit = 0;
-		/* Because this code path will be executed only and immediately
-		   after real_envrcpt(), we can use the rcpt at the head of
-		   priv_rcpt. */
-		struct rcpt *rcpt = priv->priv_rcpt.lh_first;
+	/* Because this code path will be executed only and immediately
+	   after real_envrcpt(), we can use the rcpt at the head of
+	   priv_rcpt. */
+	struct rcpt *rcpt = priv->priv_rcpt.lh_first;
+	int tarpit_type = priv->priv_after_tarpit;
+	priv->priv_after_tarpit = 0;
 
+	if (tarpit_type == 0) /* the normal case: tarpit wasn't activated. */
+		return SMFIS_CONTINUE;
+	else if (tarpit_type == 1 || tarpit_type == 2) {
 		pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
 			      priv->priv_from, rcpt->r_addr,
-			      priv->priv_sr.sr_autowhite);
+			      priv->priv_sr.sr_autowhite, FORCE_AUTOWHITE);
+		return SMFIS_CONTINUE;
+	} else if (tarpit_type == 3) {
+		/* Do nothing. We also need to greylist. */
+		return SMFIS_TEMPFAIL;
 	}
 }
 
@@ -547,7 +554,7 @@ real_envrcpt(ctx, envrcpt)
 	char rcpt[ADDRLEN + 1];
 	int save_nolog;
 	struct tuple_fields tuple;
-	time_t tarpit_duration = 0;
+	time_t sleep_duration = 0;
 
 	/*
 	 * Strip spaces from the recipient address
@@ -559,7 +566,8 @@ real_envrcpt(ctx, envrcpt)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry(priv);
+	if (tarpit_reentry(priv) == SMFIS_TEMPFAIL)
+		return SMFIS_TEMPFAIL;
 
 	if (!iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
 	    sizeof(addrstr)))
@@ -627,7 +635,7 @@ real_envrcpt(ctx, envrcpt)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST) {
+	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST && priv->priv_sr.sr_tarpit <= 0) {
 		priv->priv_sr.sr_elapsed = 0;
 		goto exit_accept;
 	}
@@ -692,22 +700,24 @@ real_envrcpt(ctx, envrcpt)
 		printf("real_rcpt(): priv->priv_sr.sr_tarpit_mode: %s\n", priv->priv_sr.sr_tarpit_mode == TARPIT_PER_SESSION ? "persession" : "perresponse");
 		if (priv->priv_sr.sr_tarpit_mode == TARPIT_PER_RESPONSE &&
 		    priv->priv_sr.sr_tarpit > priv->priv_max_tarpitted)
-			tarpit_duration = priv->priv_sr.sr_tarpit;
+			sleep_duration = priv->priv_sr.sr_tarpit;
 		else if (priv->priv_sr.sr_tarpit_mode == TARPIT_PER_SESSION &&
 			 priv->priv_sr.sr_tarpit > priv->priv_total_tarpitted)
-			tarpit_duration = priv->priv_sr.sr_tarpit -
+			sleep_duration = priv->priv_sr.sr_tarpit -
 					      priv->priv_total_tarpitted;
 		else
 			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
 				      priv->priv_from, rcpt,
-				      priv->priv_sr.sr_autowhite);
+				      priv->priv_sr.sr_autowhite, FORCE_AUTOWHITE);
 
-		if (tarpit_duration > 0) {
-			if (tarpit_duration > priv->priv_max_tarpitted)
-				priv->priv_max_tarpitted = tarpit_duration;
-			priv->priv_total_tarpitted += tarpit_duration;
-			priv->priv_after_tarpit = 1;
-			sleep(tarpit_duration);
+		if (sleep_duration > 0) {
+			if (sleep_duration > priv->priv_max_tarpitted)
+				priv->priv_max_tarpitted = sleep_duration;
+			priv->priv_total_tarpitted += sleep_duration;
+			
+			priv->priv_after_tarpit = (priv->priv_sr.sr_whitelist & EXF_GREYLIST) ? 3 : 2 ;
+			printf("adfsfsdfasf %d\n", priv->priv_after_tarpit);
+			sleep(sleep_duration);
 		}
 		priv->priv_sr.sr_elapsed = 0;
 		goto exit_accept;
@@ -721,7 +731,7 @@ real_envrcpt(ctx, envrcpt)
 		    priv->priv_sr.sr_tarpit <= priv->priv_total_tarpitted)) {
 			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
 				      priv->priv_from, rcpt,
-				      priv->priv_sr.sr_autowhite);
+				      priv->priv_sr.sr_autowhite, FORCE_AUTOWHITE);
 			priv->priv_sr.sr_elapsed = 0;
 			goto exit_accept;
 		}
@@ -773,7 +783,8 @@ real_header(ctx, name, value)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry(priv);
+	if (tarpit_reentry(priv) == SMFIS_TEMPFAIL)
+		return SMFIS_TEMPFAIL;
 
 	len = strlen(name) + strlen(sep) + strlen(value) + strlen(crlf);
 	priv->priv_msgcount += len;
@@ -825,7 +836,8 @@ real_eoh(ctx)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry(priv);
+	if (tarpit_reentry(priv) == SMFIS_TEMPFAIL)
+		return SMFIS_TEMPFAIL;
 
 	if ((stat = dkimcheck_eoh(priv)) != SMFIS_CONTINUE)
 		return stat;
@@ -850,7 +862,8 @@ real_body(ctx, chunk, size)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry(priv);
+	if (tarpit_reentry(priv) == SMFIS_TEMPFAIL)
+		return SMFIS_TEMPFAIL;
 
 	stat = SMFIS_CONTINUE;
 
@@ -955,7 +968,8 @@ real_eom(ctx)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry(priv);
+	if (tarpit_reentry(priv) == SMFIS_TEMPFAIL)
+		return SMFIS_TEMPFAIL;
 
 	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
         /* we want fstring_expand to expand %E to priv_max_elapsed here */
@@ -1261,8 +1275,18 @@ real_close(ctx)
 	struct rcpt *r;
 	struct header *h;
 	struct body *b;
+	struct rcpt *rcpt;
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) != NULL) {
+		/* client aborted while tarpitting */
+		if (priv->priv_after_tarpit == 2 ||
+		    priv->priv_after_tarpit == 3) {
+			printf("removing....\n");
+			rcpt = priv->priv_rcpt.lh_first;
+			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
+				      priv->priv_from, rcpt->r_addr,
+				      priv->priv_sr.sr_autowhite, FORCE_REMOVE);
+		}
 		smtp_reply_free(&priv->priv_sr);
 
 		while ((r = LIST_FIRST(&priv->priv_rcpt)) != NULL) {

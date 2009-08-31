@@ -75,6 +75,11 @@ typedef enum {
 	T_NONE = 0
 } tuple_t;
 
+typedef enum {
+	FORCE_AUTOWHITE,
+	FORCE_REMOVE
+} force_t;
+
 TAILQ_HEAD(pendinglist, pending);
 
 struct pending {
@@ -110,7 +115,7 @@ struct pending *pending_get(struct sockaddr *, socklen_t, char *, char *,
     time_t, tuple_t);
 tuple_t pending_check(struct sockaddr *, socklen_t, char *, char *, 
     time_t *, time_t *, char *, time_t, time_t);
-void pending_force(struct sockaddr *, socklen_t, char *, char *, time_t);
+void pending_force(struct sockaddr *, socklen_t, char *, char *, time_t, force_t);
 void pending_del(struct sockaddr *, socklen_t, char *, char *, time_t, 
     time_t);
 void pending_rem(struct pending *);
