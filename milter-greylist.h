@@ -145,6 +145,9 @@ typedef union {
 
 #endif
 
+#define TARPIT_TOTAL 0
+#define TARPIT_MAX 1
+
 struct smtp_reply {
 	int sr_whitelist;
 	int sr_nowhitelist;
@@ -155,6 +158,7 @@ struct smtp_reply {
 	time_t sr_delay;
 	time_t sr_autowhite;
 	time_t sr_tarpit;
+	int sr_tarpit_mode;
 	char *sr_code;
 	char *sr_ecode;
 	char *sr_msg;
@@ -222,8 +226,9 @@ struct mlfi_priv {
 	int priv_spamd_flags;
 	int priv_spamd_score10;
 #endif
-	bool priv_after_tarpit;
+	int priv_after_tarpit;
 	time_t priv_max_tarpitted;
+	time_t priv_total_tarpitted;
 };
 
 sfsistat mlfi_connect(SMFICTX *, char *, _SOCK_ADDR *);

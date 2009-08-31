@@ -373,6 +373,7 @@ real_connect(ctx, hostname, addr)
 #endif
 	priv->priv_after_tarpit = 0;
 	priv->priv_max_tarpitted = 0;
+	priv->priv_total_tarpitted = 0;
 
 	return SMFIS_CONTINUE;
 }
@@ -546,6 +547,7 @@ real_envrcpt(ctx, envrcpt)
 	char rcpt[ADDRLEN + 1];
 	int save_nolog;
 	struct tuple_fields tuple;
+	time_t tarpit_duration = 0;
 
 	/*
 	 * Strip spaces from the recipient address
@@ -557,7 +559,7 @@ real_envrcpt(ctx, envrcpt)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry (priv);
+	tarpit_reentry(priv);
 
 	if (!iptostring(SA(&priv->priv_addr), priv->priv_addrlen, addrstr,
 	    sizeof(addrstr)))
@@ -684,25 +686,45 @@ real_envrcpt(ctx, envrcpt)
 			priv->priv_max_elapsed = priv->priv_sr.sr_elapsed;
 		goto exit_accept;
 		break;
-	case T_NONEANDFIRST:
-		if (priv->priv_sr.sr_tarpit > 0) {
-			if (priv->priv_sr.sr_tarpit > priv->priv_max_tarpitted) {
-				priv->priv_max_tarpitted = priv->priv_sr.sr_tarpit;
-				priv->priv_after_tarpit = 1;
-				sleep (priv->priv_sr.sr_tarpit);
-			} else {
-				pending_force(SA(&priv->priv_addr), 
-					      priv->priv_addrlen,
-					      priv->priv_from,
-					      rcpt,
-					      priv->priv_sr.sr_autowhite);
-			}
+	case T_CREATED:
+		if (priv->priv_sr.sr_tarpit <= 0)
+			break;
+
+		if (priv->priv_sr.sr_tarpit_mode == TARPIT_MAX &&
+		    priv->priv_sr.sr_tarpit > priv->priv_max_tarpitted)
+			tarpit_duration = priv->priv_sr.sr_tarpit;
+		else if (priv->priv_sr.sr_tarpit_mode == TARPIT_TOTAL &&
+			 priv->priv_sr.sr_tarpit > priv->priv_total_tarpitted)
+			tarpit_duration = priv->priv_sr.sr_tarpit -
+					      priv->priv_total_tarpitted;
+		else
+			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
+				      priv->priv_from, rcpt,
+				      priv->priv_sr.sr_autowhite);
+
+		if (tarpit_duration > 0) {
+			if (tarpit_duration > priv->priv_max_tarpitted)
+				priv->priv_max_tarpitted = tarpit_duration;
+			priv->priv_total_tarpitted += tarpit_duration;
+			priv->priv_after_tarpit = 1;
+			sleep(tarpit_duration);
+		}
+		priv->priv_sr.sr_elapsed = 0;
+		goto exit_accept;
+	default:			/* first encounter */
+		if (priv->priv_sr.sr_tarpit <= 0)
+			break;
+
+		if((priv->priv_sr.sr_tarpit_mode == TARPIT_MAX &&
+		    priv->priv_sr.sr_tarpit <= priv->priv_max_tarpitted) ||
+                   (priv->priv_sr.sr_tarpit_mode == TARPIT_TOTAL &&
+		    priv->priv_sr.sr_tarpit <= priv->priv_total_tarpitted)) {
+			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
+				      priv->priv_from, rcpt,
+				      priv->priv_sr.sr_autowhite);
 			priv->priv_sr.sr_elapsed = 0;
 			goto exit_accept;
 		}
-		break;
-	default:			/* first encounter */
-		;
 		break;
 	}
 	priv->priv_sr.sr_remaining = remaining;
@@ -751,7 +773,7 @@ real_header(ctx, name, value)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry (priv);
+	tarpit_reentry(priv);
 
 	len = strlen(name) + strlen(sep) + strlen(value) + strlen(crlf);
 	priv->priv_msgcount += len;
@@ -803,7 +825,7 @@ real_eoh(ctx)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry (priv);
+	tarpit_reentry(priv);
 
 	if ((stat = dkimcheck_eoh(priv)) != SMFIS_CONTINUE)
 		return stat;
@@ -828,7 +850,7 @@ real_body(ctx, chunk, size)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry (priv);
+	tarpit_reentry(priv);
 
 	stat = SMFIS_CONTINUE;
 
@@ -933,7 +955,7 @@ real_eom(ctx)
 		mg_log(LOG_ERR, "Internal error: smfi_getpriv() returns NULL");
 		return SMFIS_TEMPFAIL;
 	}
-	tarpit_reentry (priv);
+	tarpit_reentry(priv);
 
 	priv->priv_cur_rcpt = NULL; /* There is no current recipient */
         /* we want fstring_expand to expand %E to priv_max_elapsed here */

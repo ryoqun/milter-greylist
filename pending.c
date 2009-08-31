@@ -466,7 +466,7 @@ out:
 	if (rest <= 0)
 		return T_PENDING;
 	else
-		return first ? T_NONEANDFIRST : T_NONE;
+		return first ? T_CREATED : T_NONE;
 
 out_aw:
 	PENDING_UNLOCK;

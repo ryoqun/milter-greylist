@@ -1926,6 +1926,8 @@ acl_filter(stage, ctx, priv)
 		    ap.ap_autowhite : conf.c_autowhite_validity;
 		priv->priv_sr.sr_tarpit =
 		    (ap.ap_tarpit != -1) ? ap.ap_tarpit : conf.c_tarpit;
+		priv->priv_sr.sr_tarpit_mode = TARPIT_MAX;
+		    /*(ap.ap_tarpit_mode != TARPIT_DEFAULT) ? ap.ap_tarpit_mode : conf.c_tarpit_mode;*/
 
 		if (ap.ap_id) {
 			priv->priv_sr.sr_acl_id = strdup(ap.ap_id);
@@ -2020,6 +2022,7 @@ acl_filter(stage, ctx, priv)
 		priv->priv_sr.sr_delay = conf.c_delay;
 		priv->priv_sr.sr_autowhite = conf.c_autowhite_validity;
 		priv->priv_sr.sr_tarpit = conf.c_tarpit;
+		priv->priv_sr.sr_tarpit_mode = TARPIT_MAX;//conf.c_tarpit_mode;
 	}
 
 	if ((retval & EXF_NOLOG) == 0 && retval & EXF_WHITELIST) {
