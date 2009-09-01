@@ -305,6 +305,9 @@ tarpit_reentry(priv)
 	case GREYLIST_OR_TARPIT:
 		stat = SMFIS_TEMPFAIL;	
 		break;
+	default: /* error */
+		stat = SMFIS_TEMPFAIL;
+		break;
 	}
 
 	priv->priv_after_tarpit = NOT_TARPITTED;
@@ -563,7 +566,7 @@ real_envrcpt(ctx, envrcpt)
 	int save_nolog;
 	struct tuple_fields tuple;
 	time_t sleep_duration = 0;
-
+	enum tarpit_effect after_tarpit = NOT_TARPITTED;
 	/*
 	 * Strip spaces from the recipient address
 	 */
@@ -643,7 +646,8 @@ real_envrcpt(ctx, envrcpt)
 		return SMFIS_TEMPFAIL;
 	}
 
-	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST && priv->priv_sr.sr_tarpit <= 0) {
+	if (priv->priv_sr.sr_whitelist & EXF_WHITELIST &&
+	    priv->priv_sr.sr_tarpit <= 0) {
 		priv->priv_sr.sr_elapsed = 0;
 		goto exit_accept;
 	}
@@ -691,6 +695,14 @@ real_envrcpt(ctx, envrcpt)
 	tuple.gldelay = priv->priv_sr.sr_delay;
 	tuple.autowhite = priv->priv_sr.sr_autowhite;
 
+	if (priv->priv_sr.sr_whitelist & EXF_GREYLIST &&
+	    priv->priv_sr.sr_whitelist & EXF_TARPIT)
+		after_tarpit = GREYLIST_OR_TARPIT;
+	else if (priv->priv_sr.sr_whitelist & EXF_GREYLIST)
+		after_tarpit = AUTOWHITE_OR_GREYLIST;
+	else if (priv->priv_sr.sr_whitelist & EXF_WHITELIST)
+		after_tarpit = AUTOWHITE_OR_TARPIT;
+
 	switch(mg_tuple_check(tuple)) {
 	case T_AUTOWHITE:			/* autowhite listed */
 		priv->priv_sr.sr_elapsed = 0;
@@ -713,7 +725,8 @@ real_envrcpt(ctx, envrcpt)
 			 priv->priv_sr.sr_tarpit > priv->priv_total_tarpitted)
 			sleep_duration = priv->priv_sr.sr_tarpit -
 					      priv->priv_total_tarpitted;
-		else
+		else if (after_tarpit == AUTOWHITE_OR_GREYLIST ||
+			 after_tarpit == AUTOWHITE_OR_TARPIT)
 			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
 				      priv->priv_from, rcpt,
 				      priv->priv_sr.sr_autowhite, FORCE_AUTOWHITE);
@@ -722,15 +735,7 @@ real_envrcpt(ctx, envrcpt)
 			if (sleep_duration > priv->priv_max_tarpitted)
 				priv->priv_max_tarpitted = sleep_duration;
 			priv->priv_total_tarpitted += sleep_duration;
-			
-			if (priv->priv_sr.sr_whitelist & EXF_GREYLIST &&
-			    priv->priv_sr.sr_whitelist & EXF_TARPIT)
-				priv->priv_after_tarpit = GREYLIST_OR_TARPIT;
-			else if (priv->priv_sr.sr_whitelist & EXF_GREYLIST)
-				priv->priv_after_tarpit = AUTOWHITE_OR_GREYLIST;
-			else if (priv->priv_sr.sr_whitelist & EXF_WHITELIST)
-				priv->priv_after_tarpit = AUTOWHITE_OR_TARPIT;
-
+			priv->priv_after_tarpit = after_tarpit;
 
 			sleep(sleep_duration);
 		}
@@ -740,10 +745,12 @@ real_envrcpt(ctx, envrcpt)
 		if (priv->priv_sr.sr_tarpit <= 0)
 			break;
 
-		if((priv->priv_sr.sr_tarpit_mode == TARPIT_PER_RESPONSE &&
-		    priv->priv_sr.sr_tarpit <= priv->priv_max_tarpitted) ||
-                   (priv->priv_sr.sr_tarpit_mode == TARPIT_PER_SESSION &&
-		    priv->priv_sr.sr_tarpit <= priv->priv_total_tarpitted)) {
+		if(((priv->priv_sr.sr_tarpit_mode == TARPIT_PER_RESPONSE &&
+		     priv->priv_sr.sr_tarpit <= priv->priv_max_tarpitted) ||
+                    (priv->priv_sr.sr_tarpit_mode == TARPIT_PER_SESSION &&
+		     priv->priv_sr.sr_tarpit <= priv->priv_total_tarpitted)) &&
+		    (after_tarpit == AUTOWHITE_OR_GREYLIST ||
+		     after_tarpit == AUTOWHITE_OR_TARPIT)) {
 			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
 				      priv->priv_from, rcpt,
 				      priv->priv_sr.sr_autowhite, FORCE_AUTOWHITE);
