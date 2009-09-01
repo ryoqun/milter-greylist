@@ -831,6 +831,7 @@ acl_clause:	helo_clause
 	|	propregex_clause
 	|	spamd_clause
 	|	spamd_score_clause
+	|	tarpit_clause
 	;
 
 acl_values:	acl_value
@@ -1033,7 +1034,11 @@ header_clause:	GLHEADER QSTRING {
 
 headerregex_clause:	GLHEADER REGEX { acl_add_clause(AC_HEADER_RE, $2); }
 	;
-
+tarpit_clause:		TARPIT TDELAY {
+				time_t t = humanized_atoi($2);
+				acl_add_clause(AC_TARPIT, &t);
+			}
+	;
 body_clause:		BODY QSTRING {
 				char qstring[QSTRLEN + 1];
 

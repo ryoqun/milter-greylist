@@ -146,6 +146,7 @@ typedef union {
 #endif
 
 enum tarpit_mode { TARPIT_PER_SESSION, TARPIT_PER_RESPONSE };
+enum tarpit_effect { NOT_TARPITTED, AUTOWHITE_OR_GREYLIST, AUTOWHITE_OR_TARPIT, GREYLIST_OR_TARPIT };
 
 struct smtp_reply {
 	int sr_whitelist;
@@ -225,7 +226,7 @@ struct mlfi_priv {
 	int priv_spamd_flags;
 	int priv_spamd_score10;
 #endif
-	int priv_after_tarpit;
+	enum tarpit_effect priv_after_tarpit;
 	time_t priv_max_tarpitted;
 	time_t priv_total_tarpitted;
 };

@@ -283,24 +283,32 @@ static sfsistat
 tarpit_reentry(priv)
 	struct mlfi_priv *priv;
 {
+	sfsistat stat;
+
 	/* Because this code path will be executed only and immediately
 	   after real_envrcpt(), we can use the rcpt at the head of
 	   priv_rcpt. */
-	struct rcpt *rcpt = priv->priv_rcpt.lh_first;
-	int tarpit_type = priv->priv_after_tarpit;
-	priv->priv_after_tarpit = 0;
+	struct rcpt *rcpt;
 
-	if (tarpit_type == 0) /* the normal case: tarpit wasn't activated. */
-		return SMFIS_CONTINUE;
-	else if (tarpit_type == 1 || tarpit_type == 2) {
+	switch(priv->priv_after_tarpit) {
+	case NOT_TARPITTED:
+		stat = SMFIS_CONTINUE;
+		break;
+	case AUTOWHITE_OR_GREYLIST:
+	case AUTOWHITE_OR_TARPIT:
+		rcpt = priv->priv_rcpt.lh_first;
 		pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
 			      priv->priv_from, rcpt->r_addr,
 			      priv->priv_sr.sr_autowhite, FORCE_AUTOWHITE);
-		return SMFIS_CONTINUE;
-	} else if (tarpit_type == 3) {
-		/* Do nothing. We also need to greylist. */
-		return SMFIS_TEMPFAIL;
+		stat = SMFIS_CONTINUE;
+		break;
+	case GREYLIST_OR_TARPIT:
+		stat = SMFIS_TEMPFAIL;	
+		break;
 	}
+
+	priv->priv_after_tarpit = NOT_TARPITTED;
+	return stat;
 }
 
 static sfsistat
@@ -378,7 +386,7 @@ real_connect(ctx, hostname, addr)
 	priv->priv_p0f = NULL;
 	p0f_lookup(priv);
 #endif
-	priv->priv_after_tarpit = 0;
+	priv->priv_after_tarpit = NOT_TARPITTED;
 	priv->priv_max_tarpitted = 0;
 	priv->priv_total_tarpitted = 0;
 
@@ -697,7 +705,7 @@ real_envrcpt(ctx, envrcpt)
 	case T_CREATED:
 		if (priv->priv_sr.sr_tarpit <= 0)
 			break;
-		printf("real_rcpt(): priv->priv_sr.sr_tarpit_mode: %s\n", priv->priv_sr.sr_tarpit_mode == TARPIT_PER_SESSION ? "persession" : "perresponse");
+
 		if (priv->priv_sr.sr_tarpit_mode == TARPIT_PER_RESPONSE &&
 		    priv->priv_sr.sr_tarpit > priv->priv_max_tarpitted)
 			sleep_duration = priv->priv_sr.sr_tarpit;
@@ -715,8 +723,15 @@ real_envrcpt(ctx, envrcpt)
 				priv->priv_max_tarpitted = sleep_duration;
 			priv->priv_total_tarpitted += sleep_duration;
 			
-			priv->priv_after_tarpit = (priv->priv_sr.sr_whitelist & EXF_GREYLIST) ? 3 : 2 ;
-			printf("adfsfsdfasf %d\n", priv->priv_after_tarpit);
+			if (priv->priv_sr.sr_whitelist & EXF_GREYLIST &&
+			    priv->priv_sr.sr_whitelist & EXF_TARPIT)
+				priv->priv_after_tarpit = GREYLIST_OR_TARPIT;
+			else if (priv->priv_sr.sr_whitelist & EXF_GREYLIST)
+				priv->priv_after_tarpit = AUTOWHITE_OR_GREYLIST;
+			else if (priv->priv_sr.sr_whitelist & EXF_WHITELIST)
+				priv->priv_after_tarpit = AUTOWHITE_OR_TARPIT;
+
+
 			sleep(sleep_duration);
 		}
 		priv->priv_sr.sr_elapsed = 0;
@@ -1279,9 +1294,8 @@ real_close(ctx)
 
 	if ((priv = (struct mlfi_priv *) smfi_getpriv(ctx)) != NULL) {
 		/* client aborted while tarpitting */
-		if (priv->priv_after_tarpit == 2 ||
-		    priv->priv_after_tarpit == 3) {
-			printf("removing....\n");
+		if (priv->priv_after_tarpit == AUTOWHITE_OR_TARPIT ||
+		    priv->priv_after_tarpit == GREYLIST_OR_TARPIT) {
 			rcpt = priv->priv_rcpt.lh_first;
 			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
 				      priv->priv_from, rcpt->r_addr,
