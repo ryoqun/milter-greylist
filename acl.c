@@ -562,7 +562,9 @@ acl_tarpit_filter(ad, stage, ap, priv)
 	struct mlfi_priv *priv;
 {
 	ap->ap_tarpit = ad->time;
-	return 1;
+	return pending_check_tarpit(SA(&priv->priv_addr), priv->priv_addrlen,
+				    priv->priv_from, priv->priv_cur_rcpt, 
+				    ad->time);
 }
 
 

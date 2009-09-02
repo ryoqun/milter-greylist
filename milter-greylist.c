@@ -737,6 +737,7 @@ real_envrcpt(ctx, envrcpt)
 			priv->priv_total_tarpitted += sleep_duration;
 			priv->priv_after_tarpit = after_tarpit;
 
+			printf("sleeP! %ld\n", sleep_duration);
 			sleep(sleep_duration);
 		}
 		priv->priv_sr.sr_elapsed = 0;
@@ -1306,7 +1307,7 @@ real_close(ctx)
 			rcpt = priv->priv_rcpt.lh_first;
 			pending_force(SA(&priv->priv_addr), priv->priv_addrlen,
 				      priv->priv_from, rcpt->r_addr,
-				      priv->priv_sr.sr_autowhite, FORCE_REMOVE);
+				      priv->priv_sr.sr_tarpit, FORCE_TARPIT);
 		}
 		smtp_reply_free(&priv->priv_sr);
 

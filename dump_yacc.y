@@ -1,4 +1,4 @@
-%token IPADDR IP6ADDR EMAIL TIME AUTO GARBAGE
+%token IPADDR IP6ADDR EMAIL TIME AUTO TARPIT GARBAGE
 
 %{
 #include "config.h"
@@ -41,18 +41,19 @@ void dump_error(char *);
 %%
 lines	:	lines greyentry '\n' 
 	|	lines autoentry '\n'
+	|	lines tarpitentry '\n'
 	|	lines '\n'
 	|	error '\n'		{ yyerrok; }
 	|
 	;
 greyentry :	IPADDR EMAIL EMAIL TIME	{
 			pending_get(SA(&$1), sizeof(struct sockaddr_in), $2,
-			    $3, $4, T_PENDING);
+			    $3, $4, 0, T_PENDING);
 		}
 	|	IP6ADDR EMAIL EMAIL TIME {
 #ifdef AF_INET6
 			pending_get(SA(&$1), sizeof(struct sockaddr_in6), $2,
-			    $3, $4, T_PENDING);
+			    $3, $4, 0, T_PENDING);
 #else
 			printf("IPv6 is not supported, ignore line %d\n",
 			    dump_line);
@@ -61,12 +62,26 @@ greyentry :	IPADDR EMAIL EMAIL TIME	{
 	;
 autoentry :	IPADDR EMAIL EMAIL TIME AUTO { 
 			pending_get(SA(&$1), sizeof(struct sockaddr_in), $2,
-			    $3, $4, T_AUTOWHITE);
+			    $3, $4, 0, T_AUTOWHITE);
 		}
 	|	IP6ADDR EMAIL EMAIL TIME AUTO {
 #ifdef AF_INET6
 			pending_get(SA(&$1), sizeof(struct sockaddr_in6), $2,
-			    $3, $4, T_AUTOWHITE);
+			    $3, $4, 0, T_AUTOWHITE);
+#else
+			printf("IPv6 is not supported, ignore line %d\n",
+			    dump_line);
+#endif
+		}
+	;
+tarpitentry :	IPADDR EMAIL EMAIL TIME TIME TARPIT {
+			pending_get(SA(&$1), sizeof(struct sockaddr_in), $2,
+			    $3, $4, $5, T_TARPIT);
+		}
+	|	IP6ADDR EMAIL EMAIL TIME TIME TARPIT {
+#ifdef AF_INET6
+			pending_get(SA(&$1), sizeof(struct sockaddr_in6), $2,
+			    $3, $4, $5, T_TARPIT);
 #else
 			printf("IPv6 is not supported, ignore line %d\n",
 			    dump_line);

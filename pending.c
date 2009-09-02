@@ -119,7 +119,8 @@ pending_timeout(pending, now)
 	long pt = pending->p_tv.tv_sec;
 	long nt = now->tv_sec;
 
-	if ((pending->p_type == T_PENDING && nt - pt > conf.c_timeout) ||
+	if (((pending->p_type == T_PENDING || pending->p_type == T_TARPIT)
+		&& nt - pt > conf.c_timeout) ||
 	    (pending->p_type == T_AUTOWHITE && pt < nt)) {
 		if (conf.c_debug || conf.c_logexpired) {
 			mg_log(LOG_DEBUG,
@@ -137,12 +138,13 @@ pending_timeout(pending, now)
 
 /* pending_lock must be locked */
 struct pending *
-pending_get(sa, salen, from, rcpt, date, tupletype)  
+pending_get(sa, salen, from, rcpt, date, tarpit, tupletype)  
 	struct sockaddr *sa;
 	socklen_t salen;
 	char *from;
 	char *rcpt;
 	time_t date;
+	time_t tarpit;
 	tuple_t tupletype;
 {
 	struct pending *pending;
@@ -155,6 +157,7 @@ pending_get(sa, salen, from, rcpt, date, tupletype)
 
 	bzero((void *)pending, sizeof(pending));
 	pending->p_tv.tv_sec = date;
+	pending->p_tarpit.tv_sec = tarpit;
 	pending->p_type = tupletype;
 
 	if ((pending->p_sa = malloc(salen)) == NULL) {
@@ -250,7 +253,7 @@ pending_put(pending, aw_date)
 		/* 
 		 * change greylist entry to autowhite 
 		 */
-		pending->p_type=T_AUTOWHITE; 	
+		pending->p_type = T_AUTOWHITE; 	
 		pending->p_tv.tv_sec = aw_date;
 	} else {	
 		/*
@@ -331,8 +334,8 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	struct pending *next;
 	struct timeval tv;
 	time_t now;
-	time_t rest;
-	time_t accepted;
+	time_t rest = -1; //XXX
+	time_t accepted = 0; //XXX
 	int dirty = 0;
 	int first = 0;
 	struct pending_bucket *b;
@@ -431,6 +434,14 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 			}
 			break;
 
+		case T_TARPIT:
+			if (ip_match(sa, pending->p_sa, mask) &&
+			    (strcmp(from, pending->p_from) == 0) &&
+			    (strcmp(rcpt, pending->p_rcpt) == 0)) {
+				first = 1; // already the acl matched in the preceeding state. we need to tarpit in this case....
+				goto out;
+			}
+			break;
 		default:			/* Error */
 			break;
 		}
@@ -442,7 +453,7 @@ pending_check(sa, salen, from, rcpt, remaining, elapsed, queueid, delay, aw)
 	*/
 	accepted = now + delay;
 	rest = 0;
-	pending = pending_get(sa, salen, from, rcpt, accepted, T_PENDING);
+	pending = pending_get(sa, salen, from, rcpt, accepted, 0, T_PENDING);
 	if (pending) {
 		++dirty;
 		peer_create(pending);
@@ -463,14 +474,84 @@ out:
 		dump_flush();
 	}
 
-	if (rest <= 0)
+	if (first)
+		return T_CREATED;
+	else if (rest <= 0)
 		return T_PENDING;
 	else
-		return first ? T_CREATED : T_NONE;
+		return T_NONE;
 
 out_aw:
 	PENDING_UNLOCK;
 	return T_AUTOWHITE;
+}
+
+int pending_check_tarpit(sa, salen, from, rcpt, tarpit)
+	struct sockaddr *sa;
+	socklen_t salen;
+	char *from;
+	char *rcpt;
+	time_t tarpit;
+{
+	struct pending *pending;
+	struct pending *next;
+	struct timeval tv;
+	time_t now;
+	int dirty = 0;
+	struct pending_bucket *b;
+	ipaddr *mask = NULL;
+	int ret = 1;
+
+	(void)gettimeofday(&tv, NULL);
+	now = tv.tv_sec;
+	
+	printf("pending_check_tarpit(): %s %d\n", rcpt, tarpit);
+	b = &pending_buckets[BUCKET_HASH(sa, from, rcpt, PENDING_BUCKETS)];
+	PENDING_LOCK;
+	for (pending = TAILQ_FIRST(&b->b_pending_head); 
+	    pending; pending = next) {
+		next = TAILQ_NEXT(pending, pb_list);
+		/* 
+		 * flag stale greylist and aw entries
+		 */
+		if (pending_timeout(pending, &tv)) { 
+			++dirty;
+			continue;
+		}
+
+		switch (pending->p_sa->sa_family) {
+		case AF_INET:
+			mask = (ipaddr *)&conf.c_match_mask;
+			break;
+#ifdef AF_INET6
+		case AF_INET6:
+			mask = (ipaddr *)&conf.c_match_mask6;
+			break;
+#endif
+		}
+
+		/*
+		 * Look for our entry.
+		 */
+		if (pending->p_type == T_TARPIT &&
+		    ip_match(sa, pending->p_sa, mask) &&
+		    (strcmp(from, pending->p_from) == 0) &&
+		    (strcmp(rcpt, pending->p_rcpt) == 0)) {
+			if (tarpit < pending->p_tarpit.tv_sec)
+				ret = 1; /* shorter tarpit. client may pass this time.... */
+			else
+				ret = 0; /* longer or equal tarpit. client definitely fails this time too. so move to the next ACL */
+			break;
+		}
+	}
+
+	PENDING_UNLOCK;
+	if (dirty) {
+		dump_touch(dirty);
+		dump_flush();
+	}
+	/* not found in the database. therefore, try tarpitting for the first time. */
+	return ret;
 }
 
 void pending_force(sa, salen, from, rcpt, aw, force)
@@ -515,13 +596,12 @@ void pending_force(sa, salen, from, rcpt, aw, force)
 			mask = (ipaddr *)&conf.c_match_mask6;
 			break;
 #endif
-			}
+		}
 
 		/*
 		 * Look for our entry.
 		 */
-		if (pending->p_type == T_PENDING &&
-		    ip_match(sa, pending->p_sa, mask) &&
+		if (ip_match(sa, pending->p_sa, mask) &&
 		    (strcmp(from, pending->p_from) == 0) &&
 		    (strcmp(rcpt, pending->p_rcpt) == 0)) {
 			if (force == FORCE_AUTOWHITE) {
@@ -530,6 +610,14 @@ void pending_force(sa, salen, from, rcpt, aw, force)
 				pending_put(pending, date);
 			} else if (force == FORCE_REMOVE) {
 				pending_rem(pending);
+			} else if (force == FORCE_TARPIT) {
+				if (pending->p_type == T_TARPIT) {
+					if (aw < pending->p_tarpit.tv_sec)
+						pending->p_tarpit.tv_sec = aw;
+				} else {
+					pending->p_type = T_TARPIT;
+					pending->p_tarpit.tv_sec = aw;
+				}
 			}
 			++dirty;
 
@@ -557,12 +645,14 @@ pending_textdump(stream)
 
 	done.pending = 0;
 	done.autowhite = 0;
+	done.tarpit = 0;
 
 	gettimeofday(&now, NULL);
 
 	fprintf(stream, "\n\n#\n# stored tuples\n#\n");
-	fprintf(stream, "# Sender IP\t%s\t%s\tTime accepted\n", 
-	    "Sender e-mail", "Recipient e-mail");
+	fprintf(stream, "# Sender IP\t%s\t%s\tTime accepted\t"
+		"Unsuccessful shortest tarpit\n", 
+		"Sender e-mail", "Recipient e-mail");
 
 	PENDING_LOCK;
 	for (pending = TAILQ_FIRST(&pending_head); pending; pending = next) {
@@ -572,26 +662,49 @@ pending_textdump(stream)
 			continue;
 
 		if (conf.c_dump_no_time_translation) {
-			fprintf(stream, "%s\t%s\t%s\t%ld %s\n", 
-			    pending->p_addr, pending->p_from, 
-			    pending->p_rcpt, (long)pending->p_tv.tv_sec,
-			    pending->p_type == T_AUTOWHITE ? "AUTO" : "");
+			if (pending->p_type == T_AUTOWHITE) {
+				fprintf(stream, "%s\t%s\t%s\t%ld AUTO\n", 
+				    pending->p_addr, pending->p_from, 
+				    pending->p_rcpt, (long)pending->p_tv.tv_sec);
+			} else if (pending->p_type == T_PENDING) {
+				fprintf(stream, "%s\t%s\t%s\t%ld \n", 
+				    pending->p_addr, pending->p_from, 
+				    pending->p_rcpt, (long)pending->p_tv.tv_sec);
+			} else {
+				fprintf(stream, "%s\t%s\t%s\t%ld\t%ld TARPIT\n", 
+				    pending->p_addr, pending->p_from, 
+				    pending->p_rcpt, (long)pending->p_tv.tv_sec,
+				    (long)pending->p_tarpit.tv_sec);
+			}
 		} else {
 			ti = pending->p_tv.tv_sec;
 			localtime_r(&ti, &tm);
 			strftime(textdate, DATELEN, "%Y-%m-%d %T", &tm);
-		
-			fprintf(stream, "%s\t%s\t%s\t%ld%s# %s\n", 
-			    pending->p_addr, pending->p_from, 
-			    pending->p_rcpt, (long)pending->p_tv.tv_sec,
-			    pending->p_type == T_AUTOWHITE ? " AUTO " : " ",
-			    textdate);
+
+			if (pending->p_type == T_AUTOWHITE) {
+				fprintf(stream, "%s\t%s\t%s\t%ld AUTO # %s\n", 
+				    pending->p_addr, pending->p_from, 
+				    pending->p_rcpt, (long)pending->p_tv.tv_sec,
+				    textdate);
+			} else if (pending->p_type == T_PENDING) {
+				fprintf(stream, "%s\t%s\t%s\t%ld # %s\n", 
+				    pending->p_addr, pending->p_from, 
+				    pending->p_rcpt, (long)pending->p_tv.tv_sec,
+				    textdate);
+			} else {
+				fprintf(stream, "%s\t%s\t%s\t%ld\t%ld TARPIT # %s\n", 
+				    pending->p_addr, pending->p_from, 
+				    pending->p_rcpt, (long)pending->p_tv.tv_sec,
+				    (long)pending->p_tarpit.tv_sec, textdate);
+			}
 		}
 
 		if (pending->p_type == T_AUTOWHITE)
 			done.autowhite++;
-		else
+		else if (pending->p_type == T_PENDING)
 			done.pending++;
+		else
+			done.tarpit++;
 	}
 	PENDING_UNLOCK;
 

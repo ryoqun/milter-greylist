@@ -16,6 +16,7 @@ void_email	"<>"
 comment		#.*$
 blank		[ \t]{1,}
 auto		[Aa][Uu][Tt][Oo]
+tarpit		[Tt][Aa][Rr][Pp][Ii][Tt]
 
 %{
 	#include "config.h"
@@ -44,6 +45,7 @@ auto		[Aa][Uu][Tt][Oo]
 
 %%
 {auto}		{ return AUTO; }
+{tarpit}	{ return TARPIT; }
 {blank}
 {comment}
 {ipaddr}	{ 

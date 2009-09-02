@@ -1224,7 +1224,7 @@ eol:
 			PENDING_LOCK;
 			/* delay = -1 means unused: we supply the date */
 			if (pending_get(SA(&addr), addrlen, from, rcpt, 
-					date, T_PENDING))
+					date, 0, T_PENDING))
 				++dirty;
 			PENDING_UNLOCK;
 			dump_touch(dirty);

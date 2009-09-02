@@ -280,12 +280,14 @@ dump_perform(final)
 	dump_header(dump);
 	greylisted_count = pending_textdump(dump);
 
-	done = greylisted_count.pending + greylisted_count.autowhite;
+	done = greylisted_count.pending + greylisted_count.autowhite + 
+	       greylisted_count.tarpit;
 
 	fprintf(dump, "#\n# Summary: %d records, %d greylisted, "
-		"%d whitelisted\n#\n", done,
+		"%d whitelisted, %d tarpitted\n#\n", done,
 		greylisted_count.pending, 
-		greylisted_count.autowhite);
+		greylisted_count.autowhite,
+		greylisted_count.tarpit);
 
 	/*
 	 * Ensure that the data is really flushed to disk.
